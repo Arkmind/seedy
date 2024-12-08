@@ -1,27 +1,28 @@
 "use server";
 
-import { FileSystemItem } from "@/types/filesystem";
+import { File, FileSystemItem } from "@/types/filesystem";
 import { join } from "path";
 
 export const getFiles = async (
   query: string = "",
   order: string = "",
   extension: string = "",
-  length: string = ""
+  skip: string = "",
+  take: string = "8"
 ) => {
   const searchParams = new URLSearchParams();
-  searchParams.append("skip", length);
+  searchParams.append("skip", skip);
   searchParams.append("query", query);
   searchParams.append("order", order);
   searchParams.append("extension", extension === "none" ? "" : extension || "");
-  searchParams.append("take", "8");
+  searchParams.append("take", take);
 
   try {
     const nfiles = await fetch(
       "http://localhost:3000/api/files/latest?" + searchParams.toString(),
       { cache: "no-store" }
     );
-    return (await nfiles.json()) as { data: FileSystemItem[]; count: number };
+    return (await nfiles.json()) as { data: File[]; count: number };
   } catch (error) {
     console.error("error", error);
     return { data: [], count: 0 };

@@ -60,7 +60,8 @@ export const FileList: FC<FileListProps> = ({ files: defaultFiles }) => {
         query,
         order,
         extension,
-        nlength || filesLength.current.toString()
+        nlength || filesLength.current.toString(),
+        "12"
       );
 
       setFiles((prev) => (reset ? data : [...prev, ...data]));

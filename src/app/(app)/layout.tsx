@@ -33,7 +33,7 @@ const Layout: FC<LayoutProps> = ({ children }) => {
               },
               {
                 name: "Seedbooks",
-                href: "/ebooks",
+                href: "/epub",
                 icon: <PiBook size={30} />,
               },
               {

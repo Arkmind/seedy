@@ -62,7 +62,7 @@ const getFiles = ({ items }: { items: FileSystemItem[] }): File[] => {
 
 export async function GET(request: NextRequest) {
   const skip = Number(request.nextUrl.searchParams.get("skip")) || 0;
-  const take = Number(request.nextUrl.searchParams.get("take")) || 8;
+  const take = Number(request.nextUrl.searchParams.get("take")) || undefined;
   const query = request.nextUrl.searchParams.get("query") || "";
   const extensions = request.nextUrl.searchParams.get("extension") || "";
   const order = request.nextUrl.searchParams.get("order") || "desc";
@@ -101,7 +101,9 @@ export async function GET(request: NextRequest) {
         return b.date.getTime() - a.date.getTime();
       });
 
-    const sliced = filteredFiles.slice(skip, take + skip);
+    const sliced = take
+      ? filteredFiles.slice(skip, take + skip)
+      : filteredFiles;
 
     return NextResponse.json({
       data: sliced,
