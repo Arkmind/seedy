@@ -3,7 +3,7 @@
 import { classnames } from "@/librairies/utils";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import React, { FC } from "react";
+import React, { FC, useEffect } from "react";
 import { ModeToggle } from "./ModeToggle";
 import {
   Sidebar,
@@ -12,6 +12,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
+  useSidebar,
 } from "./ui/sidebar";
 
 export type Route = {
@@ -50,6 +51,7 @@ const Item: FC<Partial<Route> & { active?: boolean }> = ({
 
 export const Navbar: FC<NavbarProps> = ({ routes }) => {
   const pathname = usePathname();
+  const sidebar = useSidebar();
 
   const isActive = (routePath: string) => {
     // Exact match for root path
@@ -59,6 +61,10 @@ export const Navbar: FC<NavbarProps> = ({ routes }) => {
     // For other paths, use startsWith to handle nested routes
     return pathname.startsWith(routePath);
   };
+
+  useEffect(() => {
+    sidebar.setOpen(true);
+  }, [pathname]);
 
   return (
     <Sidebar className="w-36">

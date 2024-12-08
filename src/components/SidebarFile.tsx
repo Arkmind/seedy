@@ -26,8 +26,16 @@ export const SidebarFile: FC = () => {
 
     const file = fileSystem.current[0];
 
-    if (file.name.endsWith(".epub")) {
+    const mime = contentType(file.name);
+
+    console.log(mime);
+
+    if (mime && mime === "application/epub+zip") {
       router.push(`/epub/${file.url?.split("/").slice(2).join("/")}`);
+    } else if (mime && mime.startsWith("video")) {
+      router.push(
+        `/seedflix/player/${file.url?.split("/").slice(2).join("/")}`
+      );
     }
   };
 

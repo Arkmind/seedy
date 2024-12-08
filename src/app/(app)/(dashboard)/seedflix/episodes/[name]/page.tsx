@@ -3,6 +3,7 @@ import { LinkClient } from "@/components/LinkClient";
 import { Button } from "@/components/ui/button";
 import { classnames } from "@/librairies/utils";
 import Image from "next/image";
+import Link from "next/link";
 import ptt from "parse-torrent-title";
 import { join } from "path";
 import { FC } from "react";
@@ -50,35 +51,42 @@ const SeedflixEpisodes: FC<SeedflixEpisodesProps> = async ({
           const f = ptt.parse(file.name);
 
           return (
-            <div
-              className={classnames(
-                "flex p-3 px-4 border rounded-md transition-all cursor-pointer",
-                "dark:border-neutral-700 hover:dark:bg-neutral-900",
-                "border-neutral-200 hover:bg-neutral-100"
-              )}
+            <Link
+              href={`/seedflix/player/${file.url
+                ?.split("/")
+                .slice(2)
+                .join("/")}`}
               key={file.name}
             >
-              <div className="flex flex-col flex-1 space-y-1">
-                <h1 className="text-xl font-bold">
-                  Episode {f.episode} {f.title} {f.season}
-                </h1>
-                <p className="text-xs opacity-30">
-                  {Object.values({
-                    ...f,
-                    title: undefined,
-                    season: undefined,
-                    episode: undefined,
-                  })
-                    .filter(Boolean)
-                    .join(" - ")}
-                </p>
+              <div
+                className={classnames(
+                  "flex p-3 px-4 border rounded-md transition-all cursor-pointer",
+                  "dark:border-neutral-700 hover:dark:bg-neutral-900",
+                  "border-neutral-200 hover:bg-neutral-100"
+                )}
+              >
+                <div className="flex flex-col flex-1 space-y-1">
+                  <h1 className="text-xl font-bold">
+                    Episode {f.episode} {f.title} {f.season}
+                  </h1>
+                  <p className="text-xs opacity-30">
+                    {Object.values({
+                      ...f,
+                      title: undefined,
+                      season: undefined,
+                      episode: undefined,
+                    })
+                      .filter(Boolean)
+                      .join(" - ")}
+                  </p>
+                </div>
+                <div className="flex justify-end">
+                  <Button className="ml-auto h-full">
+                    Watch <PiPlay size={20} />
+                  </Button>
+                </div>
               </div>
-              <div className="flex justify-end">
-                <Button className="ml-auto h-full">
-                  Watch <PiPlay size={20} />
-                </Button>
-              </div>
-            </div>
+            </Link>
           );
         })}
       </div>
