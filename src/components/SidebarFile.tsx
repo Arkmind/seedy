@@ -96,25 +96,33 @@ export const SidebarFile: FC = () => {
         {fileSystem.current.length > 1 && (
           <div className="flex flex-col space-y-2 w-full h-full">
             {fileSystem.current.map((file) => (
-              <div
-                key={`current-${file.name}`}
-                className="flex flex-col w-full"
-              >
-                <Tooltip delayDuration={800}>
-                  <TooltipTrigger asChild>
-                    <h2 className="font-semibold text-lg text-ellipsis w-full overflow-hidden whitespace-nowrap">
-                      {file.name}
-                    </h2>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{file.name}</p>
-                  </TooltipContent>
-                </Tooltip>
-                <div>
-                  <p className="dark:text-neutral-500 text-xs">
-                    {formatBytes(file.size)} |{" "}
-                    {file.date ? new Date(file.date).toLocaleString() : "???"}
-                  </p>
+              <div key={`current-${file.name}`} className="flex w-full">
+                <div className="flex flex-col justify-center flex-1 w-[calc(100%-5rem)]">
+                  <Tooltip delayDuration={800}>
+                    <TooltipTrigger asChild>
+                      <h2 className="font-semibold text-lg text-ellipsis w-full overflow-hidden whitespace-nowrap">
+                        {file.name}
+                      </h2>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{file.name}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <div>
+                    <p className="dark:text-neutral-500 text-xs">
+                      {formatBytes(file.size)} |{" "}
+                      {file.date ? new Date(file.date).toLocaleString() : "???"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end w-20">
+                  <Button
+                    variant="outline"
+                    className="size-7 dark:bg-neutral-900 dark:border-neutral-700 hover:dark:bg-neutral-800 bg-neutral-50 hover:bg-neutral-100 border-neutral-200"
+                    onClick={() => fileSystem.removeFile(file)}
+                  >
+                    <PiX className="scale-75" />
+                  </Button>
                 </div>
               </div>
             ))}
