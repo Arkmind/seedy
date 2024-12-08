@@ -1,9 +1,10 @@
+import { redirect } from "next/navigation";
 import { FC } from "react";
 
-export interface PlayerProps {}
+export interface SeedflixProps {}
 
-const Player: FC<PlayerProps> = () => {
-  return <></>;
+const Seedflix: FC<SeedflixProps> = () => {
+  redirect("/seedflix");
 };
 
-export default Player;
+export default Seedflix;

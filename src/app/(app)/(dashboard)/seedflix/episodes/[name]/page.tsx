@@ -2,12 +2,18 @@ import { explore } from "@/actions/files";
 import { LinkClient } from "@/components/LinkClient";
 import { Button } from "@/components/ui/button";
 import { classnames } from "@/librairies/utils";
+import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import ptt from "parse-torrent-title";
 import { join } from "path";
 import { FC } from "react";
 import { PiArrowLeft, PiPlay } from "react-icons/pi";
+
+export const metadata: Metadata = {
+  title: "Seedy Episodes",
+  description: "Seedy episodes, watch your series",
+};
 
 export interface SeedflixEpisodesProps {
   params: {

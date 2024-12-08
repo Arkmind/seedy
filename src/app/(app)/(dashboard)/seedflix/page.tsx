@@ -3,8 +3,14 @@ import { getTorrentList } from "@/actions/transmission";
 import { Movie } from "@/components/Movie";
 import { isActionError } from "@/librairies/error";
 import { classnames } from "@/librairies/utils";
+import { Metadata } from "next";
 import ptt from "parse-torrent-title";
 import { FC } from "react";
+
+export const metadata: Metadata = {
+  title: "Seedy Videos, Movies, Series",
+  description: "Seedflix, the seedy way to watch movies and series",
+};
 
 export interface SeedflixProps {}
 
