@@ -28,8 +28,6 @@ export const SidebarFile: FC = () => {
 
     const mime = contentType(file.name);
 
-    console.log(mime);
-
     if (mime && mime === "application/epub+zip") {
       router.push(`/epub/${file.url?.split("/").slice(2).join("/")}`);
     } else if (mime && mime.startsWith("video")) {

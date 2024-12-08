@@ -61,6 +61,7 @@ export const getTorrentList = async (): Promise<
     const response = await fetch(
       join(process.env.TRANSMISSION_URL || "", "/transmission/rpc"),
       {
+        cache: "no-store",
         method: "POST",
         headers,
         body: JSON.stringify({

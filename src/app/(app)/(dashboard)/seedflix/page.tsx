@@ -17,17 +17,17 @@ const Seedflix: FC<SeedflixProps> = async () => {
   }
 
   const ptorrents = torrents.arguments.torrents
-    .map((torrent) => {
-      return {
-        ...ptt.parse(torrent.name),
-        name: torrent.name,
-      };
-    })
-    .filter((t) => t.title && t.resolution);
+    .map((torrent) => ({
+      ...ptt.parse(torrent.name),
+      name: torrent.name,
+    }))
+    .filter(
+      (t) => t.resolution || t.container === "mkv" || t.container === "mp4"
+    );
 
   const search = await Promise.all(
     ptorrents.map(async (t) => {
-      const search = await searchMovie(`${t.title} ${t.season}`);
+      const search = await searchMovie(`${t.title}`);
       return {
         search,
         torrent: t,

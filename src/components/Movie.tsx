@@ -27,24 +27,28 @@ export const Movie: FC<MovieProps> = ({ movie, torrent }) => {
     <Link
       href={
         isMovie(movie)
-          ? `/seedflix/player/${torrent.name}`
+          ? `/seedflix/player/complete/${torrent.name}`
           : `/seedflix/episodes/${torrent.name}`
       }
     >
       <div
         className={classnames(
-          "flex flex-col space-y-3 dark:bg-neutral-950 p-2 rounded-xl bg-white hover:dark:bg-neutral-800 hover:bg-neutral-100 transition-all cursor-pointer border-2"
+          "flex flex-col space-y-3 p-2 rounded-xl transition-all cursor-pointer border-2 h-full",
+          "bg-white hover:bg-neutral-100",
+          "dark:bg-neutral-950 hover:dark:bg-neutral-800"
         )}
       >
-        <Image
-          src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-          alt={isMovie(movie) ? movie.title : movie.name}
-          priority
-          width={0}
-          height={0}
-          sizes="100vw"
-          className="object-cover w-full h-full rounded-md"
-        />
+        <div className="w-full h-full">
+          <Image
+            src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+            alt={isMovie(movie) ? movie.title : movie.name}
+            priority
+            width={0}
+            height={0}
+            sizes="100vw"
+            className="object-cover w-full h-full rounded-md"
+          />
+        </div>
         <div className="flex-1 px-2">
           <h2 className="text-lg font-bold">
             {isMovie(movie) ? movie.title : movie.name}
