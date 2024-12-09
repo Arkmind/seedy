@@ -21,8 +21,15 @@ export type Route = {
   icon?: React.ReactNode;
 };
 
+export type Divider = {
+  name: "divider";
+};
+
+const isDivider = (route: Route | Divider): route is Divider =>
+  route.name === "divider";
+
 export interface NavbarProps {
-  routes: Route[];
+  routes: (Route | Divider)[];
 }
 
 const Item: FC<Partial<Route> & { active?: boolean }> = ({
@@ -36,8 +43,10 @@ const Item: FC<Partial<Route> & { active?: boolean }> = ({
   return (
     <div
       className={classnames(
-        "flex flex-col items-center justify-center space-y-2 size-24 dark:bg-neutral-950 p-2 rounded-xl bg-neutral-50 hover:dark:bg-black transition-all cursor-pointer",
-        active && "dark:border-white border-neutral-200 border-2"
+        "flex flex-col items-center justify-center space-y-2 size-24 p-2 rounded-xl hover:dark:bg-neutral-900 hover:bg-neutral-100 transition-all cursor-pointer",
+        active
+          ? "dark:border-neutral-50 border-neutral-950 border-2 dark:bg-black bg-white"
+          : "dark:bg-neutral-950 bg-neutral-50"
       )}
       onClick={() => router.push(href || "")}
     >
@@ -90,13 +99,17 @@ export const Navbar: FC<NavbarProps> = ({ routes }) => {
             <SidebarGroupContent className="py-4">
               <div className="flex flex-col items-center">
                 <div className="flex flex-1 flex-col items-center space-y-4">
-                  {routes.map((route) => (
-                    <Item
-                      key={route.href}
-                      active={isActive(route.href)}
-                      {...route}
-                    />
-                  ))}
+                  {routes.map((route, i) =>
+                    isDivider(route) ? (
+                      <hr key={`divider-nav-${i}`} className="w-4/5" />
+                    ) : (
+                      <Item
+                        key={route.href}
+                        active={isActive(route.href)}
+                        {...route}
+                      />
+                    )
+                  )}
                 </div>
               </div>
             </SidebarGroupContent>

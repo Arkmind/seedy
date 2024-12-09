@@ -2,8 +2,15 @@ import { Navbar } from "@/components/Navbar";
 import { SidebarFile } from "@/components/SidebarFile";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { classnames } from "@/librairies/utils";
 import { FC, ReactNode } from "react";
-import { PiBook, PiFolder, PiHouse, PiMagnet, PiVideo } from "react-icons/pi";
+import {
+  PiBook,
+  PiEqualizer,
+  PiFolder,
+  PiHouse,
+  PiVideo,
+} from "react-icons/pi";
 
 export interface LayoutProps {
   children: ReactNode;
@@ -27,6 +34,9 @@ const Layout: FC<LayoutProps> = ({ children }) => {
                 icon: <PiFolder size={30} />,
               },
               {
+                name: "divider",
+              },
+              {
                 name: "Seedflix",
                 href: "/seedflix",
                 icon: <PiVideo size={30} />,
@@ -37,14 +47,14 @@ const Layout: FC<LayoutProps> = ({ children }) => {
                 icon: <PiBook size={30} />,
               },
               {
-                name: "Torrents",
-                href: "/torrents",
-                icon: <PiMagnet size={30} />,
+                name: "Seedzik",
+                href: "/seedzik",
+                icon: <PiEqualizer size={30} />,
               },
             ]}
           />
         </div>
-        <div className="flex-1">{children}</div>
+        <div className={classnames("flex-1")}>{children}</div>
         <SidebarFile />
       </SidebarProvider>
     </TooltipProvider>

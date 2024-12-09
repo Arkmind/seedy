@@ -62,7 +62,7 @@ export const SidebarFile: FC = () => {
   return (
     <div
       className={classnames(
-        "flex flex-col py-10 overflow-x-hidden w-0 transition-all dark:bg-neutral-900 bg-neutral-50 items-center sticky top-0 h-screen",
+        "flex flex-col py-10 overflow-x-hidden w-0 transition-all dark:bg-black bg-white items-center sticky top-0 h-screen",
         fileSystem.current.length > 0 && "w-1/4 px-2"
       )}
     >
@@ -76,7 +76,7 @@ export const SidebarFile: FC = () => {
             <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>
                 <Button
-                  className="size-8 dark:bg-neutral-900 dark:border-neutral-700 hover:dark:bg-neutral-800 bg-neutral-50 hover:bg-neutral-100 border-neutral-200"
+                  className="size-8 dark:bg-black dark:border-neutral-700 hover:dark:bg-neutral-800 bg-white hover:bg-neutral-100 border-neutral-200"
                   variant="outline"
                   onClick={() => fileSystem.setCurrent([])}
                 >
@@ -95,8 +95,8 @@ export const SidebarFile: FC = () => {
         className={classnames(
           "flex-1 flex flex-col items-center w-full h-full overflow-auto px-8",
           "[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-md",
-          "[&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300",
-          "dark:[&::-webkit-scrollbar-track]:bg-neutral-900 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-700"
+          "[&::-webkit-scrollbar-track]:bg-white [&::-webkit-scrollbar-thumb]:bg-gray-50",
+          "dark:[&::-webkit-scrollbar-track]:bg-black dark:[&::-webkit-scrollbar-thumb]:bg-neutral-950"
         )}
       >
         {fileSystem.current.length > 1 && (
