@@ -102,7 +102,7 @@ export const Navbar: FC<NavbarProps> = ({ routes }) => {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        {pathname.startsWith("/epub") && (
+        {pathname.startsWith("/epub/") && (
           <SidebarFooter className="items-center pb-8 px-6">
             <ModeToggle className="w-full dark:bg-neutral-950 hover:dark:bg-black" />
           </SidebarFooter>
