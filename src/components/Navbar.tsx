@@ -67,40 +67,42 @@ export const Navbar: FC<NavbarProps> = ({ routes }) => {
   }, [pathname]);
 
   return (
-    <Sidebar className="w-36">
-      <SidebarHeader className="items-center pt-8">
-        <Image
-          src="/jelly-white.svg"
-          priority
-          alt="logo"
-          width={0}
-          height={0}
-          sizes="100vw"
-          className="dark:invert w-14"
-        />
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent className="py-4">
-            <div className="flex flex-col items-center">
-              <div className="flex flex-1 flex-col items-center space-y-4">
-                {routes.map((route) => (
-                  <Item
-                    key={route.href}
-                    active={isActive(route.href)}
-                    {...route}
-                  />
-                ))}
+    <div className={classnames("w-36", "absolute z-50")}>
+      <Sidebar>
+        <SidebarHeader className="items-center pt-8">
+          <Image
+            src="/jelly-white.svg"
+            priority
+            alt="logo"
+            width={0}
+            height={0}
+            sizes="100vw"
+            className="dark:invert w-14"
+          />
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent className="py-4">
+              <div className="flex flex-col items-center">
+                <div className="flex flex-1 flex-col items-center space-y-4">
+                  {routes.map((route) => (
+                    <Item
+                      key={route.href}
+                      active={isActive(route.href)}
+                      {...route}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      {pathname.startsWith("/epub") && (
-        <SidebarFooter className="items-center pb-8 px-6">
-          <ModeToggle className="w-full dark:bg-neutral-950 hover:dark:bg-black" />
-        </SidebarFooter>
-      )}
-    </Sidebar>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        {pathname.startsWith("/epub") && (
+          <SidebarFooter className="items-center pb-8 px-6">
+            <ModeToggle className="w-full dark:bg-neutral-950 hover:dark:bg-black" />
+          </SidebarFooter>
+        )}
+      </Sidebar>
+    </div>
   );
 };

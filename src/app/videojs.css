@@ -1,0 +1,125 @@
+.vjs-text-track-display {
+  bottom: 0;
+}
+
+.video-js .vjs-control-bar {
+  background-color: transparent;
+  padding: 1rem 6rem 0 6rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  z-index: 11;
+  height: 150px;
+  overflow: hidden;
+}
+
+.video-js .vjs-control-bar::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  bottom: 0;
+  left: -75px;
+  width: calc(100% + 150px);
+  height: 150px;
+  box-shadow: inset 0px -100px 40px 5px rgba(0, 0, 0, 0.9);
+}
+
+.video-js .vjs-time-control {
+  font-size: 2em;
+}
+
+.video-js .vjs-progress-control:hover .vjs-time-tooltip,
+.video-js
+  .vjs-progress-control:hover
+  .vjs-progress-holder:focus
+  .vjs-time-tooltip,
+.video-js.vjs-scrubbing.vjs-touch-enabled
+  .vjs-progress-control
+  .vjs-time-tooltip {
+  font-size: 1rem;
+}
+
+.video-js .vjs-play-progress:before {
+  font-size: 2.4em;
+}
+.vjs-button > .vjs-icon-placeholder:before {
+  font-size: 3.5em;
+}
+
+.video-js .vjs-progress-holder {
+  height: 8px;
+  background-color: transparent;
+}
+
+.video-js .vjs-load-progress {
+  background-color: transparent;
+}
+
+.vjs-play-progress.vjs-slider-bar {
+  border-radius: 3px;
+  background-color: #18181b;
+  left: -1px;
+}
+
+.vjs-load-progress > div,
+.vjs-play-progress.vjs-slider-bar {
+  border-radius: 4px;
+}
+
+.video-js .vjs-load-progress > div {
+  background-color: #fff;
+}
+
+.video-js .vjs-button {
+  height: 5.8em;
+}
+
+.video-js .vjs-volume-panel {
+  align-items: center;
+}
+
+.video-js .vjs-time-control {
+  display: flex;
+  align-items: center;
+}
+
+.video-js .vjs-current-time,
+.video-js .vjs-time-divider {
+  display: none;
+}
+
+.video-js
+  .vjs-progress-control:hover
+  .vjs-play-progress.vjs-slider-bar::before {
+  transform: scale(1);
+}
+
+.video-js .vjs-progress-control:hover .vjs-progress-holder,
+.video-js.vjs-scrubbing.vjs-touch-enabled
+  .vjs-progress-control
+  .vjs-progress-holder {
+  font-size: inherit;
+}
+
+.video-js .vjs-big-play-button {
+  display: none;
+}
+
+.video-js
+  .vjs-remaining-time.vjs-time-control.vjs-control
+  > span[aria-hidden="true"] {
+  display: none;
+}
+
+.vjs-time-tooltip {
+  font-weight: 700;
+}
+
+.video-js .vjs-mouse-display .vjs-time-tooltip {
+  background-color: #18181b;
+}
+
+.video-js .vjs-time-tooltip {
+  right: -29px !important;
+  background-color: #fff;
+}

@@ -2,6 +2,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import "./videojs.css";
 
 const geistSans = localFont({
   src: "./assets/fonts/GeistVF.woff",
