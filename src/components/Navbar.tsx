@@ -67,7 +67,12 @@ export const Navbar: FC<NavbarProps> = ({ routes }) => {
   }, [pathname]);
 
   return (
-    <div className={classnames("w-36", "absolute z-50")}>
+    <div
+      className={classnames(
+        "w-36",
+        pathname.startsWith("/seedflix/player") && "absolute z-50"
+      )}
+    >
       <Sidebar>
         <SidebarHeader className="items-center pt-8">
           <Image
