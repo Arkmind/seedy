@@ -13,6 +13,8 @@ sealed interface Route {
     data object Search : Route
     data object LiveTv : Route
     data object Settings : Route
+    /** A settings page: "profile", "home", "playback", "subtitles", "display", "gestures", "about"… */
+    data class SettingsPage(val page: String) : Route
     data class Player(val id: UUID) : Route
     /** A title that's on Seerr but not on the server (search, Discover…). */
     data class SeerrTitle(val mediaType: String, val tmdbId: Int) : Route

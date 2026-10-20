@@ -49,6 +49,7 @@ import io.github.arkmind.seedy.mobile.player.PlayerRoute
 import io.github.arkmind.seedy.mobile.requests.RequestsTab
 import io.github.arkmind.seedy.mobile.requests.SeerrTitleRoute
 import io.github.arkmind.seedy.mobile.search.SearchRoute
+import io.github.arkmind.seedy.mobile.settings.SettingsPageRoute
 import io.github.arkmind.seedy.mobile.settings.SettingsRoute
 import io.github.arkmind.seedy.ui.theme.LocalCore
 import io.github.arkmind.seedy.ui.theme.LocalSession
@@ -242,6 +243,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                 entry<Route.Search> { SearchRoute() }
                 entry<Route.LiveTv> { LiveTvRoute() }
                 entry<Route.Settings> { WithTabBar(tabs, tab, nav) { SettingsRoute(appVersion) } }
+                entry<Route.SettingsPage> { SettingsPageRoute(it.page, appVersion) }
                 entry<Route.Player> { PlayerRoute(it.id) }
                 entry<Route.SeerrTitle> { SeerrTitleRoute(it.mediaType, it.tmdbId) }
             },
