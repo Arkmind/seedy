@@ -225,6 +225,10 @@ export function TypePill({ type }: { type: 'movie' | 'tv' | 'upcoming' }) {
 }
 
 export const seerrPath = (s: Pick<SeerrItem, 'mediaType' | 'tmdbId'>) => `/request/${s.mediaType}/${s.tmdbId}`;
+/* On the server already (all of it or some seasons), with the library item to open. */
+export const inLibrary = (s: Pick<SeerrItem, 'jellyfinItemId' | 'status'>) => !!s.jellyfinItemId && (s.status === 'available' || s.status === 'partial');
+/* Where a Seerr title opens: its library page once it's on the server, else its Seerr page. */
+export const seerrTarget = (s: Pick<SeerrItem, 'mediaType' | 'tmdbId' | 'jellyfinItemId' | 'status'>) => (inLibrary(s) ? `/details/${s.jellyfinItemId}` : seerrPath(s));
 
 export function PosterCard({ item, width, canRequest, onRequest, requesting, showRequestButton, requestedLabel, title: shownTitle, upcoming, meta, metaAccent }: {
   item: SeerrItem;
@@ -244,8 +248,7 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
 }) {
   const title = shownTitle ?? item.title;
   const poster = tmdbImage(item.posterPath, 'w342');
-  const inLibrary = !!item.jellyfinItemId && (item.status === 'available' || item.status === 'partial');
-  const target = inLibrary ? `/details/${item.jellyfinItemId}` : seerrPath(item);
+  const target = seerrTarget(item);
   const requestable = canRequest && (item.status === 'none' || item.status === 'declined');
   const style = width ? { flex: `0 0 ${width}px`, width: width + 'px' } : undefined;
   return (
@@ -264,7 +267,7 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
                 {requesting ? t('Requesting…') : t('Request')}
               </button>
             )}
-            <Link to={target} class="btn poster-more">{inLibrary ? t('Open') : t('More info')}</Link>
+            <Link to={target} class="btn poster-more">{inLibrary(item) ? t('Open') : t('More info')}</Link>
           </div>
         )}
       </div>

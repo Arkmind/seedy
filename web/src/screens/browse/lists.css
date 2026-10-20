@@ -1,8 +1,6 @@
 /* List pages (/list/*) and Favorites, in the Library style. */
 
 .list-page .page-main { gap: 28px; }
-.list-loading { display: flex; justify-content: center; padding: 8px 0; }
-.list-loading .spinner { width: 28px; height: 28px; }
 .list-foot { padding-top: 8px; }
 .list-seed { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--seedy-text-2); }
 .list-seed:hover { color: #ffffff; }

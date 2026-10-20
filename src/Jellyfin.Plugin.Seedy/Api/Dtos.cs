@@ -239,7 +239,8 @@ public sealed class SeerrCrewDto
     [JsonPropertyName("job")] public string Job { get; set; } = string.Empty;
 }
 
-public sealed class MyRequestDto : SeerrItemDto
+/* One Seerr request: the title, who asked and when, and where it is now. */
+public sealed class RequestDto : SeerrItemDto
 {
     [JsonPropertyName("requestId")] public int RequestId { get; set; }
     [JsonPropertyName("requestedAt")] public DateTime RequestedAt { get; set; }
@@ -248,9 +249,8 @@ public sealed class MyRequestDto : SeerrItemDto
     [JsonPropertyName("is4k")] public bool Is4k { get; set; }
     [JsonPropertyName("availableAt")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public DateTime? AvailableAt { get; set; }
 
-    /* When the request last changed (approved, declined…) and who changed it. */
+    /* When the request last changed (approved, declined…). */
     [JsonPropertyName("updatedAt")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public DateTime? UpdatedAt { get; set; }
-    [JsonPropertyName("modifiedBy")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? ModifiedBy { get; set; }
 
     /* What Sonarr/Radarr are downloading for it right now. */
     [JsonPropertyName("download")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public RequestDownloadDto? Download { get; set; }
@@ -268,20 +268,18 @@ public sealed class RequestDownloadDto
     [JsonPropertyName("fraction")] public double Fraction { get; set; }
     /* Set when every download belongs to one season. */
     [JsonPropertyName("season")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? Season { get; set; }
-    [JsonPropertyName("items")] public int Items { get; set; }
-    [JsonPropertyName("estimatedAt")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public DateTime? EstimatedAt { get; set; }
 }
 
 public sealed class MyRequestsDto
 {
-    [JsonPropertyName("results")] public List<MyRequestDto> Results { get; set; } = [];
+    [JsonPropertyName("results")] public List<RequestDto> Results { get; set; } = [];
     [JsonPropertyName("open")] public int Open { get; set; }
 }
 
 /* A page of requests (Requests · My requests and All requests). */
 public sealed class RequestListDto
 {
-    [JsonPropertyName("results")] public List<MyRequestDto> Results { get; set; } = [];
+    [JsonPropertyName("results")] public List<RequestDto> Results { get; set; } = [];
     [JsonPropertyName("total")] public int Total { get; set; }
 }
 

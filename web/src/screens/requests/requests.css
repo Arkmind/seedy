@@ -1,23 +1,11 @@
-/* Requests (Requests board). */
+/* Requests (Requests board). The title row, tabs, buttons and row headings use the shared page, tab, button and row
+   styles; these are the page's own pieces. */
 
 .reqs-main { display: flex; flex-direction: column; gap: 32px; padding: 24px 0 80px; }
 .reqs-pad { padding: 0 var(--gutter); }
+.reqs-open { font-weight: 700; }
 
-/* ── Title, search and tabs ── */
-
-.reqs-head {
-  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px;
-  padding: 0 var(--gutter);
-}
-.reqs-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 14px; min-width: 0; }
-.reqs-title h1 { font-size: 48px; line-height: 1; font-weight: 900; letter-spacing: -0.02em; color: #ffffff; }
-.reqs-lede { font-size: 15px; font-weight: 600; color: var(--seedy-text-3); }
-.reqs-open {
-  display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: var(--r-card);
-  background: var(--seedy-surface); color: var(--seedy-text); font-size: 14px; font-weight: 700; white-space: nowrap;
-  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
-}
-.reqs-open:hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+/* ── Search and tabs ── */
 
 .reqs-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 0 var(--gutter); }
 .reqs-search {
@@ -35,27 +23,22 @@
 .reqs-search input::-webkit-search-cancel-button { filter: invert(0.6); }
 .reqs-search:focus-within { box-shadow: inset 0 0 0 2px var(--seedy-accent); }
 
-.reqs-tabs { display: flex; gap: 8px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-.reqs-tabs::-webkit-scrollbar { display: none; }
-.reqs-tab {
-  flex: none; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: var(--r-card);
-  background: var(--seedy-surface); color: var(--seedy-text); font-size: 14px; font-weight: 700; white-space: nowrap;
-  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
-}
-.reqs-tab:hover, .reqs-tab.is-current { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
-.reqs-tab.is-current { font-weight: 800; }
-.reqs-tab:hover { color: var(--seedy-ink-inverse); }
+.reqs-tab { flex: none; height: 44px; padding: 0 18px; font-weight: 700; }
+.reqs-tab[aria-current='page'] { font-weight: 800; }
 
+/* "My requests 3", "All requests 2" (amber: waiting for approval). */
 .reqs-count {
   min-width: 22px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: var(--r-pill);
   background: var(--seedy-surface-2); color: var(--seedy-text);
   display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;
 }
 .reqs-count.is-pending { background: rgba(255, 201, 138, 0.18); color: var(--seedy-pending); }
-.reqs-tab:hover .reqs-count, .reqs-tab.is-current .reqs-count,
-.tab[aria-selected='true'] .reqs-count, .tab:hover .reqs-count { background: rgba(30, 30, 30, 0.12); color: var(--seedy-ink-inverse); }
-.reqs-tab:hover .reqs-count.is-pending, .reqs-tab.is-current .reqs-count.is-pending,
-.tab[aria-selected='true'] .reqs-count.is-pending, .tab:hover .reqs-count.is-pending { background: var(--seedy-pending); color: var(--seedy-ink-inverse); }
+.tab:hover .reqs-count, .tab[aria-current='page'] .reqs-count, .tab[aria-selected='true'] .reqs-count {
+  background: rgba(30, 30, 30, 0.12); color: var(--seedy-ink-inverse);
+}
+.tab:hover .reqs-count.is-pending, .tab[aria-current='page'] .reqs-count.is-pending, .tab[aria-selected='true'] .reqs-count.is-pending {
+  background: var(--seedy-pending); color: var(--seedy-ink-inverse);
+}
 
 /* ── Your requests · Waiting for your approval ── */
 
@@ -64,8 +47,6 @@
 .reqs-col.is-mine { flex: 1 1 640px; }
 .reqs-col.is-approvals { flex: 1 1 520px; }
 .reqs-col-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
-.reqs-col-head h2 { font-size: 20px; font-weight: 800; color: #ffffff; }
-.reqs-col-sub { font-size: 13px; color: var(--seedy-text-3); }
 .reqs-col-head .row-link { margin-left: auto; }
 
 .reqs-list { display: flex; flex-direction: column; gap: 8px; }
@@ -91,14 +72,14 @@ a.reqs-row:hover { background: var(--seedy-row); color: var(--seedy-text); }
 .reqs-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .reqs-text.is-wrap { flex: 1 1 200px; }
 .reqs-name {
-  font-size: 15px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: flex-start; max-width: 100%;
+  align-self: flex-start; max-width: 100%; font-size: 15px; font-weight: 700; color: #ffffff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 a.reqs-name { border-radius: 4px; }
 a.reqs-name:hover { color: #ffffff; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .reqs-what { font-size: 13px; line-height: 1.4; color: var(--seedy-text-3); }
-
-.reqs-bar-track { display: block; max-width: 320px; height: 5px; border-radius: 3px; background: var(--seedy-surface-2); overflow: hidden; }
-.reqs-bar-track > span { display: block; height: 100%; background: var(--seedy-accent); }
+.reqs-progress { max-width: 320px; background: var(--seedy-surface-2); }
+.reqs-progress > i { background: var(--seedy-accent); }
 
 .reqs-chip {
   flex: none; display: flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: var(--r-pill);
@@ -112,16 +93,12 @@ a.reqs-name:hover { color: #ffffff; text-decoration: underline; text-underline-o
 .reqs-chip.is-danger { background: rgba(255, 138, 138, 0.1); color: var(--seedy-danger); }
 
 .reqs-decide { display: flex; gap: 8px; }
-.reqs-decline, .reqs-approve {
-  display: flex; align-items: center; justify-content: center; gap: 6px; height: 44px; border: 0; border-radius: var(--r-menu);
-  font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap;
-  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+.reqs-decline {
+  height: 44px; padding: 0 14px; border-radius: var(--r-menu);
+  background: var(--seedy-surface); color: var(--seedy-danger); font-size: 14px; font-weight: 700;
 }
-.reqs-decline { padding: 0 14px; background: var(--seedy-surface); color: var(--seedy-danger); font-weight: 700; }
 .reqs-decline:not(:disabled):hover { background: var(--seedy-danger); color: var(--seedy-ink-inverse); }
-.reqs-approve { padding: 0 16px; background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-weight: 800; }
-.reqs-approve:not(:disabled):hover { background: var(--seedy-bg); color: var(--seedy-text); box-shadow: inset 0 0 0 1px var(--seedy-surface-2); }
-.reqs-decline:disabled, .reqs-approve:disabled { opacity: 0.5; cursor: default; }
+.reqs-approve.btn-primary { gap: 6px; padding: 0 16px; border-radius: var(--r-menu); }
 
 .reqs-acts { display: flex; align-items: center; gap: 8px; }
 .reqs-acts:empty { display: none; }
@@ -133,25 +110,19 @@ a.reqs-name:hover { color: #ffffff; text-decoration: underline; text-underline-o
 .reqs-note > svg { flex: none; color: var(--seedy-text-3); }
 .reqs-note > span { flex: 1 1 220px; }
 
-/* ── My requests · All requests ── */
+/* ── My requests · All requests · search results ── */
 
-.reqs-listing { display: flex; flex-direction: column; gap: 20px; }
+.reqs-listing, .reqs-results { display: flex; flex-direction: column; gap: 20px; }
 .reqs-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-.reqs-filter-tabs { display: flex; gap: 8px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-.reqs-filter-tabs::-webkit-scrollbar { display: none; }
-.reqs-filter-tabs .tab { flex: none; }
+.reqs-filters .tab { flex: none; }
 .reqs-filters-end { display: flex; align-items: center; gap: 12px; margin-left: auto; }
 .reqs-total { font-size: 14px; font-weight: 600; color: var(--seedy-text-3); white-space: nowrap; }
 
-.reqs-results { display: flex; flex-direction: column; gap: 20px; }
-
 @media (max-width: 720px) {
   .reqs-main { gap: 24px; padding-top: 16px; }
-  .reqs-title h1 { font-size: 36px; }
   .reqs-search { flex-basis: 100%; height: 48px; }
   .reqs-search input { font-size: 16px; }
   .reqs-row { flex-wrap: wrap; gap: 10px 14px; }
   .reqs-row > .reqs-text { flex: 1 1 200px; }
-  .reqs-row > .reqs-chip { margin-left: 58px; }
-  .reqs-row.is-approval > .reqs-decide, .reqs-row.is-list > .reqs-acts { margin-left: 58px; }
+  .reqs-row > .reqs-chip, .reqs-row.is-approval > .reqs-decide, .reqs-row.is-list > .reqs-acts { margin-left: 58px; }
 }

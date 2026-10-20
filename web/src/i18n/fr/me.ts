@@ -447,7 +447,6 @@ const fr: Record<string, string> = {
 
   // Requests wording shared with Home's "Arrived" notice
   'Find something to request': 'Trouver un titre à demander',
-  'Requests aren’t set up': 'Les demandes ne sont pas configurées',
   'Seerr didn’t answer. It may be restarting.': 'Seerr ne répond pas. Il redémarre peut-être.',
   'No requests yet': 'Aucune demande pour l’instant',
   'Titles you request from Discover or Search show up here, with where they are on the way to your library.': 'Les titres demandés depuis Découvrir ou Rechercher apparaissent ici, avec leur progression vers votre bibliothèque.',

@@ -1,10 +1,11 @@
 import { tmdbImage } from '../../api/images';
-import { myRequests, type MyRequest } from '../../api/seedy';
+import { myRequests, type SeerrRequest } from '../../api/seedy';
 import { meStore } from '../../lib/app-state';
 import { fmtDayMonth } from '../../lib/format';
 import { t, tx } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
+import { inLibrary } from '../../ui/cards';
 import { Icon } from '../../ui/icons';
 import { CUSTOM, readCustom, saveCustom } from './prefs';
 
@@ -13,9 +14,9 @@ import { CUSTOM, readCustom, saveCustom } from './prefs';
 
 const WEEK = 7 * 86_400_000;
 
-export function arrivals(list: MyRequest[], dismissed: number[], now = Date.now()) {
+export function arrivals(list: SeerrRequest[], dismissed: number[], now = Date.now()) {
   return list.filter((r) => {
-    if (!(r.status === 'available' || r.status === 'partial') || !r.jellyfinItemId) return false;
+    if (!inLibrary(r)) return false;
     const at = r.availableAt ? new Date(r.availableAt).getTime() : NaN;
     return Number.isFinite(at) && now - at <= WEEK && !dismissed.includes(r.requestId);
   });

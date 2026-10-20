@@ -210,7 +210,7 @@ async function handle(req: IncomingMessage, res: ServerResponse, path: string, q
   const admin = !!user.Policy?.IsAdministrator;
   const day = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
   const REQUESTS = [
-    { ...DISCOVER[1], requestId: 1, requestStatus: 'approved', status: 'processing', requestedBy: 'Alex', requestedByMe: true, seasons: [2, 4], unaired: [4], requestedAt: day(3), updatedAt: day(1), download: { fraction: 0.62, season: 2, items: 3 } },
+    { ...DISCOVER[1], requestId: 1, requestStatus: 'approved', status: 'processing', requestedBy: 'Alex', requestedByMe: true, seasons: [2, 4], unaired: [4], requestedAt: day(3), updatedAt: day(1), download: { fraction: 0.62, season: 2 } },
     { ...DISCOVER[0], requestId: 2, requestStatus: 'completed', status: 'available', requestedBy: 'Alex', requestedByMe: true, requestedAt: day(3), availableAt: day(1) },
     { ...DISCOVER[5], requestId: 3, requestStatus: 'approved', status: 'processing', requestedBy: 'Alex', requestedByMe: true, seasons: [1], requestedAt: day(6), updatedAt: day(5) },
     { ...DISCOVER[11], requestId: 4, requestStatus: 'pending', status: 'pending', requestedBy: 'Mia', requestedByMe: false, seasons: [1, 3], requestedAt: day(0) },

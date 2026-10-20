@@ -126,7 +126,7 @@ public class RequestsController : ControllerBase
             }
 
             var all = scope == "all";
-            if (all && !(await _seerr.RequestSummaryAsync(me.Value, ct).ConfigureAwait(false)).CanViewAll)
+            if (all && !SeerrService.CanViewAllRequests(await _seerr.PermissionsAsync(me.Value, ct).ConfigureAwait(false)))
             {
                 throw new SeerrException("Your Seerr account can't see other people's requests.", HttpStatusCode.Forbidden);
             }
@@ -148,21 +148,21 @@ public class RequestsController : ControllerBase
     /// <param name="ct">Cancellation.</param>
     /// <returns>The request.</returns>
     [HttpPost("{requestId:int}/Approve")]
-    public Task<ActionResult<MyRequestDto?>> Approve([FromRoute] int requestId, CancellationToken ct) => Update(requestId, "approve", ct);
+    public Task<ActionResult<RequestDto?>> Approve([FromRoute] int requestId, CancellationToken ct) => Update(requestId, "approve", ct);
 
     /// <summary>Declines a request (needs Seerr's Manage requests).</summary>
     /// <param name="requestId">Seerr request id.</param>
     /// <param name="ct">Cancellation.</param>
     /// <returns>The request.</returns>
     [HttpPost("{requestId:int}/Decline")]
-    public Task<ActionResult<MyRequestDto?>> Decline([FromRoute] int requestId, CancellationToken ct) => Update(requestId, "decline", ct);
+    public Task<ActionResult<RequestDto?>> Decline([FromRoute] int requestId, CancellationToken ct) => Update(requestId, "decline", ct);
 
     /// <summary>Sends a failed request to Sonarr/Radarr again (needs Seerr's Manage requests).</summary>
     /// <param name="requestId">Seerr request id.</param>
     /// <param name="ct">Cancellation.</param>
     /// <returns>The request.</returns>
     [HttpPost("{requestId:int}/Retry")]
-    public Task<ActionResult<MyRequestDto?>> Retry([FromRoute] int requestId, CancellationToken ct) => Update(requestId, "retry", ct);
+    public Task<ActionResult<RequestDto?>> Retry([FromRoute] int requestId, CancellationToken ct) => Update(requestId, "retry", ct);
 
     /// <summary>Withdraws the person's own waiting request, or removes any request for request managers.</summary>
     /// <param name="requestId">Seerr request id.</param>
@@ -179,7 +179,7 @@ public class RequestsController : ControllerBase
         return result.Result ?? NoContent();
     }
 
-    private Task<ActionResult<MyRequestDto?>> Update(int requestId, string action, CancellationToken ct)
+    private Task<ActionResult<RequestDto?>> Update(int requestId, string action, CancellationToken ct)
         => Run((_, me) => _seerr.UpdateRequestAsync(requestId, action, me ?? throw NoAccount(), ct), ct);
 
     private static SeerrException NoAccount() => new("This profile has no Seerr account. Ask an admin to link one.", HttpStatusCode.Forbidden);
