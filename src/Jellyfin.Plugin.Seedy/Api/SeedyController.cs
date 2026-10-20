@@ -67,11 +67,18 @@ public class SeedyController : ControllerBase
 
     // ── Public: what the sign-in page needs ──
 
-    /// <summary>Branding for the sign-in page and header.</summary>
-    /// <returns>Branding.</returns>
+    /// <summary>Branding for the sign-in page and header. The Android apps also read it to find out whether a server
+    /// runs Seedy (a 404 means plain Jellyfin) and which API it speaks.</summary>
+    /// <returns>Branding, the plugin version and the API level.</returns>
     [HttpGet("Client")]
     [AllowAnonymous]
-    public ActionResult<BrandingDto> GetClient() => ConfigMapper.Branding(ConfigMapper.Current);
+    public ActionResult<BrandingDto> GetClient()
+    {
+        var branding = ConfigMapper.Branding(ConfigMapper.Current);
+        branding.Version = Plugin.Instance?.VersionString ?? "0.1.0";
+        branding.Api = ConfigMapper.ApiLevel;
+        return branding;
+    }
 
     /// <summary>The uploaded logo.</summary>
     /// <returns>The image.</returns>
