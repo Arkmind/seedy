@@ -161,21 +161,39 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
         ) {
             Row(Modifier.fillMaxWidth().padding(bottom = 16.bp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(24.bp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.bp)) {
-                    if (item?.type == BaseItemKind.EPISODE) {
+                    if (state.live) {
+                        SText(
+                            t("Live · {channel}", "channel" to io.github.arkmind.seedy.core.livetv.LiveTv.cleanName(item?.name.orEmpty())),
+                            size = 17.bsp, weight = 700, tracking = 0.08f, color = Color(0xFFFF5C5C), uppercase = true, maxLines = 1,
+                        )
+                    } else if (item?.type == BaseItemKind.EPISODE) {
                         SText(
                             "${item.seriesName.orEmpty()} · S${item.parentIndexNumber ?: 0} E${item.indexNumber ?: 0}",
                             size = 17.bsp, weight = 700, tracking = 0.08f, color = SeedyColors.Text2, uppercase = true, maxLines = 1,
                         )
                     }
-                    SText(item?.name.orEmpty(), size = 48.bsp, weight = 800, lineHeight = 1.05f, color = SeedyColors.White, maxLines = 1)
-                    SText(endsLine(state), size = 18.bsp, color = SeedyColors.Text2)
+                    SText(if (state.live) state.program?.name ?: item?.name.orEmpty() else item?.name.orEmpty(), size = 48.bsp, weight = 800, lineHeight = 1.05f, color = SeedyColors.White, maxLines = 1)
+                    SText(if (state.live) liveLine(state) else endsLine(state), size = 18.bsp, color = SeedyColors.Text2)
                 }
                 if (state.skip != null) SkipButton(state, actions.onSkip, focus.skip)
             }
-            Scrubber(state, seekBack, seekForward, actions, focus.scrubber)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TimeText(clock(state.positionMs))
-                TimeText(clock(state.durationMs))
+            if (state.live) {
+                val p = state.program
+                Box(Modifier.fillMaxWidth().height(32.bp), contentAlignment = Alignment.CenterStart) {
+                    Box(Modifier.fillMaxWidth().height(10.bp).clip(RoundedCornerShape(5.bp)).background(Color.White.copy(alpha = 0.2f))) {
+                        Box(Modifier.fillMaxHeight().fillMaxWidth(io.github.arkmind.seedy.core.livetv.LiveTv.fraction(p, java.time.LocalDateTime.now())).background(Color(0xFFD63C3C)))
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TimeText(io.github.arkmind.seedy.core.livetv.LiveTv.clockOf(p?.startDate))
+                    TimeText(io.github.arkmind.seedy.core.livetv.LiveTv.clockOf(p?.endDate))
+                }
+            } else {
+                Scrubber(state, seekBack, seekForward, actions, focus.scrubber)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TimeText(clock(state.positionMs))
+                    TimeText(clock(state.durationMs))
+                }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.bp), verticalAlignment = Alignment.CenterVertically) {
@@ -186,8 +204,10 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
                             contentAlignment = Alignment.Center,
                         ) { SIcon(if (state.playing) WebIcons.Pause else WebIcons.Play, size = 28.bp, color = SeedyColors.InkInverse) }
                     }
-                    ToolButton({ actions.onSeekBy(-seekBack * 1000L) }) { ink -> SeekGlyph(back = true, seconds = seekBack, size = 34.bp, color = ink) }
-                    ToolButton({ actions.onSeekBy(seekForward * 1000L) }) { ink -> SeekGlyph(back = false, seconds = seekForward, size = 34.bp, color = ink) }
+                    if (!state.live) {
+                        ToolButton({ actions.onSeekBy(-seekBack * 1000L) }) { ink -> SeekGlyph(back = true, seconds = seekBack, size = 34.bp, color = ink) }
+                        ToolButton({ actions.onSeekBy(seekForward * 1000L) }) { ink -> SeekGlyph(back = false, seconds = seekForward, size = 34.bp, color = ink) }
+                    }
                     if (state.next != null) ToolButton(actions.onNext) { ink -> SIcon(TvPlayerIcons.Next, size = 30.bp, color = ink) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.bp), verticalAlignment = Alignment.CenterVertically) {
@@ -211,6 +231,12 @@ private fun endsLine(state: PlayerState): String {
     val leftMs = ((state.durationMs - state.positionMs) / state.speed.coerceAtLeast(0.25f)).toLong().coerceAtLeast(0)
     val ends = LocalTime.now().plusSeconds(leftMs / 1000).format(DateTimeFormatter.ofPattern("HH:mm"))
     return join(t("Ends at {time}", "time" to ends), t("{time} left", "time" to duration(leftMs / 1000.0)))
+}
+
+/** A live programme's line: "20:45 – 22:45 · 55 min left". */
+private fun liveLine(state: PlayerState): String {
+    val p = state.program ?: return ""
+    return join(io.github.arkmind.seedy.core.livetv.LiveTv.timeRange(p), io.github.arkmind.seedy.core.livetv.LiveTv.leftLabel(p, java.time.LocalDateTime.now()))
 }
 
 @Composable

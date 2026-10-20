@@ -28,6 +28,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.libraryApi
+import org.jellyfin.sdk.api.client.extensions.liveTvApi
 import org.jellyfin.sdk.api.client.extensions.mediaSegmentApi
 import org.jellyfin.sdk.api.client.extensions.showApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -72,7 +73,11 @@ data class PlayerState(
     /** The show's seasons and the playing episode's season, for the Episodes panel. */
     val seasons: List<BaseItemDto> = emptyList(),
     val episodes: List<BaseItemDto> = emptyList(),
-)
+    /** A live channel's programme on now (refreshed every minute). */
+    val program: BaseItemDto? = null,
+) {
+    val live: Boolean get() = item?.type == BaseItemKind.TV_CHANNEL
+}
 
 /**
  * One playback session: asks the server for a stream fitted to this device, plays it in ExoPlayer, keeps the server
@@ -84,7 +89,11 @@ class PlayerController(context: Context, private val session: UserSession, priva
     private val _state = MutableStateFlow(PlayerState())
     val state: StateFlow<PlayerState> = _state.asStateFlow()
 
-    private val streams = Streams(session) { Profiles.build(caps, _state.value.quality.bitrate) }
+    private val streams = Streams(
+        session,
+        profile = { Profiles.build(caps, _state.value.quality.bitrate) },
+        liveProfile = { Profiles.buildLive(caps, _state.value.quality.bitrate) },
+    )
     private val prefs = session.seedy?.prefs?.playback
 
     val exo: ExoPlayer = ExoPlayer.Builder(context)
@@ -145,6 +154,7 @@ class PlayerController(context: Context, private val session: UserSession, priva
             }.getOrNull()
             if (loaded == null) return@launch _state.update { it.copy(loading = false, problem = "network") }
             start(loaded)
+            if (loaded.type == BaseItemKind.TV_CHANNEL) followProgram(loaded.id)
         }
     }
 
@@ -185,7 +195,7 @@ class PlayerController(context: Context, private val session: UserSession, priva
         exo.setMediaItem(media, opts.startTicks / 10_000)
         exo.prepare()
         exo.playWhenReady = if (keepPaused) wasPlaying else true
-        if (old != null && old.playSessionId != s.playSessionId) scope.launch { streams.stopEncoding(old) }
+        if (old != null && old.playSessionId != s.playSessionId) scope.launch { streams.stopEncoding(old); streams.closeLive(old) }
         _state.update { st ->
             st.copy(
                 audio = s.audioStreams, subtitles = s.subtitleStreams, audioIndex = s.audioIndex, subtitleIndex = s.subtitleIndex,
@@ -412,6 +422,17 @@ class PlayerController(context: Context, private val session: UserSession, priva
         }
     }
 
+    /** A channel's programme on now, refreshed every minute while it plays. */
+    private fun followProgram(channelId: UUID) {
+        jobs += scope.launch {
+            while (isActive) {
+                val program = runCatching { withIo { session.api.liveTvApi.getChannel(channelId, session.userId).content.currentProgram } }.getOrNull()
+                _state.update { it.copy(program = program ?: it.program) }
+                delay(60_000)
+            }
+        }
+    }
+
     /** The episodes of another season, for the Episodes panel's season switcher. */
     suspend fun season(seasonId: UUID): List<BaseItemDto> {
         val seriesId = item?.seriesId ?: return emptyList()
@@ -440,6 +461,7 @@ class PlayerController(context: Context, private val session: UserSession, priva
         if (started) reportNow { streams.reportStopped(it) }
         started = false
         streams.stopEncoding(s)
+        streams.closeLive(s)
         stream = null
     }
 
@@ -457,6 +479,7 @@ class PlayerController(context: Context, private val session: UserSession, priva
                 withContext(NonCancellable) {
                     if (started) streams.reportStopped(Streams.Report(it, s, pos * 10_000, paused, speed, _state.value.subtitleIndex))
                     streams.stopEncoding(s)
+                    streams.closeLive(s)
                 }
             }
         }

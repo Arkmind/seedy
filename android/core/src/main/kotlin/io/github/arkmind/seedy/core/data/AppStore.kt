@@ -22,6 +22,8 @@ data class AppData(
     val currentServerId: String? = null,
     /** The last language shown, so the first screen of the next launch is already in it. */
     val lang: String? = null,
+    /** The live channel each profile watched last ("serverId:userId" → channel id), for Live TV's "Last watched". */
+    val lastChannel: Map<String, String> = emptyMap(),
 ) {
     val currentServer: SavedServer? get() = servers.firstOrNull { it.id == currentServerId }
 }

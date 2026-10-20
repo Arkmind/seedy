@@ -149,6 +149,20 @@ object Profiles {
         )
     }
 
+    /**
+     * Live channels convert to HLS in MPEG-TS segments: Jellyfin offers fMP4 only for tuners that allow it and
+     * otherwise falls back to a progressive stream, so the live profile asks for TS with H.264 and the audio TS carries.
+     */
+    fun buildLive(caps: Capabilities, maxBitrate: Int): DeviceProfile {
+        val base = build(caps, maxBitrate)
+        val audio = listOf("aac", "mp3", "ac3", "eac3").filter { it == "aac" || it == "mp3" || it in caps.audioCodecs }.joinToString(",")
+        return base.copy(
+            transcodingProfiles = base.transcodingProfiles.map {
+                if (it.type == DlnaProfileType.VIDEO && it.protocol == MediaStreamProtocol.HLS) it.copy(container = "ts", videoCodec = "h264", audioCodec = audio) else it
+            },
+        )
+    }
+
     private fun sizeConditions(caps: Capabilities, codec: String): List<ProfileCondition> {
         val (w, h) = caps.maxSize[codec] ?: return emptyList()
         return listOf(

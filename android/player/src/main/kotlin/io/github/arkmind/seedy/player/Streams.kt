@@ -4,6 +4,7 @@ import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.delete
+import org.jellyfin.sdk.api.client.extensions.post
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
 import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -55,7 +56,11 @@ data class ActiveStream(
 }
 
 /** PlaybackInfo → a stream URL, and the Sessions/Playing reports around it (web/src/player/playback.ts, for Android). */
-class Streams(private val session: UserSession, private val profile: () -> DeviceProfile) {
+class Streams(
+    private val session: UserSession,
+    private val profile: () -> DeviceProfile,
+    private val liveProfile: () -> DeviceProfile = profile,
+) {
     private val api get() = session.api
     private val base get() = api.baseUrl.orEmpty().trimEnd('/')
     private val token get() = api.accessToken.orEmpty()
@@ -74,7 +79,7 @@ class Streams(private val session: UserSession, private val profile: () -> Devic
                 audioStreamIndex = opts.audioIndex,
                 subtitleStreamIndex = opts.subtitleIndex,
                 mediaSourceId = msId,
-                deviceProfile = profile(),
+                deviceProfile = if (live) liveProfile() else profile(),
                 enableDirectPlay = !live && !opts.forceTranscode,
                 enableDirectStream = true,
                 enableTranscoding = true,
@@ -170,6 +175,12 @@ class Streams(private val session: UserSession, private val profile: () -> Devic
     suspend fun stopEncoding(stream: ActiveStream) = quietly {
         if (stream.method == PlayMethod.DIRECT_PLAY) return@quietly
         api.delete<Unit>("/Videos/ActiveEncodings", queryParameters = mapOf("deviceId" to deviceId, "playSessionId" to stream.playSessionId))
+    }
+
+    /** Frees the tuner a live channel holds. */
+    suspend fun closeLive(stream: ActiveStream) = quietly {
+        val id = stream.source.liveStreamId ?: return@quietly
+        api.post<Unit>("/LiveStreams/Close", queryParameters = mapOf("liveStreamId" to id))
     }
 
     /** One report's facts: what plays, where it is, and how. */

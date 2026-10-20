@@ -159,7 +159,7 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
             horizontalArrangement = Arrangement.spacedBy(44.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
+            if (!state.live) Box(
                 Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).background(SeedyColors.Bg.copy(alpha = 0.45f)).tap { actions.onSeekBy(-seekBack * 1000L) },
                 contentAlignment = Alignment.Center,
             ) { SeekGlyph(back = true, seconds = seekBack, size = 30.dp, color = SeedyColors.Inverse) }
@@ -167,7 +167,7 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
                 Modifier.size(68.dp).clip(RoundedCornerShape(19.dp)).background(SeedyColors.Inverse).tap(onClick = actions.onPlayPause),
                 contentAlignment = Alignment.Center,
             ) { SIcon(if (state.playing) WebIcons.Pause else WebIcons.Play, size = 28.dp, color = SeedyColors.InkInverse) }
-            Box(
+            if (!state.live) Box(
                 Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).background(SeedyColors.Bg.copy(alpha = 0.45f)).tap { actions.onSeekBy(seekForward * 1000L) },
                 contentAlignment = Alignment.Center,
             ) { SeekGlyph(back = false, seconds = seekForward, size = 30.dp, color = SeedyColors.Inverse) }
@@ -177,16 +177,16 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     overline(item)?.let { SText(it, size = 11.sp, weight = 700, tracking = 0.08f, color = SeedyColors.Text2, uppercase = true, maxLines = 1) }
-                    SText(item?.name.orEmpty(), size = 18.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
+                    SText(if (state.live) state.program?.name ?: item?.name.orEmpty() else item?.name.orEmpty(), size = 18.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
                 }
                 if (state.skip != null) SkipButton(state, actions.onSkip)
             }
-            Scrubber(state, actions.onSeekTo)
+            if (state.live) LiveProgress(state) else Scrubber(state, actions.onSeekTo)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 val episode = item?.type == BaseItemKind.EPISODE
                 if (episode) Action(PlayerIcons.Episodes, t("Episodes")) { actions.onPanel(PlayerPanel.Episodes) }
                 Action(PlayerIcons.Tracks, t("Subtitles and audio"), dot = state.subtitleIndex >= 0) { actions.onPanel(PlayerPanel.Tracks) }
-                Action(PlayerIcons.Speed, t("Speed {speed}", "speed" to speedLabel(state.speed))) { actions.onPanel(PlayerPanel.Speed) }
+                if (!state.live) Action(PlayerIcons.Speed, t("Speed {speed}", "speed" to speedLabel(state.speed))) { actions.onPanel(PlayerPanel.Speed) }
                 if (state.next != null) Action(PlayerIcons.Next, t("Next episode"), onClick = actions.onNext)
             }
         }
@@ -199,6 +199,7 @@ private fun heading(item: BaseItemDto?): String = item?.seriesName ?: item?.name
 
 private fun subheading(item: BaseItemDto?): String? = when {
     item == null -> null
+    item.type == BaseItemKind.TV_CHANNEL -> item.currentProgram?.let(io.github.arkmind.seedy.core.livetv.LiveTv::timeRange)
     item.type == BaseItemKind.EPISODE && item.parentIndexNumber != null && item.indexNumber != null ->
         t("Season {s} · Episode {e}", "s" to item.parentIndexNumber!!, "e" to item.indexNumber!!)
     else -> item.productionYear?.toString()
@@ -206,6 +207,7 @@ private fun subheading(item: BaseItemDto?): String? = when {
 
 private fun overline(item: BaseItemDto?): String? = when {
     item == null -> null
+    item.type == BaseItemKind.TV_CHANNEL -> t("Live · {channel}", "channel" to io.github.arkmind.seedy.core.livetv.LiveTv.cleanName(item.name.orEmpty()))
     item.type == BaseItemKind.EPISODE -> "${item.seriesName.orEmpty()} · S${item.parentIndexNumber ?: 0} E${item.indexNumber ?: 0}"
     else -> null
 }
@@ -302,6 +304,20 @@ private fun Scrubber(state: PlayerState, onSeekTo: (Long) -> Unit) {
             )
         }
         TimeText(clock(state.durationMs))
+    }
+}
+
+/** A live channel's programme: how far into it, with its start and end on either side. */
+@Composable
+private fun LiveProgress(state: PlayerState) {
+    val p = state.program
+    val now = java.time.LocalDateTime.now()
+    Row(Modifier.height(28.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        TimeText(io.github.arkmind.seedy.core.livetv.LiveTv.clockOf(p?.startDate))
+        Box(Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = 0.2f))) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(io.github.arkmind.seedy.core.livetv.LiveTv.fraction(p, now)).background(Color(0xFFD63C3C)))
+        }
+        TimeText(io.github.arkmind.seedy.core.livetv.LiveTv.clockOf(p?.endDate))
     }
 }
 
