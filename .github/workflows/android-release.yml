@@ -17,6 +17,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      HAS_PLAY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
     defaults:
       run:
         working-directory: android
@@ -53,9 +55,7 @@ jobs:
         run: gh release upload "$GITHUB_REF_NAME" "seedy-android-$VERSION.apk" --clobber
 
       - name: Send the bundle to Google Play (internal track)
-        if: ${{ env.PLAY_JSON != '' }}
-        env:
-          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        if: env.HAS_PLAY == 'true'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
