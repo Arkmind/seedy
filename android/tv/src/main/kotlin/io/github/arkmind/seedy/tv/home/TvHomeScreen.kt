@@ -2,7 +2,11 @@ package io.github.arkmind.seedy.tv.home
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,6 +82,12 @@ import kotlin.math.min
 /** Space kept around a card row so the focused card's ring isn't clipped (ring 9 px, plus the focused card's growth). */
 private val RingRoom = 12.bp
 
+/** Lets the home rows' list ignore focus; [TvHomeScreen] scrolls it to the row in use itself. */
+@OptIn(ExperimentalFoundationApi::class)
+private object NoFocusScroll : BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
+}
+
 /** What the hero shows: a title and why it's there (the focused card's row, or Seedy's featured reason). */
 private data class HeroPick(val item: BaseItemDto, val reason: String)
 
@@ -85,6 +95,7 @@ private data class HeroPick(val item: BaseItemDto, val reason: String)
  * Board "Android TV · Home": the hero describes whatever the remote is on, over that title's backdrop; the rows sit
  * under it and scroll so the row in use is always the first one.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TvHomeScreen(state: HomeViewModel.State, onOpen: (BaseItemDto) -> Unit, firstCard: FocusRequester = remember { FocusRequester() }) {
     val rows = state.visibleRows
@@ -101,6 +112,10 @@ fun TvHomeScreen(state: HomeViewModel.State, onOpen: (BaseItemDto) -> Unit, firs
         Column(Modifier.fillMaxSize().padding(start = RailInset, top = 104.bp), verticalArrangement = Arrangement.spacedBy(44.bp - RingRoom)) {
             Hero(hero)
             // Rows are 44 px apart on the board; each card row keeps 12 px above and below for the focus ring, taken from the gaps.
+            // The list doesn't follow focus by itself (it would scroll just enough to show the card, leaving the row
+            // above half in view): the row in use is scrolled to the top instead, title and all.
+            val cardRows = LocalBringIntoViewSpec.current
+            CompositionLocalProvider(LocalBringIntoViewSpec provides NoFocusScroll) {
             LazyColumn(Modifier.fillMaxWidth().weight(1f), state = list, verticalArrangement = Arrangement.spacedBy(44.bp - RingRoom * 2), contentPadding = PaddingValues(bottom = 200.bp)) {
                 itemsIndexed(rows, key = { _, r -> r.row.id }) { index, row ->
                     TvRow(
@@ -115,8 +130,10 @@ fun TvHomeScreen(state: HomeViewModel.State, onOpen: (BaseItemDto) -> Unit, firs
                             }
                         },
                         onOpen = onOpen,
+                        cardScroll = cardRows,
                     )
                 }
+            }
             }
         }
     }
@@ -186,12 +203,16 @@ private fun Hero(pick: HeroPick?) {
     }
 }
 
-/** 80 px, or smaller so the longest word stays on one line in the hero's 900 px. */
+/**
+ * 80 px, or smaller (down to 52 px) so the title fits the hero's 900 px on one line: two lines would push the
+ * overview out of the hero. Noto Sans Black capitals run about 0.72 em.
+ */
 private fun heroSize(title: String): TextUnit {
-    val longest = title.split(Regex("\\s+")).maxOfOrNull { it.length }?.coerceAtLeast(4) ?: 4
-    return (min(80f, 900f / (longest * 0.72f)) / 2f).sp
+    val fit = 900f / (title.length.coerceAtLeast(4) * 0.72f)
+    return (fit.coerceIn(52f, 80f) / 2f).sp
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TvRow(
     row: HomeViewModel.Row,
@@ -199,10 +220,12 @@ private fun TvRow(
     firstCard: FocusRequester?,
     onFocus: (BaseItemDto) -> Unit,
     onOpen: (BaseItemDto) -> Unit,
+    cardScroll: BringIntoViewSpec,
 ) {
     Column(Modifier.padding(top = RingRoom), verticalArrangement = Arrangement.spacedBy(18.bp - RingRoom)) {
         SText(row.title, size = 24.bsp, weight = 800, color = if (active) SeedyColors.White else SeedyColors.TextHero, maxLines = 1)
         val items = row.items.orEmpty()
+        CompositionLocalProvider(LocalBringIntoViewSpec provides cardScroll) {
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(28.bp),
             verticalAlignment = Alignment.CenterVertically,
@@ -217,6 +240,7 @@ private fun TvRow(
                     onClick = { onOpen(item) },
                 )
             }
+        }
         }
     }
 }

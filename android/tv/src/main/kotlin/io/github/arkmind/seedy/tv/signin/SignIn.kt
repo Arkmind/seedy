@@ -1,10 +1,20 @@
 package io.github.arkmind.seedy.tv.signin
 
 import androidx.compose.foundation.background
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -69,20 +79,32 @@ private fun TvBrand(name: String) {
     BrandMark(name, markSize = 50.bp, radius = 14.bp, letterSize = 26.bsp, wordSize = 36.bsp, gap = 16.bp)
 }
 
-/** The sign-in pages' frame: brand on top, the page's heading 120 px under it, actions at the bottom. */
+/**
+ * The sign-in pages' frame: brand on top, the page's heading 120 px under it, actions at the bottom. While the
+ * system keyboard is up (it covers the lower half of the screen) the brand and the spacing go, so the field being
+ * typed in stays above it.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Frame(brand: String, title: String, bottom: @Composable () -> Unit = {}, content: @Composable () -> Unit) {
+    val typing = WindowInsets.isImeVisible
     Column(
-        Modifier.fillMaxSize().background(SeedyColors.Bg).padding(start = 96.bp, end = 96.bp, top = 96.bp, bottom = 72.bp),
+        Modifier.fillMaxSize().background(SeedyColors.Bg).padding(start = 96.bp, end = 96.bp, top = if (typing) 48.bp else 96.bp, bottom = 72.bp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        TvBrand(brand)
-        SText(title, Modifier.padding(top = 120.bp), size = 56.bsp, weight = 900, tracking = -0.02f, lineHeight = 1f, color = SeedyColors.White)
-        content()
+        if (!typing) TvBrand(brand)
+        SText(
+            title, Modifier.padding(top = if (typing) 0.bp else 120.bp),
+            size = if (typing) 36.bsp else 56.bsp, weight = 900, tracking = -0.02f, lineHeight = 1f, color = SeedyColors.White,
+        )
+        CompositionLocalProvider(LocalTyping provides typing) { content() }
         Spacer(Modifier.weight(1f))
-        bottom()
+        if (!typing) bottom()
     }
 }
+
+/** True while the system keyboard is up: pages leave out what would push the field under it. */
+private val LocalTyping = staticCompositionLocalOf { false }
 
 /** Board "Android TV · Who is watching". */
 @Composable
@@ -110,7 +132,12 @@ fun TvProfilesScreen(
             )
         },
     ) {
-        LazyRow(Modifier.padding(top = 88.bp), horizontalArrangement = Arrangement.spacedBy(56.bp)) {
+        // 24 px around the tiles so the focused one's zoom and ring aren't clipped, taken from the 88 px above.
+        LazyRow(
+            Modifier.padding(top = 88.bp - 24.bp),
+            horizontalArrangement = Arrangement.spacedBy(56.bp),
+            contentPadding = PaddingValues(24.bp),
+        ) {
             items(state.profiles, key = { it.userId }) { p ->
                 ProfileTile(
                     name = p.name,
@@ -143,7 +170,10 @@ private fun ProfileTile(name: String, onClick: () -> Unit, onFocused: () -> Unit
     }
 }
 
-/** A 76 px text well for the remote: the system keyboard opens on OK; the white ring shows where the remote is. */
+/**
+ * A 76 px text well for the remote. Landing on it only shows the white ring; OK opens the system keyboard, and its
+ * Done (or Back) closes it and leaves the remote on the field.
+ */
 @Composable
 private fun TvField(
     value: String,
@@ -154,12 +184,26 @@ private fun TvField(
     keyboard: KeyboardType = KeyboardType.Text,
     onDone: () -> Unit = {},
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
+    var editing by remember { mutableStateOf(false) }
+    val outer = remember { FocusRequester() }
+    val inner = remember { FocusRequester() }
+    val outerInteraction = remember { MutableInteractionSource() }
+    val innerInteraction = remember { MutableInteractionSource() }
+    val outerFocused by outerInteraction.collectIsFocusedAsState()
+    val innerFocused by innerInteraction.collectIsFocusedAsState()
+    val focused = outerFocused || innerFocused
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val stop = {
+        editing = false
+        keyboardController?.hide()
+        outer.requestFocus()
+    }
     Box(
         modifier.width(720.bp).height(76.bp).focusRing(focused, radius = 20.bp, gap = 4.bp, ring = 5.bp)
             .clip(RoundedCornerShape(20.bp)).background(SeedyColors.Row)
-            .then(if (focused) Modifier.border(2.bp, LocalAccent.current, RoundedCornerShape(20.bp)) else Modifier)
+            .then(if (innerFocused) Modifier.border(2.bp, LocalAccent.current, RoundedCornerShape(20.bp)) else Modifier)
+            .focusRequester(outer)
+            .clickable(interactionSource = outerInteraction, indication = null) { editing = true }
             .padding(horizontal = 28.bp),
         contentAlignment = Alignment.CenterStart,
     ) {
@@ -168,7 +212,7 @@ private fun TvField(
             value = value,
             onValueChange = onChange,
             singleLine = true,
-            interactionSource = interaction,
+            interactionSource = innerInteraction,
             textStyle = BaseText.copy(
                 fontSize = 24.bsp, fontWeight = FontWeight(700), color = SeedyColors.White,
                 letterSpacing = if (password) 0.1.em else 0.em,
@@ -176,10 +220,18 @@ private fun TvField(
             cursorBrush = SolidColor(LocalAccent.current),
             visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(keyboardType = if (password) KeyboardType.Password else keyboard, imeAction = ImeAction.Done, autoCorrectEnabled = false),
-            keyboardActions = KeyboardActions(onDone = { onDone() }),
-            modifier = Modifier.fillMaxWidth(),
+            keyboardActions = KeyboardActions(onDone = { stop(); onDone() }),
+            modifier = Modifier.fillMaxWidth().focusRequester(inner).focusProperties { canFocus = editing }
+                .onFocusChanged { if (!it.isFocused && editing) editing = false },
         )
     }
+    LaunchedEffect(editing) {
+        if (editing) {
+            inner.focusSoon()
+            keyboardController?.show()
+        }
+    }
+    BackHandler(enabled = editing) { stop() }
 }
 
 /** Signing in on the TV (no board: built from "Who is watching"): the password, or Quick Connect's code. */
@@ -201,12 +253,12 @@ fun TvPasswordScreen(
             size = 19.bsp, color = SeedyColors.Text3,
         )
     }) {
-        if (profile != null) {
+        if (profile != null && !LocalTyping.current) {
             Box(Modifier.padding(top = 56.bp)) {
                 ProfileSquare(profile.name, profile.imageUrl, profile.colour, size = 160.bp, radius = 36.bp, letterSize = 68.bsp)
             }
         }
-        Column(Modifier.padding(top = 56.bp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.bp)) {
+        Column(Modifier.padding(top = if (LocalTyping.current) 28.bp else 56.bp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.bp)) {
             if (state.code != null) {
                 QuickConnectCode(state.code!!)
             } else {
@@ -255,8 +307,8 @@ fun TvAddServerScreen(state: AddServerViewModel.State, onAdd: (String) -> Unit, 
     Frame("Seedy", t("Add your server"), bottom = {
         SText(t("Seedy plays from your Jellyfin server."), size = 19.bsp, color = SeedyColors.Text3)
     }) {
-        Column(Modifier.padding(top = 72.bp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.bp)) {
-            if (state.found.isNotEmpty()) {
+        Column(Modifier.padding(top = if (LocalTyping.current) 28.bp else 72.bp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.bp)) {
+            if (state.found.isNotEmpty() && !LocalTyping.current) {
                 Row(horizontalArrangement = Arrangement.spacedBy(24.bp)) {
                     state.found.forEachIndexed { i, s ->
                         TvButton(s.name, { onAdd(s.address) }, if (i == 0) Modifier.focusRequester(first) else Modifier, icon = AppIcons.Server)
