@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.tv.livetv
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
@@ -332,8 +334,15 @@ private fun GuideRow(
             ChannelLogo(c.item, 46.bp, 12.bp, 16.bsp)
             SText(c.label, size = 19.bsp, weight = 700, color = SeedyColors.White, maxLines = 1)
         }
-        Box(Modifier.weight(1f).fillMaxHeight().clipToBounds()) {
-            val programs = state.programs[c.id].orEmpty().ifEmpty { listOfNotNull(c.current) }
+        // Coming in from the row above or below, the remote lands on what's airing now.
+        val airingCell = remember { FocusRequester() }
+        val programs = state.programs[c.id].orEmpty().ifEmpty { listOfNotNull(c.current) }
+        val hasAiring = programs.any { LiveTv.isAiring(it, state.now) }
+        Box(
+            Modifier.weight(1f).fillMaxHeight().clipToBounds()
+                .focusProperties { if (hasAiring) onEnter = { airingCell.requestFocus() } }
+                .focusGroup(),
+        ) {
             if (programs.isEmpty()) {
                 // No guide data for this channel: one cell across, so it can still be watched.
                 TvPressable(onWatch, Modifier.fillMaxSize().padding(start = 3.bp, end = 3.bp, top = 6.bp, bottom = 8.bp).then(firstModifier).onFocusChanged { if (it.isFocused) onFocus(null, offset, offset + SpanMinutes) }) { f ->
@@ -353,9 +362,11 @@ private fun GuideRow(
                 val airing = LiveTv.isAiring(p, state.now)
                 var longPressed by remember { mutableStateOf(false) }
                 TvPressable(
-                    onClick = { if (airing) onWatch() },
+                    // OK watches the channel, whichever programme is under the remote; holding OK records that one.
+                    onClick = onWatch,
                     modifier = Modifier.offset(x = left).width(width).fillMaxHeight().padding(start = 3.bp, end = 3.bp, top = 6.bp, bottom = 8.bp)
                         .then(if (i == 0) firstModifier else Modifier)
+                        .then(if (airing) Modifier.focusRequester(airingCell) else Modifier)
                         .onFocusChanged { if (it.isFocused) onFocus(p, a, end) }
                         .onPreviewKeyEvent { e ->
                             val center = e.key == Key.DirectionCenter || e.key == Key.Enter

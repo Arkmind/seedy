@@ -139,7 +139,7 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(3.bp)) {
-                SText(item?.seriesName ?: item?.name.orEmpty(), size = 20.bsp, weight = 800, color = SeedyColors.White, maxLines = 1)
+                SText(if (state.live) io.github.arkmind.seedy.core.livetv.LiveTv.cleanName(item?.name.orEmpty()) else item?.seriesName ?: item?.name.orEmpty(), size = 20.bsp, weight = 800, color = SeedyColors.White, maxLines = 1)
                 if (item?.type == BaseItemKind.EPISODE) {
                     SText(t("Season {s} · Episode {e}", "s" to (item.parentIndexNumber ?: 0), "e" to (item.indexNumber ?: 0)), size = 17.bsp, color = SeedyColors.Text2)
                 }

@@ -195,7 +195,8 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
 
 fun speedLabel(speed: Float): String = (if (speed % 1f == 0f) speed.toInt().toString() else speed.toString().trimEnd('0')) + "×"
 
-private fun heading(item: BaseItemDto?): String = item?.seriesName ?: item?.name.orEmpty()
+private fun heading(item: BaseItemDto?): String =
+    if (item?.type == BaseItemKind.TV_CHANNEL) io.github.arkmind.seedy.core.livetv.LiveTv.cleanName(item.name.orEmpty()) else item?.seriesName ?: item?.name.orEmpty()
 
 private fun subheading(item: BaseItemDto?): String? = when {
     item == null -> null
