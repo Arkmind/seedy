@@ -104,7 +104,7 @@ class TvDetailsActions(
 
 /**
  * Board "Android TV · Series details": the backdrop across the screen, the title and its facts, Resume, Episodes,
- * Trailer, Request and the heart (then Watched and Shuffle); the progress; the seasons as tabs (missing ones dashed)
+ * Trailer, Request and the heart, as on the board; the progress; the seasons as tabs (missing ones dashed)
  * and the open season's episodes. Movies show "More like this" there; collections and people their titles.
  */
 @Composable
@@ -217,9 +217,6 @@ private fun Hero(
                 }
                 val fav = item.userData?.isFavorite == true
                 HeroButton(null, if (fav) AppIcons.HeartFilled else WebIcons.Heart, actions.onFavorite)
-                val played = item.userData?.played == true
-                HeroButton(null, WebIcons.Check, actions.onPlayed, iconColor = if (played) accent else null)
-                if (isSeries || isList) HeroButton(null, WebIcons.Shuffle, actions.onShuffle)
             }
             Progress(state, item, canRequest)
         }

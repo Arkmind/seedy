@@ -202,7 +202,9 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
         )
     }
     val stack = remember(session) { mutableStateListOf<Any>(TabsKey) }
-    val nav = remember(stack) { MobileNav(stack) }
+    var tab by rememberSaveable { mutableStateOf(Tab.Home) }
+    val nav = remember(stack) { MobileNav(stack) { tab = it } }
+    val tabs = if (viewer.requests) Tab.entries else Tab.entries - Tab.Requests
     val account = AccountActions(
         onSwitchProfile = { scope.launch { core.sessions.switchProfile() } },
         onSignOut = { scope.launch { core.sessions.signOut() } },
@@ -215,8 +217,6 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
             entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
             entryProvider = entryProvider {
                 entry<TabsKey> {
-                    val tabs = if (viewer.requests) Tab.entries else Tab.entries - Tab.Requests
-                    var tab by rememberSaveable { mutableStateOf(Tab.Home) }
                     Box(Modifier.fillMaxSize()) {
                         when (tab) {
                             Tab.Home -> {
@@ -236,14 +236,24 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                         TabBar(tabs, tab, { tab = it }, Modifier.align(Alignment.BottomCenter))
                     }
                 }
-                entry<Route.Details> { DetailsRoute(it.id) }
-                entry<Route.Library> { LibraryRoute(it.id) }
+                // The boards keep the tab bar under these pages, lit on the tab they were opened from.
+                entry<Route.Details> { WithTabBar(tabs, tab, nav) { DetailsRoute(it.id) } }
+                entry<Route.Library> { WithTabBar(tabs, tab, nav) { LibraryRoute(it.id) } }
                 entry<Route.Search> { SearchRoute() }
                 entry<Route.LiveTv> { LiveTvRoute() }
-                entry<Route.Settings> { SettingsRoute(appVersion) }
+                entry<Route.Settings> { WithTabBar(tabs, tab, nav) { SettingsRoute(appVersion) } }
                 entry<Route.Player> { PlayerRoute(it.id) }
                 entry<Route.SeerrTitle> { SeerrTitleRoute(it.mediaType, it.tmdbId) }
             },
         )
+    }
+}
+
+/** A page with the tab bar under it; a tab goes back to the tabs on that tab. */
+@Composable
+private fun WithTabBar(tabs: List<Tab>, current: Tab, nav: MobileNav, content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
+        Box(Modifier.weight(1f)) { content() }
+        TabBar(tabs, current, nav::toTab)
     }
 }

@@ -19,7 +19,13 @@ sealed interface Route {
 }
 
 /** Moves between pages; every screen reaches it through [LocalMobileNav]. */
-class MobileNav(private val stack: SnapshotStateList<Any>) {
+class MobileNav(private val stack: SnapshotStateList<Any>, private val selectTab: (io.github.arkmind.seedy.mobile.parts.Tab) -> Unit = {}) {
+    /** Back to the tabs, on [tab] (the tab bar under a page). */
+    fun toTab(tab: io.github.arkmind.seedy.mobile.parts.Tab) {
+        while (stack.size > 1) stack.removeAt(stack.lastIndex)
+        selectTab(tab)
+    }
+
     fun go(route: Route) {
         stack.add(route)
     }

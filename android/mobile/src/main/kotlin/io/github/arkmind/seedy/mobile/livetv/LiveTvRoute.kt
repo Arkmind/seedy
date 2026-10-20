@@ -70,7 +70,7 @@ fun LiveTvRoute() {
         onFavorite = vm::toggleFavorite,
         onWatch = watch,
         onPlayRecording = { nav.play(it) },
-        onTab = { nav.back() },
+        onTab = nav::toTab,
     )
 }
 
