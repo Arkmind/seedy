@@ -18,12 +18,16 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -128,10 +132,19 @@ fun TvDetailsScreen(state: DetailsViewModel.State, actions: TvDetailsActions, ca
             }
             return@Box
         }
-        Hero(state, item, actions, canRequest, playFocus, onEpisodes = { episodesFocus.requestFocusSafely() })
+        val episodesList = rememberLazyListState()
+        val scope = rememberCoroutineScope()
+        val upNext = state.shownEpisodes.orEmpty().indexOfFirst { it.id == state.target?.item?.id }.coerceAtLeast(0)
+        Hero(state, item, actions, canRequest, playFocus, onEpisodes = {
+            // Episodes: the remote goes to the episode to watch next.
+            scope.launch {
+                episodesList.scrollToItem((upNext - 1).coerceAtLeast(0))
+                episodesFocus.focusSoon()
+            }
+        })
         Column(Modifier.padding(start = 96.bp, top = 628.bp), verticalArrangement = Arrangement.spacedBy(26.bp)) {
             when (item.type) {
-                BaseItemKind.SERIES -> Episodes(state, actions, episodesFocus)
+                BaseItemKind.SERIES -> Episodes(state, actions, episodesFocus, episodesList, upNext)
                 BaseItemKind.BOX_SET, BaseItemKind.PLAYLIST, BaseItemKind.FOLDER, BaseItemKind.COLLECTION_FOLDER, BaseItemKind.PERSON ->
                     CardRow(if (item.type == BaseItemKind.PERSON) t("Filmography") else t("In this collection"), state.children.orEmpty(), actions.onOpen, episodesFocus)
                 else -> CardRow(t("More like this"), state.similar.orEmpty(), actions.onOpen, episodesFocus)
@@ -139,10 +152,6 @@ fun TvDetailsScreen(state: DetailsViewModel.State, actions: TvDetailsActions, ca
         }
     }
     LaunchedEffect(item != null) { if (item != null) playFocus.focusSoon() }
-}
-
-private fun FocusRequester.requestFocusSafely() {
-    runCatching { requestFocus() }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -261,7 +270,7 @@ private fun Progress(state: DetailsViewModel.State, item: BaseItemDto, canReques
 }
 
 @Composable
-private fun Episodes(state: DetailsViewModel.State, actions: TvDetailsActions, focus: FocusRequester) {
+private fun Episodes(state: DetailsViewModel.State, actions: TvDetailsActions, focus: FocusRequester, list: LazyListState, start: Int) {
     // 10 px of room around tabs and cards keeps the focus ring inside their rows (they clip).
     LazyRow(
         Modifier.offset(x = (-10).bp, y = (-10).bp).fillMaxWidth(),
@@ -279,10 +288,11 @@ private fun Episodes(state: DetailsViewModel.State, actions: TvDetailsActions, f
         }
     }
     val eps = state.shownEpisodes.orEmpty()
-    val upNext = state.target?.item?.id
-    val start = eps.indexOfFirst { it.id == upNext }.coerceAtLeast(0)
+    // As on the web, the row starts near the episode to watch next when it's further than the fifth.
+    LaunchedEffect(state.episodesFor) { if (start >= 5) list.scrollToItem(start - 1) }
     LazyRow(
         Modifier.offset(x = (-10).bp, y = (-30).bp).fillMaxWidth(),
+        state = list,
         contentPadding = PaddingValues(start = 10.bp, end = 96.bp, top = 10.bp, bottom = 10.bp),
         horizontalArrangement = Arrangement.spacedBy(32.bp),
     ) {

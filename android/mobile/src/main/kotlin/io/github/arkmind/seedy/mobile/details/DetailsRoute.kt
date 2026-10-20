@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,6 +35,8 @@ fun DetailsRoute(id: UUID) {
     val images = LocalViewer.current.images
     val vm = viewModel(key = "details:$id") { DetailsViewModel(session, id) }
     val state by vm.state.collectAsStateWithLifecycle()
+    // Back from the player: progress and watched marks may have changed.
+    LaunchedEffect(Unit) { vm.refresh() }
     // The seasons the request sheet starts with ticked (empty: every open one); null while it's closed.
     var ask by rememberSaveable { mutableStateOf<List<Int>?>(null) }
     Box(Modifier.fillMaxSize()) {

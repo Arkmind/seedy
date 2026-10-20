@@ -211,7 +211,7 @@ private fun Top(state: DetailsViewModel.State, item: BaseItemDto, actions: Detai
     Box(Modifier.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth().height(240.dp)) {
             val art = viewer.images?.backdrop(item, 1280) ?: state.children?.firstNotNullOfOrNull { viewer.images?.backdrop(it, 1280) }
-            if (art != null && !isPerson) AsyncImage(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = BiasAlignment(0.4f, -0.2f))
+            if (art != null && !isPerson) AsyncImage(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = BiasAlignment(0.47f, -0.07f))
             Box(Modifier.fillMaxWidth().height(120.dp).background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.65f), Color.Transparent))))
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.7f).background(Brush.verticalGradient(listOf(Color.Transparent, SeedyColors.Bg))))
             TopButtons(actions, menu(state, actions))

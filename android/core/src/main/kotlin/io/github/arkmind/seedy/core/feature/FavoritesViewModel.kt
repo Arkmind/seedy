@@ -73,4 +73,11 @@ class FavoritesViewModel(private val session: UserSession) : ViewModel() {
     }
 
     fun show(group: Group?) = _state.update { it.copy(only = group) }
+
+    private var shown = false
+
+    /** The tab or place is back on screen: hearts may have changed elsewhere. The first call (opening) does nothing. */
+    fun refresh() {
+        if (shown) load() else shown = true
+    }
 }

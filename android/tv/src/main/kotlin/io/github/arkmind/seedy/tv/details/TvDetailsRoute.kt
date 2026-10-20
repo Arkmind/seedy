@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +34,8 @@ fun TvDetailsRoute(id: UUID) {
     val images = LocalViewer.current.images
     val vm = viewModel(key = "details:$id") { DetailsViewModel(session, id) }
     val state by vm.state.collectAsStateWithLifecycle()
+    // Back from the player: progress and watched marks may have changed.
+    LaunchedEffect(Unit) { vm.refresh() }
     var ask by rememberSaveable { mutableStateOf<List<Int>?>(null) }
     val play = remember { FocusRequester() }
     Box(Modifier.fillMaxSize()) {

@@ -169,6 +169,25 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
         }
     }
 
+    private var shown = false
+
+    /**
+     * The page is back on screen (from the player, say): watched marks, progress and what Play starts may have
+     * changed. The first call (the page opening) does nothing; [load] runs then.
+     */
+    fun refresh() {
+        if (!shown) {
+            shown = true
+            return
+        }
+        val item = _state.value.item ?: return
+        viewModelScope.launch {
+            val fresh = runCatching { browse.item(item.id) }.getOrNull() ?: return@launch
+            _state.update { it.copy(item = fresh) }
+            if (fresh.type == BaseItemKind.SERIES) refreshSeries()
+        }
+    }
+
     private suspend fun loadSeries(series: BaseItemDto) {
         _state.update { it.copy(item = series) }
         viewModelScope.launch {

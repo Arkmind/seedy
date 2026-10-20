@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +57,7 @@ fun FavoritesTab() {
     val nav = LocalMobileNav.current
     val vm = viewModel { FavoritesViewModel(session) }
     val state by vm.state.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.refresh() }
     FavoritesScreen(state, onShow = vm::show, onOpen = nav::open, onSearch = { nav.go(Route.Search) }, bottomPadding = tabBarHeight())
 }
 
