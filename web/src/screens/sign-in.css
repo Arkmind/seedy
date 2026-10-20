@@ -49,6 +49,8 @@
   transition: box-shadow var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
 }
 .signin-face img { width: 100%; height: 100%; object-fit: cover; }
+/* A face without a picture shows the initial on the light fill, like the navbar's account button. */
+.signin-face:not(.is-other):not(.skel) { background: var(--seedy-inverse); }
 .signin-face.skel { background-size: 200% 100%; }
 .signin-face.is-other {
   background: transparent; color: var(--seedy-text-2); border: 2px dashed var(--seedy-stroke);
