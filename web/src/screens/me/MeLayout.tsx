@@ -6,7 +6,7 @@ import { useStore } from '../../lib/store';
 import { Header } from '../../ui/navbar/Header';
 import './me.css';
 
-export type MePage = 'profile' | 'home' | 'playback' | 'subtitles' | 'display' | 'controls' | 'requests';
+export type MePage = 'profile' | 'home' | 'playback' | 'subtitles' | 'display' | 'controls';
 
 /* Personal settings, grouped as on the Settings boards. They follow the profile to every device unless a row
    carries the "This device" tag. */
@@ -59,7 +59,7 @@ export function MeLayout({ page, title, lede, children, actions }: {
           <div aria-hidden="true" class="me-nav-sep" />
           <div class="me-nav-group is-links">
             {me.historyEnabled && <Link to="/history">{t('Viewing history')}</Link>}
-            {me.requests.connected && <Link to="/requests" aria-current={page === 'requests' ? 'page' : undefined}>{t('My requests')}</Link>}
+            {me.requests.connected && <Link to="/requests/my">{t('My requests')}</Link>}
             {me.isAdmin && <Link to="/admin">{t('Admin dashboard')}</Link>}
             <button type="button" class="me-nav-btn is-danger" onClick={leave}>{t('Sign out')}</button>
           </div>

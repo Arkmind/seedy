@@ -95,6 +95,8 @@ export const fmtDate = (d: Date) =>
     : dateStyle.monthFirst ? `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`
     : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 export const fmtWeekdayDate = (d: Date) => `${DAYS[d.getDay()]} ${fmtDayMonth(d)}`;
+/* "Nov 2026", "nov. 2026". */
+export const fmtMonthYear = (d: Date) => `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 
 export function startOfDay(d: Date): Date {
   const x = new Date(d);

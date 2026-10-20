@@ -17,6 +17,9 @@
 .poster-grid > .poster-card { width: auto !important; flex: none !important; }
 
 .sentinel { height: 1px; }
+/* "Loading more" under a grid or list that grows as it scrolls. */
+.list-loading { display: flex; justify-content: center; padding: 8px 0; }
+.list-loading .spinner { width: 28px; height: 28px; }
 
 .link-btn { border: 0; padding: 0; background: transparent; font: inherit; cursor: pointer; }
 .link-btn.row-link { font-size: 14px; font-weight: 600; color: var(--seedy-text-2); transition: color var(--t-fast) var(--ease); }

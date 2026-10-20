@@ -1,8 +1,8 @@
 import type { ComponentChildren } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect } from 'preact/hooks';
 import { getItems, getLatest, getResume, getSimilar, getUpcomingEpisodes } from '../../api/jellyfin';
 import { tmdbImage } from '../../api/images';
-import { seerrDiscover, seerrUpcoming, type SeerrItem } from '../../api/seedy';
+import { seerrDiscover, seerrUpcoming } from '../../api/seedy';
 import type { BaseItem } from '../../api/types';
 import { meStore, viewsStore } from '../../lib/app-state';
 import { plural, whenLabel, dayOf } from '../../lib/format';
@@ -12,8 +12,8 @@ import { PosterCard, UpcomingCard, seerrPath } from '../../ui/cards';
 import { Header, type HeaderActive } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import {
-  CardGrid, EmptyState, ErrorState, GridSkeleton, ItemGrid, NextUpCard, PageHead, ResumeCard, Sentinel, groupUpcoming,
-  useItemList, usePaged, useRequests
+  CardGrid, EmptyState, ErrorState, GridSkeleton, ItemGrid, NextUpCard, PageHead, ResumeCard, SeerrGrid, Sentinel, groupUpcoming,
+  useItemList, usePaged, useRequests, useSeerrPages
 } from './parts';
 import './lists.css';
 import { getNextUpForMe } from '../me/prefs';
@@ -33,14 +33,15 @@ export function ListScreen({ kind }: { kind: string }) {
     case 'latest': return <LatestList />;
     default:
       return (
-        <Frame title={t('List not found')}>
+        <ListFrame title={t('List not found')}>
           <EmptyState icon="searchX" title={t('This list isn\'t here')} text={t('The link may be old.')} action={<Link to="/" class="btn btn-primary is-sm">{t('Back to home')}</Link>} />
-        </Frame>
+        </ListFrame>
       );
   }
 }
 
-function Frame({ title, count, lede, active = 'home', children }: { title: ComponentChildren; count?: string; lede?: ComponentChildren; active?: HeaderActive; children: ComponentChildren }) {
+/* A list page: the header, its title and lede, then the list. */
+export function ListFrame({ title, count, lede, active = 'home', children }: { title: ComponentChildren; count?: string; lede?: ComponentChildren; active?: HeaderActive; children: ComponentChildren }) {
   return (
     <div class="page list-page">
       <Header active={active} />
@@ -72,22 +73,22 @@ const countOf = (data?: unknown[]) => (data ? plural(data.length, 'title') : und
 function ContinueList() {
   const state = useAsync(() => getResume(100).then((r) => r.Items), []);
   return (
-    <Frame title={t('Continue watching')} count={countOf(state.data)}>
+    <ListFrame title={t('Continue watching')} count={countOf(state.data)}>
       <Body state={state} empty={<EmptyState icon="clock" title={t('Nothing in progress')} text={t('Titles you start will wait for you here.')} />}>
         {(items) => <ItemGrid items={items} render={(it) => <ResumeCard item={it} origin="continue" />} />}
       </Body>
-    </Frame>
+    </ListFrame>
   );
 }
 
 function NextUpList() {
   const state = useAsync(() => getNextUpForMe(100).then((r) => r.Items), []);
   return (
-    <Frame title={t('Next up')} count={state.data ? plural(state.data.length, 'show') : undefined}>
+    <ListFrame title={t('Next up')} count={state.data ? plural(state.data.length, 'show') : undefined}>
       <Body state={state} empty={<EmptyState icon="tv" title={t('You\'re all caught up')} text={t('When a show you watch has a next episode, it shows up here.')} />}>
         {(items) => <ItemGrid items={items} render={(it) => <NextUpCard item={it} origin="nextup" />} />}
       </Body>
-    </Frame>
+    </ListFrame>
   );
 }
 
@@ -101,7 +102,7 @@ function SimilarList() {
   const state = useAsync(() => (seed ? getSimilar(seed, 48).then((r) => r.Items) : Promise.resolve([])), [seed]);
   useEffect(() => { if (state.data) setItems(state.data); }, [state.data]);
   return (
-    <Frame
+    <ListFrame
       title={<><span class="lead">{t('Because you watched')}</span> {name || 'this'}</>}
       count={countOf(state.data)}
       lede={seed ? <Link to={`/details/${seed}`} class="list-seed"><Icon name="chevronLeft" size={14} stroke={2.4} />Back to {name || 'the title'}</Link> : undefined}
@@ -109,7 +110,7 @@ function SimilarList() {
       <Body state={{ ...state, data: state.data ? items : undefined }} empty={<EmptyState icon="film" title={t('No suggestions yet')} text={t('Jellyfin hasn\'t found anything similar on this server.')} />}>
         {(list) => <CardGrid items={list} onReplace={replace} origin="because" />}
       </Body>
-    </Frame>
+    </ListFrame>
   );
 }
 
@@ -127,9 +128,9 @@ function GenreList() {
     60
   );
   return (
-    <Frame title={genre || t('Genre')} count={paged.items.length || !paged.loading ? plural(paged.total, 'title') : undefined} lede={view ? t('In {library}', { library: view.Name }) : undefined} active={view ? { viewId: view.Id } : 'home'}>
+    <ListFrame title={genre || t('Genre')} count={paged.items.length || !paged.loading ? plural(paged.total, 'title') : undefined} lede={view ? t('In {library}', { library: view.Name }) : undefined} active={view ? { viewId: view.Id } : 'home'}>
       <PagedGrid paged={paged} empty={<EmptyState icon="film" title={`No ${genre.toLowerCase()} titles`} text={t('Nothing on this server is tagged with this genre yet.')} />} />
-    </Frame>
+    </ListFrame>
   );
 }
 
@@ -167,11 +168,11 @@ function LatestList() {
   const state = useAsync(() => (parentId ? getLatest(parentId, 60) : Promise.resolve([] as BaseItem[])), [parentId]);
   useEffect(() => { if (state.data) setItems(state.data); }, [state.data]);
   return (
-    <Frame title={view ? t('Latest {library}', { library: view.Name.toLowerCase() }) : t('Recently added')} count={countOf(state.data)} active={view ? { viewId: view.Id } : 'home'}>
+    <ListFrame title={view ? t('Latest {library}', { library: view.Name.toLowerCase() }) : t('Recently added')} count={countOf(state.data)} active={view ? { viewId: view.Id } : 'home'}>
       <Body state={{ ...state, data: state.data ? items : undefined }} empty={<EmptyState icon="film" title={t('Nothing new')} text={t('Titles added to this library show up here.')} />}>
         {(list) => <CardGrid items={list} onReplace={replace} origin="latest" />}
       </Body>
-    </Frame>
+    </ListFrame>
   );
 }
 
@@ -180,65 +181,31 @@ function LatestList() {
 function DiscoverList() {
   const me = useStore(meStore);
   const req = useRequests();
-  const [items, setItems] = useState<SeerrItem[]>([]);
-  const [page, setPage] = useState(1);
-  const [done, setDone] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<Error | undefined>();
-  const seen = useRef(new Set<string>());
-
-  const load = async (p: number) => {
-    if (busy || done) return;
-    setBusy(true);
-    setError(undefined);
-    try {
-      const r = await seerrDiscover(p);
-      const fresh = (r.results ?? []).filter((s) => !seen.current.has(s.mediaType + s.tmdbId));
-      fresh.forEach((s) => seen.current.add(s.mediaType + s.tmdbId));
-      setItems((list) => [...list, ...fresh]);
-      setPage(p + 1);
-      if (!fresh.length) setDone(true);
-    } catch (e) {
-      setError(e as Error);
-    } finally {
-      setBusy(false);
-    }
-  };
-  useEffect(() => { load(1); }, []);
-
-  if (!me.requests.discover && !me.requests.connected) {
+  const on = me.requests.discover || me.requests.connected;
+  const pages = useSeerrPages((page) => seerrDiscover(page), [], on);
+  if (!on) {
     return (
-      <Frame title={t('Discover')}>
+      <ListFrame title={t('Discover')}>
         <EmptyState icon="inbox" title={t('Requests aren\'t set up')} text={t('An administrator can connect Seerr in Admin › Requests to discover and request new titles.')} />
-      </Frame>
+      </ListFrame>
     );
   }
   return (
-    <Frame title={t('Discover')} lede={t('Not in your library yet · request with one click')}>
-      {busy && !items.length ? <GridSkeleton count={14} poster />
-        : error && !items.length ? <ErrorState error={error} retry={() => load(page)} title={t('Couldn\'t reach Seerr')} />
-        : !items.length ? <EmptyState icon="searchX" title={t('Nothing to discover right now')} text={t('Check back later for new titles.')} />
-        : (
-          <>
-            <div class="poster-grid">
-              {items.map((s) => (
-                <PosterCard key={s.mediaType + s.tmdbId} item={req.apply(s)} canRequest={req.canRequest} onRequest={req.request} requesting={req.busy(s)} />
-              ))}
-            </div>
-            {!done && !error && <Sentinel onVisible={() => load(page)} token={items.length} disabled={busy} />}
-            {busy && <div class="list-loading"><span class="spinner" aria-label={t('Loading more')} /></div>}
-            {error && <div class="grid-more"><button type="button" class="btn btn-secondary" onClick={() => load(page)}><Icon name="refresh" size={18} />{t('Load more')}</button></div>}
-          </>
-        )}
+    <ListFrame title={t('Discover')} lede={t('Not in your library yet · request with one click')}>
+      <SeerrGrid
+        pages={pages}
+        empty={<EmptyState icon="searchX" title={t('Nothing to discover right now')} text={t('Check back later for new titles.')} />}
+        render={(s) => <PosterCard item={req.apply(s)} canRequest={req.canRequest} onRequest={req.request} requesting={req.busy(s)} />}
+      />
       {req.dialog}
-    </Frame>
+    </ListFrame>
   );
 }
 
 function UpcomingMoviesList() {
   const state = useAsync(() => seerrUpcoming().then((r) => r.results ?? []), []);
   return (
-    <Frame title={t('Upcoming movies')} count={countOf(state.data)}>
+    <ListFrame title={t('Upcoming movies')} count={countOf(state.data)}>
       <Body poster state={state} empty={<EmptyState icon="clock" title={t('Nothing coming up')} text={t('Requested movies with a release date show up here.')} />}>
         {(items) => (
           <div class="poster-grid">
@@ -249,14 +216,14 @@ function UpcomingMoviesList() {
           </div>
         )}
       </Body>
-    </Frame>
+    </ListFrame>
   );
 }
 
 function UpcomingShowsList() {
   const state = useAsync(() => getUpcomingEpisodes(300).then((r) => groupUpcoming(r.Items)), []);
   return (
-    <Frame title={t('Upcoming shows')} count={state.data ? plural(state.data.length, 'show') : undefined}>
+    <ListFrame title={t('Upcoming shows')} count={state.data ? plural(state.data.length, 'show') : undefined}>
       <Body poster state={state} empty={<EmptyState icon="tv" title={t('No new episodes scheduled')} text={t('Upcoming episodes of shows in your library show up here once they\'re announced.')} />}>
         {(groups) => (
           <div class="poster-grid">
@@ -264,6 +231,6 @@ function UpcomingShowsList() {
           </div>
         )}
       </Body>
-    </Frame>
+    </ListFrame>
   );
 }

@@ -239,7 +239,8 @@ public sealed class SeerrCrewDto
     [JsonPropertyName("job")] public string Job { get; set; } = string.Empty;
 }
 
-public sealed class MyRequestDto : SeerrItemDto
+/* One Seerr request: the title, who asked and when, and where it is now. */
+public sealed class RequestDto : SeerrItemDto
 {
     [JsonPropertyName("requestId")] public int RequestId { get; set; }
     [JsonPropertyName("requestedAt")] public DateTime RequestedAt { get; set; }
@@ -247,12 +248,66 @@ public sealed class MyRequestDto : SeerrItemDto
     [JsonPropertyName("seasons")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public List<int>? Seasons { get; set; }
     [JsonPropertyName("is4k")] public bool Is4k { get; set; }
     [JsonPropertyName("availableAt")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public DateTime? AvailableAt { get; set; }
+
+    /* When the request last changed (approved, declined…). */
+    [JsonPropertyName("updatedAt")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public DateTime? UpdatedAt { get; set; }
+
+    /* What Sonarr/Radarr are downloading for it right now. */
+    [JsonPropertyName("download")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public RequestDownloadDto? Download { get; set; }
+
+    /* Requested seasons that haven't started airing (they download once they do). */
+    [JsonPropertyName("unaired")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public List<int>? Unaired { get; set; }
+
+    /* A movie's home release (yyyy-MM-dd) when it's still ahead. */
+    [JsonPropertyName("releaseDate")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? ReleaseDate { get; set; }
+}
+
+public sealed class RequestDownloadDto
+{
+    /* 0–1 over everything downloading for the request. */
+    [JsonPropertyName("fraction")] public double Fraction { get; set; }
+    /* Set when every download belongs to one season. */
+    [JsonPropertyName("season")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? Season { get; set; }
 }
 
 public sealed class MyRequestsDto
 {
-    [JsonPropertyName("results")] public List<MyRequestDto> Results { get; set; } = [];
+    [JsonPropertyName("results")] public List<RequestDto> Results { get; set; } = [];
     [JsonPropertyName("open")] public int Open { get; set; }
+}
+
+/* A page of requests (Requests · My requests and All requests). */
+public sealed class RequestListDto
+{
+    [JsonPropertyName("results")] public List<RequestDto> Results { get; set; } = [];
+    [JsonPropertyName("total")] public int Total { get; set; }
+}
+
+/* What the Requests page shows the person: which tabs and actions Seerr allows them, and the tabs' counts. */
+public sealed class RequestSummaryDto
+{
+    /* Seerr's Manage requests or View requests: the All requests tab. */
+    [JsonPropertyName("canViewAll")] public bool CanViewAll { get; set; }
+    /* Seerr's Manage requests: approve, decline, retry and remove anyone's request. */
+    [JsonPropertyName("canManage")] public bool CanManage { get; set; }
+    /* The person's requests still waiting or on the way. */
+    [JsonPropertyName("open")] public int Open { get; set; }
+    /* Everyone's requests waiting for approval (with canViewAll). */
+    [JsonPropertyName("pending")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? Pending { get; set; }
+}
+
+/* A title on a Requests row (trending, popular, upcoming). Upcoming ones carry their date; an upcoming season of a
+   series already requested carries its number. */
+public sealed class SeerrTitleDto : SeerrItemDto
+{
+    [JsonPropertyName("releaseDate")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? ReleaseDate { get; set; }
+    [JsonPropertyName("season")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? Season { get; set; }
+}
+
+public sealed class SeerrTitlesDto
+{
+    [JsonPropertyName("results")] public List<SeerrTitleDto> Results { get; set; } = [];
+    [JsonPropertyName("pages")] public int Pages { get; set; }
 }
 
 public sealed class SeerrSeasonDto

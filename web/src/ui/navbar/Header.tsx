@@ -45,7 +45,7 @@ export function Brand({ small }: { small?: boolean }) {
   );
 }
 
-export type HeaderActive = 'home' | 'favorites' | 'history' | 'search' | 'settings' | { viewId: string } | { collectionType: string } | null;
+export type HeaderActive = 'home' | 'favorites' | 'history' | 'search' | 'settings' | 'requests' | { viewId: string } | { collectionType: string } | null;
 
 /* The app's phone breakpoint (tokens.css: the gutter drops to 16 px). */
 const PHONE = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
@@ -60,8 +60,6 @@ function usePhone(): boolean {
   }, []);
   return phone;
 }
-
-const seerrHome = (me: ReturnType<typeof meStore.get>) => (me.requests.connected ? me.requests.seerrUrl?.trim() || '' : '');
 
 export function Header({ variant = 'plain', active }: { variant?: 'overlay' | 'plain'; active: HeaderActive }) {
   const glass = variant === 'overlay';
@@ -109,18 +107,17 @@ function NavLink({ to, icon, label, current, glass }: { to: string; icon: IconNa
   );
 }
 
-/* Requests ↗ (the person's Seerr, in a new tab), cast, and the account button. */
+/* Requests (when Seerr is connected), cast, and the account button. */
 export function HeaderActions({ glass, active }: { glass?: boolean; active?: HeaderActive; hideSearch?: boolean }) {
   const me = useStore(meStore);
-  const seerr = seerrHome(me);
+  const current = active === 'requests';
   return (
     <div class="nb-actions header-actions">
-      {seerr && (
-        <a href={seerr} target="_blank" rel="noreferrer" class={'nb-req' + (glass ? ' is-glass' : '')} aria-label={t('Requests (opens Seerr in a new tab)')}>
+      {me.requests.connected && (
+        <Link to="/requests" class={'nb-req' + (glass ? ' is-glass' : '') + (current ? ' is-current' : '')} aria-current={current ? 'page' : undefined}>
           <NbIcon name="request" size={18} />
           {t('Requests')}
-          <NbIcon name="out" size={13} stroke={2.4} class="nb-out" />
-        </a>
+        </Link>
       )}
       <CastButton glass={glass} />
       <AccountButton variant="pill" glass={glass} highlighted={active === 'settings'} />
@@ -132,7 +129,7 @@ export function HeaderActions({ glass, active }: { glass?: boolean; active?: Hea
 
 function TabBar({ active }: { active: HeaderActive }) {
   const me = useStore(meStore);
-  const seerr = seerrHome(me);
+  const requests = me.requests.connected;
   const [libs, setLibs] = useState(false);
   // Pages leave room for the bar at the bottom while it's there.
   useLayoutEffect(() => {
@@ -149,13 +146,13 @@ function TabBar({ active }: { active: HeaderActive }) {
   );
   return createPortal(
     <>
-      <nav aria-label={t('Main')} class={'nb-tabbar' + (seerr ? '' : ' is-3')}>
+      <nav aria-label={t('Main')} class={'nb-tabbar' + (requests ? '' : ' is-3')}>
         <Link to="/" class="nb-tab" aria-current={active === 'home' ? 'page' : undefined}>{tab('home', 'Home')}</Link>
         <button type="button" class="nb-tab" aria-haspopup="dialog" aria-expanded={libs ? 'true' : 'false'} aria-current={inLibrary ? 'page' : undefined} onClick={() => setLibs(true)}>
           {tab('grid', 'Libraries')}
         </button>
         <Link to="/favorites" class="nb-tab" aria-current={active === 'favorites' ? 'page' : undefined}>{tab('heart', 'Favorites')}</Link>
-        {seerr && <a href={seerr} target="_blank" rel="noreferrer" class="nb-tab" aria-label={t('Requests (opens Seerr in a new tab)')}>{tab('request', 'Requests')}</a>}
+        {requests && <Link to="/requests" class="nb-tab" aria-current={active === 'requests' ? 'page' : undefined}>{tab('request', 'Requests')}</Link>}
       </nav>
       <LibrariesSheet open={libs} onClose={() => setLibs(false)} active={active} />
     </>,

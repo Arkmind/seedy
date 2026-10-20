@@ -206,6 +206,37 @@ async function handle(req: IncomingMessage, res: ServerResponse, path: string, q
       seasons: det[1] === 'tv' ? [{ seasonNumber: 1, name: 'Season 1', episodeCount: 8, status: 'none' }, { seasonNumber: 2, name: 'Season 2', episodeCount: 8, status: 'none' }] : undefined
     }), true;
   }
+  // Requests page: the person's requests, everyone's waiting for approval, and the title rows.
+  const admin = !!user.Policy?.IsAdministrator;
+  const day = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
+  const REQUESTS = [
+    { ...DISCOVER[1], requestId: 1, requestStatus: 'approved', status: 'processing', requestedBy: 'Alex', requestedByMe: true, seasons: [2, 4], unaired: [4], requestedAt: day(3), updatedAt: day(1), download: { fraction: 0.62, season: 2 } },
+    { ...DISCOVER[0], requestId: 2, requestStatus: 'completed', status: 'available', requestedBy: 'Alex', requestedByMe: true, requestedAt: day(3), availableAt: day(1) },
+    { ...DISCOVER[5], requestId: 3, requestStatus: 'approved', status: 'processing', requestedBy: 'Alex', requestedByMe: true, seasons: [1], requestedAt: day(6), updatedAt: day(5) },
+    { ...DISCOVER[11], requestId: 4, requestStatus: 'pending', status: 'pending', requestedBy: 'Mia', requestedByMe: false, seasons: [1, 3], requestedAt: day(0) },
+    { ...DISCOVER[9], requestId: 5, requestStatus: 'pending', status: 'pending', requestedBy: 'Sam', requestedByMe: false, seasons: [1], requestedAt: day(1) }
+  ];
+  if (path === '/Seedy/Requests/Summary') return send(res, 200, { canViewAll: admin, canManage: admin, open: 2, pending: admin ? 2 : undefined }), true;
+  if (path === '/Seedy/Requests/List') {
+    const filter = query.get('filter') ?? 'all';
+    const list = REQUESTS.filter((r) => (query.get('scope') === 'all' || r.requestedByMe)
+      && (filter === 'all' || (filter === 'pending' ? r.requestStatus === 'pending' : filter === 'available' ? r.status === 'available' : filter === 'processing' ? r.requestStatus === 'approved' : false)));
+    const skip = Number(query.get('skip') ?? 0);
+    return send(res, 200, { results: list.slice(skip, skip + Number(query.get('take') ?? 20)), total: list.length }), true;
+  }
+  const titles = path.match(/^\/Seedy\/Requests\/Titles\/([a-z-]+)$/);
+  if (titles) {
+    const upcoming = titles[1].startsWith('upcoming');
+    const results = DISCOVER.filter((d) => !titles[1].endsWith('movies') || d.mediaType === 'movie').filter((d) => !titles[1].endsWith('shows') || d.mediaType === 'tv')
+      .map((d, i) => ({ ...withReq(d), releaseDate: upcoming ? new Date(Date.now() + (i * 23 + 9) * 86400000).toISOString().slice(0, 10) : undefined }));
+    return send(res, 200, { results: Number(query.get('page') ?? 1) > 1 ? [] : results, pages: 1 }), true;
+  }
+  const act = path.match(/^\/Seedy\/Requests\/(\d+)(?:\/(Approve|Decline|Retry))?$/);
+  if (act) {
+    const r = REQUESTS.find((x) => x.requestId === Number(act[1]));
+    if (m === 'DELETE' || !r) return send(res, 204), true;
+    return send(res, 200, { ...r, requestStatus: act[2] === 'Decline' ? 'declined' : 'approved', updatedAt: day(0) }), true;
+  }
   if (path === '/Seedy/Requests' && m === 'POST') {
     const b = await readBody(req);
     state.requested.add(Number(b.tmdbId));

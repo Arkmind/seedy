@@ -45,7 +45,7 @@ export function MeProfile() {
               : me.requests.canRequest ? `${seerrName.toLowerCase()} · ${t('linked through Jellyfin sign-in')}`
               : t('Not linked yet · ask your admin to link your Seerr account')}
           >
-            <Link to="/requests" class="me-chip-link">
+            <Link to="/requests/my" class="me-chip-link">
               {requests.data ? t('My requests · {n} open', { n: requests.data.open }) : t('My requests')}
             </Link>
           </MeRow>

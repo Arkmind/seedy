@@ -1,4 +1,4 @@
-import type { ComponentChildren, RefObject } from 'preact';
+import { Fragment, type ComponentChildren, type RefObject } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { get, getSession, type Query } from '../../api/client';
 import {
@@ -576,5 +576,74 @@ export function useRequests() {
   return { canRequest: me.requests.canRequest && me.requests.requestButtons !== false, request, apply, busy: (s: SeerrItem) => !!busy[key(s)], dialog };
 }
 
+
+/* ───────── Pages of Seerr titles (Discover, the Requests rows' See all, Requests search) ───────── */
+
+type Titled = SeerrItem & { season?: number };
+export const seerrKey = (s: Titled) => `${s.mediaType}:${s.tmdbId}:${s.season ?? ''}`;
+
+export interface SeerrPages<T> { items: T[]; busy: boolean; done: boolean; error?: Error; total?: number; loadMore: () => void }
+
+/* Loads pages of titles as a grid scrolls, without repeats; stops at Seerr's last page, or at a page with nothing new. */
+export function useSeerrPages<T extends Titled>(
+  load: (page: number) => Promise<{ results: T[]; pages?: number; total?: number }>,
+  deps: unknown[],
+  enabled = true
+): SeerrPages<T> {
+  const [items, setItems] = useState<T[]>([]);
+  const [page, setPage] = useState(1);
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<Error | undefined>();
+  const [total, setTotal] = useState<number | undefined>();
+  const seen = useRef(new Set<string>());
+  const gen = useRef(0);
+
+  const more = async (p: number, g: number) => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      const r = await load(p);
+      if (g !== gen.current) return;
+      const fresh = (r.results ?? []).filter((s) => !seen.current.has(seerrKey(s)));
+      fresh.forEach((s) => seen.current.add(seerrKey(s)));
+      setItems((list) => [...list, ...fresh]);
+      setTotal(r.total);
+      setPage(p + 1);
+      if (!fresh.length || (r.pages !== undefined && p >= r.pages)) setDone(true);
+    } catch (e) {
+      if (g === gen.current) setError(e as Error);
+    } finally {
+      if (g === gen.current) setBusy(false);
+    }
+  };
+  useEffect(() => {
+    const g = ++gen.current;
+    seen.current = new Set();
+    setItems([]);
+    setTotal(undefined);
+    setPage(1);
+    setDone(false);
+    if (enabled) void more(1, g);
+  }, [...deps, enabled]);
+  return { items, busy, done, error, total, loadMore: () => { if (!busy && !done) void more(page, gen.current); } };
+}
+
+/* A poster grid of those pages: skeleton, error, empty, then more as it scrolls. */
+export function SeerrGrid<T extends Titled>({ pages, empty, render }: { pages: SeerrPages<T>; empty: ComponentChildren; render: (item: T) => ComponentChildren }) {
+  if (pages.busy && !pages.items.length) return <GridSkeleton count={14} poster />;
+  if (pages.error && !pages.items.length) return <ErrorState error={pages.error} retry={pages.loadMore} title={t('Couldn\'t reach Seerr')} />;
+  if (!pages.items.length) return <>{empty}</>;
+  return (
+    <>
+      <div class="poster-grid">
+        {pages.items.map((s) => <Fragment key={seerrKey(s)}>{render(s)}</Fragment>)}
+      </div>
+      {!pages.done && !pages.error && <Sentinel onVisible={pages.loadMore} token={pages.items.length} disabled={pages.busy} />}
+      {pages.busy && <div class="list-loading"><span class="spinner" aria-label={t('Loading more')} /></div>}
+      {pages.error && <div class="grid-more"><button type="button" class="btn btn-secondary" onClick={pages.loadMore}><Icon name="refresh" size={18} />{t('Load more')}</button></div>}
+    </>
+  );
+}
 
 export { CARD_FIELDS };

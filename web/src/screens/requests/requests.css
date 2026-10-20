@@ -1,0 +1,128 @@
+/* Requests (Requests board). The title row, tabs, buttons and row headings use the shared page, tab, button and row
+   styles; these are the page's own pieces. */
+
+.reqs-main { display: flex; flex-direction: column; gap: 32px; padding: 24px 0 80px; }
+.reqs-pad { padding: 0 var(--gutter); }
+.reqs-open { font-weight: 700; }
+
+/* ── Search and tabs ── */
+
+.reqs-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 0 var(--gutter); }
+.reqs-search {
+  flex: 1 1 420px; max-width: 720px; display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px;
+  border-radius: var(--r-seg); background: var(--seedy-row); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  color: var(--seedy-text-2); cursor: text;
+  transition: box-shadow var(--t-fast) var(--ease);
+}
+.reqs-search svg { flex: none; }
+.reqs-search input {
+  flex: 1; min-width: 0; border: 0; background: transparent; color: #ffffff;
+  font: inherit; font-size: 15px; font-weight: 500; outline: none;
+}
+.reqs-search input::placeholder { color: var(--seedy-text-2); }
+.reqs-search input::-webkit-search-cancel-button { filter: invert(0.6); }
+.reqs-search:focus-within { box-shadow: inset 0 0 0 2px var(--seedy-accent); }
+
+.reqs-tab { flex: none; height: 44px; padding: 0 18px; font-weight: 700; }
+.reqs-tab[aria-current='page'] { font-weight: 800; }
+
+/* "My requests 3", "All requests 2" (amber: waiting for approval). */
+.reqs-count {
+  min-width: 22px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: var(--r-pill);
+  background: var(--seedy-surface-2); color: var(--seedy-text);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;
+}
+.reqs-count.is-pending { background: rgba(255, 201, 138, 0.18); color: var(--seedy-pending); }
+.tab:hover .reqs-count, .tab[aria-current='page'] .reqs-count, .tab[aria-selected='true'] .reqs-count {
+  background: rgba(30, 30, 30, 0.12); color: var(--seedy-ink-inverse);
+}
+.tab:hover .reqs-count.is-pending, .tab[aria-current='page'] .reqs-count.is-pending, .tab[aria-selected='true'] .reqs-count.is-pending {
+  background: var(--seedy-pending); color: var(--seedy-ink-inverse);
+}
+
+/* ── Your requests · Waiting for your approval ── */
+
+.reqs-columns { display: flex; flex-wrap: wrap; gap: 24px; padding: 0 var(--gutter); }
+.reqs-col { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.reqs-col.is-mine { flex: 1 1 640px; }
+.reqs-col.is-approvals { flex: 1 1 520px; }
+.reqs-col-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.reqs-col-head .row-link { margin-left: auto; }
+
+.reqs-list { display: flex; flex-direction: column; gap: 8px; }
+
+.reqs-row {
+  display: flex; align-items: center; gap: 16px; padding: 10px 14px 10px 10px; border-radius: 14px;
+  background: var(--seedy-panel); color: var(--seedy-text);
+}
+a.reqs-row { transition: background-color var(--t-fast) var(--ease); }
+a.reqs-row:hover { background: var(--seedy-row); color: var(--seedy-text); }
+.reqs-row.is-approval, .reqs-row.is-list { flex-wrap: wrap; gap: 12px 16px; }
+.reqs-row.is-approval { padding: 10px; box-shadow: inset 0 0 0 1px rgba(255, 201, 138, 0.22); }
+/* In the lists, rows waiting for approval keep the others' right edge. */
+.reqs-row.is-list.is-approval { padding: 10px 14px 10px 10px; }
+
+.reqs-thumb {
+  flex: none; position: relative; display: block; width: 44px; height: 66px; border-radius: var(--r-badge); overflow: hidden;
+  background: var(--seedy-surface);
+}
+.reqs-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.reqs-thumb-link { flex: none; display: block; border-radius: var(--r-badge); }
+
+.reqs-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.reqs-text.is-wrap { flex: 1 1 200px; }
+.reqs-name {
+  align-self: flex-start; max-width: 100%; font-size: 15px; font-weight: 700; color: #ffffff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+a.reqs-name { border-radius: 4px; }
+a.reqs-name:hover { color: #ffffff; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.reqs-what { font-size: 13px; line-height: 1.4; color: var(--seedy-text-3); }
+.reqs-progress { max-width: 320px; background: var(--seedy-surface-2); }
+.reqs-progress > i { background: var(--seedy-accent); }
+
+.reqs-chip {
+  flex: none; display: flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.reqs-chip-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+.reqs-chip.is-accent { background: var(--seedy-surface); color: var(--seedy-accent); }
+.reqs-chip.is-muted { background: var(--seedy-surface); color: var(--seedy-text-hero); }
+.reqs-chip.is-ok { background: rgba(159, 224, 176, 0.1); color: var(--seedy-ok); }
+.reqs-chip.is-pending { background: rgba(255, 201, 138, 0.1); color: var(--seedy-pending); }
+.reqs-chip.is-danger { background: rgba(255, 138, 138, 0.1); color: var(--seedy-danger); }
+
+.reqs-decide { display: flex; gap: 8px; }
+.reqs-decline {
+  height: 44px; padding: 0 14px; border-radius: var(--r-menu);
+  background: var(--seedy-surface); color: var(--seedy-danger); font-size: 14px; font-weight: 700;
+}
+.reqs-decline:not(:disabled):hover { background: var(--seedy-danger); color: var(--seedy-ink-inverse); }
+.reqs-approve.btn-primary { gap: 6px; padding: 0 16px; border-radius: var(--r-menu); }
+
+.reqs-acts { display: flex; align-items: center; gap: 8px; }
+.reqs-acts:empty { display: none; }
+
+.reqs-note {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px 18px; border-radius: 14px;
+  background: var(--seedy-panel); color: var(--seedy-text-2); font-size: 14px; line-height: 1.45;
+}
+.reqs-note > svg { flex: none; color: var(--seedy-text-3); }
+.reqs-note > span { flex: 1 1 220px; }
+
+/* ── My requests · All requests · search results ── */
+
+.reqs-listing, .reqs-results { display: flex; flex-direction: column; gap: 20px; }
+.reqs-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.reqs-filters .tab { flex: none; }
+.reqs-filters-end { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.reqs-total { font-size: 14px; font-weight: 600; color: var(--seedy-text-3); white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .reqs-main { gap: 24px; padding-top: 16px; }
+  .reqs-search { flex-basis: 100%; height: 48px; }
+  .reqs-search input { font-size: 16px; }
+  .reqs-row { flex-wrap: wrap; gap: 10px 14px; }
+  .reqs-row > .reqs-text { flex: 1 1 200px; }
+  .reqs-row > .reqs-chip, .reqs-row.is-approval > .reqs-decide, .reqs-row.is-list > .reqs-acts { margin-left: 58px; }
+}

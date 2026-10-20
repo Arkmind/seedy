@@ -1,4 +1,4 @@
-/* Settings · Profile, Home screen, Display, Controls and My requests (MeProfile, MeHome, MeDisplay, MeControls boards). */
+/* Settings · Profile, Home screen, Display and Controls (MeProfile, MeHome, MeDisplay, MeControls boards). */
 
 /* ── Panels and rows ── */
 .me-section { display: flex; flex-direction: column; padding: 24px; border-radius: var(--r-panel); background: var(--seedy-panel); }
@@ -203,32 +203,6 @@ body.me-dragging, body.me-dragging * { cursor: grabbing !important; user-select:
 }
 .me-remote-title { margin: 0 0 10px; }
 
-/* ── My requests (History board's list language) ── */
-.me-req-group { display: flex; flex-direction: column; gap: 10px; }
-.me-req-label { display: flex; align-items: baseline; gap: 10px; padding: 0 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--seedy-text-3); }
-.me-req-label b { font-weight: 700; color: var(--seedy-text-2); letter-spacing: 0; }
-.me-req-list { display: flex; flex-direction: column; border-radius: var(--r-panel); background: var(--seedy-panel); overflow: hidden; }
-.me-req-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 12px 16px; }
-.me-req-row + .me-req-row { border-top: 1px solid var(--seedy-line); }
-.me-req-poster {
-  position: relative; flex: 0 0 60px; width: 60px; aspect-ratio: 2 / 3; border-radius: var(--r-badge); overflow: hidden; background: var(--seedy-surface);
-  outline: 2px solid transparent; outline-offset: 3px; transition: outline-color var(--t-fast) var(--ease);
-}
-.me-req-poster:focus-visible { outline-color: var(--seedy-accent); }
-.me-req-poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.me-req-poster .art-title { left: 6px; right: 6px; bottom: 8px; font-size: 10px; }
-.me-req-text { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.me-req-name { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
-.me-req-title { font-size: 15px; font-weight: 700; color: #ffffff; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-a.me-req-title:hover { color: #ffffff; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-.me-req-name .type-pill { padding: 2px 8px; font-size: 10px; }
-.me-req-sub { font-size: 13px; color: var(--seedy-text-3); }
-.me-req-state { flex: 0 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
-.me-req-state > span:first-child { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--seedy-text); }
-.me-req-state > span:last-child { color: var(--seedy-text-3); }
-.me-req-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 178px; margin-left: auto; }
-.me-req-skel { height: 114px; }
-
 @media (max-width: 720px) {
   .me-section { padding: 20px 16px; }
   .me-row-label, .me-row.is-narrow .me-row-label { flex-basis: 180px; }
@@ -247,8 +221,4 @@ a.me-req-title:hover { color: #ffffff; text-decoration: underline; text-underlin
   .me-qc-form { flex: 1 1 100%; }
   .me-qc-code { flex: 1 1 140px; }
   .me-pw-foot .btn { flex: 1 1 100%; }
-  .me-req-actions { min-width: 0; margin-left: 80px; }
-  .me-req-actions .icon-btn { display: none; }
-  .me-req-actions:not(:has(.btn-secondary)) { display: none; }
-  .me-req-state { flex-basis: 100%; padding-left: 80px; }
 }
