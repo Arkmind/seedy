@@ -1,0 +1,90 @@
+package io.github.arkmind.seedy.core.format
+
+import io.github.arkmind.seedy.core.i18n.t
+import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.BaseItemKind
+import java.time.LocalDate
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
+
+/* Item labels, as the web app writes them (web/src/lib/format.ts). */
+
+const val TICKS_PER_SECOND = 10_000_000L
+
+fun ticksToSeconds(ticks: Long?): Double = (ticks ?: 0L) / TICKS_PER_SECOND.toDouble()
+
+/** "52 min", "1 h 05 min". Anything that runs at all is at least "1 min"; "0 min" reads as broken. */
+fun duration(seconds: Double): String {
+    val totalMin = if (seconds > 0) max(1, (seconds / 60).roundToInt()) else 0
+    val h = totalMin / 60
+    val m = totalMin % 60
+    return if (h == 0) "$m min" else "$h h ${m.toString().padStart(2, '0')} min"
+}
+
+val BaseItemDto.runtime: String get() = runTimeTicks?.let { duration(ticksToSeconds(it)) }.orEmpty()
+
+val BaseItemDto.remainingSeconds: Double
+    get() = max(0.0, ticksToSeconds(runTimeTicks) - ticksToSeconds(userData?.playbackPositionTicks))
+
+/** "34 min left". */
+fun timeLeft(seconds: Double): String = t("{time} left", "time" to duration(seconds))
+
+/** How far into the title this person is, 0–1. */
+val BaseItemDto.progress: Float
+    get() {
+        userData?.playedPercentage?.takeIf { it > 0 }?.let { return min(1.0, it / 100).toFloat() }
+        val total = runTimeTicks ?: 0L
+        val pos = userData?.playbackPositionTicks ?: 0L
+        return if (total > 0) min(1f, pos.toFloat() / total) else 0f
+    }
+
+/** "S3 E2", "Special 1", "E4". */
+val BaseItemDto.episodeTag: String
+    get() {
+        val s = parentIndexNumber
+        val e = indexNumber ?: return ""
+        val end = indexNumberEnd?.let { "–$it" }.orEmpty()
+        return when (s) {
+            null -> "E$e"
+            0 -> t("Special {n}", "n" to "$e$end")
+            else -> t("S{s} E{e}", "s" to s, "e" to "$e$end")
+        }
+    }
+
+/** "S3 · E2", the boards' badge and button form. */
+val BaseItemDto.episodeShort: String
+    get() {
+        val e = indexNumber ?: return ""
+        val s = parentIndexNumber ?: return "E$e"
+        return if (s == 0) t("Special {n}", "n" to e) else "S$s · E$e"
+    }
+
+/** "Season 3 · Episode 2". */
+val BaseItemDto.seasonEpisodeLong: String
+    get() = if (parentIndexNumber == 0) t("Special · Episode {e}", "e" to (indexNumber ?: ""))
+    else t("Season {s} · Episode {e}", "s" to (parentIndexNumber ?: ""), "e" to (indexNumber ?: ""))
+
+val BaseItemDto.year: Int? get() = productionYear ?: premiereDate?.year
+
+/** "2024–2026" for a running or finished series, the year for anything else. */
+val BaseItemDto.yearRange: String
+    get() {
+        val start = year ?: return ""
+        if (type != BaseItemKind.SERIES) return start.toString()
+        val end = endDate?.year
+        if (status == "Continuing") {
+            val now = LocalDate.now().year
+            return if (now > start) "$start–$now" else start.toString()
+        }
+        return if (end != null && end != start) "$start–$end" else start.toString()
+    }
+
+private val ratingCountry = Regex("^[A-Z]{2}-")
+
+/** "TV-MA", without a country prefix ("FR-12" → "12"). */
+val BaseItemDto.rating: String get() = officialRating?.trim()?.replace(ratingCountry, "").orEmpty()
+
+/** Joins the parts that aren't blank: join("2026", "", "Drama") → "2026 · Drama". */
+fun join(vararg parts: Any?, separator: String = " · "): String =
+    parts.mapNotNull { it?.toString()?.takeIf(String::isNotBlank) }.joinToString(separator)
