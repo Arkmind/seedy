@@ -40,4 +40,36 @@ class Images(private val api: ApiClient) {
             ?: item.parentLogoImageTag?.let { tag -> item.parentLogoItemId?.let { item(it, ImageType.LOGO, tag, maxWidth) } }
 
     fun user(userId: UUID, tag: String?): String? = tag?.let { api.imageApi.getUserImageUrl(userId = userId, tag = it) }
+
+    /** A person's portrait, a channel's logo, a library's own picture: the item's primary image. */
+    fun primary(item: BaseItemDto, maxWidth: Int): String? =
+        item.imageTags?.get(ImageType.PRIMARY)?.let { item(item.id, ImageType.PRIMARY, it, maxWidth) }
+
+    /**
+     * Art for the 16:9 library cards, as the web's cardArt: a thumb (it carries the title), else a backdrop with the
+     * logo set on it (or the title written on it when there's no logo), else the poster contained over its own blur.
+     */
+    fun cardArt(item: BaseItemDto, maxWidth: Int, episodeImages: Boolean = true): CardArt {
+        if (item.type == BaseItemKind.EPISODE) {
+            val own = if (episodeImages) item.imageTags?.get(ImageType.PRIMARY)?.let { item(item.id, ImageType.PRIMARY, it, maxWidth) } else null
+            val src = own ?: item.parentThumbImageTag?.let { tag -> item.parentThumbItemId?.let { item(it, ImageType.THUMB, tag, maxWidth) } }
+                ?: backdrop(item, maxWidth)
+            return CardArt(src, titleOnArt = src == null)
+        }
+        if (item.type == BaseItemKind.MUSIC_ALBUM || item.type == BaseItemKind.AUDIO || item.type == BaseItemKind.MUSIC_ARTIST || item.type == BaseItemKind.PLAYLIST) {
+            val p = primary(item, maxWidth)
+            return CardArt(p, contain = p != null, titleOnArt = p == null)
+        }
+        item.imageTags?.get(ImageType.THUMB)?.let { return CardArt(item(item.id, ImageType.THUMB, it, maxWidth)) }
+        backdrop(item, maxWidth)?.let { bd ->
+            val logo = logo(item, (maxWidth * 0.6f).toInt())
+            return CardArt(bd, logo = logo, titleOnArt = logo == null)
+        }
+        val p = primary(item, maxWidth)
+        if (p != null) return CardArt(p, contain = (item.primaryImageAspectRatio ?: 0.67) < 1.2, titleOnArt = true)
+        return CardArt(null, titleOnArt = true)
+    }
 }
+
+/** What a 16:9 card draws: the picture, a logo on it, or the title written on it (the boards' stand-in). */
+data class CardArt(val src: String?, val logo: String? = null, val contain: Boolean = false, val titleOnArt: Boolean = false)

@@ -110,6 +110,8 @@ fun TvPlayerScreen(
     focus: TvPlayerFocus,
     video: @Composable () -> Unit,
     subtitleSize: TextUnit = 40.bsp,
+    /** The time "Ends at" counts from (fixed in screenshot tests). */
+    now: () -> LocalTime = LocalTime::now,
     /** A panel is open: subtitles step aside for it. */
     panelOpen: Boolean = false,
     panel: @Composable () -> Unit = {},
@@ -124,13 +126,13 @@ fun TvPlayerScreen(
             )
         }
         if (!panelOpen) Subtitles(state, if (controls) 400.bp else 96.bp, subtitleSize)
-        if (controls) Controls(state, seekBack, seekForward, actions, focus)
+        if (controls) Controls(state, seekBack, seekForward, actions, focus, now)
         panel()
     }
 }
 
 @Composable
-private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, actions: TvPlayerActions, focus: TvPlayerFocus) {
+private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, actions: TvPlayerActions, focus: TvPlayerFocus, now: () -> LocalTime) {
     val item = state.item
     Box(Modifier.fillMaxSize()) {
         Row(
@@ -173,7 +175,7 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
                         )
                     }
                     SText(if (state.live) state.program?.name ?: item?.name.orEmpty() else item?.name.orEmpty(), size = 48.bsp, weight = 800, lineHeight = 1.05f, color = SeedyColors.White, maxLines = 1)
-                    SText(if (state.live) liveLine(state) else endsLine(state), size = 18.bsp, color = SeedyColors.Text2)
+                    SText(if (state.live) liveLine(state) else endsLine(state, now()), size = 18.bsp, color = SeedyColors.Text2)
                 }
                 if (state.skip != null) SkipButton(state, actions.onSkip, focus.skip)
             }
@@ -227,9 +229,9 @@ private fun streamLabel(label: String): String =
     label.split(" · ").joinToString(" · ") { part -> if (part in setOf("Direct play", "Direct stream", "Transcoding", "Stereo", "Mono")) t(part) else part }
 
 /** "Ends at 22:41 · 50 min left" (allowing for the playback speed). */
-private fun endsLine(state: PlayerState): String {
+private fun endsLine(state: PlayerState, now: LocalTime): String {
     val leftMs = ((state.durationMs - state.positionMs) / state.speed.coerceAtLeast(0.25f)).toLong().coerceAtLeast(0)
-    val ends = LocalTime.now().plusSeconds(leftMs / 1000).format(DateTimeFormatter.ofPattern("HH:mm"))
+    val ends = now.plusSeconds(leftMs / 1000).format(DateTimeFormatter.ofPattern("HH:mm"))
     return join(t("Ends at {time}", "time" to ends), t("{time} left", "time" to duration(leftMs / 1000.0)))
 }
 

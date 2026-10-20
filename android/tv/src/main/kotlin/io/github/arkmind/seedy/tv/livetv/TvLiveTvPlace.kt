@@ -58,7 +58,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.compose.ContentFrame
 import io.github.arkmind.seedy.core.feature.LiveTvViewModel
 import io.github.arkmind.seedy.core.format.join
-import io.github.arkmind.seedy.core.format.weekdayDayMonth
+import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.livetv.LiveChannel
 import io.github.arkmind.seedy.core.livetv.LiveTv
@@ -206,7 +206,7 @@ fun TvGuide(
                     Box(
                         Modifier.width(300.bp).fillMaxHeight().drawBehind { drawLine(Color(0xFF1F1F1F), Offset(size.width - 1f, 0f), Offset(size.width - 1f, size.height), 2.bp.toPx()) }.padding(horizontal = 22.bp),
                         contentAlignment = Alignment.CenterStart,
-                    ) { SText(weekdayDayMonth(state.day), size = 18.bsp, weight = 800, color = SeedyColors.White) }
+                    ) { SText(weekdayDate(state.day), size = 18.bsp, weight = 800, color = SeedyColors.White) }
                     Box(Modifier.weight(1f).fillMaxHeight().clipToBounds()) {
                         var m = (offset / 30) * 30
                         while (m < offset + SpanMinutes) {
@@ -265,11 +265,11 @@ fun TvGuide(
 
 private fun dayLabel(day: LocalDate): String {
     val today = LocalDate.now()
-    val short = weekdayDayMonth(day).substringBeforeLast(' ')
+    val short = weekdayDate(day).substringBeforeLast(' ')
     return when (day) {
         today -> t("Today, {day}", "day" to short)
         today.plusDays(1) -> t("Tomorrow, {day}", "day" to short)
-        else -> weekdayDayMonth(day)
+        else -> weekdayDate(day)
     }
 }
 

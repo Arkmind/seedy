@@ -83,4 +83,26 @@ object AppIcons {
     val History = IconDef(2f, "M3.5 12a8.5 8.5 0 1 0 17 0a8.5 8.5 0 1 0 -17 0Z", "M12 7.5V12l3 2")
     val Reorder = IconDef(2f, "M4 7h16", "M4 12h16", "M4 17h10")
     val ChannelNumber = IconDef(2f, "M5 9h14", "M5 15h14", "M10 4L8 20", "M16 4l-2 16")
+
+    /* Libraries board: the tiles' kinds. */
+    val Layers = IconDef(2.2f, "M12 3l9 5-9 5-9-5z", "M3 13l9 5 9-5")
+    val Camera = IconDef(
+        2.2f, "M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z", "M12 10a3.5 3.5 0 1 1 0 7a3.5 3.5 0 1 1 0-7z",
+    )
+    val Playlist = IconDef(2.2f, "M9 6h11M9 12h11M9 18h11", "M4 6h.01M4 12h.01M4 18h.01")
+
+    /** Series details: an episode row's play button (an outline). */
+    val PlayOutline = IconDef(2.2f, "M8 5v14l11-7z")
+
+    /** TV series details: the Episodes button. */
+    val Episodes = IconDef(2.2f, "M3 9h18v11H3z", "M6 6h12", "M9 3h6")
+
+    /** A favourite: the heart, filled. */
+    val HeartFilled = IconDef(2f, listOf(IconPart("M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z", filled = true)))
+
+    /** The phone boards' row chevron (a little shorter than the web's). */
+    val Chevron = IconDef(2.4f, "M9 6l6 6-6 6")
+
+    /** Request seasons: the "approval first" note's clock hands. */
+    val ClockHands = IconDef(3f, "M12 7v5l3 2")
 }

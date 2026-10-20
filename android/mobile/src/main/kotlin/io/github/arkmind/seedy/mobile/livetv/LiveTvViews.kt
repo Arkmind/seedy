@@ -46,7 +46,7 @@ import io.github.arkmind.seedy.core.feature.LiveTvViewModel
 import io.github.arkmind.seedy.core.format.dayMonth
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.format.runtime
-import io.github.arkmind.seedy.core.format.weekdayDayMonth
+import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.livetv.LiveChannel
 import io.github.arkmind.seedy.core.livetv.LiveTv
@@ -313,9 +313,9 @@ private fun DayPicker(day: LocalDate, onDay: (LocalDate) -> Unit) {
     var open by remember { mutableStateOf(false) }
     val today = LocalDate.now()
     fun label(d: LocalDate) = when (d) {
-        today -> t("Today, {day}", "day" to weekdayDayMonth(d).substringBeforeLast(' '))
-        today.plusDays(1) -> t("Tomorrow, {day}", "day" to weekdayDayMonth(d).substringBeforeLast(' '))
-        else -> weekdayDayMonth(d)
+        today -> t("Today, {day}", "day" to weekdayDate(d).substringBeforeLast(' '))
+        today.plusDays(1) -> t("Tomorrow, {day}", "day" to weekdayDate(d).substringBeforeLast(' '))
+        else -> weekdayDate(d)
     }
     Box {
         Row(

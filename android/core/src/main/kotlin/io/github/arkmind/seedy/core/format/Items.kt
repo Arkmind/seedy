@@ -1,9 +1,12 @@
 package io.github.arkmind.seedy.core.format
 
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.i18n.tn
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.LocationType
 import java.time.LocalDate
+import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -166,27 +169,59 @@ fun clock(ms: Long): String {
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
 }
 
-/* Short dates as on the boards: three-letter English ("19 Oct", "Fri 23 Oct"), the usual French abbreviations. */
-private val MonthsEn = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-private val DaysEn = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-private val MonthsFr = listOf("janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc.")
-private val DaysFr = listOf("lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim.")
-
-private fun fr() = io.github.arkmind.seedy.core.i18n.I18n.lang == io.github.arkmind.seedy.core.i18n.Lang.Fr
-
-/** "25 Sep" / "25 sept.". */
-fun dayMonth(d: java.time.LocalDate): String = "${d.dayOfMonth} ${(if (fr()) MonthsFr else MonthsEn)[d.monthValue - 1]}"
-
-/** "Fri 23 Oct" / "ven. 23 oct.". */
-fun weekdayDayMonth(d: java.time.LocalDate): String = "${(if (fr()) DaysFr else DaysEn)[d.dayOfWeek.value - 1]} ${dayMonth(d)}"
-
 /**
  * An episode's line in lists: "54 min · 25 Sep" once aired, "52 min · 50 min left" when started, "Airs Fri 23 Oct"
  * when it's still to come.
  */
 fun episodeMeta(e: BaseItemDto): String {
     val date = e.premiereDate?.toLocalDate()
-    if (date != null && date.isAfter(LocalDate.now())) return t("Airs {date}", "date" to weekdayDayMonth(date))
+    if (date != null && date.isAfter(LocalDate.now())) return t("Airs {date}", "date" to weekdayDate(date))
     val started = e.progress > 0f && e.userData?.played != true
     return join(e.runtime, if (started) timeLeft(e.remainingSeconds) else date?.let(::dayMonth))
 }
+
+/** "3 seasons": a series' ChildCount is its season count. */
+val BaseItemDto.seasonsLabel: String
+    get() = childCount?.takeIf { it > 0 }?.let { tn(it, "{n} season", "{n} seasons") }.orEmpty()
+
+/** "New": an unwatched episode added to the server in the last 7 days. */
+val BaseItemDto.isNewEpisode: Boolean
+    get() {
+        if (userData?.played == true) return false
+        val added = dateCreated ?: return false
+        return daysFromToday(added.toLocalDate()) >= -7
+    }
+
+/** Started and not finished. */
+val BaseItemDto.inProgress: Boolean get() = progress > 0f && userData?.played != true
+
+/** A library card's line under the title, as on the web: the year for films, the years for shows. */
+val BaseItemDto.libraryMeta: String
+    get() = when (type) {
+        BaseItemKind.SERIES -> yearRange
+        BaseItemKind.EPISODE -> join(seriesName, episodeTag)
+        BaseItemKind.BOX_SET -> childCount?.takeIf { it > 0 }?.let { tn(it, "{n} title", "{n} titles") }.orEmpty()
+        BaseItemKind.MUSIC_ALBUM -> join(albumArtist, year)
+        else -> year?.toString().orEmpty()
+    }
+
+/** The TV grid's longer line: "2026 · 1 h 54 min", "2025 · 1 h 12 min left", "2024–2026 · 3 seasons". */
+val BaseItemDto.libraryMetaLong: String
+    get() = when (type) {
+        BaseItemKind.SERIES -> join(yearRange, seasonsLabel)
+        BaseItemKind.MOVIE, BaseItemKind.VIDEO, BaseItemKind.MUSIC_VIDEO -> join(year, if (inProgress) timeLeft(remainingSeconds) else runtime)
+        else -> libraryMeta
+    }
+
+/** The score shown with a star ("8.4"), or null. */
+val BaseItemDto.score: String? get() = communityRating?.takeIf { it > 0f }?.let { String.format(Locale.US, "%.1f", it) }
+
+/** An episode's number in its season: "2", "2–3". */
+val BaseItemDto.episodeNumber: String
+    get() = indexNumber?.let { n -> indexNumberEnd?.let { "$n–$it" } ?: "$n" }.orEmpty()
+
+/** Jellyfin's placeholder for an episode or season it knows about but has no file for. */
+val BaseItemDto.isVirtual: Boolean get() = locationType == LocationType.VIRTUAL
+
+/** The day a title premiered (Jellyfin's premiere dates are calendar days). */
+val BaseItemDto.premiereDay: LocalDate? get() = premiereDate?.toLocalDate()

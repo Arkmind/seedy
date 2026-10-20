@@ -99,7 +99,7 @@ class TvPlayerShots {
             SeedyTheme {
                 TvPlayerScreen(
                     state = state, controls = panel == null, seekBack = 10, seekForward = 30, actions = actions, focus = focus,
-                    video = { Box(Modifier.fillMaxSize().background(Color(0xFF1A232E))) }, panelOpen = panel != null, panel = { panel?.invoke() },
+                    video = { Box(Modifier.fillMaxSize().background(Color(0xFF1A232E))) }, now = { java.time.LocalTime.of(21, 51) }, panelOpen = panel != null, panel = { panel?.invoke() },
                 )
             }
             if (panel == null) LaunchedEffect(Unit) { focus.skip.focusSoon() }
