@@ -226,7 +226,7 @@ export function TypePill({ type }: { type: 'movie' | 'tv' | 'upcoming' }) {
 
 export const seerrPath = (s: Pick<SeerrItem, 'mediaType' | 'tmdbId'>) => `/request/${s.mediaType}/${s.tmdbId}`;
 
-export function PosterCard({ item, width, canRequest, onRequest, requesting, showRequestButton, requestedLabel }: {
+export function PosterCard({ item, width, canRequest, onRequest, requesting, showRequestButton, requestedLabel, title: shownTitle, upcoming, meta, metaAccent }: {
   item: SeerrItem;
   width?: number;
   canRequest: boolean;
@@ -235,7 +235,14 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
   /* Search shows the Request button under the poster rather than on hover. */
   showRequestButton?: boolean;
   requestedLabel?: string;
+  /* Requests rows: a title other than the item's ("Series · Season 4"). */
+  title?: string;
+  /* Upcoming rows: the green Upcoming pill instead of the type, no status corner, and `meta` (the date) under the title. */
+  upcoming?: boolean;
+  meta?: ComponentChildren;
+  metaAccent?: boolean;
 }) {
+  const title = shownTitle ?? item.title;
   const poster = tmdbImage(item.posterPath, 'w342');
   const inLibrary = !!item.jellyfinItemId && (item.status === 'available' || item.status === 'partial');
   const target = inLibrary ? `/details/${item.jellyfinItemId}` : seerrPath(item);
@@ -244,11 +251,11 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
   return (
     <div class="card poster-card" style={style}>
       <div class="card-media is-poster" tabIndex={-1}>
-        <Link to={target} class="poster-link" aria-label={`${item.title}, ${item.mediaType === 'movie' ? 'movie' : 'series'}${item.year ? ', ' + item.year : ''}`}>
-          {poster ? <Img src={poster} class="art" /> : <span aria-hidden="true" class="art-title">{item.title}</span>}
+        <Link to={target} class="poster-link" aria-label={`${title}, ${item.mediaType === 'movie' ? 'movie' : 'series'}${item.year && !upcoming ? ', ' + item.year : ''}`}>
+          {poster ? <Img src={poster} class="art" /> : <span aria-hidden="true" class="art-title">{title}</span>}
         </Link>
-        <TypePill type={item.mediaType} />
-        <SeerrStatusPill status={item.status} />
+        <TypePill type={upcoming ? 'upcoming' : item.mediaType} />
+        {!upcoming && <SeerrStatusPill status={item.status} />}
         {!showRequestButton && (
           <div class="poster-hover">
             {requestable && (
@@ -262,12 +269,16 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
         )}
       </div>
       <Link to={target} class="card-text" tabIndex={-1}>
-        <span class="card-title is-14">{item.title}</span>
-        <span class="card-meta is-score">
-          {item.rating ? <><Icon name="star" size={13} color="var(--seedy-accent)" />{item.rating.toFixed(1)}</> : null}
-          {item.rating && item.year ? ' · ' : ''}
-          {item.year}
-        </span>
+        <span class="card-title is-14">{title}</span>
+        {meta !== undefined ? (
+          <span class="card-meta" style={{ fontWeight: 600, color: metaAccent ? 'var(--seedy-accent)' : undefined }}>{meta}</span>
+        ) : (
+          <span class="card-meta is-score">
+            {item.rating ? <><Icon name="star" size={13} color="var(--seedy-accent)" />{item.rating.toFixed(1)}</> : null}
+            {item.rating && item.year ? ' · ' : ''}
+            {item.year}
+          </span>
+        )}
       </Link>
       {showRequestButton && requestable && (
         <button type="button" class="btn btn-primary is-sm is-block" aria-label={`Request ${item.title} (${item.mediaType === 'movie' ? 'movie' : 'series'}${item.year ? ', ' + item.year : ''})`} aria-haspopup={item.mediaType === 'tv' ? 'dialog' : undefined} disabled={requesting} onClick={() => onRequest(item)}>

@@ -25,7 +25,6 @@ import { MePlayback } from './screens/me/Playback';
 import { MeSubtitles } from './screens/me/Subtitles';
 import { MeDisplay } from './screens/me/Display';
 import { MeControls } from './screens/me/Controls';
-import { MyRequests } from './screens/me/MyRequests';
 import { PersonalHost } from './screens/me/effects';
 import { ServerOverview } from './screens/server/Overview';
 import { ServerSettings } from './screens/server/Settings';
@@ -42,6 +41,7 @@ import { ServerTasks } from './screens/server/Tasks';
 import { ServerBackups } from './screens/server/Backups';
 import { ServerLogs } from './screens/server/Logs';
 import { ServerApiKeys } from './screens/server/ApiKeys';
+import { RequestsBrowse, RequestsDiscover, RequestsList } from './screens/requests/Requests';
 import { LiveOnNow } from './screens/livetv/OnNow';
 import { LiveGuide } from './screens/livetv/Guide';
 import { LiveChannels } from './screens/livetv/Channels';
@@ -91,7 +91,10 @@ const ROUTES: Route[] = [
   { pattern: '/settings/subtitles', render: () => <MeSubtitles /> },
   { pattern: '/settings/display', render: () => <MeDisplay /> },
   { pattern: '/settings/controls', render: () => <MeControls /> },
-  { pattern: '/requests', render: () => <MyRequests /> },
+  { pattern: '/requests', render: () => <RequestsDiscover /> },
+  { pattern: '/requests/my', render: () => <RequestsList scope="mine" /> },
+  { pattern: '/requests/all', render: () => <RequestsList scope="all" /> },
+  { pattern: '/requests/discover/:kind', render: (p) => <RequestsBrowse kind={p.kind} /> },
   { pattern: '/admin', render: () => <AdminGeneral />, admin: true },
   { pattern: '/admin/home', render: () => <AdminHome />, admin: true },
   { pattern: '/admin/requests', render: () => <AdminRequests />, admin: true },

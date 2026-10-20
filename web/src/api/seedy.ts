@@ -153,7 +153,32 @@ export interface MyRequest extends SeerrItem {
   is4k?: boolean;
   /* When the title became available, if it has. */
   availableAt?: string;
+  /* When the request last changed (approved, declined…) and who changed it. */
+  updatedAt?: string;
+  modifiedBy?: string;
+  /* What Sonarr/Radarr are downloading for it right now; `season` when it's all one season. */
+  download?: { fraction: number; season?: number; items: number; estimatedAt?: string };
+  /* Requested seasons that haven't started airing yet. */
+  unaired?: number[];
+  /* A movie's home release (yyyy-MM-dd) while it's still ahead. */
+  releaseDate?: string;
 }
+
+/* The Requests page for the signed-in person: the All requests tab and admin actions follow their Seerr permissions. */
+export interface RequestSummary {
+  canViewAll: boolean;
+  canManage: boolean;
+  /* Their own requests still waiting or on the way. */
+  open: number;
+  /* Everyone's requests waiting for approval (with canViewAll). */
+  pending?: number;
+}
+
+export type RequestFilter = 'all' | 'pending' | 'processing' | 'available' | 'failed';
+export type TitlesKind = 'trending' | 'popular-movies' | 'popular-shows' | 'upcoming-movies' | 'upcoming-shows';
+
+/* A title on a Requests row. Upcoming ones carry their date; a requested series' next season carries its number. */
+export interface SeerrTitle extends SeerrItem { releaseDate?: string; season?: number }
 
 export interface SeerrSeason {
   seasonNumber: number;
@@ -314,6 +339,14 @@ export const seerrUpcoming = () => get<{ results: SeerrUpcoming[] }>('/Seedy/Req
 export const seerrDetails = (mediaType: 'movie' | 'tv', tmdbId: number) => get<SeerrDetails>(`/Seedy/Requests/Media/${mediaType}/${tmdbId}`);
 /* The person's requests, newest first; `open` counts those still waiting or downloading. */
 export const myRequests = () => get<{ results: MyRequest[]; open: number }>('/Seedy/Requests/Mine');
+export const requestSummary = () => get<RequestSummary>('/Seedy/Requests/Summary');
+export const requestList = (q: { scope: 'mine' | 'all'; filter?: RequestFilter; sort?: 'added' | 'modified'; skip?: number; take?: number }) =>
+  get<{ results: MyRequest[]; total: number }>('/Seedy/Requests/List', q as Query);
+export const seerrTitles = (kind: TitlesKind, page = 1) => get<{ results: SeerrTitle[]; pages: number }>(`/Seedy/Requests/Titles/${kind}`, { page });
+export const approveRequest = (id: number) => post<MyRequest | undefined>(`/Seedy/Requests/${id}/Approve`);
+export const declineRequest = (id: number) => post<MyRequest | undefined>(`/Seedy/Requests/${id}/Decline`);
+export const retryRequest = (id: number) => post<MyRequest | undefined>(`/Seedy/Requests/${id}/Retry`);
+export const removeRequest = (id: number) => del<void>(`/Seedy/Requests/${id}`);
 export const seerrRequestOptions = (mediaType: 'movie' | 'tv') => get<RequestOptions>(`/Seedy/Requests/Options/${mediaType}`);
 export const seerrRequest = (body: RequestBody) =>
   post<{ status: SeerrStatus }>('/Seedy/Requests', body);

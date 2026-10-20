@@ -44,6 +44,7 @@
 .nb-account:hover, .nb-account.is-current {
   background: var(--seedy-inverse); color: var(--seedy-ink-inverse);
 }
+.nb-req.is-current { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-weight: 800; }
 /* Settings open (or the menu): the pill turns light and its avatar dark. */
 .nb-account:hover .header-avatar, .nb-account.is-current .header-avatar { background: var(--seedy-surface-2); color: #ffffff; }
 .nb-account.is-current .nb-chev, .nb-account:hover .nb-chev { opacity: 1; }
@@ -66,7 +67,6 @@
 }
 @media (min-width: 721px) and (max-width: 790px) {
   .nb-req { width: 44px; padding: 0; justify-content: center; font-size: 0; gap: 0; }
-  .nb-req .nb-out { display: none; }
 }
 
 /* ── Libraries menu ── */

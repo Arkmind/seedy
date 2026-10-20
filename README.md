@@ -10,7 +10,8 @@ plugin repository and the server address opens Seedy instead of Jellyfin's web a
   Collections. Each profile's row order adapts to the rows they actually play from.
 - **Search as you type.** Results grouped by kind with a best match you can play straight away, recent searches,
   browse by genre, typo-tolerant matching. "Not what you're searching for? Request it" under the results.
-- **Requests through Seerr** (Jellyseerr / Overseerr). Discover, Upcoming movies, Request buttons, My requests.
+- **Requests through Seerr** (Jellyseerr / Overseerr). A Requests page with Seerr's trending, popular and upcoming
+  titles, your requests and their download progress, and everyone's requests to approve or decline for request managers.
   Requests are made as the signed-in person, so their Seerr limits and auto-approval apply. The API key never leaves
   the server.
 - **Live TV.** On now, a guide grid with a "now" line, channels, recordings and series rules, and a live player with
@@ -126,7 +127,7 @@ src/Jellyfin.Plugin.Seedy/
   Configuration/          admin settings (stored as Jellyfin plugin XML) and the dashboard page
   Api/WebController       serves the app's files at /seedy/ (index.html for app routes, immutable caching for assets)
   Api/SeedyController     /Seedy: branding, profile and preferences, home rows, Featured, Top 10, history (/Seedy/Plays)
-  Api/RequestsController  /Seedy/Requests: Seerr discover, search, upcoming, details, requests
+  Api/RequestsController  /Seedy/Requests: Seerr discover, search, upcoming, details, requests and their approval
   Api/AdminController     /Seedy/Admin: config, status, logo, Seerr connection and accounts, play log
   Api/BackupsController   /Seedy/Admin/BackupFiles and /Seedy/Admin/BackupSchedule
   Api/TrailerController   /Seedy/Items/{id}/Trailer: local, TMDB (Jellyfin metadata) or Seerr trailers
@@ -140,7 +141,8 @@ web/                      Preact + TypeScript + Vite
   src/ui                  design tokens and shared components; the navbar and its search
   src/screens/browse      Home, Details, Library, lists, Favorites, History, Search, Seerr titles
   src/screens/livetv      Live TV: On now, Guide, Channels, Recordings
-  src/screens/me          personal settings (/settings) and My requests
+  src/screens/requests    Requests: Discover, My requests, All requests (Seerr)
+  src/screens/me          personal settings (/settings)
   src/screens/admin       Seedy's admin pages and the dashboard shell
   src/screens/server      the server dashboard; its Jellyfin API calls are in api.ts
   src/player              the player (on demand and live)

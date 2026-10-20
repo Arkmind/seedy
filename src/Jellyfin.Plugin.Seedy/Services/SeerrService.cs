@@ -697,61 +697,348 @@ public sealed class SeerrService
     public async Task<MyRequestsDto> MyRequestsAsync(int me, CancellationToken ct)
     {
         var node = await Api(HttpMethod.Get, $"/request?take=60&skip=0&filter=all&sort=added&requestedBy={me}", ct: ct).ConfigureAwait(false);
-        var result = new MyRequestsDto();
-        foreach (var r in node?["results"]?.AsArray() ?? [])
-        {
-            if (r is null || Int(r["requestedBy"]?["id"]) is { } by && by != me)
-            {
-                continue;
-            }
-
-            var type = Str(r["type"]) == "tv" ? "tv" : "movie";
-            var tmdb = Int(r["media"]?["tmdbId"]);
-            if (tmdb is null)
-            {
-                continue;
-            }
-
-            JsonNode? details = null;
-            try
-            {
-                details = await Cached((type == "tv" ? "/tv/" : "/movie/") + tmdb.Value.ToString(CultureInfo.InvariantCulture) + "?language=en", DetailsTtl, ct).ConfigureAwait(false);
-            }
-            catch (SeerrException)
-            {
-                // Keep the request even when Seerr can't describe the title.
-            }
-
-            var basic = MapResult(details, me, type) ?? new SeerrItemDto { TmdbId = tmdb.Value, MediaType = type, Title = "Unknown title" };
-            var media = r["media"];
-            var mediaStatus = MediaStatus(media, Bool(r["is4k"]));
-            var request = new MyRequestDto
-            {
-                TmdbId = basic.TmdbId,
-                MediaType = basic.MediaType,
-                Title = basic.Title,
-                Year = basic.Year,
-                Rating = basic.Rating,
-                PosterPath = basic.PosterPath,
-                BackdropPath = basic.BackdropPath,
-                Overview = basic.Overview,
-                Status = mediaStatus ?? basic.Status,
-                RequestedBy = Str(r["requestedBy"]?["displayName"]),
-                RequestedByMe = true,
-                JellyfinItemId = NormalizeId(Str(media?["jellyfinMediaId"])) ?? basic.JellyfinItemId,
-                RequestId = Int(r["id"]) ?? 0,
-                RequestedAt = Date(r["createdAt"]) ?? DateTime.UtcNow,
-                RequestStatus = Int(r["status"]) switch { 2 => "approved", 3 => "declined", 4 => "failed", 5 => "completed", _ => "pending" },
-                Is4k = Bool(r["is4k"]),
-                Seasons = type == "tv" ? (r["seasons"]?.AsArray() ?? []).Select(s => Int(s?["seasonNumber"]) ?? 0).Where(n => n > 0).ToList() : null,
-                AvailableAt = mediaStatus is "available" or "partial" ? Date(media?["mediaAddedAt"]) ?? Date(media?["updatedAt"]) : null
-            };
-            result.Results.Add(request);
-        }
-
+        var mine = (node?["results"]?.AsArray() ?? []).Where(r => r is not null && (Int(r["requestedBy"]?["id"]) is not { } by || by == me)).ToList();
+        var result = new MyRequestsDto { Results = await MapRequestsAsync(mine, me, ct).ConfigureAwait(false) };
         result.Open = result.Results.Count(x => x.RequestStatus is "pending" or "approved" && x.Status is not ("available"));
         return result;
     }
+
+    // ── Requests page ──
+
+    /// <summary>A page of requests: the person's own, or everyone's (Seerr only lists everyone's for people with
+    /// Manage or View requests, since the call is made as the person).</summary>
+    /// <param name="me">The person's Seerr id.</param>
+    /// <param name="all">Everyone's requests rather than the person's.</param>
+    /// <param name="filter">all, pending, processing, available or failed (Seerr's request filters).</param>
+    /// <param name="sort">added or modified.</param>
+    /// <param name="skip">Requests to skip.</param>
+    /// <param name="take">Page size.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Requests and the total.</returns>
+    public async Task<RequestListDto> RequestListAsync(int me, bool all, string? filter, string? sort, int skip, int take, CancellationToken ct)
+    {
+        var f = filter is "pending" or "processing" or "available" or "failed" ? filter : "all";
+        var s = sort == "modified" ? "modified" : "added";
+        var path = string.Create(CultureInfo.InvariantCulture, $"/request?take={Math.Clamp(take, 1, 50)}&skip={Math.Max(0, skip)}&filter={f}&sort={s}");
+        var node = await Api(HttpMethod.Get, all ? path : path + "&requestedBy=" + me.ToString(CultureInfo.InvariantCulture), asUser: me, ct: ct).ConfigureAwait(false);
+        var list = (node?["results"]?.AsArray() ?? []).Where(r => r is not null && (all || Int(r["requestedBy"]?["id"]) is not { } by || by == me)).ToList();
+        return new RequestListDto
+        {
+            Results = await MapRequestsAsync(list, me, ct).ConfigureAwait(false),
+            Total = Int(node?["pageInfo"]?["results"]) ?? list.Count
+        };
+    }
+
+    /// <summary>The Requests page's tabs and counts for the person.</summary>
+    /// <param name="me">The person's Seerr id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Summary.</returns>
+    public async Task<RequestSummaryDto> RequestSummaryAsync(int me, CancellationToken ct)
+    {
+        var perms = await PermissionsAsync(me, ct).ConfigureAwait(false);
+        var summary = new RequestSummaryDto
+        {
+            CanViewAll = Has(perms, PermManageRequests, PermRequestView),
+            CanManage = Has(perms, PermManageRequests)
+        };
+
+        // "unavailable": waiting for approval, or approved and not in the library yet.
+        var open = await Api(HttpMethod.Get, $"/request?take=1&skip=0&filter=unavailable&requestedBy={me}", asUser: me, ct: ct).ConfigureAwait(false);
+        summary.Open = Int(open?["pageInfo"]?["results"]) ?? 0;
+        if (summary.CanViewAll)
+        {
+            // Seerr counts everyone's requests whoever asks, so only people who may see them get the number.
+            var count = await Api(HttpMethod.Get, "/request/count", ct: ct).ConfigureAwait(false);
+            summary.Pending = Int(count?["pending"]) ?? 0;
+        }
+
+        return summary;
+    }
+
+    /// <summary>Approves, declines or retries a request as the person (Seerr checks they have Manage requests).</summary>
+    /// <param name="requestId">Seerr request id.</param>
+    /// <param name="action">approve, decline or retry.</param>
+    /// <param name="me">The person's Seerr id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>The request as it is now.</returns>
+    public async Task<MyRequestDto?> UpdateRequestAsync(int requestId, string action, int me, CancellationToken ct)
+    {
+        var id = requestId.ToString(CultureInfo.InvariantCulture);
+        var node = await Api(HttpMethod.Post, action == "retry" ? $"/request/{id}/retry" : $"/request/{id}/{action}", asUser: me, ct: ct).ConfigureAwait(false);
+        ForgetRequests(node);
+        return node is null ? null : (await MapRequestsAsync([node], me, ct).ConfigureAwait(false)).FirstOrDefault();
+    }
+
+    /// <summary>Removes a request as the person: Seerr lets people withdraw their own while it waits, and
+    /// request managers remove any.</summary>
+    /// <param name="requestId">Seerr request id.</param>
+    /// <param name="me">The person's Seerr id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>A task.</returns>
+    public async Task DeleteRequestAsync(int requestId, int me, CancellationToken ct)
+    {
+        await Api(HttpMethod.Delete, "/request/" + requestId.ToString(CultureInfo.InvariantCulture), asUser: me, ct: ct).ConfigureAwait(false);
+        ForgetRequests(null);
+    }
+
+    /* After a request changes: lists and the title's details have a new status. */
+    private void ForgetRequests(JsonNode? request)
+    {
+        var tmdb = Int(request?["media"]?["tmdbId"]);
+        var title = tmdb is null ? null : (Str(request?["type"]) == "tv" ? "/tv/" : "/movie/") + tmdb.Value.ToString(CultureInfo.InvariantCulture);
+        foreach (var k in _cache.Keys.Where(k => k.StartsWith("/discover", StringComparison.Ordinal) || k.StartsWith("/search", StringComparison.Ordinal)
+            || k.StartsWith("/request", StringComparison.Ordinal) || (title is not null && k.StartsWith(title + "?", StringComparison.Ordinal))).ToList())
+        {
+            _cache.TryRemove(k, out _);
+        }
+    }
+
+    /// <summary>A Requests row: trending, popular movies or shows, upcoming movies or shows. The first page of the
+    /// upcoming rows starts with what people requested: movies not out yet, and new seasons of requested series.</summary>
+    /// <param name="kind">trending, popular-movies, popular-shows, upcoming-movies or upcoming-shows.</param>
+    /// <param name="page">Page (1-based).</param>
+    /// <param name="me">The viewer's Seerr id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Titles and Seerr's page count.</returns>
+    public async Task<SeerrTitlesDto> TitlesAsync(string kind, int page, int? me, CancellationToken ct)
+    {
+        var path = kind switch
+        {
+            "popular-movies" => "/discover/movies",
+            "popular-shows" => "/discover/tv",
+            "upcoming-movies" => "/discover/movies/upcoming",
+            "upcoming-shows" => "/discover/tv/upcoming",
+            _ => "/discover/trending"
+        };
+        var upcoming = kind.StartsWith("upcoming", StringComparison.Ordinal);
+        var result = new SeerrTitlesDto();
+        if (page <= 1 && kind == "upcoming-movies")
+        {
+            foreach (var u in await UpcomingAsync(me, ct).ConfigureAwait(false))
+            {
+                result.Results.Add(Title(u, u.ReleaseDate));
+            }
+        }
+        else if (page <= 1 && kind == "upcoming-shows")
+        {
+            result.Results.AddRange(await UpcomingSeasonsAsync(me, ct).ConfigureAwait(false));
+        }
+
+        var node = await Cached(string.Create(CultureInfo.InvariantCulture, $"{path}?page={Math.Max(1, page)}&language=en"), ListTtl, ct).ConfigureAwait(false);
+        result.Pages = Int(node?["totalPages"]) ?? 1;
+        foreach (var r in node?["results"]?.AsArray() ?? [])
+        {
+            var item = MapResult(r, me, kind switch { "popular-movies" or "upcoming-movies" => "movie", "popular-shows" or "upcoming-shows" => "tv", _ => null });
+            if (item is null || item.Status == "blocklisted" || result.Results.Any(x => x.Season is null && x.TmdbId == item.TmdbId && x.MediaType == item.MediaType))
+            {
+                continue;
+            }
+
+            var date = upcoming ? NullIfEmpty(Str(r?[item.MediaType == "tv" ? "firstAirDate" : "releaseDate"])) : null;
+            result.Results.Add(Title(item, date));
+        }
+
+        await Enrich(result.Results.Where(x => x.Season is null), me, ct).ConfigureAwait(false);
+        return result;
+    }
+
+    private static SeerrTitleDto Title(SeerrItemDto i, string? releaseDate) => new()
+    {
+        TmdbId = i.TmdbId,
+        MediaType = i.MediaType,
+        Title = i.Title,
+        Year = i.Year,
+        Rating = i.Rating,
+        PosterPath = i.PosterPath,
+        BackdropPath = i.BackdropPath,
+        Overview = i.Overview,
+        Status = i.Status,
+        RequestedBy = i.RequestedBy,
+        RequestedByMe = i.RequestedByMe,
+        JellyfinItemId = i.JellyfinItemId,
+        ReleaseDate = releaseDate
+    };
+
+    /// <summary>The next season of each requested series that has been announced but hasn't started airing; the
+    /// viewer's own requests first, then soonest first.</summary>
+    private async Task<List<SeerrTitleDto>> UpcomingSeasonsAsync(int? me, CancellationToken ct)
+    {
+        var requests = await Cached("/request?take=100&skip=0&filter=all&sort=added", ListTtl, ct).ConfigureAwait(false);
+        var series = new Dictionary<int, (string Name, bool Mine)>();
+        foreach (var r in requests?["results"]?.AsArray() ?? [])
+        {
+            // Declined (3) and failed (4) requests aren't coming.
+            if (Str(r?["type"]) != "tv" || Int(r?["status"]) is 3 or 4 || Int(r?["media"]?["tmdbId"]) is not { } id)
+            {
+                continue;
+            }
+
+            var by = r?["requestedBy"];
+            var mine = me is not null && Int(by?["id"]) == me;
+            if (!series.TryGetValue(id, out var known) || (mine && !known.Mine))
+            {
+                series[id] = (UserName(by), mine);
+            }
+        }
+
+        var today = DateTime.UtcNow.Date;
+        var found = new List<(SeerrTitleDto Title, bool Mine, DateTime? Date)>();
+        foreach (var (id, who) in series.Take(30))
+        {
+            JsonNode? tv;
+            try
+            {
+                tv = await Cached("/tv/" + id.ToString(CultureInfo.InvariantCulture) + "?language=en", DetailsTtl, ct).ConfigureAwait(false);
+            }
+            catch (SeerrException)
+            {
+                continue;
+            }
+
+            if (tv is null || Str(tv["status"]) is "Ended" or "Canceled" || MapResult(tv, me, "tv") is not { } basic)
+            {
+                continue;
+            }
+
+            var next = (tv["seasons"]?.AsArray() ?? [])
+                .Where(s => (Int(s?["seasonNumber"]) ?? 0) > 0 && (Date(s?["airDate"]) is not { } d || d.Date > today))
+                .OrderBy(s => Int(s?["seasonNumber"]))
+                .FirstOrDefault();
+            if (next is null)
+            {
+                continue;
+            }
+
+            var airs = Date(next["airDate"]);
+            var title = Title(basic, airs?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            title.Season = Int(next["seasonNumber"]);
+            title.PosterPath = Str(next["posterPath"]) ?? basic.PosterPath;
+            title.RequestedBy = who.Name;
+            title.RequestedByMe = who.Mine;
+            found.Add((title, who.Mine, airs));
+        }
+
+        return found.OrderByDescending(f => f.Mine).ThenBy(f => f.Date ?? DateTime.MaxValue).Select(f => f.Title).ToList();
+    }
+
+    /* Requests as the page shows them, with each title's name and art (Seerr's details, cached) filled in. */
+    private async Task<List<MyRequestDto>> MapRequestsAsync(IReadOnlyList<JsonNode?> requests, int me, CancellationToken ct)
+    {
+        using var gate = new SemaphoreSlim(6);
+        var tasks = requests.Select(async r =>
+        {
+            await gate.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                return await MapRequestAsync(r, me, ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }).ToList();
+        var mapped = await Task.WhenAll(tasks).ConfigureAwait(false);
+        return mapped.Where(r => r is not null).Select(r => r!).ToList();
+    }
+
+    private async Task<MyRequestDto?> MapRequestAsync(JsonNode? r, int me, CancellationToken ct)
+    {
+        var type = Str(r?["type"]) == "tv" ? "tv" : "movie";
+        var media = r?["media"];
+        if (r is null || Int(media?["tmdbId"]) is not { } tmdb)
+        {
+            return null;
+        }
+
+        JsonNode? details = null;
+        try
+        {
+            details = await Cached((type == "tv" ? "/tv/" : "/movie/") + tmdb.ToString(CultureInfo.InvariantCulture) + "?language=en", DetailsTtl, ct).ConfigureAwait(false);
+        }
+        catch (SeerrException)
+        {
+            // Keep the request even when Seerr can't describe the title.
+        }
+
+        var is4k = Bool(r["is4k"]);
+        var basic = MapResult(details, me, type) ?? new SeerrItemDto { TmdbId = tmdb, MediaType = type, Title = "Unknown title" };
+        var mediaStatus = MediaStatus(media, is4k);
+        var requestStatus = Int(r["status"]) switch { 2 => "approved", 3 => "declined", 4 => "failed", 5 => "completed", _ => "pending" };
+        var by = r["requestedBy"];
+        var request = new MyRequestDto
+        {
+            TmdbId = basic.TmdbId,
+            MediaType = basic.MediaType,
+            Title = basic.Title,
+            Year = basic.Year,
+            Rating = basic.Rating,
+            PosterPath = basic.PosterPath,
+            BackdropPath = basic.BackdropPath,
+            Overview = basic.Overview,
+            Status = mediaStatus ?? basic.Status,
+            RequestedBy = UserName(by),
+            RequestedByMe = Int(by?["id"]) == me,
+            JellyfinItemId = NormalizeId(Str(media?[is4k ? "jellyfinMediaId4k" : "jellyfinMediaId"])) ?? NormalizeId(Str(media?["jellyfinMediaId"])) ?? basic.JellyfinItemId,
+            RequestId = Int(r["id"]) ?? 0,
+            RequestedAt = Date(r["createdAt"]) ?? DateTime.UtcNow,
+            UpdatedAt = Date(r["updatedAt"]),
+            ModifiedBy = r["modifiedBy"] is JsonObject mod ? UserName(mod) : null,
+            RequestStatus = requestStatus,
+            Is4k = is4k,
+            Seasons = type == "tv" ? (r["seasons"]?.AsArray() ?? []).Select(s => Int(s?["seasonNumber"]) ?? 0).Where(n => n > 0).ToList() : null,
+            AvailableAt = mediaStatus is "available" or "partial" ? Date(media?["mediaAddedAt"]) ?? Date(media?["updatedAt"]) : null,
+            Download = Download(media?[is4k ? "downloadStatus4k" : "downloadStatus"])
+        };
+
+        // Approved and still to come: which requested seasons haven't aired, or when the movie comes out.
+        if (requestStatus == "approved" && request.Status is not "available")
+        {
+            var today = DateTime.UtcNow.Date;
+            if (type == "tv")
+            {
+                var unaired = (details?["seasons"]?.AsArray() ?? [])
+                    .Where(s => Int(s?["seasonNumber"]) is { } n && request.Seasons!.Contains(n) && (Date(s?["airDate"]) is not { } d || d.Date > today))
+                    .Select(s => Int(s?["seasonNumber"])!.Value)
+                    .ToList();
+                request.Unaired = unaired.Count > 0 ? unaired : null;
+            }
+            else if (ReleaseDate(details).Date is { } release && release.Date > today)
+            {
+                request.ReleaseDate = release.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            }
+        }
+
+        return request;
+    }
+
+    /* Sonarr/Radarr's queue for a title, as Seerr tracks it: overall progress, and the season when it's just one. */
+    private static RequestDownloadDto? Download(JsonNode? status)
+    {
+        var items = (status as JsonArray ?? []).Where(d => d is not null).ToList();
+        if (items.Count == 0)
+        {
+            return null;
+        }
+
+        double size = 0, left = 0;
+        foreach (var d in items)
+        {
+            size += Double(d!["size"]) ?? 0;
+            left += Double(d["sizeLeft"]) ?? 0;
+        }
+
+        var seasons = items.Select(d => Int(d!["episode"]?["seasonNumber"])).Distinct().ToList();
+        return new RequestDownloadDto
+        {
+            Fraction = size > 0 ? Math.Clamp((size - left) / size, 0, 1) : 0,
+            Season = seasons.Count == 1 ? seasons[0] : null,
+            Items = items.Count,
+            EstimatedAt = items.Select(d => Date(d!["estimatedCompletionTime"])).Where(d => d is not null).Max()
+        };
+    }
+
+    private static string UserName(JsonNode? user) =>
+        Str(user?["displayName"]) ?? Str(user?["jellyfinUsername"]) ?? Str(user?["username"]) ?? Str(user?["email"]) ?? "someone";
 
     /// <summary>
     /// The YouTube videos TMDB lists for a title (Seerr's relatedVideos), best first: trailers, then teasers, then
@@ -1003,6 +1290,7 @@ public sealed class SeerrService
     private const int PermRequest4kMovie = 2048;
     private const int PermRequest4kTv = 4096;
     private const int PermRequestAdvanced = 8192;
+    private const int PermRequestView = 16384;
     private const int PermAutoApprove4k = 32768;
     private const int PermAutoApprove4kMovie = 65536;
     private const int PermAutoApprove4kTv = 131072;

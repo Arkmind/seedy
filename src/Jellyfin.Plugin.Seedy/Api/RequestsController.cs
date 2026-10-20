@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Seedy.Services;
@@ -99,6 +100,89 @@ public class RequestsController : ControllerBase
     [HttpGet("Mine")]
     public Task<ActionResult<MyRequestsDto>> Mine(CancellationToken ct)
         => Run<MyRequestsDto>(async (_, me) => me is null ? new MyRequestsDto() : await _seerr.MyRequestsAsync(me.Value, ct).ConfigureAwait(false), ct);
+
+    /// <summary>The Requests page's tabs, actions and counts for the signed-in person.</summary>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Summary.</returns>
+    [HttpGet("Summary")]
+    public Task<ActionResult<RequestSummaryDto>> Summary(CancellationToken ct)
+        => Run<RequestSummaryDto>(async (_, me) => me is null ? new RequestSummaryDto() : await _seerr.RequestSummaryAsync(me.Value, ct).ConfigureAwait(false), ct);
+
+    /// <summary>A page of requests: the person's own, or everyone's for people Seerr lets see them.</summary>
+    /// <param name="scope">mine or all.</param>
+    /// <param name="filter">all, pending, processing, available or failed.</param>
+    /// <param name="sort">added or modified.</param>
+    /// <param name="skip">Requests to skip.</param>
+    /// <param name="take">Page size (up to 50).</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Requests.</returns>
+    [HttpGet("List")]
+    public Task<ActionResult<RequestListDto>> List([FromQuery] string? scope, [FromQuery] string? filter, [FromQuery] string? sort, [FromQuery] int skip, [FromQuery] int take, CancellationToken ct)
+        => Run<RequestListDto>(async (_, me) =>
+        {
+            if (me is null)
+            {
+                return new RequestListDto();
+            }
+
+            var all = scope == "all";
+            if (all && !(await _seerr.RequestSummaryAsync(me.Value, ct).ConfigureAwait(false)).CanViewAll)
+            {
+                throw new SeerrException("Your Seerr account can't see other people's requests.", HttpStatusCode.Forbidden);
+            }
+
+            return await _seerr.RequestListAsync(me.Value, all, filter, sort, skip, take <= 0 ? 20 : take, ct).ConfigureAwait(false);
+        }, ct);
+
+    /// <summary>A row of titles to request: trending, popular or upcoming movies and shows.</summary>
+    /// <param name="kind">trending, popular-movies, popular-shows, upcoming-movies or upcoming-shows.</param>
+    /// <param name="page">Page.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Titles.</returns>
+    [HttpGet("Titles/{kind}")]
+    public Task<ActionResult<SeerrTitlesDto>> Titles([FromRoute] string kind, [FromQuery] int page, CancellationToken ct)
+        => Run((_, me) => _seerr.TitlesAsync(kind, page <= 0 ? 1 : page, me, ct), ct);
+
+    /// <summary>Approves a request (needs Seerr's Manage requests).</summary>
+    /// <param name="requestId">Seerr request id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>The request.</returns>
+    [HttpPost("{requestId:int}/Approve")]
+    public Task<ActionResult<MyRequestDto?>> Approve([FromRoute] int requestId, CancellationToken ct) => Update(requestId, "approve", ct);
+
+    /// <summary>Declines a request (needs Seerr's Manage requests).</summary>
+    /// <param name="requestId">Seerr request id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>The request.</returns>
+    [HttpPost("{requestId:int}/Decline")]
+    public Task<ActionResult<MyRequestDto?>> Decline([FromRoute] int requestId, CancellationToken ct) => Update(requestId, "decline", ct);
+
+    /// <summary>Sends a failed request to Sonarr/Radarr again (needs Seerr's Manage requests).</summary>
+    /// <param name="requestId">Seerr request id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>The request.</returns>
+    [HttpPost("{requestId:int}/Retry")]
+    public Task<ActionResult<MyRequestDto?>> Retry([FromRoute] int requestId, CancellationToken ct) => Update(requestId, "retry", ct);
+
+    /// <summary>Withdraws the person's own waiting request, or removes any request for request managers.</summary>
+    /// <param name="requestId">Seerr request id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Nothing.</returns>
+    [HttpDelete("{requestId:int}")]
+    public async Task<ActionResult> Remove([FromRoute] int requestId, CancellationToken ct)
+    {
+        var result = await Run<bool>(async (_, me) =>
+        {
+            await _seerr.DeleteRequestAsync(requestId, me ?? throw NoAccount(), ct).ConfigureAwait(false);
+            return true;
+        }, ct).ConfigureAwait(false);
+        return result.Result ?? NoContent();
+    }
+
+    private Task<ActionResult<MyRequestDto?>> Update(int requestId, string action, CancellationToken ct)
+        => Run((_, me) => _seerr.UpdateRequestAsync(requestId, action, me ?? throw NoAccount(), ct), ct);
+
+    private static SeerrException NoAccount() => new("This profile has no Seerr account. Ask an admin to link one.", HttpStatusCode.Forbidden);
 
     /// <summary>Requested movies that aren't out yet.</summary>
     /// <param name="ct">Cancellation.</param>
