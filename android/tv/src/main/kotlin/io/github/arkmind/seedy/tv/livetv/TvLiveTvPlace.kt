@@ -305,7 +305,7 @@ private fun ProgramDetails(c: LiveChannel, p: BaseItemDto?, now: LocalDateTime) 
             }
             p.overview?.let { SText(it, Modifier.width(860.bp), size = 21.bsp, lineHeight = 1.5f, color = SeedyColors.TextHero, maxLines = 2) }
         }
-        SText(t("OK to watch · hold OK to record or open the channel"), size = 18.bsp, color = SeedyColors.Text3)
+        SText(t("OK to watch · hold OK to record"), size = 18.bsp, color = SeedyColors.Text3)
     }
 }
 

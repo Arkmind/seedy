@@ -67,11 +67,10 @@ ${motion.join('\n')}
 
 // ── French ──
 
-// The apps have no admin pages, so the admin and server-dashboard dictionaries stay out.
+// Every dictionary, admin pages included: the apps reuse many of their words ("Continue watching", "Live TV").
 const dir = join(root, 'web/src/i18n/fr');
-const skip = new Set(['admin.ts', 'server.ts']);
 const fr: Record<string, string> = {};
-for (const file of readdirSync(dir).filter((f) => f.endsWith('.ts') && !skip.has(f)).sort()) {
+for (const file of readdirSync(dir).filter((f) => f.endsWith('.ts')).sort()) {
   const mod = (await import(join(dir, file))) as { default: Record<string, string> };
   Object.assign(fr, mod.default);
 }
