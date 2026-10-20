@@ -40,6 +40,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -97,7 +102,12 @@ private data class HeroPick(val item: BaseItemDto, val reason: String)
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TvHomeScreen(state: HomeViewModel.State, onOpen: (BaseItemDto) -> Unit, firstCard: FocusRequester = remember { FocusRequester() }) {
+fun TvHomeScreen(
+    state: HomeViewModel.State,
+    onOpen: (BaseItemDto) -> Unit,
+    onPlay: (BaseItemDto) -> Unit = {},
+    firstCard: FocusRequester = remember { FocusRequester() },
+) {
     val rows = state.visibleRows
     var pick by remember { mutableStateOf<HeroPick?>(null) }
     var focusedRow by remember { mutableIntStateOf(0) }
@@ -130,6 +140,7 @@ fun TvHomeScreen(state: HomeViewModel.State, onOpen: (BaseItemDto) -> Unit, firs
                             }
                         },
                         onOpen = onOpen,
+                        onPlay = onPlay,
                         cardScroll = cardRows,
                     )
                 }
@@ -220,6 +231,7 @@ private fun TvRow(
     firstCard: FocusRequester?,
     onFocus: (BaseItemDto) -> Unit,
     onOpen: (BaseItemDto) -> Unit,
+    onPlay: (BaseItemDto) -> Unit,
     cardScroll: BringIntoViewSpec,
 ) {
     Column(Modifier.padding(top = RingRoom), verticalArrangement = Arrangement.spacedBy(18.bp - RingRoom)) {
@@ -238,6 +250,7 @@ private fun TvRow(
                     modifier = if (i == 0 && firstCard != null) Modifier.focusRequester(firstCard) else Modifier,
                     onFocus = { onFocus(item) },
                     onClick = { onOpen(item) },
+                    onPlay = { onPlay(item) },
                 )
             }
         }
@@ -247,9 +260,14 @@ private fun TvRow(
 
 /** The board's 384 px landscape card; the focused one widens to 420 px inside the white ring. */
 @Composable
-private fun TvCard(item: BaseItemDto, kind: String, onFocus: () -> Unit, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun TvCard(item: BaseItemDto, kind: String, onFocus: () -> Unit, onClick: () -> Unit, onPlay: () -> Unit, modifier: Modifier = Modifier) {
     val viewer = LocalViewer.current
-    TvPressable(onClick, modifier.onFocusChanged { if (it.isFocused) onFocus() }) { focused ->
+    // The remote's Play key starts the title straight away; OK opens its page.
+    val playable = item.type in setOf(BaseItemKind.MOVIE, BaseItemKind.EPISODE, BaseItemKind.VIDEO, BaseItemKind.TV_CHANNEL)
+    val keys = Modifier.onKeyEvent { e ->
+        if (playable && e.type == KeyEventType.KeyDown && (e.key == Key.MediaPlay || e.key == Key.MediaPlayPause)) { onPlay(); true } else false
+    }
+    TvPressable(onClick, modifier.onFocusChanged { if (it.isFocused) onFocus() }.then(keys)) { focused ->
         val width by animateDpAsState(if (focused) 420.bp else 384.bp, label = "card")
         Box(
             Modifier.width(width).height(width * 9f / 16f).focusRing(focused, radius = 18.bp, gap = 4.bp, ring = 5.bp)

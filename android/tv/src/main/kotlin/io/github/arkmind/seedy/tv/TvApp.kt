@@ -203,7 +203,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession) {
                         when (place) {
                             TvPlace.Home -> {
                                 val state by home.state.collectAsStateWithLifecycle()
-                                TvHomeScreen(state, onOpen = nav::open)
+                                TvHomeScreen(state, onOpen = nav::open, onPlay = nav::play)
                             }
                             TvPlace.Search -> TvSearchPlace()
                             TvPlace.Movies -> LibraryPlace(home, CollectionType.MOVIES)
