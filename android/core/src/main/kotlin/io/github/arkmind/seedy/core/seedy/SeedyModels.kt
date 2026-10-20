@@ -74,7 +74,7 @@ data class HomeRow(
 @Serializable
 internal data class HomeRows(val rows: List<HomeRow> = emptyList())
 
-/** A title for the hero: [reason] is why it's there ("continue", "new-episode"…), [play] what Play starts. */
+/** A title for the hero: [reason] is why it's there, in English for t() ("Continue watching", "New episodes"…); [play] is what Play starts. */
 @Serializable
 data class FeaturedEntry(val item: BaseItemDto, val reason: String = "", val play: BaseItemDto? = null)
 

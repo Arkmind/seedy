@@ -69,7 +69,7 @@ class Home(private val session: UserSession) {
                 enableImageTypes = listOf(ImageType.BACKDROP, ImageType.LOGO, ImageType.THUMB, ImageType.PRIMARY),
             ).content.items.filter { !it.backdropImageTags.isNullOrEmpty() }.take(5).map { item ->
                 val play = if (item.type == BaseItemKind.SERIES) nextUp(limit = 1, seriesId = item.id).firstOrNull() else null
-                FeaturedEntry(item, reason = if (item.type == BaseItemKind.SERIES) "new-episodes" else "just-added", play = play)
+                FeaturedEntry(item, reason = if (item.type == BaseItemKind.SERIES) "New episodes" else "Just added", play = play)
             }
     }
 

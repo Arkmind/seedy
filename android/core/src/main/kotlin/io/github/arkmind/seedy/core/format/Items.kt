@@ -80,11 +80,27 @@ val BaseItemDto.yearRange: String
         return if (end != null && end != start) "$start–$end" else start.toString()
     }
 
-private val ratingCountry = Regex("^[A-Z]{2}-")
+private val ratingCountry = Regex(
+    "^(GB|UK|IE|DE|AT|CH|FR|BE|NL|LU|ES|PT|IT|SE|NO|DK|FI|IS|PL|CZ|HU|RO|BG|GR|TR|RU|UA|AU|NZ|BR|MX|AR|CL|CO|JP|KR|CN|HK|TW|IN|SG|ZA|CA|US)-",
+)
 
-/** "TV-MA", without a country prefix ("FR-12" → "12"). */
+/** "TV-MA", without a country prefix ("FR-12" → "12"), as on the web. */
 val BaseItemDto.rating: String get() = officialRating?.trim()?.replace(ratingCountry, "").orEmpty()
 
 /** Joins the parts that aren't blank: join("2026", "", "Drama") → "2026 · Drama". */
 fun join(vararg parts: Any?, separator: String = " · "): String =
     parts.mapNotNull { it?.toString()?.takeIf(String::isNotBlank) }.joinToString(separator)
+
+/** "Resume S3 · E2", "Play", "Resume" — the hero's and details' main button. */
+fun playLabel(play: BaseItemDto): String {
+    val verb = if ((play.userData?.playbackPositionTicks ?: 0L) > 0L) t("Resume") else t("Play")
+    if (play.type != BaseItemKind.EPISODE || play.indexNumber == null) return verb
+    return "$verb ${play.episodeShort}"
+}
+
+/** The hero's line under the title: "2026 · TV-MA · Drama · Thriller · Mystery". */
+val BaseItemDto.heroMeta: String
+    get() = join(year, rating, *genres.orEmpty().take(3).toTypedArray())
+
+/** A card's title for anything: an episode shows its series' name. */
+val BaseItemDto.cardTitle: String get() = (if (type == BaseItemKind.EPISODE) seriesName else null) ?: name.orEmpty()
