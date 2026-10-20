@@ -252,7 +252,7 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
         {!showRequestButton && (
           <div class="poster-hover">
             {requestable && (
-              <button type="button" class="btn btn-primary is-sm is-block" disabled={requesting} onClick={() => onRequest(item)}>
+              <button type="button" class="btn btn-primary is-sm is-block" aria-haspopup={item.mediaType === 'tv' ? 'dialog' : undefined} disabled={requesting} onClick={() => onRequest(item)}>
                 <Icon name="plus" size={18} stroke={2.6} />
                 {requesting ? t('Requesting…') : t('Request')}
               </button>
@@ -270,7 +270,7 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
         </span>
       </Link>
       {showRequestButton && requestable && (
-        <button type="button" class="btn btn-primary is-sm is-block" aria-label={`Request ${item.title} (${item.mediaType === 'movie' ? 'movie' : 'series'}${item.year ? ', ' + item.year : ''})`} disabled={requesting} onClick={() => onRequest(item)}>
+        <button type="button" class="btn btn-primary is-sm is-block" aria-label={`Request ${item.title} (${item.mediaType === 'movie' ? 'movie' : 'series'}${item.year ? ', ' + item.year : ''})`} aria-haspopup={item.mediaType === 'tv' ? 'dialog' : undefined} disabled={requesting} onClick={() => onRequest(item)}>
           <Icon name="plus" size={18} stroke={2.6} />
           {requesting ? t('Requesting…') : t('Request')}
         </button>

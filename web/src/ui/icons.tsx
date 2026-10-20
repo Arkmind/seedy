@@ -56,6 +56,8 @@ const ICONS = {
   lock: { w: 2, body: <><rect x="5" y="11" width="14" height="9" rx="2" />{p('M8 11V8a4 4 0 0 1 8 0v3')}</> },
   drag: { w: 0, fill: true, body: <><circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" /><circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" /><circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" /></> },
   download: { w: 2.2, body: <>{p('M12 4v11')}{p('M7 10l5 5 5-5')}{p('M5 20h14')}</> },
+  /* Requests: a tray with a down arrow (the navbar's Requests link, Request buttons for seasons). */
+  request: { w: 2.2, body: <>{p('M12 3v10')}{p('M8 9l4 4 4-4')}{p('M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4')}</> },
   upload: { w: 2.2, body: <>{p('M12 20V9')}{p('M7 14l5-5 5 5')}{p('M5 4h14')}</> },
   star: { w: 0, fill: true, body: p('M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z') },
   signOut: { w: 2, body: <>{p('M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4')}{p('M10 8l-4 4 4 4')}{p('M6 12h10')}</> },

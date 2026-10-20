@@ -42,6 +42,21 @@ a.dhero-back:hover { color: #ffffff; }
 .dhero-bar { flex: none; width: 160px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.18); overflow: hidden; }
 .dhero-bar > i { display: block; height: 100%; border-radius: 3px; background: #ffffff; }
 
+/* Missing seasons, under the actions: "Seasons 2 and 4 aren't on the server · Request 2 seasons". */
+.dhero-missing {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; max-width: 600px; padding: 10px 10px 10px 16px;
+  border-radius: 14px; background: rgba(14, 14, 14, 0.66); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.dhero-missing-icon {
+  flex: none; width: 36px; height: 36px; border-radius: var(--r-ctl); background: rgba(255, 255, 255, 0.08); color: var(--seedy-accent);
+  display: flex; align-items: center; justify-content: center;
+}
+.dhero-missing-text { flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dhero-missing-title { font-size: 15px; font-weight: 700; color: #ffffff; }
+.dhero-missing-sub { font-size: 13px; color: var(--seedy-text-2); }
+.btn-primary.dhero-missing-btn { height: 44px; padding: 0 18px; gap: 8px; border-radius: var(--r-menu); font-size: 14px; }
+
 .dhero-panel {
   flex: 0 1 360px; min-width: 0; margin: 0; padding: 22px 24px; border-radius: var(--r-panel);
   background: rgba(14, 14, 14, 0.74); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
@@ -68,6 +83,15 @@ a.dhero-back:hover { color: #ffffff; }
 /* ── Seasons and episodes ── */
 .seasons { display: flex; flex-direction: column; gap: 20px; padding: 0 var(--gutter); scroll-margin-top: 24px; }
 .seasons-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+/* A season that isn't on the server: dashed, quieter, opens the request dialog. */
+.tab.is-missing {
+  gap: 7px; padding: 9px 17px; background: transparent; box-shadow: none;
+  border: 1px dashed #444444; color: var(--seedy-text-3);
+}
+.tab.is-missing:hover { background: transparent; border-color: var(--seedy-text-3); color: var(--seedy-text); }
+.tab-year { font-size: 12px; font-weight: 600; color: #6f6f6f; }
+.tab.is-missing:hover .tab-year { color: var(--seedy-text-3); }
+.tab-pending { width: 6px; height: 6px; border-radius: 50%; background: var(--seedy-pending); }
 .seasons-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .seasons-count { font-size: 13px; color: var(--seedy-text-3); }
 .seasons-more { align-self: center; padding: 0 20px; }
@@ -167,6 +191,7 @@ a.ep-row:hover .ep-hover, a.ep-row:focus-visible .ep-hover { opacity: 1; }
   .dhero-title, .dhero-title.is-long { --title-size: 48px; }
   .dhero-overview { font-size: 15px; -webkit-line-clamp: 4; }
   .dhero-actions .btn-primary { flex: 1 1 100%; padding: 0 20px; }
+  .btn-primary.dhero-missing-btn { flex: 1 1 100%; }
   .details-main { gap: 40px; }
   .ep-row { gap: 12px 14px; padding: 10px; }
   .ep-thumb { flex-basis: 132px; }

@@ -120,6 +120,16 @@ public class RequestsController : ControllerBase
     public Task<ActionResult<SeerrDetailsDto>> Details([FromRoute] string mediaType, [FromRoute] int tmdbId, CancellationToken ct)
         => Run((_, me) => _seerr.DetailsAsync(mediaType == "tv" ? "tv" : "movie", tmdbId, me, ct), ct);
 
+    /// <summary>What the request dialog offers the signed-in person: quota, approval, 4K and, for admins, advanced choices.</summary>
+    /// <param name="mediaType">movie or tv.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Options.</returns>
+    [HttpGet("Options/{mediaType}")]
+    public Task<ActionResult<RequestOptionsDto>> Options([FromRoute] string mediaType, CancellationToken ct)
+        => Run<RequestOptionsDto>(async (user, me) => me is null
+            ? new RequestOptionsDto()
+            : await _seerr.RequestOptionsAsync(mediaType == "tv" ? "tv" : "movie", me.Value, user.IsAdmin(), ct).ConfigureAwait(false), ct);
+
     /// <summary>Requests a title as the signed-in person.</summary>
     /// <param name="body">What to request.</param>
     /// <param name="ct">Cancellation.</param>
@@ -164,6 +174,15 @@ public class RequestsController : ControllerBase
             if (body.Is4k && !ConfigMapper.Current.Allow4k)
             {
                 return StatusCode(StatusCodes.Status403Forbidden, new { message = "4K requests are switched off." });
+            }
+
+            // Server, profile, folder and "request for" are admin choices; everyone else gets Seerr's defaults.
+            if (!user.IsAdmin())
+            {
+                body.ServerId = null;
+                body.ProfileId = null;
+                body.RootFolder = null;
+                body.UserId = null;
             }
 
             body.Seasons = body.Seasons?.Where(s => s > 0).Distinct().ToList();

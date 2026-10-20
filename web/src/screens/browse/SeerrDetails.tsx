@@ -9,7 +9,8 @@ import { useAsync, useStore } from '../../lib/store';
 import { TypePill, playPath } from '../../ui/cards';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
-import { Sheet, toast } from '../../ui/overlay';
+import { toast } from '../../ui/overlay';
+import { RequestSeasonsDialog, markRequested } from './request-seasons';
 import { Row } from '../../ui/Row';
 import './seerr.css';
 import { t } from '../../lib/i18n';
@@ -128,29 +129,15 @@ export function SeerrDetails({ mediaType, tmdbId }: { mediaType: 'movie' | 'tv';
   const canMore = tv && showRequest && openSeasons.length > 0 && seasons.length > 0;
   const want4k = req.allow4k && showRequest;
 
-  const request = async (opts: { seasons?: number[]; is4k?: boolean } = {}) => {
+  /* Movies only: a series goes through the seasons dialog. */
+  const request = async (opts: { is4k?: boolean } = {}) => {
     setBusy(opts.is4k ? '4k' : 'std');
     try {
-      const body = { mediaType: d.mediaType, tmdbId: d.tmdbId, ...(tv ? { seasons: opts.seasons ?? openSeasons.map((s) => s.seasonNumber) } : {}), ...(opts.is4k ? { is4k: true } : {}) };
-      const r = await seerrRequest(body);
-      setD((prev) => {
-        if (!prev) return prev;
-        if (opts.is4k) return { ...prev, status4k: r.status };
-        const picked = new Set(body.seasons ?? []);
-        return {
-          ...prev,
-          // Asking for the missing seasons of a partly available show keeps it playable from the library.
-          status: prev.status === 'partial' ? 'partial' : r.status,
-          requestedByMe: true,
-          requestedBy: undefined,
-          seasons: prev.seasons?.map((s) => (picked.has(s.seasonNumber) ? { ...s, status: r.status === 'available' ? 'available' : 'pending' } : s))
-        };
-      });
-      const what = tv && body.seasons && openSeasons.length !== body.seasons.length ? `${plural(body.seasons.length, 'season')} of ${d.title}` : d.title;
-      toast(`Requested ${what}${opts.is4k ? ' in 4K' : ''}`);
-      setPicker(false);
+      const r = await seerrRequest({ mediaType: d.mediaType, tmdbId: d.tmdbId, ...(opts.is4k ? { is4k: true } : {}) });
+      setD((prev) => prev && (opts.is4k ? { ...prev, status4k: r.status } : { ...prev, status: r.status, requestedByMe: true, requestedBy: undefined }));
+      toast(opts.is4k ? t('Requested {title} in 4K', { title: d.title }) : t('Requested {title}', { title: d.title }));
     } catch (e) {
-      toast(e instanceof ApiError && e.status === 403 ? "Your profile can't request titles" : `Couldn't request ${d.title}`, 'error');
+      toast(e instanceof ApiError && e.status === 403 ? t("Your profile can't request titles") : t("Couldn't request {title}", { title: d.title }), 'error');
     } finally {
       setBusy(null);
     }
@@ -164,10 +151,16 @@ export function SeerrDetails({ mediaType, tmdbId }: { mediaType: 'movie' | 'tv';
   } else if (isRequested(d.status)) {
     primary = <span class="seerr-state" role="status"><span class="dot is-pending" />{t('Requested')}</span>;
   } else if (showRequest && isRequestable(d.status) && (!tv || openSeasons.length > 0 || seasons.length === 0)) {
-    primary = (
-      <button type="button" class="btn btn-primary" disabled={busy !== null} onClick={() => request()} aria-label={`Request ${d.title}${tv ? ', all seasons' : ''}`}>
+    // A series always goes through the seasons dialog, so the person sees what they're asking for.
+    primary = tv ? (
+      <button type="button" class="btn btn-primary" aria-haspopup="dialog" onClick={() => setPicker(true)}>
         <Icon name="plus" size={20} stroke={2.6} />
-        {busy === 'std' ? t('Requesting…') : tv ? (seasons.length > 1 ? t('Request all seasons') : t('Request')) : t('Request')}
+        {seasons.length > 1 ? t('Request seasons') : t('Request')}
+      </button>
+    ) : (
+      <button type="button" class="btn btn-primary" disabled={busy !== null} onClick={() => request()} aria-label={`Request ${d.title}`}>
+        <Icon name="plus" size={20} stroke={2.6} />
+        {busy === 'std' ? t('Requesting…') : t('Request')}
       </button>
     );
   }
@@ -209,27 +202,21 @@ export function SeerrDetails({ mediaType, tmdbId }: { mediaType: 'movie' | 'tv';
 
             <div class="seerr-actions">
               {primary}
-              {canMore && seasons.length > 1 && (
-                <button type="button" class="btn seerr-alt" onClick={() => setPicker(true)} disabled={busy !== null}>
-                  <Icon name="episodes" size={20} />
-                  {t('Choose seasons')}
-                </button>
-              )}
               {inLibrary && !tv && d.jellyfinItemId && (
                 <Link to={`/details/${d.jellyfinItemId}`} class="btn seerr-alt">{t('Open in library')}</Link>
               )}
-              {inLibrary && tv && canMore && seasons.length <= 1 && (
-                <button type="button" class="btn seerr-alt" onClick={() => request()} disabled={busy !== null}>
-                  <Icon name="plus" size={18} stroke={2.6} />
-                  {t('Request the rest')}
+              {tv && canMore && (inLibrary || isRequested(d.status)) && (
+                <button type="button" class="btn seerr-alt" aria-haspopup="dialog" onClick={() => setPicker(true)}>
+                  <Icon name="request" size={20} />
+                  {inLibrary ? t('Request missing seasons') : t('Request more seasons')}
                 </button>
               )}
-              {want4k && isRequestable(d.status4k) && (
+              {want4k && !tv && isRequestable(d.status4k) && (
                 <button type="button" class="btn seerr-alt" onClick={() => request({ is4k: true })} disabled={busy !== null}>
                   {busy === '4k' ? t('Requesting…') : t('Request in 4K')}
                 </button>
               )}
-              {want4k && isRequested(d.status4k) && (
+              {want4k && !tv && isRequested(d.status4k) && (
                 <span class="seerr-state is-alt" role="status"><span class="dot is-pending" />{t('4K requested')}</span>
               )}
               {d.trailerUrl && (
@@ -272,8 +259,8 @@ export function SeerrDetails({ mediaType, tmdbId }: { mediaType: 'movie' | 'tv';
           <section class="seerr-section" aria-labelledby="seerr-seasons">
             <div class="seerr-section-head">
               <h2 id="seerr-seasons" class="row-title">{t('Seasons')}</h2>
-              {canMore && seasons.length > 1 && (
-                <button type="button" class="btn btn-secondary" onClick={() => setPicker(true)}>
+              {canMore && (
+                <button type="button" class="btn btn-secondary" aria-haspopup="dialog" onClick={() => setPicker(true)}>
                   <Icon name="plus" size={18} stroke={2.6} />
                   {t('Request seasons')}
                 </button>
@@ -302,13 +289,17 @@ export function SeerrDetails({ mediaType, tmdbId }: { mediaType: 'movie' | 'tv';
       </main>
 
       {tv && (
-        <SeasonPicker
+        <RequestSeasonsDialog
           open={picker}
-          title={d.title}
-          seasons={seasons}
-          busy={busy === 'std'}
+          context={inLibrary ? 'library' : 'seerr'}
+          target={{ tmdbId: d.tmdbId, title: d.title, year, posterPath: d.posterPath, backdropPath: d.backdropPath }}
+          details={d}
           onClose={() => setPicker(false)}
-          onRequest={(list) => request({ seasons: list })}
+          onDone={(r) => setD((prev) => prev && {
+            ...markRequested(prev, r.seasons, r.is4k, r.status),
+            // Asking for the missing seasons of a partly available show keeps it playable from the library.
+            ...(r.is4k ? { status4k: prev.status4k === 'partial' ? 'partial' : r.status } : { status: prev.status === 'partial' ? 'partial' : r.status, requestedByMe: true, requestedBy: undefined })
+          })}
         />
       )}
     </Shell>
@@ -342,59 +333,6 @@ function SeerrCastCard({ name, role, path, index }: { name: string; role?: strin
         {role && <span class="cast-role">{role}</span>}
       </span>
     </div>
-  );
-}
-
-function SeasonPicker({ open, title, seasons, busy, onClose, onRequest }: {
-  open: boolean; title: string; seasons: SeerrSeason[]; busy: boolean; onClose: () => void; onRequest: (seasons: number[]) => void;
-}) {
-  const open_ = seasons.filter((s) => isRequestable(s.status)).map((s) => s.seasonNumber);
-  const [picked, setPicked] = useState<Set<number>>(new Set(open_));
-  useEffect(() => { if (open) setPicked(new Set(open_)); }, [open]);
-  const all = open_.length > 0 && open_.every((n) => picked.has(n));
-  const toggle = (n: number) => setPicked((p) => {
-    const next = new Set(p);
-    if (next.has(n)) next.delete(n); else next.add(n);
-    return next;
-  });
-  return (
-    <Sheet open={open} onClose={onClose} label={t('Request seasons of {title}', { title })}>
-      <div class="sheet-head">
-        <div class="seerr-sheet-head">
-          <h2 class="sheet-title">{t('Request seasons')}</h2>
-          <p class="sheet-text">Pick the seasons of {title} to ask for. Seasons already on the server or requested can't be picked again.</p>
-        </div>
-      </div>
-      <div class="seerr-picks">
-        {open_.length > 1 && (
-          <label class={'seerr-pick is-all' + (all ? ' is-on' : '')}>
-            <input type="checkbox" checked={all} onChange={() => setPicked(all ? new Set() : new Set(open_))} />
-            <span class="seerr-pick-text"><span class="seerr-pick-name">{t('All open seasons')}</span></span>
-          </label>
-        )}
-        {seasons.map((s) => {
-          const can = isRequestable(s.status);
-          const on = can && picked.has(s.seasonNumber);
-          return (
-            <label key={s.seasonNumber} class={'seerr-pick' + (on ? ' is-on' : '') + (can ? '' : ' is-locked')}>
-              <input type="checkbox" checked={on || !can} disabled={!can} onChange={() => toggle(s.seasonNumber)} />
-              <span class="seerr-pick-text">
-                <span class="seerr-pick-name">{s.name || t('Season {n}', { n: s.seasonNumber })}</span>
-                {seasonSub(s) && <span class="seerr-pick-sub">{seasonSub(s)}</span>}
-              </span>
-              {!can && <StatusPill status={s.status} />}
-            </label>
-          );
-        })}
-      </div>
-      <div class="sheet-actions">
-        <button type="button" class="btn btn-ghost is-light" onClick={onClose}>{t('Cancel')}</button>
-        <button type="button" class="btn btn-primary is-sm" disabled={busy || picked.size === 0} onClick={() => onRequest([...picked].sort((a, b) => a - b))}>
-          <Icon name="plus" size={18} stroke={2.6} />
-          {busy ? t('Requesting…') : picked.size === open_.length && open_.length > 1 ? t('Request all') : t('Request {count}', { count: plural(picked.size, 'season') })}
-        </button>
-      </div>
-    </Sheet>
   );
 }
 

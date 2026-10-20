@@ -53,7 +53,7 @@ export function fallbackLibraryName(item: BaseItem): string {
 
 export interface InfoRow { label: string; value?: ComponentChildren }
 
-export function DetailsHero({ art: artIn, itemId, overline, overlineTo, title, meta, badges, overview, actions, progress, info, poster }: {
+export function DetailsHero({ art: artIn, itemId, overline, overlineTo, title, meta, badges, overview, actions, progress, notice, info, poster }: {
   art?: string;
   /* The title whose theme video / theme song may play here (Settings · Display). */
   itemId?: string;
@@ -65,6 +65,8 @@ export function DetailsHero({ art: artIn, itemId, overline, overlineTo, title, m
   overview?: string;
   actions?: ComponentChildren;
   progress?: { fraction: number; text: string };
+  /* Under the actions: "Seasons 2 and 4 aren't on the server · Request 2 seasons". */
+  notice?: ComponentChildren;
   info?: InfoRow[];
   poster?: ComponentChildren;
 }) {
@@ -120,6 +122,7 @@ export function DetailsHero({ art: artIn, itemId, overline, overlineTo, title, m
                 <span>{progress.text}</span>
               </div>
             )}
+            {notice}
           </div>
         </div>
         {rows.length > 0 && (
@@ -314,6 +317,15 @@ export function seriesStatus(item: BaseItem): string | undefined {
 
 /* ───────── Seasons and episodes ───────── */
 
+/* Seasons on the server and the missing ones, by number; Specials stay last. */
+function withMissing(seasons: BaseItem[], missing?: MissingSeason[]): (BaseItem | MissingSeason)[] {
+  if (!missing?.length) return seasons;
+  const num = (s: BaseItem | MissingSeason) => ('n' in s ? s.n : s.IndexNumber ?? 0);
+  const specials = seasons.filter((s) => s.IndexNumber === 0);
+  const rest: (BaseItem | MissingSeason)[] = [...seasons.filter((s) => s.IndexNumber !== 0), ...missing];
+  return [...rest.sort((a, b) => num(a) - num(b)), ...specials];
+}
+
 export function orderSeasons(list: BaseItem[]): BaseItem[] {
   const regular = list.filter((s) => (s.IndexNumber ?? 1) !== 0);
   const specials = list.filter((s) => s.IndexNumber === 0);
@@ -322,9 +334,14 @@ export function orderSeasons(list: BaseItem[]): BaseItem[] {
 
 const EPISODE_FIELDS = 'Overview,PrimaryImageAspectRatio,DateCreated';
 
-export function SeasonEpisodes({ series, seasons, selected, onSelect, upNextId, currentId, onChanged, version }: {
+/* A season that isn't on the server, shown as a dashed tab that opens the request dialog. */
+export interface MissingSeason { n: number; name: string; year?: number; requested: boolean }
+
+export function SeasonEpisodes({ series, seasons, selected, onSelect, upNextId, currentId, onChanged, version, missing, onRequest }: {
   series: BaseItem;
   seasons: BaseItem[];
+  missing?: MissingSeason[];
+  onRequest?: (season: number) => void;
   selected?: string;
   onSelect?: (seasonId: string) => void;
   upNextId?: string;
@@ -381,7 +398,22 @@ export function SeasonEpisodes({ series, seasons, selected, onSelect, upNextId, 
     <section class="seasons" id="seasons" aria-label={t('Episodes')}>
       <div class="seasons-bar">
         <div class="tab-row hscroll" role="tablist" aria-label={t('Seasons')}>
-          {seasons.map((s) => (
+          {withMissing(seasons, missing).map((s) => 'n' in s ? (
+            <button
+              key={'missing-' + s.n}
+              type="button"
+              class={'tab is-missing' + (s.requested ? ' is-requested' : '')}
+              aria-haspopup="dialog"
+              aria-label={s.requested
+                ? t('{name}, requested, not on the server yet', { name: s.name })
+                : s.year ? t('{name}, airs in {year}, not on the server', { name: s.name, year: s.year }) : t('{name}, not on the server', { name: s.name })}
+              onClick={() => onRequest?.(s.n)}
+            >
+              {s.requested ? <span class="tab-pending" aria-hidden="true" /> : <Icon name="plus" size={14} stroke={2.4} />}
+              {s.name}
+              {s.year && <span class="tab-year">{s.year}</span>}
+            </button>
+          ) : (
             <button
               key={s.Id}
               type="button"

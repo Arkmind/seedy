@@ -1,4 +1,4 @@
-# Local test server for Seedy: Jellyfin 12.2 with generated media.
+# Local test server for Seedy: Jellyfin 12.2 with generated media, Seerr, and Sonarr/Radarr behind it.
 # `make dev-install` (../build.sh --install-dev) puts the plugin in ./data/config/plugins/Seedy_<version>.
 services:
   jellyfin:
@@ -26,4 +26,49 @@ services:
       - TZ=Europe/London
     volumes:
       - ./data/seerr:/app/config
+    restart: unless-stopped
+
+  # Sonarr, a second Sonarr for 4K, and Radarr, so Seerr has servers to send requests to (quality profiles, folders,
+  # 4K). No download client: approved requests are added and monitored, nothing downloads. Their folders are outside
+  # ./data/media, so nothing they create shows up in Jellyfin. Connect them to Seerr with ./setup-arr.py.
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: seedy-sonarr
+    ports:
+      - "8989:8989"
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Europe/London
+    volumes:
+      - ./data/sonarr:/config
+      - ./data/arr/tv:/data/tv
+    restart: unless-stopped
+
+  sonarr-4k:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: seedy-sonarr-4k
+    ports:
+      - "8990:8989"
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Europe/London
+    volumes:
+      - ./data/sonarr-4k:/config
+      - ./data/arr/tv-4k:/data/tv-4k
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: seedy-radarr
+    ports:
+      - "7878:7878"
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Europe/London
+    volumes:
+      - ./data/radarr:/config
+      - ./data/arr/movies:/data/movies
     restart: unless-stopped

@@ -20,6 +20,7 @@ import { toast } from '../../ui/overlay';
 import { withEpisodeArt } from '../me/prefs';
 import './browse.css';
 import { t } from '../../lib/i18n';
+import { RequestSeasonsDialog } from './request-seasons';
 
 /* ───────── Item helpers ───────── */
 
@@ -538,13 +539,16 @@ export function NextUpCard({ item, width, origin, onOpen }: { item: BaseItem; wi
 }
 
 
-/* Seerr requests: optimistic "Requested" with a toast. */
+/* Seerr requests: optimistic "Requested" with a toast. A series always opens the seasons dialog first;
+   render `dialog` once in the page. */
 export function useRequests() {
   const me = useStore(meStore);
   const [status, setStatus] = useState<Record<string, SeerrStatus>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
+  const [series, setSeries] = useState<SeerrItem | null>(null);
   const key = (s: SeerrItem) => s.mediaType + ':' + s.tmdbId;
   const request = async (s: SeerrItem) => {
+    if (s.mediaType === 'tv') { setSeries(s); return; }
     const k = key(s);
     setBusy((b) => ({ ...b, [k]: true }));
     setStatus((m) => ({ ...m, [k]: 'pending' }));
@@ -560,7 +564,16 @@ export function useRequests() {
     }
   };
   const apply = (s: SeerrItem): SeerrItem => (status[key(s)] ? { ...s, status: status[key(s)], requestedByMe: true } : s);
-  return { canRequest: me.requests.canRequest && me.requests.requestButtons !== false, request, apply, busy: (s: SeerrItem) => !!busy[key(s)] };
+  const dialog = series && (
+    <RequestSeasonsDialog
+      open
+      context="seerr"
+      target={{ tmdbId: series.tmdbId, title: series.title, year: series.year, posterPath: series.posterPath, backdropPath: series.backdropPath }}
+      onClose={() => setSeries(null)}
+      onDone={(r) => setStatus((m) => ({ ...m, [key(series)]: r.status }))}
+    />
+  );
+  return { canRequest: me.requests.canRequest && me.requests.requestButtons !== false, request, apply, busy: (s: SeerrItem) => !!busy[key(s)], dialog };
 }
 
 
