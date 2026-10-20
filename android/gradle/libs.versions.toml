@@ -14,6 +14,7 @@ tv-material = "1.1.0"
 navigation3 = "1.2.0"
 datastore = "1.2.1"
 jellyfin-sdk = "1.9.2"
+slf4j = "2.0.20"
 coil = "3.6.3"
 splashscreen = "1.2.0"
 junit = "4.13.2"
@@ -45,6 +46,7 @@ kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutine
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 jellyfin-core = { module = "org.jellyfin.sdk:jellyfin-core", version.ref = "jellyfin-sdk" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 junit = { module = "junit:junit", version.ref = "junit" }

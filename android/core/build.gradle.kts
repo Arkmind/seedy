@@ -15,6 +15,8 @@ android {
 
 dependencies {
     api(libs.jellyfin.core)
+    // The SDK logs through kotlin-logging, which needs SLF4J's API on Android (no provider: its log calls do nothing).
+    implementation(libs.slf4j.api)
     api(libs.kotlinx.coroutines.android)
     api(libs.kotlinx.serialization.json)
     api(libs.androidx.lifecycle.viewmodel)
