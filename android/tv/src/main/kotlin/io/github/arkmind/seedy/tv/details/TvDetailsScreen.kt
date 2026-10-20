@@ -34,8 +34,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -271,18 +272,24 @@ private fun Progress(state: DetailsViewModel.State, item: BaseItemDto, canReques
 
 @Composable
 private fun Episodes(state: DetailsViewModel.State, actions: TvDetailsActions, focus: FocusRequester, list: LazyListState, start: Int) {
-    // 10 px of room around tabs and cards keeps the focus ring inside their rows (they clip).
+    // 10 px of room around tabs and cards keeps the focus ring inside their rows (they clip). Coming down from the
+    // buttons lands on the open season's tab; OK on another opens it.
+    val currentTab = remember { FocusRequester() }
     LazyRow(
-        Modifier.offset(x = (-10).bp, y = (-10).bp).fillMaxWidth(),
+        Modifier.offset(x = (-10).bp, y = (-10).bp).fillMaxWidth()
+            .focusProperties { onEnter = { currentTab.requestFocus() } }.focusGroup(),
         contentPadding = PaddingValues(start = 10.bp, end = 96.bp, top = 10.bp, bottom = 10.bp),
         horizontalArrangement = Arrangement.spacedBy(14.bp),
     ) {
         itemsIndexed(state.tabs, key = { _, tab -> tab.key }) { _, tab ->
             when (tab) {
-                is DetailsViewModel.SeasonTab.OnServer -> SeasonTab(tab.season.name.orEmpty(), null, tab.season.id == state.selected, missing = false, onFocus = { actions.onSeason(tab.season.id) }, onClick = { actions.onSeason(tab.season.id) })
+                is DetailsViewModel.SeasonTab.OnServer -> SeasonTab(
+                    tab.season.name.orEmpty(), null, tab.season.id == state.selected, missing = false, onClick = { actions.onSeason(tab.season.id) },
+                    modifier = if (tab.season.id == state.selected) Modifier.focusRequester(currentTab) else Modifier,
+                )
                 is DetailsViewModel.SeasonTab.Missing -> SeasonTab(
                     tab.season.name, if (tab.season.requested) t("Requested") else tab.season.year?.toString() ?: t("Not on the server"),
-                    current = false, missing = true, onFocus = {}, onClick = { if (!tab.season.requested) actions.onRequest(listOf(tab.season.n)) },
+                    current = false, missing = true, onClick = { if (!tab.season.requested) actions.onRequest(listOf(tab.season.n)) },
                 )
             }
         }
@@ -310,8 +317,8 @@ private val DetailsViewModel.SeasonTab.key: String
 
 /** A season tab; a missing season's is dashed, with its year or "Not on the server". */
 @Composable
-private fun SeasonTab(label: String, note: String?, current: Boolean, missing: Boolean, onFocus: () -> Unit, onClick: () -> Unit) {
-    TvPressable(onClick, Modifier.onFocusChanged { if (it.isFocused) onFocus() }) { focused ->
+private fun SeasonTab(label: String, note: String?, current: Boolean, missing: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    TvPressable(onClick, modifier) { focused ->
         val shape = RoundedCornerShape(16.bp)
         Row(
             Modifier.focusScale(focused, 1.04f).focusRing(focused, radius = 16.bp, gap = 4.bp, ring = 4.bp).height(52.bp).clip(shape)

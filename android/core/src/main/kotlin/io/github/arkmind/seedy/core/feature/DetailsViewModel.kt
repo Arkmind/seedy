@@ -152,6 +152,8 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
             when (item.type) {
                 BaseItemKind.SERIES -> loadSeries(item)
                 BaseItemKind.SEASON -> item.seriesId?.let { sid -> runCatching { browse.item(sid) }.getOrNull() }?.let { series ->
+                    // A season's page is its series' page open on that season.
+                    picked = true
                     _state.update { it.copy(selected = item.id) }
                     loadSeries(series)
                 }
@@ -195,7 +197,7 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
             _state.update { it.copy(target = target) }
             val streams = target?.let { runCatching { browse.withStreams(it.item.id) }.getOrNull() }
             _state.update { it.copy(badges = techBadges(streams)) }
-            if (_state.value.selected == null) pickSeason()
+            pickSeason()
         }
         viewModelScope.launch {
             val tmdb = _state.value.tmdbId
@@ -213,19 +215,33 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
         pickSeason()
     }
 
-    /** The season to open on: the one asked for, the one Play is in, else the first regular season. */
+    /** A season was chosen (by the person, or the page opened on one): what Play is in no longer moves it. */
+    private var picked = false
+
+    /**
+     * The season to open on: the one chosen, the one Play is in, else the first regular season. Runs as the seasons
+     * and Play's episode arrive (in either order).
+     */
     private fun pickSeason() {
         val s = _state.value
         val list = s.seasons ?: return
         val shown = list.filter { !(it.isVirtual && it.indexNumber in s.gaps.missing.map { m -> m.n }) }
-        val pick = s.selected?.takeIf { id -> shown.any { it.id == id } }
-            ?: s.target?.item?.seasonId?.takeIf { id -> shown.any { it.id == id } }
+        fun ok(id: UUID?) = id?.takeIf { i -> shown.any { it.id == i } }
+        val pick = (if (picked) ok(s.selected) else null)
+            ?: ok(s.target?.item?.seasonId)
+            ?: ok(s.selected)
             ?: shown.firstOrNull { (it.indexNumber ?: 1) > 0 }?.id
             ?: shown.firstOrNull()?.id
-        if (pick != null && (pick != s.selected || s.episodesFor != pick)) selectSeason(pick)
+        if (pick != null && (pick != s.selected || s.episodesFor != pick)) open(pick)
     }
 
+    /** The person picked a season. */
     fun selectSeason(seasonId: UUID) {
+        picked = true
+        open(seasonId)
+    }
+
+    private fun open(seasonId: UUID) {
         val series = _state.value.item ?: return
         _state.update { it.copy(selected = seasonId) }
         episodesJob?.cancel()
@@ -308,7 +324,7 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
         val item = _state.value.item ?: return
         val target = browse.seriesTarget(item.id)
         _state.update { it.copy(target = target) }
-        _state.value.selected?.let { selectSeason(it) }
+        _state.value.selected?.let { open(it) }
     }
 
     private fun patch(item: BaseItemDto, change: (UserItemDataDto) -> UserItemDataDto) {
