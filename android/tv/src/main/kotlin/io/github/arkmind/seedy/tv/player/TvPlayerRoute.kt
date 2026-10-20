@@ -100,6 +100,7 @@ fun TvPlayerRoute(id: UUID) {
 
     BackHandler {
         when {
+            state.problem != null -> nav.back()
             // A settings page goes back to the settings list; Chapters opened from its own button just closes.
             tool == TvTool.Settings && page != SettingsPage.Main -> page = SettingsPage.Main
             tool != null -> tool = null
@@ -142,7 +143,7 @@ fun TvPlayerRoute(id: UUID) {
     ) {
         TvPlayerScreen(
             state = state,
-            controls = controls && tool == null,
+            controls = controls && tool == null && state.problem == null,
             seekBack = player.seekBackSeconds,
             seekForward = player.seekForwardSeconds,
             subtitleSize = subtitleSize,
@@ -208,6 +209,8 @@ private fun Problem(code: String, onBack: () -> Unit) {
         "RateLimitExceeded" -> t("Server is busy") to t("Too many streams are playing on this server right now. Try again in a moment.")
         "network" -> t("Can't reach the server") to t("The stream stopped loading. Check your connection and try again.")
         "media" -> t("Playback stopped") to t("The video couldn't be decoded on this device.")
+        "serverError" -> t("Couldn't start playback") to t("The server couldn't prepare this title for playback. Try again in a moment.")
+        "liveUnavailable" -> t("This channel isn't available right now") to t("The server couldn't open the channel's stream. Try another channel or come back later.")
         else -> t("Couldn't start playback") to code
     }
     val back = remember { FocusRequester() }

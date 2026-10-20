@@ -90,6 +90,7 @@ fun PlayerRoute(id: UUID) {
 
     BackHandler {
         when {
+            state.problem != null -> nav.back()
             panel != null -> panel = null
             locked -> controls = true
             else -> nav.back()
@@ -99,7 +100,7 @@ fun PlayerRoute(id: UUID) {
     val subtitlePrefs = session.seedy?.prefs?.subtitles
     PhonePlayerScreen(
         state = state,
-        controls = controls && !pip && panel == null,
+        controls = controls && !pip && panel == null && state.problem == null,
         locked = locked,
         seekBack = player.seekBackSeconds,
         seekForward = player.seekForwardSeconds,
@@ -184,6 +185,8 @@ private fun Problem(code: String, onBack: () -> Unit) {
         "RateLimitExceeded" -> t("Server is busy") to t("Too many streams are playing on this server right now. Try again in a moment.")
         "network" -> t("Can't reach the server") to t("The stream stopped loading. Check your connection and try again.")
         "media" -> t("Playback stopped") to t("The video couldn't be decoded on this device.")
+        "serverError" -> t("Couldn't start playback") to t("The server couldn't prepare this title for playback. Try again in a moment.")
+        "liveUnavailable" -> t("This channel isn't available right now") to t("The server couldn't open the channel's stream. Try another channel or come back later.")
         else -> t("Couldn't start playback") to code
     }
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {

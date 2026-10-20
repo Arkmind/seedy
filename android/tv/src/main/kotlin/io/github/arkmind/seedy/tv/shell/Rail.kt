@@ -25,12 +25,14 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.tv.parts.TvPressable
 import io.github.arkmind.seedy.tv.parts.bp
@@ -82,6 +84,7 @@ fun TvRail(
 ) {
     var open by remember { mutableStateOf(false) }
     val currentRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
     val width by animateDpAsState(if (open) 380.bp else 112.bp, label = "rail")
     Box(modifier.fillMaxSize()) {
         if (open) Box(Modifier.fillMaxSize().background(Color(0x9E050505)))
@@ -101,7 +104,8 @@ fun TvRail(
                     RailItem(
                         icon = place.icon, label = t(place.label), open = open, current = place == current,
                         modifier = if (place == current) Modifier.focusRequester(currentRequester) else Modifier,
-                        onClick = { onPlace(place) },
+                        // Choosing a place moves the remote into it.
+                        onClick = { onPlace(place); focusManager.moveFocus(FocusDirection.Right) },
                     )
                 }
             }

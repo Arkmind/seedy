@@ -334,6 +334,15 @@ private fun GuideRow(
         }
         Box(Modifier.weight(1f).fillMaxHeight().clipToBounds()) {
             val programs = state.programs[c.id].orEmpty().ifEmpty { listOfNotNull(c.current) }
+            if (programs.isEmpty()) {
+                // No guide data for this channel: one cell across, so it can still be watched.
+                TvPressable(onWatch, Modifier.fillMaxSize().padding(start = 3.bp, end = 3.bp, top = 6.bp, bottom = 8.bp).then(firstModifier).onFocusChanged { if (it.isFocused) onFocus(null, offset, offset + SpanMinutes) }) { f ->
+                    Box(
+                        Modifier.fillMaxSize().clip(RoundedCornerShape(12.bp)).background(if (f) SeedyColors.Inverse else SeedyColors.Row).padding(horizontal = 16.bp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) { SText(t("No guide information"), size = 19.bsp, weight = 700, color = if (f) SeedyColors.InkInverse else SeedyColors.Text2, maxLines = 1) }
+                }
+            }
             programs.forEachIndexed { i, p ->
                 val start = p.startDate?.let { Duration.between(state.windowStart, it).toMinutes() } ?: return@forEachIndexed
                 val end = p.endDate?.let { Duration.between(state.windowStart, it).toMinutes() } ?: return@forEachIndexed

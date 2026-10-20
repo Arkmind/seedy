@@ -44,7 +44,7 @@ import java.util.UUID
 data class PlayerState(
     val item: BaseItemDto? = null,
     val loading: Boolean = true,
-    /** Why playback stopped: a Jellyfin code ("NotAllowed"…), "network" or "media". */
+    /** Why playback stopped: a Jellyfin code ("NotAllowed"…), "network", "media", "serverError" or "liveUnavailable". */
     val problem: String? = null,
     val playing: Boolean = false,
     val buffering: Boolean = false,
@@ -335,7 +335,13 @@ class PlayerController(context: Context, private val session: UserSession, priva
             reopen(s.options.copy(forceTranscode = true))
             return
         }
-        _state.update { it.copy(problem = if (error.errorCode in NetworkErrors) "network" else "media", loading = false) }
+        // The server answered with an error: a live channel whose source is down, or a conversion that failed.
+        val problem = when {
+            error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> if (_state.value.live) "liveUnavailable" else "serverError"
+            error.errorCode in NetworkErrors -> "network"
+            else -> "media"
+        }
+        _state.update { it.copy(problem = problem, loading = false) }
     }
 
     private fun onEnded() {
@@ -526,7 +532,6 @@ class PlayerController(context: Context, private val session: UserSession, priva
         val NetworkErrors = setOf(
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
-            PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
             PlaybackException.ERROR_CODE_TIMEOUT,
         )
     }
