@@ -143,8 +143,11 @@ export function RequestSeasonsDialog({ open, target, details: given, context, on
   useEffect(() => {
     if (!open) return;
     const start = initial?.filter((n) => open_.includes(n));
-    setPicked(new Set(start && start.length ? start : open_));
-  }, [open, d, is4k]);
+    // With a quota, only as many seasons as are left start ticked (the earliest first), so the dialog never
+    // opens over the limit.
+    const left = options?.quota?.remaining;
+    setPicked(new Set((start && start.length ? start : open_).slice(0, left ?? undefined)));
+  }, [open, d, is4k, options?.quota?.remaining]);
 
   const toggle = (n: number) => setPicked((p) => { const next = new Set(p); if (next.has(n)) next.delete(n); else next.add(n); return next; });
   const all = open_.length > 0 && open_.every((n) => picked.has(n));

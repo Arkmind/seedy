@@ -171,7 +171,7 @@ export interface SeerrSeason {
   requestedByMe4k?: boolean;
 }
 
-/* What the request dialog offers the signed-in person. `advanced` is only there for admins. */
+/* What the request dialog offers the signed-in person. `advanced` is there when Seerr lets them pick the server or request for others. */
 export interface RequestOptions {
   quota?: { limit: number; days: number; used: number; remaining: number };
   autoApprove: boolean;

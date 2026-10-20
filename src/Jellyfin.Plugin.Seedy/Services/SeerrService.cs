@@ -1009,18 +1009,37 @@ public sealed class SeerrService
 
     private static bool Has(int perms, params int[] any) => (perms & PermAdmin) != 0 || any.Any(p => (perms & p) != 0);
 
+    /// <summary>Gets whether Seerr lets these permissions pick the server, quality profile and folder (Seerr's Advanced).</summary>
+    /// <param name="perms">Seerr permission bits.</param>
+    /// <returns>True when allowed.</returns>
+    public static bool CanPickServer(int perms) => Has(perms, PermRequestAdvanced, PermManageRequests);
+
+    /// <summary>Gets whether Seerr lets these permissions make a request on someone else's behalf: Seerr wants both
+    /// Manage users and Manage requests (or Admin) for that.</summary>
+    /// <param name="perms">Seerr permission bits.</param>
+    /// <returns>True when allowed.</returns>
+    public static bool CanRequestFor(int perms) => Has(perms, PermManageUsers) && Has(perms, PermManageRequests);
+
+    /// <summary>A Seerr user's permission bits, read fresh so a change in Seerr applies at once.</summary>
+    /// <param name="me">Seerr user id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Permission bits (0 when unknown).</returns>
+    public async Task<int> PermissionsAsync(int me, CancellationToken ct)
+    {
+        var user = await Api(HttpMethod.Get, "/user/" + me.ToString(CultureInfo.InvariantCulture), ct: ct).ConfigureAwait(false);
+        return Int(user?["permissions"]) ?? 0;
+    }
+
     /// <summary>What the request dialog needs: the person's quota and approval, 4K, and (for admins) server choices.</summary>
     /// <param name="mediaType">movie or tv.</param>
     /// <param name="me">The person's Seerr id.</param>
-    /// <param name="isAdmin">Whether the person is a Jellyfin administrator (Advanced is only offered to them).</param>
     /// <param name="ct">Cancellation.</param>
     /// <returns>Options.</returns>
-    public async Task<RequestOptionsDto> RequestOptionsAsync(string mediaType, int me, bool isAdmin, CancellationToken ct)
+    public async Task<RequestOptionsDto> RequestOptionsAsync(string mediaType, int me, CancellationToken ct)
     {
         var tv = mediaType == "tv";
         var id = me.ToString(CultureInfo.InvariantCulture);
-        var user = await Api(HttpMethod.Get, "/user/" + id, ct: ct).ConfigureAwait(false);
-        var perms = Int(user?["permissions"]) ?? 0;
+        var perms = await PermissionsAsync(me, ct).ConfigureAwait(false);
         var o = new RequestOptionsDto
         {
             AutoApprove = Has(perms, PermManageRequests, PermAutoApprove, tv ? PermAutoApproveTv : PermAutoApproveMovie),
@@ -1056,7 +1075,7 @@ public sealed class SeerrService
             && list.Any(s => Bool(s?["is4k"]))
             && Has(perms, PermRequest4k, tv ? PermRequest4kTv : PermRequest4kMovie);
 
-        if (!isAdmin || !Has(perms, PermRequestAdvanced, PermManageRequests))
+        if (!CanPickServer(perms))
         {
             return o;
         }
@@ -1107,7 +1126,7 @@ public sealed class SeerrService
             adv.Servers.Add(server);
         }
 
-        if (Has(perms, PermManageUsers, PermManageRequests))
+        if (CanRequestFor(perms))
         {
             try
             {

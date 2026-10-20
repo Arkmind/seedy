@@ -120,15 +120,15 @@ public class RequestsController : ControllerBase
     public Task<ActionResult<SeerrDetailsDto>> Details([FromRoute] string mediaType, [FromRoute] int tmdbId, CancellationToken ct)
         => Run((_, me) => _seerr.DetailsAsync(mediaType == "tv" ? "tv" : "movie", tmdbId, me, ct), ct);
 
-    /// <summary>What the request dialog offers the signed-in person: quota, approval, 4K and, for admins, advanced choices.</summary>
+    /// <summary>What the request dialog offers the signed-in person: quota, approval, 4K and the advanced choices Seerr allows them.</summary>
     /// <param name="mediaType">movie or tv.</param>
     /// <param name="ct">Cancellation.</param>
     /// <returns>Options.</returns>
     [HttpGet("Options/{mediaType}")]
     public Task<ActionResult<RequestOptionsDto>> Options([FromRoute] string mediaType, CancellationToken ct)
-        => Run<RequestOptionsDto>(async (user, me) => me is null
+        => Run<RequestOptionsDto>(async (_, me) => me is null
             ? new RequestOptionsDto()
-            : await _seerr.RequestOptionsAsync(mediaType == "tv" ? "tv" : "movie", me.Value, user.IsAdmin(), ct).ConfigureAwait(false), ct);
+            : await _seerr.RequestOptionsAsync(mediaType == "tv" ? "tv" : "movie", me.Value, ct).ConfigureAwait(false), ct);
 
     /// <summary>Requests a title as the signed-in person.</summary>
     /// <param name="body">What to request.</param>
@@ -176,13 +176,22 @@ public class RequestsController : ControllerBase
                 return StatusCode(StatusCodes.Status403Forbidden, new { message = "4K requests are switched off." });
             }
 
-            // Server, profile, folder and "request for" are admin choices; everyone else gets Seerr's defaults.
-            if (!user.IsAdmin())
+            // Server, profile, folder and "request for" follow the person's Seerr permissions, as in Seerr itself;
+            // without them the request gets Seerr's defaults.
+            if (body.ServerId is not null || body.ProfileId is not null || body.RootFolder is not null || body.UserId is not null)
             {
-                body.ServerId = null;
-                body.ProfileId = null;
-                body.RootFolder = null;
-                body.UserId = null;
+                var perms = await _seerr.PermissionsAsync(account.Id, ct).ConfigureAwait(false);
+                if (!SeerrService.CanPickServer(perms))
+                {
+                    body.ServerId = null;
+                    body.ProfileId = null;
+                    body.RootFolder = null;
+                }
+
+                if (!SeerrService.CanRequestFor(perms))
+                {
+                    body.UserId = null;
+                }
             }
 
             body.Seasons = body.Seasons?.Where(s => s > 0).Distinct().ToList();

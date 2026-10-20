@@ -301,7 +301,7 @@ public sealed class RequestBody
     [JsonPropertyName("seasons")] public List<int>? Seasons { get; set; }
     [JsonPropertyName("is4k")] public bool Is4k { get; set; }
 
-    /* Advanced (admins only): which Sonarr/Radarr server, quality profile and folder, and who the request is for. */
+    /* Advanced (as Seerr allows the person): which Sonarr/Radarr server, quality profile and folder, and who the request is for. */
     [JsonPropertyName("serverId")] public int? ServerId { get; set; }
     [JsonPropertyName("profileId")] public int? ProfileId { get; set; }
     [JsonPropertyName("rootFolder")] public string? RootFolder { get; set; }
