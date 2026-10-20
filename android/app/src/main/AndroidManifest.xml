@@ -21,6 +21,7 @@
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode"
+            android:supportsPictureInPicture="true"
             android:exported="true"
             android:theme="@style/Theme.Seedy.Starting"
             android:windowSoftInputMode="adjustResize">

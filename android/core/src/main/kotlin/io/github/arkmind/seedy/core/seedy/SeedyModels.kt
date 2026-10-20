@@ -25,6 +25,8 @@ data class SeedyMe(
     val isAdmin: Boolean = false,
     val branding: SeedyClient = SeedyClient(),
     val prefs: UserPrefs = UserPrefs(),
+    /** The admin's playback defaults (Seedy admin · Branding & playback), for settings the person hasn't changed. */
+    val defaults: PlaybackPrefs = PlaybackPrefs(),
     val requests: RequestsFeatures = RequestsFeatures(),
     val historyEnabled: Boolean = false,
     val homeRows: List<HomeRowSetting> = emptyList(),
@@ -33,6 +35,8 @@ data class SeedyMe(
 
 @Serializable
 data class UserPrefs(
+    val playback: PlaybackPrefs = PlaybackPrefs(),
+    val subtitles: SubtitlePrefs = SubtitlePrefs(),
     val adaptRowOrder: Boolean = true,
     val hiddenRows: List<String> = emptyList(),
     val hiddenSeeds: List<String> = emptyList(),
@@ -40,6 +44,25 @@ data class UserPrefs(
     /** Namespaced settings shared with the web app, e.g. "display.language", "home.episodeImages". */
     val custom: Map<String, JsonElement> = emptyMap(),
 )
+
+/** Settings · Playback: skips are "button", "auto" or "off"; maxQuality "auto", "4k", "1080p" or "720p". */
+@Serializable
+data class PlaybackPrefs(
+    val skipIntro: String = "button",
+    val skipRecap: String = "button",
+    val skipCredits: String = "button",
+    val autoPlayNext: Boolean = true,
+    val upNextSeconds: Int = 15,
+    val moviePicksSeconds: Int = 15,
+    val seekBackSeconds: Int = 10,
+    val seekForwardSeconds: Int = 30,
+    val pauseScreenSeconds: Int = 10,
+    val maxQuality: String = "auto",
+)
+
+/** Settings · Subtitles: size "S", "M", "L" or "XL"; lift raises them above the controls. */
+@Serializable
+data class SubtitlePrefs(val size: String = "M", val lift: Boolean = true)
 
 @Serializable
 data class RequestsFeatures(

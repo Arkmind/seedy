@@ -18,6 +18,8 @@ android {
 
 dependencies {
     api(project(":ui"))
+    implementation(project(":player"))
+    implementation(libs.media3.ui.compose)
     implementation(libs.tv.material)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
