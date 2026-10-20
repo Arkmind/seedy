@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 import { JELLYFIN_WEB } from '../../api/client';
 import { getEpisodes, getItem, getItems, getNextUp, getResume, getSeasons } from '../../api/jellyfin';
 import { backdropUrl, cardArt, personImageUrl, primaryUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
+import { seerrDetails, type SeerrDetails } from '../../api/seedy';
+import { meStore } from '../../lib/app-state';
 import { duration, episodeTag, fmtDate, plural, progressFraction, remainingSeconds, runtime, ticksToSeconds, timeLeft, timecode, yearRange, dayOf } from '../../lib/format';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
-import { useAsync } from '../../lib/store';
+import { useAsync, useStore } from '../../lib/store';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { MenuItem, toast } from '../../ui/overlay';
@@ -16,11 +18,12 @@ import {
 } from './parts';
 import {
   CastRow, DetailsHero, DetailsSkeleton, MetaLine, MoreActions, SeasonEpisodes, SimilarRow, SquareToggle, TrailerButton,
-  fallbackLibraryName, heroArt, names, orderSeasons, peopleOf, seriesStatus, useView, type InfoRow
+  fallbackLibraryName, heroArt, names, orderSeasons, peopleOf, seriesStatus, useView, type InfoRow, type MissingSeason
 } from './details-parts';
+import { RequestSeasonsDialog, markRequested, seasonList } from './request-seasons';
 import { techBadges, techLines } from './media-info';
 import './details.css';
-import { t } from '../../lib/i18n';
+import { t, tn } from '../../lib/i18n';
 
 export function Details({ id }: { id: string }) {
   const [version, setVersion] = useState(0);
@@ -110,8 +113,9 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
     [target.data?.ep?.Id]
   );
   const refresh = () => { setTick((n) => n + 1); onChanged(); };
+  const gaps = useMissingSeasons(item, seasons.data);
 
-  const list = seasons.data ?? [];
+  const list = gaps.list;
   const requested = loc.query.get('season');
   const selected = (requested && list.some((s) => s.Id === requested) ? requested : undefined)
     ?? (target.data?.ep.SeasonId && list.some((s) => s.Id === target.data!.ep.SeasonId) ? target.data.ep.SeasonId : undefined)
@@ -124,7 +128,9 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
   const actors = peopleOf(item, 'Actor');
   const creators = peopleOf(item, 'Creator').length ? peopleOf(item, 'Creator') : peopleOf(item, 'Writer');
   const regularSeasons = list.filter((s) => (s.IndexNumber ?? 1) > 0).length;
-  const seasonCount = regularSeasons ? plural(regularSeasons, 'season') : seasonsLabel(item);
+  const seasonCount = gaps.total > gaps.onServerCount
+    ? `${plural(gaps.total, 'season')} · ${t('{n} on the server', { n: gaps.onServerCount })}`
+    : regularSeasons ? plural(regularSeasons, 'season') : seasonsLabel(item);
 
   const play = async (restart = false) => {
     const ep = pt?.ep ?? (await resolvePlayable(item));
@@ -160,6 +166,7 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
         overview={item.Overview}
         info={info}
         progress={pt?.resume ? { fraction: progressFraction(pt.ep), text: `${timeLeft(remainingSeconds(pt.ep))} of ${pt.ep.Name}` } : undefined}
+        notice={gaps.notice}
         actions={
           <>
             <button type="button" class="btn btn-primary" onClick={() => play()}>
@@ -206,14 +213,101 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
             upNextId={pt?.ep.Id}
             onChanged={refresh}
             version={tick}
+            missing={gaps.missing}
+            onRequest={gaps.ask}
           />
         )}
         {seasons.loading && !seasons.data && <div class="details-pad"><GridSkeleton count={2} /></div>}
         <CastRow people={item.People ?? []} />
         <SimilarRow id={item.Id} />
       </main>
+      {gaps.dialog}
     </Shell>
   );
+}
+
+/* Seasons Seerr knows that aren't on the server (Series details · request missing seasons board): a banner in the
+   hero, dashed tabs among the seasons, and the request dialog behind both. Only for people who can request. */
+function useMissingSeasons(item: BaseItem, seasons: BaseItem[] | undefined) {
+  const rq = useStore(meStore).requests;
+  const tmdbId = Number(item.ProviderIds?.Tmdb ?? item.ProviderIds?.tmdb ?? 0) || 0;
+  const can = rq.connected && rq.canRequest && rq.requestButtons && tmdbId > 0;
+  const fetched = useAsync(() => (can ? seerrDetails('tv', tmdbId).catch(() => null) : Promise.resolve(null)), [tmdbId, can]);
+  const [details, setDetails] = useState<SeerrDetails | null>(null);
+  useEffect(() => setDetails(fetched.data ?? null), [fetched.data]);
+  const [ask, setAsk] = useState<number[] | null>(null);
+
+  const all = seasons ?? [];
+  // Seasons with files; a virtual one (Jellyfin's "missing episodes") counts as missing.
+  const onServer = useMemo(
+    () => new Set(all.filter((s) => s.LocationType !== 'Virtual' && (s.IndexNumber ?? 0) > 0).map((s) => s.IndexNumber!)),
+    [seasons]
+  );
+  const known = (details?.seasons ?? []).filter((s) => s.seasonNumber > 0);
+  const away = known.filter((s) => !onServer.has(s.seasonNumber) && s.status !== 'available' && s.status !== 'partial' && s.status !== 'blocklisted');
+  const awayNums = new Set(away.map((s) => s.seasonNumber));
+  const now = Date.now();
+  const unaired = (s: { airDate?: string }) => { const d = dayOf(s.airDate); return !d || d.getTime() > now; };
+  const missing: MissingSeason[] = away.map((s) => ({
+    n: s.seasonNumber,
+    name: s.name || t('Season {n}', { n: s.seasonNumber }),
+    year: unaired(s) ? dayOf(s.airDate)?.getFullYear() : undefined,
+    requested: s.status === 'pending' || s.status === 'processing'
+  }));
+  const open = missing.filter((m) => !m.requested);
+  const requested = missing.filter((m) => m.requested);
+  const soon = away.filter((s) => !(s.status === 'pending' || s.status === 'processing') && unaired(s));
+
+  const notice = open.length > 0 && (
+    <div class="dhero-missing">
+      <span aria-hidden="true" class="dhero-missing-icon"><Icon name="request" size={18} /></span>
+      <span class="dhero-missing-text">
+        <span class="dhero-missing-title">
+          {open.length === 1 ? t("{season} isn't on the server", { season: seasonList([open[0].n]) })
+            : open.length <= 4 ? t("{seasons} aren't on the server", { seasons: seasonList(open.map((m) => m.n)) })
+            : t("{n} seasons aren't on the server", { n: open.length })}
+        </span>
+        {soon.length > 0 ? (
+          <span class="dhero-missing-sub">
+            {soon.length === 1 && dayOf(soon[0].airDate)
+              ? t('{season} is announced for {year}', { season: seasonList([soon[0].seasonNumber]), year: dayOf(soon[0].airDate)!.getFullYear() })
+              : tn(soon.length, '{season} is announced', '{season} are announced', { season: seasonList(soon.map((s) => s.seasonNumber)) })}
+          </span>
+        ) : requested.length > 0 ? (
+          <span class="dhero-missing-sub">{tn(requested.length, '{season} is already requested', '{season} are already requested', { season: seasonList(requested.map((m) => m.n)) })}</span>
+        ) : null}
+      </span>
+      <button type="button" class="btn btn-primary dhero-missing-btn" aria-haspopup="dialog" onClick={() => setAsk([])}>
+        <Icon name="request" size={17} />
+        {tn(open.length, 'Request {n} season', 'Request {n} seasons')}
+      </button>
+    </div>
+  );
+
+  const dialog = details && (
+    <RequestSeasonsDialog
+      open={ask !== null}
+      context="library"
+      target={{ tmdbId, title: item.Name, posterUrl: primaryUrl(item, 200), backdropUrl: backdropUrl(item, 780), posterPath: details.posterPath, backdropPath: details.backdropPath }}
+      details={details}
+      onServer={onServer}
+      initial={ask ?? undefined}
+      meta={[yearRange(item), known.length ? plural(known.length, 'season') : '', item.Studios?.[0]?.Name].filter(Boolean).join(' · ')}
+      onClose={() => setAsk(null)}
+      onDone={(r) => setDetails((d) => d && markRequested(d, r.seasons, r.is4k, r.status))}
+    />
+  );
+
+  return {
+    // Jellyfin's virtual seasons give way to the dashed tab for the same season.
+    list: all.filter((s) => !(s.LocationType === 'Virtual' && awayNums.has(s.IndexNumber ?? -1))),
+    missing: can ? missing : undefined,
+    total: known.length,
+    onServerCount: known.length - away.length,
+    ask: (n: number) => setAsk(open.some((m) => m.n === n) ? [n] : []),
+    notice,
+    dialog
+  };
 }
 
 /* ───────── Movie (and any other playable video) ───────── */

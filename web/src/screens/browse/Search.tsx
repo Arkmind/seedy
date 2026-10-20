@@ -16,6 +16,7 @@ import { SearchIdle } from '../../ui/search/parts';
 import { addRecent } from '../../ui/search/recent';
 import './search.css';
 import { t } from '../../lib/i18n';
+import { RequestSeasonsDialog } from './request-seasons';
 
 /* Search (Search board): the bar's box holds the query; the page shows everything the bar's dropdown sums up as
    "All N results", then "Request it" from Seerr when nothing in the library matches. `?genre=` lists a genre
@@ -68,6 +69,7 @@ function LibraryResults({ q }: { q: string }) {
   const [tick, setTick] = useState(0);
   const [seerr, setSeerr] = useState<{ items?: SeerrItem[]; total?: number; error?: boolean } | null>(null);
   const [requesting, setRequesting] = useState<number | null>(null);
+  const [series, setSeries] = useState<SeerrItem | null>(null);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -101,6 +103,7 @@ function LibraryResults({ q }: { q: string }) {
   }, [wantSeerr, q]);
 
   const request = async (item: SeerrItem) => {
+    if (item.mediaType === 'tv') { setSeries(item); return; }
     setRequesting(item.tmdbId);
     try {
       const r = await seerrRequest({ mediaType: item.mediaType, tmdbId: item.tmdbId });
@@ -112,6 +115,16 @@ function LibraryResults({ q }: { q: string }) {
       setRequesting(null);
     }
   };
+
+  const seasonsDialog = series && (
+    <RequestSeasonsDialog
+      open
+      context="seerr"
+      target={{ tmdbId: series.tmdbId, title: series.title, year: series.year, posterPath: series.posterPath, backdropPath: series.backdropPath }}
+      onClose={() => setSeries(null)}
+      onDone={(r) => setSeerr((s) => s && s.items ? { ...s, items: s.items.map((i) => (i.tmdbId === series.tmdbId && i.mediaType === 'tv' ? { ...i, status: r.status, requestedByMe: true, requestedBy: undefined } : i)) } : s)}
+    />
+  );
 
   if (lib?.error) {
     return (
@@ -149,6 +162,7 @@ function LibraryResults({ q }: { q: string }) {
         </section>
 
         {wantSeerr && seerr && <SeerrResults q={q} seerr={seerr} requesting={requesting} onRequest={request} />}
+        {seasonsDialog}
       </>
     );
   }
@@ -201,6 +215,7 @@ function LibraryResults({ q }: { q: string }) {
         </Section>
       )}
       {wantSeerr && seerr && <SeerrResults q={q} seerr={seerr} requesting={requesting} onRequest={request} more />}
+      {seasonsDialog}
     </>
   );
 }

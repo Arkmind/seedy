@@ -511,11 +511,14 @@ function DiscoverRow({ row }: { row: HomeRow }) {
   if (pending) return <RowSkeleton title={title} width={180} />;
   if (!items.length) return null;
   return (
-    <Row title={title} sub={t('Not in your library yet · request with one click')} seeAll="/list/discover" label={title}>
-      {items.map((s) => (
-        <PosterCard key={s.mediaType + s.tmdbId} item={req.apply(s)} width={180} canRequest={req.canRequest} onRequest={req.request} requesting={req.busy(s)} />
-      ))}
-    </Row>
+    <>
+      <Row title={title} sub={t('Not in your library yet · request with one click')} seeAll="/list/discover" label={title}>
+        {items.map((s) => (
+          <PosterCard key={s.mediaType + s.tmdbId} item={req.apply(s)} width={180} canRequest={req.canRequest} onRequest={req.request} requesting={req.busy(s)} />
+        ))}
+      </Row>
+      {req.dialog}
+    </>
   );
 }
 

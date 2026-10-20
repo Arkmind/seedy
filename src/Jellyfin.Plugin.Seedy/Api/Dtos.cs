@@ -262,6 +262,14 @@ public sealed class SeerrSeasonDto
     [JsonPropertyName("episodeCount")] public int EpisodeCount { get; set; }
     [JsonPropertyName("airDate")] public string? AirDate { get; set; }
     [JsonPropertyName("status")] public string Status { get; set; } = "none";
+    [JsonPropertyName("status4k")] public string Status4k { get; set; } = "none";
+    [JsonPropertyName("posterPath")] public string? PosterPath { get; set; }
+    /* Set while the season is airing: how many of its episodes are out. */
+    [JsonPropertyName("airedEpisodes")] public int? AiredEpisodes { get; set; }
+    [JsonPropertyName("requestedBy")] public string? RequestedBy { get; set; }
+    [JsonPropertyName("requestedByMe")] public bool RequestedByMe { get; set; }
+    [JsonPropertyName("requestedBy4k")] public string? RequestedBy4k { get; set; }
+    [JsonPropertyName("requestedByMe4k")] public bool RequestedByMe4k { get; set; }
 }
 
 public sealed class SeerrDetailsDto : SeerrItemDto
@@ -292,6 +300,62 @@ public sealed class RequestBody
     [JsonPropertyName("tmdbId")] public int TmdbId { get; set; }
     [JsonPropertyName("seasons")] public List<int>? Seasons { get; set; }
     [JsonPropertyName("is4k")] public bool Is4k { get; set; }
+
+    /* Advanced (as Seerr allows the person): which Sonarr/Radarr server, quality profile and folder, and who the request is for. */
+    [JsonPropertyName("serverId")] public int? ServerId { get; set; }
+    [JsonPropertyName("profileId")] public int? ProfileId { get; set; }
+    [JsonPropertyName("rootFolder")] public string? RootFolder { get; set; }
+    [JsonPropertyName("userId")] public int? UserId { get; set; }
+}
+
+/* What the request dialog needs to know about the signed-in person and the servers behind Seerr. */
+public sealed class RequestOptionsDto
+{
+    [JsonPropertyName("quota")] public RequestQuotaDto? Quota { get; set; }
+    [JsonPropertyName("autoApprove")] public bool AutoApprove { get; set; }
+    [JsonPropertyName("autoApprove4k")] public bool AutoApprove4k { get; set; }
+    [JsonPropertyName("can4k")] public bool Can4k { get; set; }
+    [JsonPropertyName("advanced")] public RequestAdvancedDto? Advanced { get; set; }
+}
+
+public sealed class RequestQuotaDto
+{
+    [JsonPropertyName("limit")] public int Limit { get; set; }
+    [JsonPropertyName("days")] public int Days { get; set; }
+    [JsonPropertyName("used")] public int Used { get; set; }
+    [JsonPropertyName("remaining")] public int Remaining { get; set; }
+}
+
+public sealed class RequestAdvancedDto
+{
+    [JsonPropertyName("servers")] public List<RequestServerDto> Servers { get; set; } = [];
+    /* Seerr users the request can be made for; empty when the person can only request as themselves. */
+    [JsonPropertyName("users")] public List<SeerrUserDto> Users { get; set; } = [];
+    [JsonPropertyName("me")] public int Me { get; set; }
+}
+
+public sealed class RequestServerDto
+{
+    [JsonPropertyName("id")] public int Id { get; set; }
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("is4k")] public bool Is4k { get; set; }
+    [JsonPropertyName("isDefault")] public bool IsDefault { get; set; }
+    [JsonPropertyName("profileId")] public int? ProfileId { get; set; }
+    [JsonPropertyName("rootFolder")] public string? RootFolder { get; set; }
+    [JsonPropertyName("profiles")] public List<RequestProfileDto> Profiles { get; set; } = [];
+    [JsonPropertyName("rootFolders")] public List<RequestFolderDto> RootFolders { get; set; } = [];
+}
+
+public sealed class RequestProfileDto
+{
+    [JsonPropertyName("id")] public int Id { get; set; }
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+}
+
+public sealed class RequestFolderDto
+{
+    [JsonPropertyName("path")] public string Path { get; set; } = string.Empty;
+    [JsonPropertyName("freeSpace")] public long? FreeSpace { get; set; }
 }
 
 public sealed class RequestResultDto

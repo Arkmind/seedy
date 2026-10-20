@@ -131,7 +131,14 @@ export function MenuButton({ button, children, align, width, placement }: {
 
 /* ── Modal sheet ── */
 
-export function Sheet({ open, onClose, children, wide, label }: { open: boolean; onClose: () => void; children: ComponentChildren; wide?: boolean; label: string }) {
+export function Sheet({ open, onClose, children, wide, label, labelledBy, class: cls, scrimClass }: {
+  open: boolean; onClose: () => void; children: ComponentChildren; wide?: boolean; label?: string;
+  /* A heading inside the dialog to name it by, instead of `label`. */
+  labelledBy?: string;
+  /* Replaces the sheet's own look (the request dialog has its own). */
+  class?: string;
+  scrimClass?: string;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   // Callers pass inline closures; keep the latest without re-running the open/close effect (which moves focus).
   const closeRef = useRef(onClose);
@@ -166,8 +173,8 @@ export function Sheet({ open, onClose, children, wide, label }: { open: boolean;
   }, [open]);
   if (!open) return null;
   return createPortal(
-    <div class="scrim" onPointerDown={(e) => { if (e.target === e.currentTarget) closeRef.current(); }}>
-      <div ref={ref} class={'sheet' + (wide ? ' is-wide' : '')} role="dialog" aria-modal="true" aria-label={label}>
+    <div class={'scrim' + (scrimClass ? ' ' + scrimClass : '')} onPointerDown={(e) => { if (e.target === e.currentTarget) closeRef.current(); }}>
+      <div ref={ref} class={cls ?? 'sheet' + (wide ? ' is-wide' : '')} role="dialog" aria-modal="true" aria-label={labelledBy ? undefined : label} aria-labelledby={labelledBy}>
         {children}
       </div>
     </div>,

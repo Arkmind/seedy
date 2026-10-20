@@ -848,25 +848,82 @@ public sealed class SeerrService
 
             d.Networks = (node["networks"]?.AsArray() ?? []).Select(n => Str(n?["name"])).Where(n => n is not null).Select(n => n!).ToList();
             d.NumberOfSeasons = Int(node["numberOfSeasons"]);
-            var seasonStatus = new Dictionary<int, string>();
+            var seasonStatus = new Dictionary<int, (string Std, string FourK)>();
             foreach (var s in node["mediaInfo"]?["seasons"]?.AsArray() ?? [])
             {
                 var n = Int(s?["seasonNumber"]);
                 if (n is not null)
                 {
-                    seasonStatus[n.Value] = StatusName(Int(s?["status"]));
+                    seasonStatus[n.Value] = (StatusName(Int(s?["status"])), StatusName(Int(s?["status4k"])));
                 }
+            }
+
+            // Who asked for each season: the newest request still waiting (1) or approved (2) that names it.
+            var asked = new Dictionary<(int Season, bool FourK), (string Name, int Id, bool Approved)>();
+            foreach (var r in node["mediaInfo"]?["requests"]?.AsArray() ?? [])
+            {
+                var rs = Int(r?["status"]);
+                if (rs is not (1 or 2))
+                {
+                    continue;
+                }
+
+                var by = r?["requestedBy"];
+                var who = (Str(by?["displayName"]) ?? Str(by?["jellyfinUsername"]) ?? Str(by?["username"]) ?? "someone", Int(by?["id"]) ?? 0, rs == 2);
+                foreach (var s in r?["seasons"]?.AsArray() ?? [])
+                {
+                    if (Int(s?["seasonNumber"]) is { } n)
+                    {
+                        asked.TryAdd((n, Bool(r?["is4k"])), who);
+                    }
+                }
+            }
+
+            // While a season is airing, Seerr knows the last episode out and the next one due.
+            var last = node["lastEpisodeToAir"];
+            var next = node["nextEpisodeToAir"];
+            var airing = Int(next?["seasonNumber"]) is { } ns && Int(last?["seasonNumber"]) == ns ? ns : (int?)null;
+
+            string Status(int n, bool fourK, string known)
+            {
+                if (known != "none" || !asked.TryGetValue((n, fourK), out var a))
+                {
+                    return known;
+                }
+
+                return a.Approved ? "processing" : "pending";
             }
 
             d.Seasons = (node["seasons"]?.AsArray() ?? [])
                 .Where(s => (Int(s?["seasonNumber"]) ?? 0) > 0)
-                .Select(s => new SeerrSeasonDto
+                .Select(s =>
                 {
-                    SeasonNumber = Int(s?["seasonNumber"]) ?? 0,
-                    Name = Str(s?["name"]) ?? "Season",
-                    EpisodeCount = Int(s?["episodeCount"]) ?? 0,
-                    AirDate = Str(s?["airDate"]),
-                    Status = seasonStatus.TryGetValue(Int(s?["seasonNumber"]) ?? 0, out var st) ? st : "none"
+                    var n = Int(s?["seasonNumber"]) ?? 0;
+                    var known = seasonStatus.TryGetValue(n, out var st) ? st : ("none", "none");
+                    var season = new SeerrSeasonDto
+                    {
+                        SeasonNumber = n,
+                        Name = Str(s?["name"]) ?? "Season",
+                        EpisodeCount = Int(s?["episodeCount"]) ?? 0,
+                        AirDate = NullIfEmpty(Str(s?["airDate"])),
+                        PosterPath = Str(s?["posterPath"]),
+                        Status = Status(n, false, known.Item1),
+                        Status4k = Status(n, true, known.Item2),
+                        AiredEpisodes = airing == n ? Int(last?["episodeNumber"]) : null
+                    };
+                    if (asked.TryGetValue((n, false), out var a))
+                    {
+                        season.RequestedBy = a.Name;
+                        season.RequestedByMe = me is not null && a.Id == me;
+                    }
+
+                    if (asked.TryGetValue((n, true), out var a4))
+                    {
+                        season.RequestedBy4k = a4.Name;
+                        season.RequestedByMe4k = me is not null && a4.Id == me;
+                    }
+
+                    return season;
                 })
                 .ToList();
         }
@@ -899,15 +956,32 @@ public sealed class SeerrService
     public async Task<string> RequestAsync(RequestBody body, int asUser, CancellationToken ct)
     {
         var tv = body.MediaType == "tv";
-        object payload = tv
-            ? new Dictionary<string, object>
-            {
-                ["mediaType"] = "tv",
-                ["mediaId"] = body.TmdbId,
-                ["is4k"] = body.Is4k,
-                ["seasons"] = body.Seasons is { Count: > 0 } s ? s : "all"
-            }
-            : new Dictionary<string, object> { ["mediaType"] = "movie", ["mediaId"] = body.TmdbId, ["is4k"] = body.Is4k };
+        var payload = new Dictionary<string, object> { ["mediaType"] = body.MediaType, ["mediaId"] = body.TmdbId, ["is4k"] = body.Is4k };
+        if (tv)
+        {
+            payload["seasons"] = body.Seasons is { Count: > 0 } s ? s : "all";
+        }
+
+        if (body.ServerId is { } server)
+        {
+            payload["serverId"] = server;
+        }
+
+        if (body.ProfileId is { } profile)
+        {
+            payload["profileId"] = profile;
+        }
+
+        if (!string.IsNullOrWhiteSpace(body.RootFolder))
+        {
+            payload["rootFolder"] = body.RootFolder;
+        }
+
+        if (body.UserId is { } forUser)
+        {
+            payload["userId"] = forUser;
+        }
+
         var node = await Api(HttpMethod.Post, "/request", payload, asUser, ct).ConfigureAwait(false);
         foreach (var k in _cache.Keys.Where(k => k.StartsWith("/discover", StringComparison.Ordinal) || k.StartsWith("/search", StringComparison.Ordinal) || k.StartsWith("/request", StringComparison.Ordinal)).ToList())
         {
@@ -916,6 +990,156 @@ public sealed class SeerrService
 
         // Request status 2 = approved (auto-approval); 1 = waiting for an admin.
         return Int(node?["status"]) == 2 ? "processing" : "pending";
+    }
+
+    // Seerr's permission bits (server/lib/permissions.ts). ADMIN has every permission.
+    private const int PermAdmin = 2;
+    private const int PermManageUsers = 8;
+    private const int PermManageRequests = 16;
+    private const int PermAutoApprove = 128;
+    private const int PermAutoApproveMovie = 256;
+    private const int PermAutoApproveTv = 512;
+    private const int PermRequest4k = 1024;
+    private const int PermRequest4kMovie = 2048;
+    private const int PermRequest4kTv = 4096;
+    private const int PermRequestAdvanced = 8192;
+    private const int PermAutoApprove4k = 32768;
+    private const int PermAutoApprove4kMovie = 65536;
+    private const int PermAutoApprove4kTv = 131072;
+
+    private static bool Has(int perms, params int[] any) => (perms & PermAdmin) != 0 || any.Any(p => (perms & p) != 0);
+
+    /// <summary>Gets whether Seerr lets these permissions pick the server, quality profile and folder (Seerr's Advanced).</summary>
+    /// <param name="perms">Seerr permission bits.</param>
+    /// <returns>True when allowed.</returns>
+    public static bool CanPickServer(int perms) => Has(perms, PermRequestAdvanced, PermManageRequests);
+
+    /// <summary>Gets whether Seerr lets these permissions make a request on someone else's behalf: Seerr wants both
+    /// Manage users and Manage requests (or Admin) for that.</summary>
+    /// <param name="perms">Seerr permission bits.</param>
+    /// <returns>True when allowed.</returns>
+    public static bool CanRequestFor(int perms) => Has(perms, PermManageUsers) && Has(perms, PermManageRequests);
+
+    /// <summary>A Seerr user's permission bits, read fresh so a change in Seerr applies at once.</summary>
+    /// <param name="me">Seerr user id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Permission bits (0 when unknown).</returns>
+    public async Task<int> PermissionsAsync(int me, CancellationToken ct)
+    {
+        var user = await Api(HttpMethod.Get, "/user/" + me.ToString(CultureInfo.InvariantCulture), ct: ct).ConfigureAwait(false);
+        return Int(user?["permissions"]) ?? 0;
+    }
+
+    /// <summary>What the request dialog needs: the person's quota and approval, 4K, and (for admins) server choices.</summary>
+    /// <param name="mediaType">movie or tv.</param>
+    /// <param name="me">The person's Seerr id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Options.</returns>
+    public async Task<RequestOptionsDto> RequestOptionsAsync(string mediaType, int me, CancellationToken ct)
+    {
+        var tv = mediaType == "tv";
+        var id = me.ToString(CultureInfo.InvariantCulture);
+        var perms = await PermissionsAsync(me, ct).ConfigureAwait(false);
+        var o = new RequestOptionsDto
+        {
+            AutoApprove = Has(perms, PermManageRequests, PermAutoApprove, tv ? PermAutoApproveTv : PermAutoApproveMovie),
+            AutoApprove4k = Has(perms, PermManageRequests, PermAutoApprove4k, tv ? PermAutoApprove4kTv : PermAutoApprove4kMovie)
+        };
+
+        try
+        {
+            var quota = (await Api(HttpMethod.Get, "/user/" + id + "/quota", ct: ct).ConfigureAwait(false))?[tv ? "tv" : "movie"];
+            if (Int(quota?["limit"]) is { } limit and > 0)
+            {
+                var used = Int(quota?["used"]) ?? 0;
+                o.Quota = new RequestQuotaDto { Limit = limit, Days = Int(quota?["days"]) ?? 7, Used = used, Remaining = Int(quota?["remaining"]) ?? Math.Max(0, limit - used) };
+            }
+        }
+        catch (SeerrException ex)
+        {
+            _logger.LogDebug("Seerr quota for user {Id}: {Message}", me, ex.Message);
+        }
+
+        JsonNode? servers;
+        try
+        {
+            servers = await Cached(tv ? "/service/sonarr" : "/service/radarr", ListTtl, ct).ConfigureAwait(false);
+        }
+        catch (SeerrException)
+        {
+            return o;
+        }
+
+        var list = servers?.AsArray() ?? [];
+        o.Can4k = ConfigMapper.Current.Allow4k
+            && list.Any(s => Bool(s?["is4k"]))
+            && Has(perms, PermRequest4k, tv ? PermRequest4kTv : PermRequest4kMovie);
+
+        if (!CanPickServer(perms))
+        {
+            return o;
+        }
+
+        var adv = new RequestAdvancedDto { Me = me };
+        foreach (var s in list)
+        {
+            var sid = Int(s?["id"]);
+            if (sid is null)
+            {
+                continue;
+            }
+
+            var server = new RequestServerDto
+            {
+                Id = sid.Value,
+                Name = Str(s?["name"]) ?? (tv ? "Sonarr" : "Radarr"),
+                Is4k = Bool(s?["is4k"]),
+                IsDefault = Bool(s?["isDefault"]),
+                ProfileId = Int(s?["activeProfileId"]),
+                RootFolder = Str(s?["activeDirectory"])
+            };
+            try
+            {
+                var detail = await Cached((tv ? "/service/sonarr/" : "/service/radarr/") + sid.Value.ToString(CultureInfo.InvariantCulture), ListTtl, ct).ConfigureAwait(false);
+                foreach (var p in detail?["profiles"]?.AsArray() ?? [])
+                {
+                    if (Int(p?["id"]) is { } pid)
+                    {
+                        server.Profiles.Add(new RequestProfileDto { Id = pid, Name = Str(p?["name"]) ?? pid.ToString(CultureInfo.InvariantCulture) });
+                    }
+                }
+
+                foreach (var f in detail?["rootFolders"]?.AsArray() ?? [])
+                {
+                    if (Str(f?["path"]) is { } path)
+                    {
+                        server.RootFolders.Add(new RequestFolderDto { Path = path, FreeSpace = f?["freeSpace"] is JsonValue v && v.TryGetValue<long>(out var free) ? free : null });
+                    }
+                }
+            }
+            catch (SeerrException ex)
+            {
+                // Sonarr/Radarr didn't answer: the server can still be picked with its defaults.
+                _logger.LogDebug("Seerr service {Id}: {Message}", sid, ex.Message);
+            }
+
+            adv.Servers.Add(server);
+        }
+
+        if (CanRequestFor(perms))
+        {
+            try
+            {
+                adv.Users = await UsersAsync(false, ct).ConfigureAwait(false);
+            }
+            catch (SeerrException)
+            {
+                // Without the list, the request goes out as the person.
+            }
+        }
+
+        o.Advanced = adv.Servers.Count > 0 || adv.Users.Count > 1 ? adv : null;
+        return o;
     }
 
     // ── Mapping ──

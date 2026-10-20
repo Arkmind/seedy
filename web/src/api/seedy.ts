@@ -155,7 +155,45 @@ export interface MyRequest extends SeerrItem {
   availableAt?: string;
 }
 
-export interface SeerrSeason { seasonNumber: number; name: string; episodeCount: number; airDate?: string; status: SeerrStatus }
+export interface SeerrSeason {
+  seasonNumber: number;
+  name: string;
+  episodeCount: number;
+  airDate?: string;
+  status: SeerrStatus;
+  status4k: SeerrStatus;
+  posterPath?: string;
+  /* Set while the season is airing: how many of its episodes are out. */
+  airedEpisodes?: number;
+  requestedBy?: string;
+  requestedByMe?: boolean;
+  requestedBy4k?: string;
+  requestedByMe4k?: boolean;
+}
+
+/* What the request dialog offers the signed-in person. `advanced` is there when Seerr lets them pick the server or request for others. */
+export interface RequestOptions {
+  quota?: { limit: number; days: number; used: number; remaining: number };
+  autoApprove: boolean;
+  autoApprove4k: boolean;
+  can4k: boolean;
+  advanced?: {
+    servers: { id: number; name: string; is4k: boolean; isDefault: boolean; profileId?: number; rootFolder?: string; profiles: { id: number; name: string }[]; rootFolders: { path: string; freeSpace?: number }[] }[];
+    users: SeerrUser[];
+    me: number;
+  };
+}
+
+export interface RequestBody {
+  mediaType: 'movie' | 'tv';
+  tmdbId: number;
+  seasons?: number[];
+  is4k?: boolean;
+  serverId?: number;
+  profileId?: number;
+  rootFolder?: string;
+  userId?: number;
+}
 
 export interface SeerrDetails extends SeerrItem {
   tagline?: string;
@@ -276,7 +314,8 @@ export const seerrUpcoming = () => get<{ results: SeerrUpcoming[] }>('/Seedy/Req
 export const seerrDetails = (mediaType: 'movie' | 'tv', tmdbId: number) => get<SeerrDetails>(`/Seedy/Requests/Media/${mediaType}/${tmdbId}`);
 /* The person's requests, newest first; `open` counts those still waiting or downloading. */
 export const myRequests = () => get<{ results: MyRequest[]; open: number }>('/Seedy/Requests/Mine');
-export const seerrRequest = (body: { mediaType: 'movie' | 'tv'; tmdbId: number; seasons?: number[]; is4k?: boolean }) =>
+export const seerrRequestOptions = (mediaType: 'movie' | 'tv') => get<RequestOptions>(`/Seedy/Requests/Options/${mediaType}`);
+export const seerrRequest = (body: RequestBody) =>
   post<{ status: SeerrStatus }>('/Seedy/Requests', body);
 
 export const adminGetConfig = () => get<AdminConfig>('/Seedy/Admin/Config');

@@ -230,6 +230,7 @@ function DiscoverList() {
             {error && <div class="grid-more"><button type="button" class="btn btn-secondary" onClick={() => load(page)}><Icon name="refresh" size={18} />{t('Load more')}</button></div>}
           </>
         )}
+      {req.dialog}
     </Frame>
   );
 }

@@ -104,11 +104,12 @@ To install a build by hand: stop Jellyfin, copy `Jellyfin.Plugin.Seedy.dll` and 
 ## Develop
 
 ```bash
-make dev-up        # test Jellyfin 12.2 on :8096 and Seerr on :5055
+make dev-up        # test Jellyfin 12.2 on :8096, Seerr on :5055, Sonarr :8989 (+ :8990 for 4K), Radarr :7878
 # open http://localhost:8096 and finish Jellyfin's setup wizard with an admin named Alex, password seedy
 # (the dev scripts sign in with it)
 make dev-media     # fill the library with open-licensed titles: Blender open movies and public-domain films
 make dev-seerr     # connect the test Seerr to the test Jellyfin
+make dev-arr       # give Seerr its Sonarr, 4K Sonarr and Radarr (quality profiles, folders, 4K requests)
 make dev-install   # build, install into the test server and restart it
 make web           # Vite on http://127.0.0.1:5173/seedy/, proxied to the test server
 make web-mock      # …or answer /Seedy/* from fixtures (web/dev/mock-plugin.ts)
