@@ -8,7 +8,7 @@
 #   VERSION     four-part plugin version (default: the csproj's)
 #   REPO_URL    folder the zip is downloaded from, used in artifacts/manifest.json
 #   OWNER       owner shown in Jellyfin's plugin catalogue (default: Seedy)
-#   CHANGELOG   text shown as this release's changelog
+#   CHANGELOG   text shown as this release's changelog (default: "Seedy <version>")
 # Uses a local .NET 10 SDK when there is one, otherwise builds in the mcr.microsoft.com/dotnet/sdk:10.0 container.
 set -euo pipefail
 
@@ -18,7 +18,7 @@ VERSION="${VERSION:-$CSPROJ_VERSION}"
 TARGET_ABI="12.0.0.0"
 REPO_URL="${REPO_URL:-https://REPLACE-ME/seedy}"
 OWNER="${OWNER:-Seedy}"
-CHANGELOG="${CHANGELOG:-See CHANGELOG.md}"
+CHANGELOG="${CHANGELOG:-Seedy $VERSION}"
 OUT="$ROOT/artifacts"
 PKG="seedy_${VERSION}.zip"
 

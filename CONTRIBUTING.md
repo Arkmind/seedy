@@ -34,11 +34,13 @@ make build       # full build: web app, plugin, package
 
 Releases are built by GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)):
 
-1. Add the release notes under a `## <version>` heading in [CHANGELOG.md](CHANGELOG.md).
-2. Push a tag: `git tag v0.2.0 && git push origin v0.2.0`.
+1. On GitHub, **Releases › Draft a new release**: a new tag such as `v0.2.0` on the default branch, a title, and the
+   release notes.
+2. **Publish release.**
 
-The workflow builds the plugin with that version, attaches `seedy_<version>.zip` to a GitHub Release, and adds the
-release to `manifest.json` on the `gh-pages` branch, keeping the older ones.
+The workflow builds the plugin with that version, attaches `seedy_<version>.zip` to the release, and adds the version to
+`manifest.json` on the `gh-pages` branch, keeping the older ones. The release notes become the changelog Jellyfin shows
+in its plugin catalogue.
 
 Once, after the first release: in the repository's **Settings › Pages**, choose **Deploy from a branch**, branch
 `gh-pages`, folder `/`. The repository address is then `https://arkmind.github.io/seedy/manifest.json`.

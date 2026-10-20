@@ -1,12 +1,12 @@
 name: Release
 
-# Push a tag such as v0.2.0 to publish a release: the plugin zip goes on a GitHub Release, and the plugin repository
-# manifest on GitHub Pages (branch gh-pages) gains the new version. Jellyfin servers that added
-# https://<owner>.github.io/<repo>/manifest.json then see the update.
+# Publishing a GitHub Release (tag such as v0.2.0) builds the plugin, attaches seedy_<version>.zip to the release, and
+# adds the version to the plugin repository manifest on GitHub Pages (branch gh-pages), with the release's text as its
+# changelog. Jellyfin servers that added https://<owner>.github.io/<repo>/manifest.json then see the update.
 
 on:
-  push:
-    tags: ['v*']
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -21,13 +21,15 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Version and notes from the tag
+      - name: Version from the tag, notes from the release
+        env:
+          NOTES: ${{ github.event.release.body }}
         run: |
           v="${GITHUB_REF_NAME#v}"
           case "$v" in *.*.*.*) ;; *.*.*) v="$v.0" ;; *.*) v="$v.0.0" ;; *) v="$v.0.0.0" ;; esac
           echo "VERSION=$v" >> "$GITHUB_ENV"
           echo "PAGES_URL=https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}" >> "$GITHUB_ENV"
-          python3 scripts/changelog.py "${GITHUB_REF_NAME#v}" > notes.md
+          printf '%s\n' "${NOTES:-Seedy ${GITHUB_REF_NAME#v}}" | tr -d '\r' > notes.md
 
       - name: Build
         run: |
@@ -36,10 +38,10 @@ jobs:
           OWNER="${GITHUB_REPOSITORY_OWNER}" \
           ./build.sh
 
-      - name: GitHub Release
+      - name: Attach the zip to the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "artifacts/seedy_${VERSION}.zip" --title "Seedy ${GITHUB_REF_NAME#v}" --notes-file notes.md
+        run: gh release upload "$GITHUB_REF_NAME" "artifacts/seedy_${VERSION}.zip" --clobber
 
       - name: Publish the plugin repository (gh-pages)
         run: |

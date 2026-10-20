@@ -145,7 +145,7 @@ web/                      Preact + TypeScript + Vite
   src/player              the player (on demand and live)
   src/i18n/fr             French translations
 Makefile                  shortcuts for the build and the test server (`make` lists them)
-scripts/                  release helpers (manifest, changelog)
+scripts/                  release helper (plugin repository manifest)
 dev/                      local test server, media generator, Seerr setup
 ```
 
