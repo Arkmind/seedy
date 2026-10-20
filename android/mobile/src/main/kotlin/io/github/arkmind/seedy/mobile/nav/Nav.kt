@@ -12,6 +12,7 @@ sealed interface Route {
     data class Library(val id: UUID) : Route
     data object Search : Route
     data object LiveTv : Route
+    data object Settings : Route
     data class Player(val id: UUID) : Route
     /** A title that's on Seerr but not on the server (search, Discover…). */
     data class SeerrTitle(val mediaType: String, val tmdbId: Int) : Route

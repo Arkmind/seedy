@@ -49,6 +49,7 @@ import io.github.arkmind.seedy.tv.player.TvPlayerRoute
 import io.github.arkmind.seedy.tv.requests.TvRequestsPlace
 import io.github.arkmind.seedy.tv.requests.TvSeerrTitleRoute
 import io.github.arkmind.seedy.tv.search.TvSearchPlace
+import io.github.arkmind.seedy.tv.settings.TvSettingsRoute
 import io.github.arkmind.seedy.ui.theme.LocalCore
 import io.github.arkmind.seedy.ui.theme.LocalSession
 import org.jellyfin.sdk.model.api.CollectionType
@@ -75,7 +76,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /** The Android TV app: the same journey as the phone (server, profile, home), drawn for the remote. */
 @Composable
-fun TvApp(core: SeedyCore) {
+fun TvApp(core: SeedyCore, appVersion: String = "") {
     val state by core.sessions.state.collectAsStateWithLifecycle()
     val accent = when (val s = state) {
         is SessionState.SignedIn -> parseHexColor(s.session.seedy?.branding?.accent ?: s.session.server.seedy?.accent)
@@ -89,7 +90,7 @@ fun TvApp(core: SeedyCore) {
                 SessionState.NoServer -> AddServerEntry(core)
                 is SessionState.SignedOut -> SignInFlow(core, s.server)
                 is SessionState.Unreachable -> Unreachable(core, s.server)
-                is SessionState.SignedIn -> SignedIn(core, s.session)
+                is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
             }
         }
     }
@@ -172,7 +173,7 @@ private fun Unreachable(core: SeedyCore, server: SavedServer) {
 private data object PlacesKey
 
 @Composable
-private fun SignedIn(core: SeedyCore, session: UserSession) {
+private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) {
     val scope = rememberCoroutineScope()
     val images = remember(session) { Images(session.api) }
     val viewer = remember(session) {
@@ -217,13 +218,14 @@ private fun SignedIn(core: SeedyCore, session: UserSession) {
                             current = place,
                             onPlace = { place = it },
                             onProfile = { scope.launch { core.sessions.switchProfile() } },
-                            onSettings = {},
+                            onSettings = { nav.go(TvRoute.Settings) },
                         )
                     }
                 }
                 entry<TvRoute.Details> { TvDetailsRoute(it.id) }
                 entry<TvRoute.Library> { TvLibraryRoute(it.id) }
                 entry<TvRoute.Player> { TvPlayerRoute(it.id) }
+                entry<TvRoute.Settings> { TvSettingsRoute(appVersion) }
                 entry<TvRoute.SeerrTitle> { TvSeerrTitleRoute(it.mediaType, it.tmdbId) }
             },
         )

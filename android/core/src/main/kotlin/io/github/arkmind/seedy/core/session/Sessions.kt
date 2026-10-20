@@ -42,13 +42,23 @@ class UserSession internal constructor(
     val account: SavedAccount,
     val api: ApiClient,
     val user: UserDto,
-    /** Seedy's view of this person, or null on plain Jellyfin (and when the plugin didn't answer). */
-    val seedy: SeedyMe?,
+    me: SeedyMe?,
 ) {
     val userId: UUID get() = user.id
 
+    private val _seedy = MutableStateFlow(me)
+
+    /** Seedy's view of this person, or null on plain Jellyfin (and when the plugin didn't answer). */
+    val seedyFlow: StateFlow<SeedyMe?> = _seedy.asStateFlow()
+    val seedy: SeedyMe? get() = _seedy.value
+
     /** The plugin's API when the server runs Seedy. */
-    val seedyApi: SeedyApi? = if (seedy != null) SeedyApi(api) else null
+    val seedyApi: SeedyApi? = if (me != null) SeedyApi(api) else null
+
+    /** Settings saved: the screens and players opened from now on use them. */
+    fun updatePrefs(prefs: io.github.arkmind.seedy.core.seedy.UserPrefs) {
+        _seedy.value = _seedy.value?.copy(prefs = prefs)
+    }
 
     /** Requests (Seerr) are shown only when Seedy is installed and connected to Seerr. */
     val hasRequests: Boolean get() = seedy?.requests?.connected == true

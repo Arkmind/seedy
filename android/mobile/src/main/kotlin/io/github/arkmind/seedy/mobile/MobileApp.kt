@@ -49,6 +49,7 @@ import io.github.arkmind.seedy.mobile.player.PlayerRoute
 import io.github.arkmind.seedy.mobile.requests.RequestsTab
 import io.github.arkmind.seedy.mobile.requests.SeerrTitleRoute
 import io.github.arkmind.seedy.mobile.search.SearchRoute
+import io.github.arkmind.seedy.mobile.settings.SettingsRoute
 import io.github.arkmind.seedy.ui.theme.LocalCore
 import io.github.arkmind.seedy.ui.theme.LocalSession
 import io.github.arkmind.seedy.mobile.home.AccountActions
@@ -77,7 +78,7 @@ import java.util.UUID
 
 /** The phone app: follows the session from "Add your server" through sign-in to the signed-in tabs. */
 @Composable
-fun MobileApp(core: SeedyCore) {
+fun MobileApp(core: SeedyCore, appVersion: String = "") {
     val state by core.sessions.state.collectAsStateWithLifecycle()
     val accent = when (val s = state) {
         is SessionState.SignedIn -> parseHexColor(s.session.seedy?.branding?.accent ?: s.session.server.seedy?.accent)
@@ -91,7 +92,7 @@ fun MobileApp(core: SeedyCore) {
                 SessionState.NoServer -> AddServerEntry(core, onBack = null)
                 is SessionState.SignedOut -> SignInFlow(core, s.server)
                 is SessionState.Unreachable -> Unreachable(core, s.server)
-                is SessionState.SignedIn -> SignedIn(core, s.session)
+                is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
             }
         }
     }
@@ -187,7 +188,7 @@ private fun Unreachable(core: SeedyCore, server: SavedServer) {
 private data object TabsKey
 
 @Composable
-private fun SignedIn(core: SeedyCore, session: UserSession) {
+private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) {
     val scope = rememberCoroutineScope()
     val images = remember(session) { Images(session.api) }
     val viewer = remember(session) {
@@ -200,12 +201,13 @@ private fun SignedIn(core: SeedyCore, session: UserSession) {
             images = images,
         )
     }
+    val stack = remember(session) { mutableStateListOf<Any>(TabsKey) }
+    val nav = remember(stack) { MobileNav(stack) }
     val account = AccountActions(
         onSwitchProfile = { scope.launch { core.sessions.switchProfile() } },
         onSignOut = { scope.launch { core.sessions.signOut() } },
+        onSettings = { nav.go(Route.Settings) },
     )
-    val stack = remember(session) { mutableStateListOf<Any>(TabsKey) }
-    val nav = remember(stack) { MobileNav(stack) }
     CompositionLocalProvider(LocalViewer provides viewer, LocalSession provides session, LocalCore provides core, LocalMobileNav provides nav) {
         NavDisplay(
             backStack = stack,
@@ -238,6 +240,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession) {
                 entry<Route.Library> { LibraryRoute(it.id) }
                 entry<Route.Search> { SearchRoute() }
                 entry<Route.LiveTv> { LiveTvRoute() }
+                entry<Route.Settings> { SettingsRoute(appVersion) }
                 entry<Route.Player> { PlayerRoute(it.id) }
                 entry<Route.SeerrTitle> { SeerrTitleRoute(it.mediaType, it.tmdbId) }
             },

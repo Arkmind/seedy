@@ -75,7 +75,7 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import kotlin.math.min
 
 /** What the header's account menu offers. */
-data class AccountActions(val onSwitchProfile: () -> Unit, val onSignOut: () -> Unit)
+data class AccountActions(val onSwitchProfile: () -> Unit, val onSignOut: () -> Unit, val onSettings: () -> Unit = {})
 
 /** Board "Android · Home": the featured hero (swipe for the next title), then the home rows. */
 @Composable
@@ -139,6 +139,11 @@ private fun AccountButton(account: AccountActions) {
                 text = { SText(t("Switch profile"), size = 14.sp, weight = 700) },
                 leadingIcon = { SIcon(WebIcons.Users, size = 18.dp, color = SeedyColors.Text2) },
                 onClick = { open = false; account.onSwitchProfile() },
+            )
+            DropdownMenuItem(
+                text = { SText(t("Settings"), size = 14.sp, weight = 700) },
+                leadingIcon = { SIcon(WebIcons.Sliders, size = 18.dp, color = SeedyColors.Text2) },
+                onClick = { open = false; account.onSettings() },
             )
             DropdownMenuItem(
                 text = { SText(t("Sign out"), size = 14.sp, weight = 700) },

@@ -3,10 +3,14 @@ package io.github.arkmind.seedy.core.seedy
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.exception.ApiClientException
 import org.jellyfin.sdk.api.client.extensions.get
+import org.jellyfin.sdk.api.client.extensions.post
 
 /** The Seedy plugin’s endpoints (under /Seedy), called through the signed-in Jellyfin client. */
 class SeedyApi(private val api: ApiClient) {
     suspend fun me(): SeedyMe = api.get<SeedyMe>("/Seedy/Me").content
+
+    /** Saves part of the person's settings (playback and subtitles go whole, custom keys merge); returns them all. */
+    suspend fun savePrefs(patch: kotlinx.serialization.json.JsonObject): UserPrefs = api.post<UserPrefs>("/Seedy/Me/Prefs", requestBody = patch).content
 
     suspend fun homeRows(): List<HomeRow> = api.get<HomeRows>("/Seedy/Home").content.rows
 

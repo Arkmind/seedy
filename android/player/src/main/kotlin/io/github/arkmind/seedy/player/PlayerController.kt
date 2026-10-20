@@ -86,7 +86,17 @@ data class PlayerState(
 @OptIn(UnstableApi::class)
 class PlayerController(context: Context, private val session: UserSession, private val scope: CoroutineScope) {
     private val caps = CapabilitiesCache.get(context)
-    private val _state = MutableStateFlow(PlayerState())
+    // Settings · Playback › Quality is where every playback starts.
+    private val _state = MutableStateFlow(
+        PlayerState(
+            quality = when (session.seedy?.prefs?.playback?.maxQuality) {
+                "4k" -> Quality.Uhd
+                "1080p" -> Quality.FullHd
+                "720p" -> Quality.Hd
+                else -> Quality.Auto
+            },
+        ),
+    )
     val state: StateFlow<PlayerState> = _state.asStateFlow()
 
     private val streams = Streams(

@@ -11,6 +11,7 @@ sealed interface TvRoute {
     data class Details(val id: UUID) : TvRoute
     data class Library(val id: UUID) : TvRoute
     data class Player(val id: UUID) : TvRoute
+    data object Settings : TvRoute
     /** A title that's on Seerr but not on the server. */
     data class SeerrTitle(val mediaType: String, val tmdbId: Int) : TvRoute
 }
