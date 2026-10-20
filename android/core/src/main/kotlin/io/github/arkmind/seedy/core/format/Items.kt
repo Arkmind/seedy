@@ -1,9 +1,12 @@
 package io.github.arkmind.seedy.core.format
 
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.i18n.tn
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.LocationType
 import java.time.LocalDate
+import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -104,3 +107,49 @@ val BaseItemDto.heroMeta: String
 
 /** A card's title for anything: an episode shows its series' name. */
 val BaseItemDto.cardTitle: String get() = (if (type == BaseItemKind.EPISODE) seriesName else null) ?: name.orEmpty()
+
+/** "3 seasons": a series' ChildCount is its season count. */
+val BaseItemDto.seasonsLabel: String
+    get() = childCount?.takeIf { it > 0 }?.let { tn(it, "{n} season", "{n} seasons") }.orEmpty()
+
+/** "New": an unwatched episode added to the server in the last 7 days. */
+val BaseItemDto.isNewEpisode: Boolean
+    get() {
+        if (userData?.played == true) return false
+        val added = dateCreated ?: return false
+        return daysFromToday(added.toLocalDate()) >= -7
+    }
+
+/** Started and not finished. */
+val BaseItemDto.inProgress: Boolean get() = progress > 0f && userData?.played != true
+
+/** A library card's line under the title, as on the web: the year for films, the years for shows. */
+val BaseItemDto.libraryMeta: String
+    get() = when (type) {
+        BaseItemKind.SERIES -> yearRange
+        BaseItemKind.EPISODE -> join(seriesName, episodeTag)
+        BaseItemKind.BOX_SET -> childCount?.takeIf { it > 0 }?.let { tn(it, "{n} title", "{n} titles") }.orEmpty()
+        BaseItemKind.MUSIC_ALBUM -> join(albumArtist, year)
+        else -> year?.toString().orEmpty()
+    }
+
+/** The TV grid's longer line: "2026 · 1 h 54 min", "2025 · 1 h 12 min left", "2024–2026 · 3 seasons". */
+val BaseItemDto.libraryMetaLong: String
+    get() = when (type) {
+        BaseItemKind.SERIES -> join(yearRange, seasonsLabel)
+        BaseItemKind.MOVIE, BaseItemKind.VIDEO, BaseItemKind.MUSIC_VIDEO -> join(year, if (inProgress) timeLeft(remainingSeconds) else runtime)
+        else -> libraryMeta
+    }
+
+/** The score shown with a star ("8.4"), or null. */
+val BaseItemDto.score: String? get() = communityRating?.takeIf { it > 0f }?.let { String.format(Locale.US, "%.1f", it) }
+
+/** An episode's number in its season: "2", "2–3". */
+val BaseItemDto.episodeNumber: String
+    get() = indexNumber?.let { n -> indexNumberEnd?.let { "$n–$it" } ?: "$n" }.orEmpty()
+
+/** Jellyfin's placeholder for an episode or season it knows about but has no file for. */
+val BaseItemDto.isVirtual: Boolean get() = locationType == LocationType.VIRTUAL
+
+/** The day a title premiered (Jellyfin's premiere dates are calendar days). */
+val BaseItemDto.premiereDay: LocalDate? get() = premiereDate?.toLocalDate()
