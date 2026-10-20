@@ -37,6 +37,20 @@ import io.github.arkmind.seedy.core.format.Images
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.SessionState
 import io.github.arkmind.seedy.core.session.UserSession
+import io.github.arkmind.seedy.mobile.details.DetailsRoute
+import io.github.arkmind.seedy.mobile.favorites.FavoritesTab
+import io.github.arkmind.seedy.mobile.library.LibrariesTab
+import io.github.arkmind.seedy.mobile.library.LibraryRoute
+import io.github.arkmind.seedy.mobile.livetv.LiveTvRoute
+import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
+import io.github.arkmind.seedy.mobile.nav.MobileNav
+import io.github.arkmind.seedy.mobile.nav.Route
+import io.github.arkmind.seedy.mobile.player.PlayerRoute
+import io.github.arkmind.seedy.mobile.requests.RequestsTab
+import io.github.arkmind.seedy.mobile.requests.SeerrTitleRoute
+import io.github.arkmind.seedy.mobile.search.SearchRoute
+import io.github.arkmind.seedy.ui.theme.LocalCore
+import io.github.arkmind.seedy.ui.theme.LocalSession
 import io.github.arkmind.seedy.mobile.home.AccountActions
 import io.github.arkmind.seedy.mobile.home.HomeScreen
 import io.github.arkmind.seedy.mobile.parts.PrimaryButton
@@ -59,7 +73,6 @@ import io.github.arkmind.seedy.ui.theme.parseHexColor
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonPrimitive
-import org.jellyfin.sdk.model.api.BaseItemDto
 import java.util.UUID
 
 /** The phone app: follows the session from "Add your server" through sign-in to the signed-in tabs. */
@@ -172,7 +185,6 @@ private fun Unreachable(core: SeedyCore, server: SavedServer) {
 }
 
 private data object TabsKey
-private data class DetailsKey(val id: UUID)
 
 @Composable
 private fun SignedIn(core: SeedyCore, session: UserSession) {
@@ -193,11 +205,11 @@ private fun SignedIn(core: SeedyCore, session: UserSession) {
         onSignOut = { scope.launch { core.sessions.signOut() } },
     )
     val stack = remember(session) { mutableStateListOf<Any>(TabsKey) }
-    val open: (BaseItemDto) -> Unit = { stack.add(DetailsKey(it.seriesId ?: it.id)) }
-    CompositionLocalProvider(LocalViewer provides viewer) {
+    val nav = remember(stack) { MobileNav(stack) }
+    CompositionLocalProvider(LocalViewer provides viewer, LocalSession provides session, LocalCore provides core, LocalMobileNav provides nav) {
         NavDisplay(
             backStack = stack,
-            onBack = { stack.removeLastOrNull() },
+            onBack = { nav.back() },
             entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
             entryProvider = entryProvider {
                 entry<TabsKey> {
@@ -208,23 +220,27 @@ private fun SignedIn(core: SeedyCore, session: UserSession) {
                             Tab.Home -> {
                                 val vm = viewModel { HomeViewModel(session) }
                                 val state by vm.state.collectAsStateWithLifecycle()
-                                HomeScreen(state, account, onOpen = open, onPlay = open, onSearch = {}, onSeeAll = {}, bottomPadding = tabBarHeight())
+                                HomeScreen(
+                                    state, account,
+                                    onOpen = nav::open, onPlay = nav::play, onSearch = { nav.go(Route.Search) },
+                                    onSeeAll = { row -> row.row.libraryId?.let { nav.go(Route.Library(UUID.fromString(it))) } },
+                                    bottomPadding = tabBarHeight(),
+                                )
                             }
-                            else -> NotYet(t(tab.label))
+                            Tab.Libraries -> LibrariesTab()
+                            Tab.Favorites -> FavoritesTab()
+                            Tab.Requests -> RequestsTab()
                         }
                         TabBar(tabs, tab, { tab = it }, Modifier.align(Alignment.BottomCenter))
                     }
                 }
-                entry<DetailsKey> { NotYet(t("Details")) }
+                entry<Route.Details> { DetailsRoute(it.id) }
+                entry<Route.Library> { LibraryRoute(it.id) }
+                entry<Route.Search> { SearchRoute() }
+                entry<Route.LiveTv> { LiveTvRoute() }
+                entry<Route.Player> { PlayerRoute(it.id) }
+                entry<Route.SeerrTitle> { SeerrTitleRoute(it.mediaType, it.tmdbId) }
             },
         )
-    }
-}
-
-/** A place the phone app doesn't have yet. */
-@Composable
-private fun NotYet(title: String) {
-    Box(Modifier.fillMaxSize().background(SeedyColors.Bg), contentAlignment = Alignment.Center) {
-        SText(title, size = 22.sp, weight = 900, color = SeedyColors.White)
     }
 }

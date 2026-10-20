@@ -8,8 +8,8 @@ import java.util.Locale
 
 /**
  * Seedy's languages, as on the web: English text is the key, wrapped in [t]. French comes from
- * assets/i18n/fr.web.json (the web app's dictionaries, copied by `make android-shared`) and fr.json (text only the
- * apps have). The language is the profile's display.language ("Auto" follows the device); this device remembers the
+ * assets/i18n/fr.web.json (the web app's dictionaries, copied by `make android-shared`) and fr.<area>.json (text
+ * only the apps have, one file per area). The language is the profile's display.language ("Auto" follows the device); this device remembers the
  * last one so the first screen is already right. Changing it recreates the activity, so [t] may be called anywhere
  * at composition time.
  */
@@ -41,7 +41,9 @@ object I18n {
     fun load(context: Context, lang: Lang) {
         this.lang = lang
         dict = if (lang == Lang.En) emptyMap() else buildMap {
-            for (name in listOf("${lang.code}.web.json", "${lang.code}.json")) {
+            // The web app's dictionary first, then the apps' own (one file per area: fr.home.json, fr.player.json…).
+            val own = context.assets.list("i18n").orEmpty().filter { it.startsWith("${lang.code}.") && it.endsWith(".json") && it != "${lang.code}.web.json" }.sorted()
+            for (name in listOf("${lang.code}.web.json") + own) {
                 val text = runCatching { context.assets.open("i18n/$name").bufferedReader().use { it.readText() } }.getOrNull()
                 if (text != null) putAll(Json.decodeFromString<Map<String, String>>(text))
             }

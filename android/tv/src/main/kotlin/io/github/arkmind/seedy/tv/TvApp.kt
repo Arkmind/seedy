@@ -38,6 +38,20 @@ import io.github.arkmind.seedy.core.format.Images
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.SessionState
 import io.github.arkmind.seedy.core.session.UserSession
+import io.github.arkmind.seedy.tv.details.TvDetailsRoute
+import io.github.arkmind.seedy.tv.favorites.TvFavoritesPlace
+import io.github.arkmind.seedy.tv.library.TvLibraryRoute
+import io.github.arkmind.seedy.tv.livetv.TvLiveTvPlace
+import io.github.arkmind.seedy.tv.nav.LocalTvNav
+import io.github.arkmind.seedy.tv.nav.TvNav
+import io.github.arkmind.seedy.tv.nav.TvRoute
+import io.github.arkmind.seedy.tv.player.TvPlayerRoute
+import io.github.arkmind.seedy.tv.requests.TvRequestsPlace
+import io.github.arkmind.seedy.tv.requests.TvSeerrTitleRoute
+import io.github.arkmind.seedy.tv.search.TvSearchPlace
+import io.github.arkmind.seedy.ui.theme.LocalCore
+import io.github.arkmind.seedy.ui.theme.LocalSession
+import org.jellyfin.sdk.model.api.CollectionType
 import io.github.arkmind.seedy.tv.home.TvHomeScreen
 import io.github.arkmind.seedy.tv.parts.TvButton
 import io.github.arkmind.seedy.tv.parts.bp
@@ -58,8 +72,6 @@ import io.github.arkmind.seedy.ui.theme.parseHexColor
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonPrimitive
-import org.jellyfin.sdk.model.api.BaseItemDto
-import java.util.UUID
 
 /** The Android TV app: the same journey as the phone (server, profile, home), drawn for the remote. */
 @Composable
@@ -157,8 +169,7 @@ private fun Unreachable(core: SeedyCore, server: SavedServer) {
     LaunchedEffect(Unit) { retry.focusSoon() }
 }
 
-private data class PlaceKey(val place: TvPlace)
-private data class DetailsKey(val id: UUID)
+private data object PlacesKey
 
 @Composable
 private fun SignedIn(core: SeedyCore, session: UserSession) {
@@ -176,23 +187,30 @@ private fun SignedIn(core: SeedyCore, session: UserSession) {
     }
     val places = if (viewer.requests) TvPlace.entries else TvPlace.entries - TvPlace.Requests
     var place by rememberSaveable { mutableStateOf(TvPlace.Home) }
-    val stack = remember(session) { mutableStateListOf<Any>(PlaceKey(TvPlace.Home)) }
-    val open: (BaseItemDto) -> Unit = { stack.add(DetailsKey(it.seriesId ?: it.id)) }
-    CompositionLocalProvider(LocalViewer provides viewer) {
+    val stack = remember(session) { mutableStateListOf<Any>(PlacesKey) }
+    val nav = remember(stack) { TvNav(stack) }
+    val home = viewModel { HomeViewModel(session) }
+    CompositionLocalProvider(LocalViewer provides viewer, LocalSession provides session, LocalCore provides core, LocalTvNav provides nav) {
         NavDisplay(
             backStack = stack,
-            onBack = { stack.removeLastOrNull() },
+            onBack = { nav.back() },
             entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
             entryProvider = entryProvider {
-                entry<PlaceKey> {
+                entry<PlacesKey> {
+                    // Back on a place other than Home goes Home first.
+                    BackHandler(enabled = place != TvPlace.Home) { place = TvPlace.Home }
                     Box(Modifier.fillMaxSize()) {
                         when (place) {
                             TvPlace.Home -> {
-                                val vm = viewModel { HomeViewModel(session) }
-                                val state by vm.state.collectAsStateWithLifecycle()
-                                TvHomeScreen(state, onOpen = open)
+                                val state by home.state.collectAsStateWithLifecycle()
+                                TvHomeScreen(state, onOpen = nav::open)
                             }
-                            else -> NotYet(t(place.label))
+                            TvPlace.Search -> TvSearchPlace()
+                            TvPlace.Movies -> LibraryPlace(home, CollectionType.MOVIES)
+                            TvPlace.Shows -> LibraryPlace(home, CollectionType.TVSHOWS)
+                            TvPlace.LiveTv -> TvLiveTvPlace()
+                            TvPlace.Favorites -> TvFavoritesPlace()
+                            TvPlace.Requests -> TvRequestsPlace()
                         }
                         TvRail(
                             places = places,
@@ -203,16 +221,25 @@ private fun SignedIn(core: SeedyCore, session: UserSession) {
                         )
                     }
                 }
-                entry<DetailsKey> { NotYet(t("Details")) }
+                entry<TvRoute.Details> { TvDetailsRoute(it.id) }
+                entry<TvRoute.Library> { TvLibraryRoute(it.id) }
+                entry<TvRoute.Player> { TvPlayerRoute(it.id) }
+                entry<TvRoute.SeerrTitle> { TvSeerrTitleRoute(it.mediaType, it.tmdbId) }
             },
         )
     }
 }
 
-/** A place the TV app doesn't have yet. */
+/** The rail's Movies and Shows: the first library of that kind. */
 @Composable
-private fun NotYet(title: String) {
-    Box(Modifier.fillMaxSize().padding(start = RailInset).background(SeedyColors.Bg), contentAlignment = Alignment.Center) {
-        SText(title, size = 48.bsp, weight = 900, color = SeedyColors.White)
+private fun LibraryPlace(home: HomeViewModel, type: CollectionType) {
+    val state by home.state.collectAsStateWithLifecycle()
+    val library = state.libraries.firstOrNull { it.collectionType == type }
+    if (library != null) {
+        androidx.compose.runtime.key(library.id) { TvLibraryRoute(library.id) }
+    } else {
+        Box(Modifier.fillMaxSize().padding(start = RailInset).background(SeedyColors.Bg), contentAlignment = Alignment.Center) {
+            SText(if (state.loading) "" else t("No library of this kind on this server"), size = 24.bsp, color = SeedyColors.Text2)
+        }
     }
 }
