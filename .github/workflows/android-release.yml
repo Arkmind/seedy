@@ -1,0 +1,65 @@
+name: Android release
+
+# Publishing a GitHub Release (tag such as v0.2.0) also builds the Android app with that version: the signed APK is
+# attached to the release, and the app bundle goes to Google Play's internal track when the Play secret is set
+# (promote it from there in the Play Console).
+#
+# Secrets: ANDROID_KEYSTORE_BASE64 (the upload keystore, base64), ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
+# ANDROID_KEY_PASSWORD, and optionally PLAY_SERVICE_ACCOUNT_JSON (a service account with release rights on the app).
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Version from the tag, keystore from the secrets
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+          echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/seedy.jks"
+          echo "SEEDY_KEYSTORE_FILE=$RUNNER_TEMP/seedy.jks" >> "$GITHUB_ENV"
+
+      - name: Build the APK and the app bundle
+        env:
+          SEEDY_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SEEDY_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          SEEDY_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew :app:assembleRelease :app:bundleRelease -PappVersion="$VERSION"
+          cp app/build/outputs/apk/release/app-release.apk "seedy-android-$VERSION.apk"
+
+      - name: Attach the APK to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" "seedy-android-$VERSION.apk" --clobber
+
+      - name: Send the bundle to Google Play (internal track)
+        if: ${{ env.PLAY_JSON != '' }}
+        env:
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: io.github.arkmind.seedy
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed

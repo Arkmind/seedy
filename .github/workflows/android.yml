@@ -1,0 +1,50 @@
+name: Android
+
+on:
+  push:
+    branches: [master]
+    paths: ['android/**', 'web/src/ui/tokens.css', 'web/src/ui/icons.tsx', 'web/src/i18n/**', 'scripts/android-shared.ts', '.github/workflows/android.yml']
+  pull_request:
+    paths: ['android/**', 'web/src/ui/tokens.css', 'web/src/ui/icons.tsx', 'web/src/i18n/**', 'scripts/android-shared.ts', '.github/workflows/android.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Shared tokens, French and icons are current
+        working-directory: .
+        run: |
+          bun scripts/android-shared.ts
+          git diff --exit-code -- android/
+
+      - name: Unit tests and screenshots
+        run: ./gradlew testDebugUnitTest verifyRoborazziDebug
+
+      - name: Build the debug APK
+        run: ./gradlew :app:assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: screenshot-diffs
+          path: android/*/build/outputs/roborazzi/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: seedy-android-debug
+          path: android/app/build/outputs/apk/debug/*.apk
