@@ -328,7 +328,7 @@ private fun Footer(state: RequestSeasonsViewModel.State, onSubmit: () -> Unit) {
     val bottom = max(26.dp, WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 12.dp)
     Column(
         Modifier.fillMaxWidth().drawBehind { drawLine(SeedyColors.Line, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = bottom),
+            .padding(start = 16.dp, end = 16.dp, top = 13.dp, bottom = bottom),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         state.error?.let { SText(it, size = 12.sp, weight = 600, color = SeedyColors.Danger) }
