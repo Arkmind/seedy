@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="seedy_bg">#0E0E0E</color>
+    <color name="seedy_inverse">#F0F0F0</color>
+    <color name="seedy_ink_inverse">#1E1E1E</color>
+</resources>
