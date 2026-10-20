@@ -148,6 +148,14 @@ object TvBrowseSamples {
         seerrOn = true,
     )
 
+    val movieDetails = DetailsViewModel.State(
+        item = movies[5].copy(
+            officialRating = "PG-13", communityRating = 7.6f, genres = listOf("Drama"),
+            overview = "Two sisters reopen their late father's lantern workshop for one last festival, and find the letters he never sent.",
+        ),
+        loading = false, badges = listOf("1080p", "CC"), hasTrailer = true, similar = movies.drop(6).take(6),
+    )
+
     val favorites = FavoritesViewModel.State(
         loading = false,
         groups = mapOf(FavoritesViewModel.Group.Movies to movies.take(5), FavoritesViewModel.Group.Shows to listOf(northbound), FavoritesViewModel.Group.People to listOf(ines)),

@@ -155,6 +155,18 @@ object BrowseSamples {
         seerr = SearchViewModel.Seerr(loading = false, items = listOf(SeerrItem(1, "movie", "Harrowgate", "2026"), SeerrItem(77, "tv", "The Harrowgate Files", "2021"))),
     )
 
+    val movieDetails = DetailsViewModel.State(
+        item = movie("Paper Lanterns", 2025, 116, position = 44).copy(
+            officialRating = "PG-13", communityRating = 7.6f, genres = listOf("Drama"),
+            overview = "Two sisters reopen their late father's lantern workshop for one last festival, and find the letters he never sent.",
+        ),
+        loading = false, badges = listOf("1080p", "CC"), hasTrailer = false, similar = movies.drop(6).take(4),
+    )
+
+    val filterOptions = LibraryViewModel.FilterOptions(
+        genres = listOf("Action", "Comedy", "Drama", "Thriller", "Science Fiction"), decades = listOf(2020, 2010, 2000), ratings = listOf("PG", "PG-13", "R"),
+    )
+
     val favorites = FavoritesViewModel.State(
         loading = false,
         groups = mapOf(

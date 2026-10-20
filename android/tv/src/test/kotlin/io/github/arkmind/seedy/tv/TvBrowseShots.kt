@@ -63,6 +63,19 @@ class TvBrowseShots {
         TvDetailsScreen(TvBrowseSamples.details, TvDetailsActions(), canRequest = true)
     }
 
+    /** No board: the series page without seasons, "More like this" in their place. */
+    @Test
+    fun movieDetails() = shot("TVMovieDetails") {
+        TvDetailsScreen(TvBrowseSamples.movieDetails, TvDetailsActions(), canRequest = true)
+    }
+
+    /** No board: the library's Sort choices. */
+    @Test
+    fun sort() = shot("TVSort", TvPlace.Movies) {
+        TvLibraryScreen(TvBrowseSamples.moviesLibrary, TvLibraryActions())
+        io.github.arkmind.seedy.tv.library.TvSortPanel(io.github.arkmind.seedy.core.browse.Sort.DateAdded, true, onPick = { _, _ -> }, onDismiss = {})
+    }
+
     @Test
     fun requestSeasons() = shot("TVRequestSeasons") {
         TvDetailsScreen(TvBrowseSamples.details, TvDetailsActions(), canRequest = true)

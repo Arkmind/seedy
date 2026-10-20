@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import io.github.arkmind.seedy.mobile.details.DetailsActions
 import io.github.arkmind.seedy.mobile.details.DetailsScreen
 import io.github.arkmind.seedy.mobile.favorites.FavoritesScreen
+import io.github.arkmind.seedy.mobile.library.FilterSheet
 import io.github.arkmind.seedy.mobile.library.LibrariesScreen
 import io.github.arkmind.seedy.mobile.library.LibraryActions
 import io.github.arkmind.seedy.mobile.library.LibraryScreen
@@ -84,6 +85,19 @@ class BrowseShots {
     @Test
     fun search() = shot("AndroidSearch") {
         SearchScreen(BrowseSamples.search, SearchActions(), bottomPadding = 0.dp)
+    }
+
+    /** No board: the series page without seasons. */
+    @Test
+    fun movieDetails() = shot("AndroidMovieDetails") {
+        DetailsScreen(BrowseSamples.movieDetails, DetailsActions(), canRequest = true, bottomPadding = 0.dp)
+    }
+
+    /** No board: the library's Filters sheet, in Request seasons' frame. */
+    @Test
+    fun filters() = shot("AndroidFilters") {
+        LibraryScreen(BrowseSamples.moviesLibrary, LibraryActions(), bottomPadding = 0.dp)
+        FilterSheet(BrowseSamples.moviesLibrary.copy(options = BrowseSamples.filterOptions), count = { 12 }, onApply = {}, onDismiss = {})
     }
 
     @Test
