@@ -6,6 +6,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.ui.R
+import kotlin.math.roundToInt
 
 /** Noto Sans, one variable font file for every weight the boards use (400–900). */
 val NotoSans = FontFamily(
@@ -51,9 +53,16 @@ fun parseHexColor(hex: String?): Color? {
     return h.toLongOrNull(16)?.let { Color(0xFF000000 or it) }
 }
 
+/** Noto Sans's natural line height (hhea ascent 1069 + descent 293, per 1000): CSS `line-height: normal`. */
+const val NotoLineRatio = 1.362f
+
 /**
  * Text as the boards write it: a size, a weight and a colour. Letter spacing is in em, like the boards' CSS
  * (`letter-spacing: -0.01em` → `tracking = -0.01f`); line height is a multiple of the size when given.
+ *
+ * Compose never makes a line shorter than the font's own height, so a heading's `line-height: 1.2` is applied the CSS
+ * way here: the box loses the difference and the glyphs stay centred in it (exact for one line; longer text keeps the
+ * font's spacing between lines).
  */
 @Composable
 fun SText(
@@ -70,15 +79,16 @@ fun SText(
     decoration: TextDecoration? = null,
     uppercase: Boolean = false,
 ) {
+    val tighter = lineHeight != null && lineHeight < NotoLineRatio
     BasicText(
         text = if (uppercase) text.uppercase() else text,
-        modifier = modifier,
+        modifier = if (tighter) modifier.cssLineBox(size, lineHeight!!) else modifier,
         style = BaseText.copy(
             fontSize = size,
             fontWeight = FontWeight(weight),
             color = color,
             letterSpacing = if (tracking == 0f) TextUnit.Unspecified else tracking.em,
-            lineHeight = lineHeight?.em ?: TextUnit.Unspecified,
+            lineHeight = if (lineHeight != null && !tighter) lineHeight.em else TextUnit.Unspecified,
             textAlign = align ?: TextAlign.Unspecified,
             textDecoration = decoration,
         ),
@@ -86,4 +96,13 @@ fun SText(
         overflow = overflow,
         softWrap = maxLines != 1,
     )
+}
+
+/** Shrinks a text box from Noto's natural line height to [ratio] × [size], keeping the glyphs centred. */
+private fun Modifier.cssLineBox(size: TextUnit, ratio: Float): Modifier = this.layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+    val px = size.toPx()
+    val cut = ((NotoLineRatio - ratio) * px).coerceAtLeast(0f)
+    val height = (placeable.height - cut).roundToInt().coerceAtLeast(0)
+    layout(placeable.width, height) { placeable.place(0, -(cut / 2).roundToInt()) }
 }
