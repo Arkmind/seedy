@@ -1,0 +1,55 @@
+/* Library (Library board). */
+
+.library .page-title-row { align-items: flex-end; }
+.lib-shuffle { padding: 0 24px; gap: 10px; }
+
+.lib-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.lib-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.lib-sort { padding: 0 14px; }
+.lib-sort-k { color: var(--seedy-text-3); transition: color var(--t-fast) var(--ease); }
+.lib-sort:hover .lib-sort-k, .lib-sort[aria-expanded='true'] .lib-sort-k { color: #6a6a6a; }
+.lib-filters { padding: 0 10px 0 14px; }
+
+.lib-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.lib-body { display: flex; align-items: flex-start; gap: 24px; padding-top: 4px; }
+.lib-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 28px; }
+.lib-loading { display: flex; justify-content: center; padding: 8px 0; }
+.lib-loading .spinner { width: 28px; height: 28px; border-width: 3px; }
+
+/* A–Z rail: # A … Z, the current letter in accent. */
+.az-rail { position: sticky; top: calc(var(--header-h, 0px) + 16px); flex: 0 0 22px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.az-letter {
+  width: 22px; padding: 0; border: 0; border-radius: 6px; background: transparent; cursor: pointer;
+  font: inherit; font-size: 11px; line-height: 18px; font-weight: 800; text-align: center; color: var(--seedy-text-3);
+  transition: color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+}
+.az-letter:hover { color: #ffffff; background: var(--seedy-surface); }
+.az-letter[aria-current='true'] { color: var(--seedy-accent); }
+
+.library .lib-foot { padding-top: 16px; }
+
+.lib-rows { padding-top: 4px; }
+.genre-slot { min-width: 0; }
+
+/* Filters sheet. */
+.fgroup { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.fgroup .menu-label { padding: 0 0 6px; }
+.fopts { display: flex; flex-wrap: wrap; gap: 8px; }
+.fopt {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border: 1px solid transparent;
+  border-radius: var(--r-pill); background: var(--seedy-surface); color: var(--seedy-text);
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+.fopt:hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.fopt[aria-pressed='true'] { background: transparent; border-color: var(--seedy-accent); color: var(--seedy-accent); }
+.fopt[aria-pressed='true']:hover { background: var(--seedy-accent); color: var(--seedy-ink-inverse); }
+.fsheet-actions { position: sticky; bottom: -24px; margin: 0 -24px -24px; padding: 16px 24px 24px; background: var(--seedy-panel); border-top: 1px solid var(--seedy-line); }
+
+@media (max-width: 720px) {
+  .az-rail { display: none; }
+  .lib-toolbar { flex-direction: column; align-items: stretch; }
+  .lib-tools { justify-content: flex-start; }
+  .lib-sort-k { display: none; }
+}

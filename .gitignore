@@ -1,0 +1,21 @@
+# Build output
+bin/
+obj/
+artifacts/
+web/node_modules/
+web/dist/
+src/Jellyfin.Plugin.Seedy/Web/
+*.zip
+
+# Local test server data (media, databases, Seerr keys)
+dev/data/
+
+# Editor settings and caches
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Personal make targets (see the end of the Makefile)
+local.mk

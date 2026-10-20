@@ -1,0 +1,24 @@
+/* List pages (/list/*) and Favorites, in the Library style. */
+
+.list-page .page-main { gap: 28px; }
+.list-loading { display: flex; justify-content: center; padding: 8px 0; }
+.list-loading .spinner { width: 28px; height: 28px; }
+.list-foot { padding-top: 8px; }
+.list-seed { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--seedy-text-2); }
+.list-seed:hover { color: #ffffff; }
+
+
+/* Favorites */
+.tab-count { font-size: 12px; font-weight: 700; color: var(--seedy-text-3); transition: color var(--t-fast) var(--ease); }
+.tab:hover .tab-count, .tab[aria-current='page'] .tab-count { color: #6a6a6a; }
+.fav-section { gap: 16px; }
+.fav-section + .fav-section { padding-top: 16px; }
+.fav-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 24px 18px; }
+.fav-people .cast-card { width: auto; }
+.fav-episode { position: relative; }
+.fav-unheart { position: absolute; top: 8px; right: 8px; z-index: 2; opacity: 0; transition: opacity var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.fav-episode:hover .fav-unheart, .fav-unheart:focus-visible { opacity: 1; }
+
+@media (max-width: 720px) {
+  .fav-people { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 18px 12px; }
+}

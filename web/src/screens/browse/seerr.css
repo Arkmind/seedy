@@ -1,0 +1,122 @@
+/* Seerr title page: the Details board's hero and info panel for titles not (fully) on the server. */
+
+.seerr-page { position: relative; }
+
+.seerr-hero { position: relative; min-height: 780px; display: flex; align-items: flex-end; overflow: hidden; background: #161a1f; }
+.seerr-hero.is-loading { background: var(--seedy-bg); }
+.seerr-hero-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+.seerr-hero-art.is-poster { left: 35%; width: 65%; object-position: center 20%; filter: blur(2px) saturate(0.9); opacity: 0.7; }
+.seerr-shade-side {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(14, 14, 14, 0.96) 0%, rgba(14, 14, 14, 0.7) 40%, rgba(14, 14, 14, 0.1) 75%);
+}
+.seerr-shade-bottom { position: absolute; left: 0; right: 0; bottom: 0; height: 45%; background: linear-gradient(0deg, #0e0e0e 0%, rgba(14, 14, 14, 0) 100%); }
+.seerr-shade-top { position: absolute; left: 0; right: 0; top: 0; height: 160px; background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%); }
+
+.seerr-hero-body {
+  position: relative; width: 100%; padding: 140px var(--gutter) 40px;
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 32px;
+}
+.seerr-hero-main { flex: 1 1 520px; max-width: 680px; min-width: 0; container-type: inline-size; display: flex; flex-direction: column; gap: 18px; }
+
+.seerr-back {
+  align-self: flex-start; display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--seedy-text-2);
+}
+.seerr-back:hover { color: #ffffff; }
+
+.seerr-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.seerr-pills .status-pill { height: 26px; padding: 0 10px; font-size: 11px; background: var(--seedy-scrim); color: var(--seedy-text); }
+
+.seerr-title { --title-size: 96px; line-height: 0.88; font-weight: 900; letter-spacing: -0.02em; text-transform: uppercase; color: #ffffff; }
+.seerr-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 14px; font-weight: 500; color: var(--seedy-text-hero); }
+.seerr-meta .rating-badge { color: var(--seedy-text-hero); }
+.seerr-meta .score svg { color: var(--seedy-accent); }
+.seerr-tagline { font-size: 16px; font-weight: 700; line-height: 1.4; color: var(--seedy-text); }
+.seerr-overview { font-size: 16px; line-height: 1.6; color: var(--seedy-text-hero); }
+.seerr-tagline + .seerr-overview { margin-top: -10px; }
+
+.seerr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 4px; }
+.seerr-actions .btn-primary { padding: 0 44px; }
+.seerr-alt {
+  height: 52px; padding: 0 22px; gap: 10px; border-radius: var(--r-card);
+  background: var(--seedy-glass); color: var(--seedy-text); font-size: 15px; font-weight: 700;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.seerr-alt:not(:disabled):hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+a.seerr-alt:hover { color: var(--seedy-ink-inverse); }
+
+/* Requested: a settled surface instead of a button, with the pending dot. */
+.seerr-state {
+  display: inline-flex; align-items: center; gap: 10px; height: 52px; padding: 0 30px; border-radius: var(--r-card);
+  background: var(--seedy-glass); color: var(--seedy-text-hero); font-size: 16px; font-weight: 800; white-space: nowrap;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.seerr-state.is-alt { padding: 0 22px; font-size: 15px; font-weight: 700; }
+.seerr-note { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--seedy-text-2); }
+
+.seerr-status.is-muted .pip { background: var(--seedy-text-3); }
+.seerr-status.is-danger .pip { background: var(--seedy-danger); }
+.seerr-status.is-pending .pip { background: var(--seedy-pending); }
+
+.seerr-info {
+  flex: 0 1 360px; margin: 0; padding: 22px 24px; border-radius: var(--r-panel);
+  background: rgba(14, 14, 14, 0.74); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 11px 18px; font-size: 13px; line-height: 1.45;
+}
+.seerr-info dt { color: var(--seedy-text-3); }
+.seerr-info dd { margin: 0; color: var(--seedy-text); }
+
+.seerr-main { display: flex; flex-direction: column; gap: 48px; padding: 16px 0 88px; }
+.seerr-section { display: flex; flex-direction: column; gap: 16px; padding: 0 var(--gutter); max-width: calc(880px + 2 * var(--gutter)); }
+.seerr-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; }
+
+.seerr-seasons { display: flex; flex-direction: column; border-radius: var(--r-panel); background: var(--seedy-panel); overflow: hidden; }
+.seerr-season { display: flex; align-items: center; gap: 16px; padding: 14px 16px; }
+.seerr-season + .seerr-season { border-top: 1px solid var(--seedy-line); }
+.seerr-season-num {
+  flex: none; width: 44px; height: 44px; border-radius: var(--r-card); background: var(--seedy-surface);
+  display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 900; color: #ffffff;
+}
+.seerr-season-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.seerr-season-name { font-size: 15px; font-weight: 700; color: #ffffff; }
+.seerr-season-sub { font-size: 13px; color: var(--seedy-text-3); }
+.seerr-season .status-pill { background: var(--seedy-bg); }
+
+.seerr-message { padding: 140px var(--gutter) 80px; max-width: 960px; }
+
+/* Season picker sheet. */
+.seerr-sheet-head { display: flex; flex-direction: column; gap: 6px; }
+.seerr-picks { display: flex; flex-direction: column; gap: 8px; }
+.seerr-pick {
+  display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 14px; border-radius: var(--r-card);
+  background: var(--seedy-bg); box-shadow: inset 0 0 0 1px var(--seedy-surface-2); cursor: pointer;
+  transition: box-shadow var(--t-fast) var(--ease);
+}
+.seerr-pick:hover { box-shadow: inset 0 0 0 1px var(--seedy-text-3); }
+.seerr-pick.is-on { box-shadow: inset 0 0 0 2px var(--seedy-accent); }
+.seerr-pick.is-locked { cursor: default; box-shadow: none; background: var(--seedy-row); }
+.seerr-pick.is-all { min-height: 44px; background: transparent; box-shadow: none; padding: 0 14px; }
+.seerr-pick input { width: 18px; height: 18px; margin: 0; accent-color: var(--seedy-accent); flex: none; }
+.seerr-pick-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.seerr-pick-name { font-size: 15px; font-weight: 700; color: #ffffff; }
+.seerr-pick.is-locked .seerr-pick-name { color: var(--seedy-text-2); }
+.seerr-pick-sub { font-size: 13px; color: var(--seedy-text-3); }
+.seerr-pick .status-pill { height: 28px; background: var(--seedy-panel); }
+
+@media (max-width: 900px) {
+  .seerr-hero { min-height: 0; }
+  .seerr-hero-body { padding-top: 160px; }
+  .seerr-title { --title-size: 64px; }
+  .seerr-info { flex-basis: 100%; }
+}
+@media (max-width: 720px) {
+  .seerr-hero-body { padding-top: 150px; gap: 24px; }
+  .seerr-hero-main { flex-basis: 100%; gap: 14px; }
+  .seerr-title { --title-size: 44px; line-height: 0.92; }
+  .seerr-tagline + .seerr-overview { margin-top: -6px; }
+  .seerr-overview { font-size: 15px; }
+  .seerr-actions .btn-primary { padding: 0 28px; flex: 1 1 auto; }
+  .seerr-hero-art.is-poster { left: 0; width: 100%; }
+  .seerr-message { padding-top: 120px; }
+}

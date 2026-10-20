@@ -1,0 +1,41 @@
+/* Search (Search board): the query lives in the navigation bar's box; library results, then "Request it" from
+   Seerr. Also the genre view ("Browse by genre") and the page's idle state (recent searches and genres). */
+
+.search-main { display: flex; flex-direction: column; gap: 40px; padding: 32px var(--gutter) 80px; }
+
+.search-section { display: flex; flex-direction: column; gap: 18px; }
+.search-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
+.search-title { font-size: 20px; font-weight: 800; color: #ffffff; }
+.search-count { font-size: 13px; color: var(--seedy-text-3); }
+.search-note { font-size: 14px; line-height: 1.5; color: var(--seedy-text-2); }
+
+/* Library results: 16:9 grid as on the Library board. */
+.search-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 28px 20px; }
+.search-grid > .card { gap: 10px; }
+.search-grid .card-text { gap: 2px; }
+.search-people { display: grid; grid-template-columns: repeat(auto-fill, 140px); gap: 24px 18px; }
+
+/* Request it: 2:3 Seerr posters with the Request button under each. */
+.search-posters { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 200px)); gap: 28px 20px; }
+
+.search-empty .empty-title { overflow-wrap: anywhere; }
+
+/* Nothing typed: the bar's "search opened" panel, laid out as page sections. */
+.search-idle { display: flex; flex-direction: column; gap: 32px; max-width: 760px; }
+.search-idle .nb-idle-group { gap: 14px; }
+.search-idle .nb-idle-head { justify-content: flex-start; align-items: baseline; }
+.search-idle .nb-idle-label { font-size: 20px; font-weight: 800; letter-spacing: 0; text-transform: none; color: #ffffff; }
+.search-idle .nb-idle-clear { font-size: 14px; }
+.search-idle .nb-chip { height: 40px; font-size: 14px; }
+.search-idle .nb-tip { font-size: 13px; }
+
+@media (max-width: 720px) {
+  .search-main { gap: 32px; padding-top: 16px; }
+  .search-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px 12px; }
+  .search-posters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 12px; }
+  .search-people { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 20px 12px; }
+  .search-people .cast-card { width: auto; }
+}
+
+/* Seerr under the library's results: "Not what you're searching for? Request it". */
+.search-section.is-more { padding-top: 32px; border-top: 1px solid var(--seedy-line); }

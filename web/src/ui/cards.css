@@ -1,0 +1,124 @@
+/* Card variants from the Home, Library, Search and Details boards. */
+
+.card-media > a, .lib-card-link, .poster-link { position: absolute; inset: 0; display: block; color: inherit; }
+.art-title.is-17 { font-size: 17px; }
+
+/* Play disc (Continue watching card, Main board): 56 px light disc centred on the art over a 32% scrim, on hover
+   and keyboard focus. It sits beside the card's link, above it; it plays, the rest of the card opens details.
+   Hover inverts it, as every light surface does (Foundations). */
+.card-play {
+  position: absolute; inset: 0; z-index: 2; margin: auto; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  background: var(--seedy-inverse); color: var(--seedy-ink-inverse);
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.card-play:hover { background: var(--seedy-bg); color: var(--seedy-text); box-shadow: inset 0 0 0 1px var(--seedy-surface-2); }
+.card:hover .card-play, .card-media:focus-within .card-play,
+.top10:hover .card-play, .top10-link:focus-visible ~ .top10-card .card-play { opacity: 1; }
+/* The scrim and the progress bar let clicks through to the link underneath. */
+.card-media .card-hover, .card-media .card-bar { pointer-events: none; }
+.card-media:focus-within .card-hover, .top10:hover .card-hover, .top10-link:focus-visible ~ .top10-card .card-hover { opacity: 1; }
+
+/* Library grid: hover / focus reveals tools over a 48% scrim; the play disc sits in the middle. */
+.lib-hover {
+  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 10px;
+  background: rgba(0, 0, 0, 0.48); opacity: 0; pointer-events: none; transition: opacity var(--t-fast) var(--ease);
+}
+.lib-card:hover .lib-hover, .lib-card .card-media:focus-within .lib-hover { opacity: 1; }
+/* Only the tools take clicks; the scrim between them still opens the title. */
+.lib-card:hover .lib-tool, .lib-card .card-media:focus-within .lib-tool { pointer-events: auto; }
+.lib-card .card-media:focus-within { outline-color: var(--seedy-accent); }
+.lib-hover-top { position: relative; z-index: 3; display: flex; justify-content: flex-end; gap: 6px; }
+.lib-tool {
+  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 0; padding: 0;
+  border-radius: var(--r-ctl); background: var(--seedy-scrim); color: #ffffff; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.lib-tool:hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.lib-tool[aria-pressed='true'] { color: var(--seedy-accent); }
+.lib-tool[aria-pressed='true']:hover { color: var(--seedy-ink-inverse); }
+.card-media .lib-hover .tag.lib-runtime { position: static; align-self: flex-start; }
+.lib-card .card-text { gap: 2px; }
+.lib-card { gap: 10px; }
+
+/* Seerr posters: Request and More info slide up on hover or focus. */
+.poster-card { gap: 10px; }
+.poster-card .card-text { gap: 2px; }
+.poster-hover {
+  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; padding: 12px;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.35) 100%);
+  opacity: 0; pointer-events: none; transition: opacity var(--t-fast) var(--ease);
+}
+.poster-card:hover .poster-hover, .poster-card .card-media:focus-within .poster-hover { opacity: 1; pointer-events: auto; }
+.poster-card .card-media:focus-within { outline-color: var(--seedy-accent); }
+.poster-more {
+  height: 36px; border-radius: var(--r-btn-sm); background: rgba(31, 31, 31, 0.9); color: var(--seedy-text);
+  font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.poster-more:hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.requested-by {
+  display: flex; align-items: center; justify-content: center; height: 44px; border-radius: var(--r-card);
+  background: var(--seedy-surface); color: var(--seedy-text-2); font-size: 13px; font-weight: 600; text-align: center; padding: 0 8px;
+}
+
+/* Top 10: rank numeral in ground colour with a 3px stroke, tucked 22px under the card. One link covers both. */
+.top10 { position: relative; flex: 0 0 auto; display: flex; align-items: flex-start; color: var(--seedy-text); }
+.top10-link { position: absolute; inset: 0; z-index: 1; color: inherit; }
+.top10-link:focus-visible { outline: none; }
+.top10-rank {
+  margin-top: 22px; margin-right: -22px; font-size: 168px; line-height: 0.82; font-weight: 900; letter-spacing: -0.06em;
+  text-align: right; color: var(--seedy-bg); -webkit-text-stroke: 3px var(--seedy-stroke); user-select: none;
+  transition: -webkit-text-stroke-color var(--t-fast) var(--ease);
+}
+.top10:hover .top10-rank { -webkit-text-stroke-color: var(--seedy-text-3); }
+/* Positioned so it paints over the rank; no z-index, so the play disc can rise above the covering link. */
+.top10-card { position: relative; width: 280px; }
+.top10-link:focus-visible ~ .top10-card .card-media { outline-color: var(--seedy-accent); }
+
+/* My media tiles. */
+.lib-tile {
+  position: relative; aspect-ratio: 16 / 9; border-radius: var(--r-card); overflow: hidden; background: var(--seedy-surface);
+  color: #ffffff; outline: 2px solid transparent; outline-offset: 3px; transition: outline-color var(--t-fast) var(--ease);
+}
+.lib-tile:hover { color: #ffffff; }
+.lib-tile:focus-visible { outline-color: var(--seedy-accent); }
+.lib-tile .art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 400ms ease; }
+.lib-tile:hover .art { transform: scale(1.03); }
+.lib-tile-shade { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 65%); }
+.lib-tile-name { position: absolute; left: 18px; bottom: 14px; right: 18px; font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; }
+
+/* Cast & crew. */
+.cast-card { flex: 0 0 140px; width: 140px; display: flex; flex-direction: column; gap: 10px; color: var(--seedy-text); }
+.cast-card:hover { color: var(--seedy-text); }
+.cast-face {
+  position: relative; aspect-ratio: 4 / 5; border-radius: var(--r-card); overflow: hidden;
+  display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 900; letter-spacing: -0.02em;
+  outline: 2px solid transparent; outline-offset: 3px; transition: outline-color var(--t-fast) var(--ease);
+}
+.cast-face .art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cast-card:focus-visible { outline: none; }
+.cast-card:focus-visible .cast-face { outline-color: var(--seedy-accent); }
+.cast-text { display: flex; flex-direction: column; gap: 2px; }
+.cast-name { font-size: 14px; font-weight: 700; color: #ffffff; }
+.cast-role { font-size: 13px; color: var(--seedy-text-3); }
+
+/* Touch screens have no hover: the disc stays on show (at the board's 44 px size) so a tap can still play.
+   TV layouts keep the focus behaviour. */
+@media (hover: none) {
+  :root:not(.seedy-tv) .card-play { opacity: 1; width: 44px; height: 44px; }
+}
+/* Narrow library cards: the 44 px disc keeps clear of the tools. */
+@media (max-width: 720px) {
+  .lib-card .card-play { width: 44px; height: 44px; }
+}
+/* Badges on library cards sit outside the link: let clicks through. */
+.lib-card .card-media > .watched-dot, .lib-card .card-media > .count-pill { pointer-events: none; }
+@media (hover: none) {
+  /* Always-on discs sit on any artwork, light ones included: a soft shadow keeps their edge. */
+  :root:not(.seedy-tv) .card-play { box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4); }
+}
+/* TV layouts ring whatever has focus (3 px, 4 px off). A card's link fills its art, so the ring goes on the art
+   alone, at the TV weight, rather than twice. */
+html.seedy-tv .card-media > a:focus, html.seedy-tv .top10 > a.top10-link:focus { outline: none; }
+html.seedy-tv .card-media:focus-within, html.seedy-tv .top10 > a.top10-link:focus ~ .top10-card .card-media { outline-width: 3px; outline-offset: 4px; }

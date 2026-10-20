@@ -1,0 +1,183 @@
+/* Details (Details board). */
+
+.details { position: relative; min-height: 100vh; background: var(--seedy-bg); color: var(--seedy-text); overflow-x: hidden; overflow-x: clip; }
+
+/* ── Hero: min 780 px, backdrop under three gradients, glass info panel on the right ── */
+.dhero { position: relative; min-height: 780px; display: flex; align-items: flex-end; overflow: hidden; background: var(--seedy-bg); }
+.dhero-art {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 20%;
+  opacity: 0; transition: opacity 500ms ease;
+}
+.dhero-art.is-loaded { opacity: 1; }
+.dhero-shade-x {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(14, 14, 14, 0.96) 0%, rgba(14, 14, 14, 0.7) 40%, rgba(14, 14, 14, 0.1) 75%);
+}
+.dhero-shade-b { position: absolute; left: 0; right: 0; bottom: 0; height: 45%; background: linear-gradient(0deg, #0e0e0e 0%, rgba(14, 14, 14, 0) 100%); }
+.dhero-shade-t { position: absolute; left: 0; right: 0; top: 0; height: 160px; background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%); }
+
+.dhero-body {
+  position: relative; width: 100%; padding: 140px var(--gutter) 40px;
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 32px;
+}
+.dhero-main { flex: 1 1 520px; max-width: 680px; min-width: 0; display: flex; align-items: flex-end; gap: 28px; }
+.dhero-info { flex: 1; min-width: 0; container-type: inline-size; display: flex; flex-direction: column; gap: 18px; }
+.dhero-cover { flex: none; width: 220px; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-panel); box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55); }
+
+.dhero-back {
+  align-self: flex-start; display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--seedy-text-2);
+}
+a.dhero-back:hover { color: #ffffff; }
+.dhero-title { --title-size: 96px; line-height: 0.88; font-weight: 900; letter-spacing: -0.02em; text-transform: uppercase; color: #ffffff; }
+.dhero-title.is-long { --title-size: 72px; }
+.dhero-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font-size: 14px; font-weight: 500; color: var(--seedy-text-hero); }
+.dhero-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.dhero-overview {
+  font-size: 16px; line-height: 1.6; color: var(--seedy-text-hero);
+  display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;
+}
+.dhero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 4px; }
+.dhero-progress { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--seedy-text-2); }
+.dhero-bar { flex: none; width: 160px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.18); overflow: hidden; }
+.dhero-bar > i { display: block; height: 100%; border-radius: 3px; background: #ffffff; }
+
+.dhero-panel {
+  flex: 0 1 360px; min-width: 0; margin: 0; padding: 22px 24px; border-radius: var(--r-panel);
+  background: rgba(14, 14, 14, 0.74); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 11px 18px; font-size: 13px; line-height: 1.45;
+}
+.dhero-panel dt { color: var(--seedy-text-3); }
+.dhero-panel dd { margin: 0; color: var(--seedy-text); }
+
+.dhero.is-loading .dhero-info { gap: 16px; }
+
+/* ── Below the hero ── */
+.details-main { display: flex; flex-direction: column; gap: 48px; padding: 16px 0 88px; }
+.details-pad { padding: 0 var(--gutter); }
+.details-similar .row-scroller { padding-top: 4px; }
+.details-similar .card-text { gap: 2px; }
+
+.row-tools .link-btn.row-link { padding: 0 0 0 8px; height: 44px; font-size: 14px; font-weight: 600; }
+
+.cast-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 24px 18px; padding: 4px var(--gutter) 8px;
+}
+.cast-grid .cast-card { width: auto; }
+
+/* ── Seasons and episodes ── */
+.seasons { display: flex; flex-direction: column; gap: 20px; padding: 0 var(--gutter); scroll-margin-top: 24px; }
+.seasons-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.seasons-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.seasons-count { font-size: 13px; color: var(--seedy-text-3); }
+.seasons-more { align-self: center; padding: 0 20px; }
+.seasons-empty { font-size: 14px; color: var(--seedy-text-2); }
+
+.ep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr)); gap: 12px 20px; }
+.ep-row {
+  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 20px; padding: 12px; border-radius: var(--r-panel);
+  background: transparent; color: var(--seedy-text);
+  transition: background-color var(--t-fast) var(--ease);
+}
+a.ep-row:hover { color: var(--seedy-text); background: var(--seedy-row); }
+.ep-row.is-next, a.ep-row.is-next:hover { background: var(--seedy-surface); }
+a.ep-row:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 3px; }
+
+.ep-thumb {
+  position: relative; flex: 0 0 240px; aspect-ratio: 16 / 9; border-radius: var(--r-card); overflow: hidden; background: var(--seedy-surface);
+}
+.ep-art { position: absolute; inset: 0; }
+.ep-art > img, .ep-art > .art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ep-art > .art-contain { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.ep-art > .art-blur { position: absolute; inset: -20px; width: calc(100% + 40px); height: calc(100% + 40px); object-fit: cover; filter: blur(22px) brightness(0.55); }
+.ep-art .art-title { font-size: 15px; bottom: 16px; }
+.ep-row.is-upcoming .ep-art { opacity: 0.35; }
+.ep-resume, .ep-hover {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.3);
+}
+.ep-hover { opacity: 0; transition: opacity var(--t-fast) var(--ease); }
+a.ep-row:hover .ep-hover, a.ep-row:focus-visible .ep-hover { opacity: 1; }
+.ep-bar { position: absolute; left: 8px; right: 8px; bottom: 8px; }
+.ep-airs { position: absolute; left: 10px; bottom: 10px; background: var(--seedy-scrim); }
+
+.ep-text { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding-top: 2px; }
+.ep-title-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ep-title { font-size: 17px; font-weight: 800; color: #ffffff; }
+.ep-row.is-upcoming .ep-title { color: var(--seedy-text-2); }
+.ep-next {
+  padding: 3px 8px; border-radius: 7px; background: var(--seedy-inverse); color: var(--seedy-ink-inverse);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.ep-new { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--seedy-accent); }
+.ep-new::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--seedy-accent); }
+.ep-meta { font-size: 13px; color: var(--seedy-text-3); }
+.ep-synopsis {
+  font-size: 14px; line-height: 1.5; color: var(--seedy-text-2);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* ── Person ── */
+.person { gap: 40px; padding-top: 32px; }
+.person-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 32px; }
+.person-portrait {
+  flex: none; width: 220px; aspect-ratio: 4 / 5; border-radius: var(--r-panel); overflow: hidden;
+  background: #2f2840; color: #e3c4ff; display: flex; align-items: center; justify-content: center;
+  font-size: 56px; font-weight: 900; letter-spacing: -0.02em;
+}
+.person-portrait img { width: 100%; height: 100%; object-fit: cover; }
+.person-text { flex: 1 1 420px; min-width: 0; max-width: 760px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.person-name { font-size: 64px; line-height: 0.92; font-weight: 900; letter-spacing: -0.02em; text-transform: uppercase; color: #ffffff; overflow-wrap: anywhere; }
+.person-born { font-size: 14px; font-weight: 500; color: var(--seedy-text-hero); }
+.person-bio {
+  font-size: 15px; line-height: 1.6; color: var(--seedy-text-2);
+  display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;
+}
+.person-bio.is-open { display: block; }
+.person-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px; }
+
+/* ── Album tracks ── */
+.tracks { list-style: none; margin: 0; padding: 8px; border-radius: var(--r-panel); background: var(--seedy-panel); max-width: 980px; }
+.track {
+  display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 8px 14px; border-radius: var(--r-menu); color: var(--seedy-text);
+  transition: background-color var(--t-fast) var(--ease);
+}
+.track:hover { background: var(--seedy-surface); color: #ffffff; }
+.track:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 0; }
+.track-no { width: 32px; flex: none; text-align: right; font-size: 13px; font-weight: 700; color: var(--seedy-text-3); font-variant-numeric: tabular-nums; }
+.track-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.track-title { font-size: 15px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track-artist { font-size: 13px; color: var(--seedy-text-3); }
+.track-time { font-size: 13px; color: var(--seedy-text-3); }
+.track-play {
+  width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: var(--seedy-inverse); color: var(--seedy-ink-inverse); opacity: 0; transition: opacity var(--t-fast) var(--ease);
+}
+.track:hover .track-play, .track:focus-visible .track-play { opacity: 1; }
+
+@media (max-width: 900px) {
+  .dhero-body { padding-top: 200px; }
+  .dhero-panel { flex: 1 1 100%; }
+}
+
+@media (max-width: 720px) {
+  .dhero { min-height: 640px; }
+  .dhero-body { gap: 24px; padding-bottom: 28px; }
+  .dhero-main { flex-basis: 100%; flex-wrap: wrap; }
+  .dhero-cover { width: 140px; }
+  .dhero-title, .dhero-title.is-long { --title-size: 48px; }
+  .dhero-overview { font-size: 15px; -webkit-line-clamp: 4; }
+  .dhero-actions .btn-primary { flex: 1 1 100%; padding: 0 20px; }
+  .details-main { gap: 40px; }
+  .ep-row { gap: 12px 14px; padding: 10px; }
+  .ep-thumb { flex-basis: 132px; }
+  .ep-text { flex-basis: 150px; gap: 4px; padding-top: 0; }
+  .ep-title { font-size: 15px; }
+  .ep-synopsis { font-size: 13px; }
+  .seasons-tools { width: 100%; flex-wrap: nowrap; gap: 8px; }
+  .seasons-count { flex: 1; min-width: 0; }
+  .seasons-tools .btn-secondary { padding: 0 12px; font-size: 13px; }
+  .dhero-shade-x { background: linear-gradient(0deg, rgba(14, 14, 14, 0.97) 0%, rgba(14, 14, 14, 0.82) 55%, rgba(14, 14, 14, 0.25) 100%); }
+  .person-portrait { width: 140px; }
+  .person-name { font-size: 40px; }
+  .track-no { width: 22px; }
+}

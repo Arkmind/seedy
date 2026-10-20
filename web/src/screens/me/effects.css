@@ -1,0 +1,84 @@
+/* App-wide effects of the personal settings (Display, Controls). Loaded from main.tsx through effects.tsx. */
+
+/* ── Soft placeholders: a tiny copy of the picture, blurred, under the one that's loading ── */
+.me-soft::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: var(--me-soft) center / cover no-repeat; filter: blur(14px) saturate(1.1); transform: scale(1.12);
+}
+
+/* ── Faster animations ── */
+html.me-fast { --t-fast: 110ms; --t-lift: 160ms; }
+html.me-fast .hero-slide { transition-duration: 380ms; }
+html.me-fast .hero-art, html.me-fast .dhero-art { transition-duration: 200ms; }
+html.me-fast .hero-info { animation-duration: 240ms; }
+html.me-fast .card-media img, html.me-fast .history-thumb img { transition-duration: 100ms !important; }
+html.me-fast .popover, html.me-fast .toast { animation-duration: 80ms; }
+html.me-fast .scrim { animation-duration: 90ms; }
+html.me-fast .me-saver-slide { transition-duration: 500ms; }
+
+/* ── Smooth scrolling: rows glide when moved by arrows, keys or a remote ── */
+html.me-smooth .row-scroller, html.me-smooth .tab-tray, html.me-smooth .tab-row { scroll-behavior: smooth; }
+
+/* ── TV layout: larger type and a focus ring that's always there for remotes and gamepads ── */
+html.seedy-tv { --gutter: 56px; }
+html.seedy-tv body { font-size: 18px; }
+html.seedy-tv .tab { font-size: 16px; padding: 12px 20px; }
+html.seedy-tv .row-title { font-size: 24px; }
+html.seedy-tv .row-sub, html.seedy-tv .row-link { font-size: 16px; }
+html.seedy-tv .card-title { font-size: 18px; }
+html.seedy-tv .card-meta { font-size: 15px; }
+html.seedy-tv .hero-overview, html.seedy-tv .dhero-overview { font-size: 19px; }
+html.seedy-tv .hero-meta, html.seedy-tv .dhero-meta { font-size: 16px; }
+html.seedy-tv .btn-secondary, html.seedy-tv .btn-ghost, html.seedy-tv .menu-item { font-size: 16px; }
+html.seedy-tv .me-nav a, html.seedy-tv .me-nav-btn { font-size: 16px; height: 48px; }
+html.seedy-tv .me-row-name, html.seedy-tv .setting-name { font-size: 17px; }
+html.seedy-tv .me-row-help, html.seedy-tv .setting-help, html.seedy-tv .rows-help { font-size: 15px; }
+html.seedy-tv .me-section-title, html.seedy-tv .panel-title { font-size: 21px; }
+html.seedy-tv .me-section-help, html.seedy-tv .panel-text, html.seedy-tv .me-title p, html.seedy-tv .page-lede { font-size: 17px; }
+html.seedy-tv .rows-name, html.seedy-tv .me-key-what { font-size: 17px; }
+html.seedy-tv :focus:not(input):not(textarea):not(select) { outline: 3px solid var(--seedy-accent); outline-offset: 4px; }
+html.seedy-tv .card-media:focus, html.seedy-tv .card-media:focus-within { outline: 3px solid var(--seedy-accent); outline-offset: 4px; }
+html.seedy-tv .card:focus-within .card-hover { opacity: 1; }
+
+/* ── Screensaver ── */
+.me-saver { position: fixed; inset: 0; z-index: 200; background: #000000; overflow: hidden; cursor: none; outline: none; animation: fade-in 600ms ease-out; }
+.me-saver-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1400ms ease; }
+.me-saver-slide.is-on { opacity: 1; }
+.me-saver-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
+.me-saver-slide.is-on .me-saver-art { animation: me-drift 40s linear both; }
+@keyframes me-drift { from { transform: scale(1.04) translateX(0); } to { transform: scale(1.12) translateX(-2%); } }
+.me-saver-shade { position: absolute; inset: 0; background: linear-gradient(20deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.15) 45%, rgba(0, 0, 0, 0) 70%); }
+.me-saver-title { position: absolute; left: 56px; bottom: 56px; max-width: min(520px, 60vw); }
+.me-saver-title span { font-size: 56px; line-height: 0.95; font-weight: 900; letter-spacing: -0.02em; text-transform: uppercase; color: #ffffff; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5); }
+.me-saver-logo { max-width: 100%; max-height: 160px; object-fit: contain; object-position: left bottom; filter: drop-shadow(0 2px 14px rgba(0, 0, 0, 0.6)); }
+.me-saver-corner { position: absolute; z-index: 3; top: 40px; right: 48px; display: flex; align-items: center; gap: 10px; color: #ffffff; font-size: 18px; font-weight: 900; opacity: 0.85; }
+.me-saver-mark {
+  position: absolute; z-index: 3; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 18px;
+  color: #ffffff; font-size: 40px; font-weight: 900; letter-spacing: -0.01em; transition: left 2.4s ease, top 2.4s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .me-saver-slide.is-on .me-saver-art { animation: none; }
+  .me-saver-mark { transition: none; }
+}
+@media (max-width: 720px) {
+  .me-saver-title { left: 24px; bottom: 32px; }
+  .me-saver-title span { font-size: 36px; }
+  .me-saver-corner { top: 24px; right: 24px; }
+}
+
+/* ── The Home "Arrived" notice for requests that came in ── */
+.me-arrivals { margin: 0 var(--gutter); display: flex; flex-direction: column; border-radius: var(--r-panel); background: var(--seedy-panel); overflow: hidden; }
+.me-arrival { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 12px 12px 12px 16px; }
+.me-arrival + .me-arrival { border-top: 1px solid var(--seedy-line); }
+.me-arrival-poster { position: relative; flex: 0 0 44px; width: 44px; aspect-ratio: 2 / 3; border-radius: var(--r-xs); overflow: hidden; background: var(--seedy-surface); }
+.me-arrival-poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.me-arrival-text { flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.me-arrival-line { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; font-weight: 700; color: #ffffff; }
+.me-arrival-line .dot { width: 8px; height: 8px; }
+.me-arrival-line > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me-arrival-line em { font-style: normal; font-weight: 600; color: var(--seedy-text-2); }
+.me-arrival-sub { font-size: 13px; color: var(--seedy-text-3); }
+.me-arrival-actions { display: flex; align-items: center; gap: 4px; }
+
+/* ── "?" overlay ── */
+.sheet .me-keys { margin-top: -6px; }

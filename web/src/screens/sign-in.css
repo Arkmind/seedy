@@ -1,0 +1,109 @@
+/* Sign-in: brand, "Who's watching?" and the profile picker, centred over library backdrops or the plain ground. */
+
+.signin {
+  position: relative; min-height: 100vh; min-height: 100dvh; overflow: hidden; background: var(--seedy-bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px var(--gutter);
+}
+
+.signin-bg { position: absolute; inset: 0; }
+.signin-bg-img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1);
+  transition: opacity 2.4s ease, transform 14s linear;
+}
+.signin-bg-img.is-on { opacity: 1; transform: scale(1.06); }
+.signin-scrim {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 50%, rgba(14, 14, 14, 0.84) 0%, rgba(14, 14, 14, 0.92) 100%),
+    linear-gradient(180deg, rgba(14, 14, 14, 0.4) 0%, rgba(14, 14, 14, 0) 30%, rgba(14, 14, 14, 0) 70%, rgba(14, 14, 14, 0.7) 100%);
+}
+
+.signin-body { position: relative; z-index: 1; width: 100%; max-width: 980px; display: flex; flex-direction: column; align-items: center; gap: 40px; }
+
+.signin-brand { display: flex; align-items: center; gap: 16px; color: #ffffff; }
+.signin-brand .brand-mark { border-radius: 18px; }
+.signin-brand-name { font-size: 40px; font-weight: 900; letter-spacing: -0.01em; }
+
+.signin-step { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 40px; }
+.signin-step.is-form { max-width: 400px; gap: 20px; }
+
+/* Display style from Foundations: 900, uppercase, tight. */
+.signin-title {
+  font-size: 72px; line-height: 0.9; font-weight: 900; letter-spacing: -0.02em; text-transform: uppercase; color: #ffffff; text-align: center;
+}
+.signin-who { font-size: 32px; line-height: 1.1; font-weight: 900; letter-spacing: -0.01em; color: #ffffff; text-align: center; }
+.signin-text { font-size: 15px; line-height: 1.55; color: var(--seedy-text-2); text-align: center; }
+
+.signin-grid { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 28px 32px; }
+.signin-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 14px; width: 136px; padding: 0; border: 0;
+  background: transparent; color: var(--seedy-text-hero); font: inherit; cursor: pointer;
+}
+.signin-tile:disabled { cursor: default; }
+.signin-tile:focus-visible { outline: none; }
+.signin-face {
+  position: relative; width: 120px; height: 120px; border-radius: 50%; overflow: hidden; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 48px; font-weight: 800; color: var(--seedy-ink-inverse); background: var(--seedy-surface);
+  box-shadow: 0 0 0 0 var(--seedy-bg), 0 0 0 0 transparent;
+  transition: box-shadow var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+.signin-face img { width: 100%; height: 100%; object-fit: cover; }
+.signin-face.skel { background-size: 200% 100%; }
+.signin-face.is-other {
+  background: transparent; color: var(--seedy-text-2); border: 2px dashed var(--seedy-stroke);
+  transition: box-shadow var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+}
+.signin-name { max-width: 100%; font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color var(--t-fast) var(--ease); }
+
+/* Hover: a light ring around the face (surfaces invert); keyboard focus: the accent ring. */
+.signin-tile:not(:disabled):hover .signin-face { box-shadow: 0 0 0 4px var(--seedy-bg), 0 0 0 7px var(--seedy-inverse); }
+.signin-tile:not(:disabled):hover .signin-name { color: #ffffff; }
+.signin-tile:not(:disabled):hover .signin-face.is-other { border-color: transparent; background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.signin-tile:focus-visible .signin-face { box-shadow: 0 0 0 4px var(--seedy-bg), 0 0 0 6px var(--seedy-accent); }
+.signin-tile:focus-visible .signin-name { color: #ffffff; }
+.signin-tile[aria-busy='true'] .signin-face { animation: signin-pulse 1s ease-in-out infinite alternate; }
+@keyframes signin-pulse { from { opacity: 1; } to { opacity: 0.55; } }
+
+.signin-qc { gap: 8px; }
+.signin-hint { font-size: 14px; color: var(--seedy-text-2); text-align: center; }
+.signin-link { border: 0; padding: 0; background: none; font: inherit; font-weight: 700; color: #ffffff; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+.signin-back {
+  align-self: center; display: flex; align-items: center; gap: 6px; border: 0; padding: 6px 8px; border-radius: var(--r-ctl);
+  background: transparent; font: inherit; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--seedy-text-2); cursor: pointer; transition: color var(--t-fast) var(--ease);
+}
+.signin-back:hover { color: #ffffff; }
+
+.signin-form { width: 100%; display: flex; flex-direction: column; gap: 14px; }
+.signin-field { width: 100%; height: 52px; font-size: 16px; }
+.signin .field { background: rgba(31, 31, 31, 0.9); }
+.signin-label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 700; color: var(--seedy-text-2); }
+.signin-form .btn-primary { margin-top: 4px; }
+.signin-error { justify-content: center; text-align: center; }
+.form-error { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--seedy-danger); }
+
+.signin-code {
+  display: flex; align-items: center; justify-content: center; min-height: 96px; padding: 0 28px 0 calc(28px + 0.18em); border-radius: var(--r-panel);
+  background: rgba(20, 20, 20, 0.9); font-size: 56px; font-weight: 900; letter-spacing: 0.18em; color: #ffffff;
+}
+.signin-code-skel { display: block; width: 220px; height: 48px; border-radius: var(--r-card); }
+.signin-waiting { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: var(--seedy-text-2); }
+
+.signin-disclaimer {
+  position: relative; z-index: 1; max-width: 640px; margin-top: 40px; font-size: 13px; line-height: 1.5; text-align: center; color: var(--seedy-text-3);
+  white-space: pre-line;
+}
+
+@media (max-width: 720px) {
+  .signin { padding: 40px var(--gutter); justify-content: flex-start; padding-top: 12vh; }
+  .signin-body { gap: 28px; }
+  .signin-brand .brand-mark { width: 48px !important; height: 48px !important; font-size: 26px !important; border-radius: 14px; }
+  .signin-brand-name { font-size: 30px; }
+  .signin-title { font-size: 44px; }
+  .signin-grid { gap: 24px 16px; }
+  .signin-tile { width: 104px; gap: 10px; }
+  .signin-face { width: 96px; height: 96px; font-size: 38px; }
+  .signin-code { font-size: 40px; min-height: 80px; }
+}

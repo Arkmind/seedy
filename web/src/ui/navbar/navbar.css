@@ -1,0 +1,168 @@
+/* Navigation bar (Navigation bar board). The bar's frame (.site-header, sticky, stuck glass) is in layout.css.
+   Over the Home banner and a details hero (.is-overlay) the controls are glass; elsewhere they're solid #1a1a1a. */
+
+.site-header.nb { --nb-solid: #1a1a1a; --nb-glass: rgba(20, 20, 20, 0.72); }
+
+.nb .brand { padding-right: 6px; }
+
+/* ── Home · Libraries · Favorites ── */
+
+.nb-nav { display: flex; align-items: center; gap: 4px; flex: none; }
+.nb-link {
+  display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border: 0; border-radius: 13px;
+  background: transparent; color: var(--seedy-text); font: inherit; font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.nb-link.is-glass { color: #ffffff; }
+.nb-libs-btn { padding: 0 12px 0 14px; }
+/* The current place is the light button; hovered ones invert the same way (Foundations: surfaces invert). */
+.nb-link.is-current, .nb-link:hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.nb-link.is-current { font-weight: 800; }
+.nb-chev { opacity: 0.7; transition: transform var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease); }
+.nb-libs-btn.is-open .nb-chev { transform: rotate(180deg); opacity: 1; }
+
+/* ── Requests ↗ · cast · account ── */
+
+.nb-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+.nb-req {
+  display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 13px;
+  background: var(--nb-solid); color: #ffffff; font-size: 14px; font-weight: 700; white-space: nowrap;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.nb-out { opacity: 0.6; }
+.site-header .nb-cast { background: var(--nb-solid); color: #ffffff; }
+.nb-account {
+  display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 10px 0 4px; border: 0; border-radius: var(--r-pill);
+  background: var(--nb-solid); color: #ffffff; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.nb-account .header-avatar { font-size: 14px; }
+.nb-req.is-glass, .site-header .nb-cast.is-glass, .nb-account.is-glass {
+  background: var(--nb-glass); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.nb-req:hover, .site-header .nb-cast:not(:disabled):hover, .site-header .nb-cast[aria-expanded='true'],
+.nb-account:hover, .nb-account.is-current {
+  background: var(--seedy-inverse); color: var(--seedy-ink-inverse);
+}
+/* Settings open (or the menu): the pill turns light and its avatar dark. */
+.nb-account:hover .header-avatar, .nb-account.is-current .header-avatar { background: var(--seedy-surface-2); color: #ffffff; }
+.nb-account.is-current .nb-chev, .nb-account:hover .nb-chev { opacity: 1; }
+
+/* ── Search in the middle (styles for the field and its dropdown: search/search.css) ── */
+
+.nb-search-wrap { position: relative; flex: 1 1 320px; max-width: 600px; margin: 0 auto; min-width: 0; }
+
+/* ── Narrower windows: the search takes its own row under the bar ── */
+
+@media (min-width: 721px) and (max-width: 1239px) {
+  .nb-actions { margin-left: auto; }
+  .nb-search-wrap { order: 5; flex-basis: 100%; }
+}
+@media (min-width: 721px) and (max-width: 900px) {
+  .site-header.nb { column-gap: 12px; }
+}
+@media (min-width: 721px) and (max-width: 880px) {
+  .nb .brand-name { display: none; }
+}
+@media (min-width: 721px) and (max-width: 790px) {
+  .nb-req { width: 44px; padding: 0; justify-content: center; font-size: 0; gap: 0; }
+  .nb-req .nb-out { display: none; }
+}
+
+/* ── Libraries menu ── */
+
+.nb-libs {
+  display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 18px;
+  background: #161616; box-shadow: 0 0 0 1px #262626, 0 24px 48px rgba(0, 0, 0, 0.55);
+  max-height: calc(100vh - 120px); overflow-y: auto; overscroll-behavior: contain;
+}
+.nb-libs-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.nb-lib {
+  display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 13px; min-width: 0; color: var(--seedy-text);
+  transition: background-color var(--t-fast) var(--ease);
+}
+.nb-lib:hover, .nb-lib.is-current { background: #222222; }
+.nb-lib:focus-visible { outline-offset: 0; }
+.nb-lib-icon {
+  flex: none; width: 44px; height: 44px; border-radius: 12px; background: #222222; color: var(--seedy-text);
+  display: flex; align-items: center; justify-content: center;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.nb-lib:hover .nb-lib-icon { background: #2c2c2c; }
+.nb-lib.is-current .nb-lib-icon { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.nb-lib-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.nb-lib-name { font-size: 15px; font-weight: 800; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-lib-count { font-size: 13px; color: var(--seedy-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-lib-count.skel { width: 96px; height: 10px; margin: 4px 0 3px; }
+.nb-libs-empty { padding: 12px; font-size: 14px; line-height: 1.5; color: var(--seedy-text-2); }
+.nb-libs-sep { height: 1px; margin: 4px 8px; background: #262626; }
+.nb-libs-foot { display: flex; flex-wrap: wrap; gap: 4px; }
+.nb-libs-link {
+  display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 11px;
+  font-size: 14px; font-weight: 600; color: var(--seedy-text-hero);
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.nb-libs-link:hover { background: #222222; color: #ffffff; }
+.nb-libs-link:focus-visible { outline-offset: 0; }
+
+/* Phone: the same menu as a sheet from the bottom. */
+.nb-sheet-scrim { align-items: flex-end; padding: 0; }
+.nb-sheet {
+  max-width: none; gap: 10px; padding: 8px 16px max(20px, env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0;
+  background: #161616; box-shadow: 0 0 0 1px #262626; animation: nb-sheet-up 220ms ease-out;
+}
+@keyframes nb-sheet-up { from { transform: translateY(24px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+.nb-sheet-head { position: relative; display: flex; align-items: center; justify-content: space-between; padding-top: 14px; }
+.nb-sheet-grab { position: absolute; top: 0; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: #333333; }
+.nb-sheet-title { font-size: 19px; font-weight: 800; color: #ffffff; }
+.nb-libs.is-sheet { padding: 0; background: transparent; box-shadow: none; max-height: none; overflow: visible; }
+.nb-libs.is-sheet .nb-libs-grid { grid-template-columns: minmax(0, 1fr); }
+
+/* ── Phone bar ── */
+
+.site-header.nb.is-phone { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 12px; padding: 18px 16px 12px; }
+.nb-ptop { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.nb-pactions { display: flex; gap: 6px; }
+.brand.is-small { gap: 8px; padding-right: 0; }
+.brand.is-small .brand-name { font-size: 19px; letter-spacing: 0; }
+.nb-account-phone { width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; flex: none; }
+.nb-account-phone .header-avatar { transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.nb-account-phone.is-current .header-avatar, .nb-account-phone:hover .header-avatar { background: var(--seedy-surface-2); color: #ffffff; }
+.nb.is-phone .nb-cast.is-glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* Tab bar at the bottom, under the thumb. */
+:root { --nb-tabbar-h: 100px; }
+.nb-tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 8px 8px max(26px, env(safe-area-inset-bottom));
+  background: rgba(14, 14, 14, 0.94); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 -1px 0 #1f1f1f;
+}
+.nb-tabbar.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.nb-tab {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; border: 0; border-radius: 12px;
+  background: transparent; color: var(--seedy-text-2); font: inherit; font-size: 11px; font-weight: 600; line-height: 15px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: color var(--t-fast) var(--ease);
+}
+.nb-tab:hover { color: #ffffff; }
+.nb-tab[aria-current='page'] { color: #ffffff; font-weight: 800; }
+.nb-tab-pill {
+  width: 52px; height: 30px; border-radius: var(--r-pill); display: flex; align-items: center; justify-content: center;
+  transition: background-color var(--t-fast) var(--ease);
+}
+.nb-tab[aria-current='page'] .nb-tab-pill { background: rgba(255, 255, 255, 0.14); }
+.nb-tab:focus-visible { outline-offset: -2px; }
+/* The tab bar hides while typing (the keyboard is up). */
+html.nb-typing .nb-tabbar { display: none; }
+
+@media (max-width: 720px) {
+  html.nb-has-tabbar body { padding-bottom: var(--nb-tabbar-h); }
+  html.nb-has-tabbar #app, html.nb-has-tabbar .page { min-height: calc(100vh - var(--nb-tabbar-h)); }
+  html.nb-has-tabbar .toasts { bottom: calc(var(--nb-tabbar-h) + 12px); left: 16px; right: 16px; }
+}
+@media (min-width: 721px) {
+  .nb-tabbar { display: none; }
+}
+
+/* TV: larger words, as elsewhere in the TV layout. */
+html.seedy-tv .nb-link, html.seedy-tv .nb-req { font-size: 16px; }
+.nb.is-phone .nb-search-wrap { flex: none; width: 100%; max-width: none; margin: 0; }

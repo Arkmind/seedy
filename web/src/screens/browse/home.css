@@ -1,0 +1,78 @@
+/* Home (Main board). */
+
+.home { position: relative; min-height: 100vh; background: var(--seedy-bg); color: var(--seedy-text); overflow-x: hidden; overflow-x: clip; }
+
+/* ── Featured hero: 680 px, backdrop under three gradients ── */
+.hero {
+  position: relative; min-height: 680px; display: flex; align-items: flex-end; overflow: hidden; background: var(--seedy-bg);
+}
+.hero-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 900ms ease; }
+.hero-slide.is-on { opacity: 1; }
+.hero-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; opacity: 0; transition: opacity 600ms ease; }
+.hero-art.is-loaded { opacity: 1; }
+.hero-shade-x {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(14, 14, 14, 0.94) 0%, rgba(14, 14, 14, 0.6) 38%, rgba(14, 14, 14, 0) 72%);
+}
+.hero-shade-b { position: absolute; left: 0; right: 0; bottom: 0; height: 48%; background: linear-gradient(0deg, #0e0e0e 0%, rgba(14, 14, 14, 0) 100%); }
+.hero-shade-t { position: absolute; left: 0; right: 0; top: 0; height: 160px; background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%); }
+
+/* Trailer: muted video between the backdrop and the scrims, so the board's gradients keep the text readable.
+   It only fades in once it really plays; the 16:9 frame is sized in script to cover the hero (letterboxing included). */
+.hero-trailer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 700ms ease; }
+.hero-trailer.is-on { opacity: 1; }
+.hero-trailer-media {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: block; border: 0; pointer-events: none; object-fit: cover; background: transparent;
+}
+
+.hero-body {
+  position: relative; z-index: 1; width: 100%; padding: 140px var(--gutter) 48px;
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px;
+}
+.hero-info { flex: 0 1 600px; min-width: 0; container-type: inline-size; display: flex; flex-direction: column; gap: 18px; animation: hero-in 600ms ease both; }
+@keyframes hero-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.hero-over { display: flex; align-items: center; gap: 10px; }
+.hero-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--seedy-accent); flex: none; }
+.hero-title { --title-size: 84px; line-height: 0.9; font-weight: 900; letter-spacing: -0.02em; text-transform: uppercase; color: #ffffff; }
+.hero-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font-size: 14px; font-weight: 500; color: var(--seedy-text-hero); }
+.hero-overview {
+  font-size: 16px; line-height: 1.55; color: var(--seedy-text-hero);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 4px; }
+.hero-nav { display: flex; align-items: center; gap: 12px; }
+.hero-count { min-width: 40px; text-align: center; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--seedy-text); }
+.hero-count span { color: var(--seedy-text-3); }
+/* Trailer sound: the pager's 44 px glass button; it holds its place and appears while a trailer plays. */
+.hero-sound {
+  opacity: 0; visibility: hidden;
+  transition: opacity var(--t-fast) var(--ease), visibility 0s linear var(--t-fast), background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.hero-sound.is-on { opacity: 1; visibility: visible; transition-delay: 0s; }
+
+.hero.is-loading .hero-info { animation: none; gap: 16px; }
+
+/* ── Rows ── */
+.home-main { position: relative; display: flex; flex-direction: column; gap: 44px; padding: 8px 0 88px; }
+.home-main.is-plain { padding-top: 16px; }
+.home-slot { display: contents; }
+.home-slot > * { scroll-snap-align: start; }
+
+@media (max-width: 900px) {
+  .hero-body { padding-top: 200px; }
+}
+
+@media (max-width: 720px) {
+  .hero { min-height: 600px; }
+  .hero-body { padding-bottom: 32px; gap: 18px; }
+  .hero-info { gap: 14px; }
+  .hero-title { --title-size: 52px; }
+  .hero-shade-x { background: linear-gradient(0deg, rgba(14, 14, 14, 0.97) 0%, rgba(14, 14, 14, 0.8) 50%, rgba(14, 14, 14, 0.2) 100%); }
+  .hero-overview { font-size: 15px; }
+  .hero-actions .btn-primary { flex: 1 1 100%; padding: 0 20px; }
+  .hero-nav { margin-left: auto; }
+  .home-main { gap: 36px; }
+  .home-main .row-scroller > .card, .home-main .home-slot > .card { flex-basis: min(300px, 80vw) !important; width: min(300px, 80vw) !important; }
+  .home-main .lib-tile { flex-basis: min(260px, 70vw) !important; width: min(260px, 70vw) !important; }
+}

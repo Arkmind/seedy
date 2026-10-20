@@ -1,0 +1,72 @@
+name: Release
+
+# Push a tag such as v0.2.0 to publish a release: the plugin zip goes on a GitHub Release, and the plugin repository
+# manifest on GitHub Pages (branch gh-pages) gains the new version. Jellyfin servers that added
+# https://<owner>.github.io/<repo>/manifest.json then see the update.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Version and notes from the tag
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          case "$v" in *.*.*.*) ;; *.*.*) v="$v.0" ;; *.*) v="$v.0.0" ;; *) v="$v.0.0.0" ;; esac
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+          echo "PAGES_URL=https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}" >> "$GITHUB_ENV"
+          python3 scripts/changelog.py "${GITHUB_REF_NAME#v}" > notes.md
+
+      - name: Build
+        run: |
+          CHANGELOG="$(cat notes.md)" \
+          REPO_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}" \
+          OWNER="${GITHUB_REPOSITORY_OWNER}" \
+          ./build.sh
+
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "artifacts/seedy_${VERSION}.zip" --title "Seedy ${GITHUB_REF_NAME#v}" --notes-file notes.md
+
+      - name: Publish the plugin repository (gh-pages)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages:gh-pages 2>/dev/null || true
+          if git show-ref --verify --quiet refs/heads/gh-pages; then
+            git worktree add pages gh-pages
+          else
+            git worktree add --detach pages
+            (cd pages && git checkout --orphan gh-pages && git rm -rfq .)
+          fi
+          python3 scripts/update-manifest.py --manifest pages/manifest.json --zip "artifacts/seedy_${VERSION}.zip" \
+            --version "$VERSION" \
+            --source-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/seedy_${VERSION}.zip" \
+            --changelog-file notes.md --owner "$GITHUB_REPOSITORY_OWNER" --image-url "$PAGES_URL/thumb.png"
+          cp assets/thumb.png pages/thumb.png
+          touch pages/.nojekyll
+          cat > pages/index.html <<HTML
+          <!doctype html><meta charset="utf-8"><title>Seedy plugin repository</title>
+          <body style="font-family:system-ui,sans-serif;max-width:640px;margin:48px auto;padding:0 16px;line-height:1.5">
+          <h1>Seedy for Jellyfin</h1>
+          <p>In Jellyfin, open <b>Dashboard › Plugins › Repositories</b>, add this address, then install <b>Seedy</b> from the catalogue:</p>
+          <pre style="background:#eee;padding:12px;border-radius:8px">$PAGES_URL/manifest.json</pre>
+          <p><a href="https://github.com/${GITHUB_REPOSITORY}">Source code and documentation</a></p>
+          HTML
+          cd pages
+          git add -A
+          git commit -qm "Seedy ${VERSION}"
+          git push origin gh-pages

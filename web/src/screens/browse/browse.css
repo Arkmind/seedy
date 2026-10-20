@@ -1,0 +1,111 @@
+/* Shared by Home, Details, Library, Favorites and list pages. */
+
+.browse-head-text { display: flex; flex-direction: column; gap: 10px; min-width: 0; max-width: 720px; }
+.browse-head-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.page-title .lead { font-weight: 600; color: var(--seedy-text-2); }
+
+/* Library grid: 16:9 cards, minmax(240px, 1fr), gap 28 × 20 (Library board). */
+.lib-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 28px 20px;
+}
+.lib-grid.is-wide { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.grid-slot { min-width: 0; display: flex; flex-direction: column; }
+.grid-slot > .card { flex: 1; }
+
+.poster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 28px 20px; }
+/* Upcoming cards size themselves for rows; in a grid they follow the column. */
+.poster-grid > .poster-card { width: auto !important; flex: none !important; }
+
+.sentinel { height: 1px; }
+
+.link-btn { border: 0; padding: 0; background: transparent; font: inherit; cursor: pointer; }
+.link-btn.row-link { font-size: 14px; font-weight: 600; color: var(--seedy-text-2); transition: color var(--t-fast) var(--ease); }
+.link-btn.row-link:hover { color: #ffffff; }
+
+/* "Showing 28 of 248" with a mini bar. */
+.lib-foot { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 13px; color: var(--seedy-text-3); }
+.lib-foot-bar { width: 120px; height: 4px; border-radius: 2px; background: var(--seedy-surface); overflow: hidden; }
+.lib-foot-bar > i { display: block; height: 100%; background: var(--seedy-text-3); transition: width 300ms ease; }
+
+.grid-more { display: flex; justify-content: center; padding-top: 8px; }
+
+/* Breaks rows out of the padded page column so their scrollers run edge to edge. */
+.bleed { margin: 0 calc(-1 * var(--gutter)); display: flex; flex-direction: column; gap: 44px; }
+
+/* Section heading inside a padded page (Favorites, Person filmography). */
+.browse-section { display: flex; flex-direction: column; gap: 16px; }
+.browse-section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+
+/* List layout: History-style rows in a 16 px panel. */
+.list-rows { display: flex; flex-direction: column; border-radius: var(--r-panel); background: var(--seedy-panel); overflow: hidden; }
+.list-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 12px 16px;
+  transition: background-color var(--t-fast) var(--ease);
+}
+.list-row + .list-row { border-top: 1px solid var(--seedy-line); }
+.list-row:hover { background: var(--seedy-row); }
+.list-thumb {
+  position: relative; flex: 0 0 160px; aspect-ratio: 16 / 9; border-radius: var(--r-btn-sm); overflow: hidden; background: var(--seedy-surface);
+  outline: 2px solid transparent; outline-offset: 3px; transition: outline-color var(--t-fast) var(--ease);
+}
+.list-thumb:focus-visible { outline-color: var(--seedy-accent); }
+.list-thumb > img, .list-thumb > .art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.list-thumb > .art-contain { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.list-thumb > .art-blur { position: absolute; inset: -20px; width: calc(100% + 40px); height: calc(100% + 40px); object-fit: cover; filter: blur(22px) brightness(0.55); }
+.list-thumb .art-title.is-list { left: 10px; right: 10px; bottom: 10px; font-size: 13px; }
+.list-thumb .art-logo { left: 10px; bottom: 10px; }
+.list-thumb .watched-dot { top: 6px; right: 6px; }
+.list-thumb .list-bar { position: absolute; left: 6px; right: 6px; bottom: 6px; }
+.list-main { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.list-title { font-size: 15px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-title:hover { color: #ffffff; text-decoration: underline; text-underline-offset: 3px; }
+.list-sub { font-size: 13px; color: var(--seedy-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-state { flex: 0 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.list-state-1 { font-weight: 600; color: var(--seedy-text); }
+.list-state-2 { color: var(--seedy-text-3); }
+.list-tools { display: flex; align-items: center; gap: 4px; }
+
+/* Filter chip (accent outline) — active filters on Library, toggles in the Filters sheet. */
+.fchip {
+  display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 4px 0 14px; border-radius: var(--r-pill);
+  border: 1px solid var(--seedy-accent); color: var(--seedy-accent); font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+.fchip button {
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 0; padding: 0;
+  border-radius: 50%; background: transparent; color: inherit; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.fchip button:hover { background: var(--seedy-accent); color: var(--seedy-ink-inverse); }
+
+/* Genre tile, built like the My media tile. */
+.genre-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+.genre-tile { display: block; width: 100%; }
+.genre-tile .lib-tile-name { font-size: 22px; }
+
+@media (max-width: 720px) {
+  .lib-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 22px 14px; }
+  .lib-grid.is-wide { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .poster-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 22px 14px; }
+  .genre-tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .genre-tile .lib-tile-name { font-size: 17px; left: 12px; bottom: 10px; }
+  .list-row { padding: 12px; gap: 10px 14px; }
+  .list-thumb { flex-basis: 120px; }
+  .list-state { display: none; }
+  .list-main { flex-basis: 140px; }
+  .list-tools { margin-left: auto; }
+}
+
+/* Workarounds for shared card markup: art inside the full-bleed links of LibraryCard / PosterCard
+   isn't a direct child of .card-media, so it needs its own sizing; the runtime tag sits at the
+   bottom of the hover layer rather than in the corner where .card-media .tag puts it. */
+.lib-card-link > img, .lib-card-link > .art, .poster-link > img, .poster-link > .art {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+}
+.lib-card-link > .art-contain { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.lib-card-link > .art-blur {
+  position: absolute; inset: -20px; width: calc(100% + 40px); height: calc(100% + 40px);
+  object-fit: cover; filter: blur(22px) brightness(0.55); transform: scale(1.1);
+}
+.lib-hover .tag.lib-runtime { position: static; }
+/* Keyboard focus on a play-on-click card shows the play disc, as on the board's focused card. */
+.card-media:focus-visible .card-hover { opacity: 1; }

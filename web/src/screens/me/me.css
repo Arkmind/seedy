@@ -1,0 +1,42 @@
+/* Personal settings shell, from the Settings boards (MeProfile … MeControls). */
+
+.me-body {
+  max-width: calc(1240px + 2 * var(--gutter)); margin: 0 auto; display: flex; flex-wrap: wrap; align-items: flex-start;
+  gap: 32px 48px; padding: 24px var(--gutter) 80px;
+}
+.me-nav { flex: 1 1 220px; max-width: 250px; display: flex; flex-direction: column; gap: 18px; position: sticky; top: calc(var(--header-h, 0px) + 24px); }
+.me-nav-group { display: flex; flex-direction: column; gap: 2px; }
+.me-nav-label { padding: 0 14px 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--seedy-text-3); }
+.me-nav a, .me-nav-btn {
+  display: flex; align-items: center; height: 44px; padding: 0 14px; border-radius: var(--r-menu);
+  color: var(--seedy-text-hero); font-size: 14px; font-weight: 600; white-space: nowrap;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.me-nav-group.is-links a, .me-nav-group.is-links .me-nav-btn { height: 40px; }
+.me-nav-btn { border: 0; background: transparent; font-family: inherit; cursor: pointer; text-align: left; }
+.me-nav a:hover, .me-nav-btn:hover { background: var(--seedy-surface); color: #ffffff; }
+.me-nav a[aria-current='page'] { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-weight: 800; }
+.me-nav-btn.is-danger { color: var(--seedy-danger); }
+.me-nav-btn.is-danger:hover { color: var(--seedy-danger); }
+.me-nav-sep { height: 1px; margin: 0 14px; background: var(--seedy-line); }
+.me-main { flex: 999 1 560px; min-width: 0; max-width: 820px; display: flex; flex-direction: column; gap: 24px; }
+.me-title-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; }
+.me-title { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1 1 420px; }
+.me-title h1 { font-size: 40px; line-height: 1; font-weight: 900; letter-spacing: -0.02em; color: #ffffff; }
+.me-title p { font-size: 15px; line-height: 1.5; color: var(--seedy-text-2); }
+.me-title-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* "This device" marks a setting kept in this browser rather than on the profile. */
+.device-tag {
+  display: inline-flex; align-items: center; padding: 1px 7px; border-radius: var(--r-pill); background: var(--seedy-surface);
+  font-size: 11px; font-weight: 700; color: var(--seedy-text-hero); white-space: nowrap; vertical-align: middle;
+}
+/* In a page's lede the board sets it a size up, inline with the sentence. */
+.me-title p .device-tag { font-size: 12px; }
+
+@media (max-width: 860px) {
+  .me-nav { position: static; max-width: none; flex-direction: row; gap: 4px; overflow-x: auto; flex-basis: 100%; }
+  .me-nav-group { flex-direction: row; gap: 4px; }
+  .me-nav-label, .me-nav-sep { display: none; }
+  .me-nav a, .me-nav-btn { flex: none; }
+}

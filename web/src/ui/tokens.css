@@ -1,0 +1,55 @@
+/* Seedy foundations. Values are taken from the Foundations board; names match its tokens. */
+:root {
+  --seedy-bg: #0e0e0e;
+  --seedy-panel: #141414;
+  --seedy-row: #1a1a1a;
+  --seedy-surface: #1f1f1f;
+  --seedy-surface-2: #2a2a2a;
+  --seedy-line: #1f1f1f;
+  --seedy-stroke: #4a4a4a;
+  --seedy-inverse: #f0f0f0;
+  --seedy-ink-inverse: #1e1e1e;
+  --seedy-white: #ffffff;
+  --seedy-text: #e0e0e0;
+  --seedy-text-hero: #c8c8c8;
+  --seedy-text-2: #a1a1a1;
+  --seedy-text-3: #8c8c8c;
+  --seedy-accent: #ff9fff;
+  --seedy-ok: #9fe0b0;
+  --seedy-pending: #ffc98a;
+  --seedy-danger: #ff8a8a;
+  --seedy-type-movie: #3b6fd8;
+  --seedy-type-series: #7a3fd1;
+  --seedy-type-upcoming: #1f7a3a;
+
+  --seedy-scrim: rgba(14, 14, 14, 0.85);
+  --seedy-scrim-soft: rgba(14, 14, 14, 0.8);
+  --seedy-tray: rgba(14, 14, 14, 0.6);
+  --seedy-glass: rgba(31, 31, 31, 0.72);
+  --seedy-track: rgba(255, 255, 255, 0.22);
+  --seedy-hairline: rgba(255, 255, 255, 0.08);
+
+  --r-xs: 6px;
+  --r-badge: 8px;
+  --r-sm: 9px;
+  --r-ctl: 10px;
+  --r-btn-sm: 11px;
+  --r-menu: 12px;
+  --r-card: 13px;
+  --r-seg: 15px;
+  --r-panel: 16px;
+  --r-tray: 18px;
+  --r-pill: 999px;
+
+  --gutter: 40px;
+  --ease: ease;
+  --t-fast: 200ms;
+  --t-lift: 300ms;
+
+  --font: 'Noto Sans Variable', 'Noto Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Noto Sans Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+@media (max-width: 720px) {
+  :root { --gutter: 16px; }
+}

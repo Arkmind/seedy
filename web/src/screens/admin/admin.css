@@ -1,0 +1,193 @@
+/* Admin pieces settings.css doesn't cover. Values from the AdminGeneral/Home/Requests/PlayLog boards.
+   Rules that touch shared classes are scoped to .admin-page so the profile Settings screen is unaffected;
+   classes only these screens use (and the sheets/popovers they portal to <body>) are left unscoped. */
+
+/* The board's body is 1360 px of content plus the gutters. */
+.admin-body { max-width: calc(1360px + 2 * var(--gutter)); }
+
+/* Setting help lines sit at the font's normal line height on these boards (only the long ones use 1.5). */
+.admin-page .setting-help { line-height: normal; }
+.admin-page .setting-help.is-long { line-height: 1.5; }
+
+/* Radio cards draw the browser's light radio, as on the boards. */
+.admin-page .radio-card input { color-scheme: light; flex: 0 1 auto; }
+
+/* Number and hex inputs keep the board's box: content width plus the browser's 2 px padding, with the
+   number's spinner gap kept on the right so "15  s" spaces out as drawn. */
+.admin-page .num-field input { width: 48px; padding: 1px 17px 1px 2px; }
+.admin-page .hex-field input { width: 84px; padding: 1px 2px; text-transform: lowercase; }
+.admin-page .hex-field.is-invalid, .admin-page .hex-field.is-invalid:focus-within { box-shadow: 0 0 0 2px var(--seedy-danger); }
+
+.field.is-280 { width: 280px; max-width: 100%; }
+.field.is-340 { width: 340px; max-width: 100%; }
+
+/* Control groups: 12 px around the logo, 10 px around the accent swatches and the API key. */
+.setting-controls.is-12 { gap: 12px; }
+.setting-controls.is-10 { gap: 10px; }
+
+/* "Remove" next to Replace, "Clear" in the play log table: quiet text buttons. */
+.btn-ghost.is-40 { height: 40px; padding: 0 10px; border-radius: var(--r-menu); }
+.btn-ghost.is-36 { height: 36px; padding: 0 12px; border-radius: var(--r-ctl); font-size: 13px; }
+
+/* ── Branding & playback ── */
+
+.logo-file { font-size: 13px; color: var(--seedy-text-2); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-page .logo-box .brand-mark { width: 34px; height: 34px; border-radius: 10px; font-size: 18px; }
+.admin-page .logo-box.is-busy { opacity: 0.5; }
+
+.admin-page .swatch { transition: box-shadow var(--t-fast) var(--ease); }
+.admin-page .swatch[aria-checked='false']:hover { box-shadow: 0 0 0 3px var(--seedy-panel), 0 0 0 5px var(--seedy-stroke); }
+.admin-page .swatch:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 6px; }
+
+/* ── Home screen: rows editor ── */
+
+.admin-page .rows-list { position: relative; }
+/* The board's min-height: 56px is a content-box height: 56 + 2 × 6 px padding. */
+.admin-page .rows-item { min-height: 68px; }
+.admin-page .rows-grip { touch-action: none; }
+.admin-page .rows-grip:focus-visible { outline-offset: 0; }
+.admin-page .rows-item.is-dragging { opacity: 0.35; }
+.rows-count { display: flex; }
+
+/* While dragging, a compact copy of the row follows the pointer so the insertion line stays in view. */
+.rows-ghost {
+  position: absolute; left: 0; top: 0; z-index: 3; display: flex; align-items: center; gap: 14px;
+  max-width: min(360px, 100%); padding: 6px 22px 6px 6px; border-radius: var(--r-card);
+  background: var(--seedy-surface); pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--seedy-surface-2), 0 16px 40px rgba(0, 0, 0, 0.55);
+}
+.rows-ghost .rows-grip { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.rows-ghost .rows-text { flex: 0 1 auto; min-width: 0; }
+.rows-ghost .rows-help { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.rows-line {
+  position: absolute; left: 0; right: 0; top: 0; z-index: 2; height: 2px; margin-top: -1px; border-radius: 1px;
+  background: var(--seedy-accent); pointer-events: none; opacity: 0;
+  transition: transform 140ms var(--ease), opacity 140ms var(--ease);
+}
+.rows-line::before, .rows-line::after {
+  content: ''; position: absolute; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--seedy-accent);
+}
+.rows-line::before { left: -4px; }
+.rows-line::after { right: -4px; }
+.rows-line.is-on { opacity: 1; }
+body.is-row-dragging, body.is-row-dragging * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+
+/* Starting genres: the add popover lists Jellyfin's genres. */
+.genre-menu { max-height: min(360px, calc(100vh - 120px)); overflow-y: auto; }
+.genre-menu .search-field { margin-bottom: 6px; flex: none; }
+.genre-menu .menu-item.is-muted { min-height: 40px; }
+
+/* Featured picks. */
+.picks { display: flex; flex-wrap: wrap; gap: 12px; }
+.pick-thumb .art-title { left: 6px; right: 6px; bottom: 6px; font-size: 9px; }
+.pick-thumb .art-logo { left: 6px; bottom: 5px; }
+.pick-thumb.skel { display: block; }
+.pick-remove {
+  width: 36px; height: 36px; flex: none; display: flex; align-items: center; justify-content: center; border: 0; padding: 0;
+  border-radius: var(--r-ctl); background: transparent; color: var(--seedy-text-2); cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.pick-remove:hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.admin-page .pick-title.is-muted { color: var(--seedy-text-3); }
+
+.pick-search { display: flex; flex-direction: column; gap: 14px; }
+.pick-results {
+  display: flex; flex-direction: column; gap: 4px; min-height: 120px; max-height: min(460px, calc(100vh - 300px));
+  overflow-y: auto; margin: 0 -8px; padding: 2px 8px;
+}
+.pick-option {
+  display: flex; align-items: center; gap: 14px; width: 100%; padding: 6px 12px 6px 6px; border: 0; border-radius: var(--r-card);
+  background: transparent; color: var(--seedy-text); font: inherit; text-align: left; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease);
+}
+.pick-option:hover, .pick-option[aria-pressed='true'] { background: var(--seedy-surface); }
+.pick-option:focus-visible { outline-offset: 0; }
+.pick-option-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pick-option-title { font-size: 15px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick-option-meta { font-size: 13px; color: var(--seedy-text-3); }
+.pick-option .tick { color: var(--seedy-accent); }
+.pick-status { padding: 18px 6px; font-size: 14px; color: var(--seedy-text-2); }
+
+.admin-page .unsaved .btn-primary.is-save { padding: 0 22px; }
+
+/* ── Requests ── */
+
+.panel-head-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.panel-head-row .panel-head { padding-bottom: 0; }
+
+.admin-page .conn-state { flex: 1 1 280px; min-width: 0; line-height: 1.5; }
+
+.admin-page .table-scroll { position: relative; }
+.acc-table { min-width: 560px; }
+.acc-table .table-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) 120px; }
+.admin-page .table-cell.is-flex { display: flex; align-items: center; }
+.acc-name { font-weight: 600; color: var(--seedy-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acc-sub { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--seedy-text-3); }
+.acc-sub .dot, .acc-none .dot { width: 6px; height: 6px; }
+.acc-linked { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.acc-none { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.acc-none-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--seedy-text-2); }
+.acc-switch { display: inline-flex; }
+/* Profiles without a Seerr account keep the board's plain "off" switch; it just can't be turned on. */
+.acc-switch .switch:disabled { opacity: 1; cursor: not-allowed; }
+
+.key-sheet .field { width: 100%; }
+
+.link-list { display: flex; flex-direction: column; gap: 2px; }
+.link-list .menu-item { min-height: 52px; }
+.link-list .avatar { width: 32px; height: 32px; font-size: 13px; }
+
+/* ── Play log ── */
+
+.log-table { min-width: 640px; }
+.log-table .table-row { grid-template-columns: minmax(0, 1.3fr) 110px 100px 110px minmax(0, 1.2fr); }
+.log-table .table-cell.is-plays { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--seedy-text); }
+.log-data { gap: 6px; }
+
+/* ── Loading and errors ── */
+
+.admin-skel-ctl { width: 200px; height: 44px; border-radius: var(--r-card); }
+.table-skel { display: flex; flex-direction: column; gap: 10px; padding: 8px 0; }
+.table-skel .skel { height: 48px; border-radius: var(--r-card); }
+.admin-inline-error { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; font-size: 14px; color: var(--seedy-text-2); }
+
+/* ── Small screens ── */
+
+@media (max-width: 720px) {
+  .admin-page .admin-title h1 { font-size: 34px; }
+  .admin-page .admin-header { padding-top: 12px; padding-bottom: 12px; }
+  .admin-page .admin-body { padding-top: 24px; }
+  .admin-page .unsaved { bottom: 8px; }
+  .admin-page .panel, .admin-page .danger-zone { padding: 20px; }
+
+  /* A switch stays on the line of its label; wider controls drop below it. */
+  .admin-page .setting:has(> .switch) .setting-label { flex: 1 1 0; min-width: 0; }
+  .admin-page .setting > .switch { margin-left: auto; }
+}
+
+@media (max-width: 560px) {
+  /* Header: brand and account on one line, the two links share the next. */
+  .admin-page .admin-actions { display: contents; }
+  .admin-page .admin-header { row-gap: 10px; }
+  .admin-page .admin-header .avatar-btn { order: 1; }
+  .admin-page .admin-actions > .btn { order: 2; flex: 1 1 0; padding: 0 12px; }
+
+  .admin-page .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-page .tile { padding: 16px; }
+
+  /* Segmented controls fill the row instead of wrapping inside their tray. */
+  .admin-page .setting .seg { flex-wrap: nowrap; width: 100%; }
+  .admin-page .setting .seg .seg-btn { flex: 1 1 auto; padding: 0 10px; }
+
+  /* Rows editor: grip, name and switch on one line; the stepper goes underneath, under the name. */
+  .admin-page .rows-item { column-gap: 10px; }
+  .admin-page .rows-text { flex: 1 1 0; }
+  .admin-page .rows-item > .switch { order: 2; }
+  .admin-page .rows-item > .rows-count { order: 3; flex-basis: 100%; padding-left: 50px; }
+
+  .admin-page .pick { max-width: 100%; }
+  .admin-page .pick-title { max-width: none; flex: 1 1 auto; min-width: 0; }
+  .admin-page .pick-add { flex: 1 1 100%; justify-content: center; }
+  .pick-option .pick-thumb { width: 80px; }
+}

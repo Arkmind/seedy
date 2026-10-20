@@ -1,0 +1,201 @@
+/* The bar's search (Navigation bar board, sections 1, 3, 4 and the phone frames). */
+
+/* ── The field ── */
+
+.nb-search {
+  display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 8px 0 16px; border-radius: 14px;
+  background: #1a1a1a; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); color: var(--seedy-text-2); cursor: text;
+  transition: background-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.nb-search.is-glass {
+  background: rgba(20, 20, 20, 0.72); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.nb-search:hover:not(.is-open):not(.is-page) { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16); }
+/* Open (focused): the accent ring; the Search page keeps it since the box is that page's subject. */
+.nb-search.is-open { background: var(--seedy-surface); box-shadow: inset 0 0 0 2px var(--seedy-accent); }
+.nb-search.is-open.has-text { color: var(--seedy-text-hero); }
+.nb-search.is-page { background: #1a1a1a; box-shadow: inset 0 0 0 2px var(--seedy-accent); color: #ffffff; padding-right: 6px; }
+.nb-search input {
+  flex: 1; min-width: 0; height: 100%; padding: 1px 2px; border: 0; background: transparent; color: #ffffff;
+  font: inherit; font-size: 15px; font-weight: 500; outline: none; -webkit-appearance: none; appearance: none;
+}
+.nb-search.has-text input { font-weight: 600; }
+/* The boards' placeholder grey (the browser default they were drawn with). */
+.nb-search input::placeholder { color: #757575; opacity: 1; font-weight: 500; }
+.nb-search input::-webkit-search-cancel-button, .nb-search input::-webkit-search-decoration { display: none; -webkit-appearance: none; }
+
+.nb-kbd {
+  flex: none; min-width: 28px; height: 28px; padding: 0 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.08);
+  color: var(--seedy-text-hero); font-family: var(--font-mono); font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; justify-content: center;
+}
+.nb-kbd.is-esc { min-width: 0; font-size: 12px; }
+.nb-clear {
+  flex: none; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 9px; background: rgba(255, 255, 255, 0.08);
+  color: var(--seedy-text-hero); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.nb-search.is-page .nb-clear { width: 36px; height: 36px; border-radius: 10px; color: var(--seedy-text); }
+.nb-clear:hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.nb-clear:focus-visible { outline-offset: 0; }
+
+/* Phone field: 46 px, opens the full-screen search. */
+.nb-search.is-phone { height: 46px; gap: 10px; padding: 0 8px 0 14px; }
+.nb-search.is-phone.is-page { padding-right: 6px; }
+.nb-psearch-field {
+  display: flex; align-items: center; gap: 10px; width: 100%; height: 46px; padding: 0 14px; border: 0; border-radius: 14px;
+  background: #1a1a1a; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); color: var(--seedy-text-2);
+  font: inherit; font-size: 15px; text-align: left; cursor: text;
+}
+.nb-psearch-ph { padding: 1px 2px; color: #757575; }
+.nb-psearch-field.is-glass { background: rgba(20, 20, 20, 0.72); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+
+/* ── The dropdown ── */
+
+/* The page behind is dimmed under the bar while search is open. */
+/* The whole window dims, from the very top, but under the bar (z-index 29 < 30): the art behind a transparent bar dims
+   with the page, and the bar's buttons stay bright and clickable. */
+.nb-dim { position: fixed; inset: 0; z-index: 29; background: rgba(0, 0, 0, 0.5); animation: fade-in 160ms ease-out; }
+
+.nb-drop {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 2;
+  width: 100%; min-width: min(560px, calc(100vw - 32px));
+  display: flex; flex-direction: column; padding: 8px; border-radius: 18px;
+  background: #161616; box-shadow: 0 0 0 1px #262626, 0 24px 48px rgba(0, 0, 0, 0.55);
+  overflow-y: auto; overscroll-behavior: contain; animation: pop-in 140ms ease-out; cursor: default;
+}
+.nb-drop.is-idle { padding: 16px; }
+.nb-drop-list { display: flex; flex-direction: column; }
+.nb-drop-idle { display: flex; flex-direction: column; gap: 14px; }
+
+.nb-mark { font-weight: 900; color: var(--seedy-accent); }
+
+/* Artwork: 16:9, a round photo for people; initials on a colour while there's none. */
+.nb-thumb {
+  position: relative; flex: none; width: 71px; height: 40px; border-radius: 8px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; line-height: 1;
+}
+.nb-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.nb-thumb.is-person { width: 40px; border-radius: 50%; }
+.nb-thumb.is-person img { object-position: center 20%; }
+.nb-thumb.is-best { width: 128px; height: auto; aspect-ratio: 16 / 9; border-radius: 10px; font-size: 20px; }
+.nb-thumb.is-phone { width: 96px; height: auto; aspect-ratio: 16 / 9; border-radius: 10px; font-size: 16px; }
+
+/* Best match: raised, a bigger picture and a play button. */
+.nb-best { display: flex; align-items: center; gap: 14px; padding: 10px; border-radius: 13px; background: #222222; cursor: pointer; }
+.nb-best.is-hover { background: #262626; }
+.nb-best.is-active { box-shadow: inset 0 0 0 2px var(--seedy-accent); }
+.nb-best-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; color: inherit; }
+.nb-best-main:hover { color: inherit; }
+.nb-best-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.nb-best-title { font-size: 16px; font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-best-meta { font-size: 13px; color: var(--seedy-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-play {
+  flex: none; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border: 0; border-radius: 12px;
+  background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.nb-play:not(:disabled):hover { background: var(--seedy-bg); color: var(--seedy-text); box-shadow: inset 0 0 0 1px var(--seedy-surface-2); }
+.nb-play:disabled { opacity: 0.6; cursor: progress; }
+.nb-best.is-skel { cursor: default; }
+
+.nb-group { display: flex; flex-direction: column; padding-top: 6px; }
+.nb-group-label { padding: 8px 10px 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--seedy-text-3); }
+.nb-row {
+  display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; color: inherit; min-width: 0;
+}
+.nb-row:hover { color: inherit; }
+.nb-row.is-active, .nb-row.is-hover { background: #222222; }
+.nb-row.is-active { box-shadow: inset 0 0 0 2px var(--seedy-accent); }
+.nb-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.nb-row-title { font-size: 14px; font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-row-meta { font-size: 12px; color: var(--seedy-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-row.is-skel .nb-row-text { gap: 6px; }
+
+.nb-drop-sep { height: 1px; margin: 8px 6px; background: #262626; flex: none; }
+.nb-drop-all, .nb-drop-seerr {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px; border-radius: 12px;
+  font-size: 14px; font-weight: 700; color: #ffffff; min-width: 0;
+}
+.nb-drop-seerr { font-weight: 600; color: var(--seedy-text-hero); }
+.nb-drop-all:hover, .nb-drop-seerr:hover { color: #ffffff; }
+.nb-drop-all.is-hover, .nb-drop-seerr.is-hover, .nb-drop-all.is-active, .nb-drop-seerr.is-active { background: #222222; color: #ffffff; }
+.nb-drop-all.is-active, .nb-drop-seerr.is-active { box-shadow: inset 0 0 0 2px var(--seedy-accent); }
+.nb-drop-line { display: flex; align-items: center; gap: 10px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.nb-kbd.is-enter { min-width: 28px; height: 26px; border-radius: 7px; background: #262626; font-size: 12px; }
+.nb-hints { display: flex; flex-wrap: wrap; gap: 14px; padding: 8px 10px 4px; font-size: 12px; color: var(--seedy-text-3); }
+.nb-hints kbd { font-family: var(--font-mono); font-weight: 500; color: var(--seedy-text-hero); }
+
+.nb-drop-empty { display: flex; align-items: center; gap: 14px; padding: 10px; }
+.nb-drop-empty-icon { flex: none; width: 44px; height: 44px; border-radius: 12px; background: #222222; color: var(--seedy-text-3); display: flex; align-items: center; justify-content: center; }
+.nb-drop-empty-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.45; color: var(--seedy-text-3); }
+.nb-drop-empty-title { font-size: 15px; font-weight: 800; color: #ffffff; overflow-wrap: anywhere; }
+.nb-drop-note { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 10px; font-size: 13px; color: var(--seedy-text-2); }
+.nb-drop-note-title { font-size: 15px; font-weight: 800; color: #ffffff; }
+.nb-drop-note .btn { margin-top: 6px; }
+
+/* ── Search opened, nothing typed yet ── */
+
+.nb-idle-group { display: flex; flex-direction: column; gap: 8px; }
+.nb-idle-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.nb-idle-label { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--seedy-text-3); margin: 0; }
+.nb-idle-clear {
+  padding: 0; border: 0; background: transparent; font: inherit; font-size: 12px; font-weight: 600; color: var(--seedy-text-2); cursor: pointer;
+  transition: color var(--t-fast) var(--ease);
+}
+.nb-idle-clear:hover { color: #ffffff; }
+.nb-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.nb-chip {
+  display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border: 0; border-radius: var(--r-pill);
+  background: #222222; color: var(--seedy-text); font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.nb-chip.is-recent { padding: 0 12px; max-width: 100%; }
+.nb-chip.is-recent svg { color: var(--seedy-text-3); transition: color var(--t-fast) var(--ease); }
+.nb-chip:hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.nb-chip:hover svg { color: var(--seedy-ink-inverse); }
+.nb-chip.is-skel { cursor: default; }
+.nb-idle-note { font-size: 13px; color: var(--seedy-text-3); }
+.nb-tip { font-size: 12px; color: var(--seedy-text-3); }
+
+/* ── Phone: full-screen search ── */
+
+.nb-psearch {
+  position: fixed; inset: 0; z-index: 80; overflow-y: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column; gap: 14px; padding: 18px 16px max(18px, env(safe-area-inset-bottom));
+  background: var(--seedy-bg); animation: fade-in 140ms ease-out;
+}
+.nb-psearch-top { display: flex; align-items: center; gap: 8px; }
+.nb-psearch-top .nb-search { flex: 1; min-width: 0; }
+.nb-cancel {
+  height: 46px; padding: 0 6px; border: 0; background: transparent; color: var(--seedy-text);
+  font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+}
+.nb-cancel:hover { color: #ffffff; }
+.nb-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.nb-filter {
+  padding: 7px 12px; border: 0; border-radius: var(--r-pill); background: var(--seedy-surface); color: var(--seedy-text);
+  font: inherit; font-size: 13px; font-weight: 600; line-height: 1.35; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.nb-filter[aria-pressed='true'] { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-weight: 800; }
+.nb-plist { display: flex; flex-direction: column; gap: 14px; }
+.nb-prow { display: flex; align-items: center; gap: 12px; color: inherit; min-width: 0; border-radius: 10px; }
+.nb-prow:hover { color: inherit; }
+.nb-prow-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.nb-prow.is-skel .nb-prow-text { gap: 8px; }
+.nb-prow-title { font-size: 15px; font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-prow-meta { font-size: 12px; color: var(--seedy-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-pempty { font-size: 14px; line-height: 1.5; color: var(--seedy-text-2); }
+.nb-pseerr {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 13px; background: #161616;
+  font-size: 14px; font-weight: 600; color: var(--seedy-text-hero);
+}
+.nb-pseerr:hover { color: #ffffff; }
+.nb-psearch-idle { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
+
+/* iOS zooms into fields under 16 px when they take focus; there the phone fields are 16 px. */
+@supports (-webkit-touch-callout: none) {
+  .nb-search.is-phone input { font-size: 16px; }
+}

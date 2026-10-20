@@ -1,0 +1,58 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+html, body {
+  margin: 0;
+  background: var(--seedy-bg);
+  color: var(--seedy-text);
+  font-family: var(--font);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Anchor jumps and focus scrolling stop below the sticky top bar. */
+html { scroll-padding-top: calc(var(--header-h, 0px) + 16px); }
+body { min-height: 100vh; overflow-x: hidden; }
+
+#app { min-height: 100vh; }
+
+a { color: var(--seedy-text); text-decoration: none; transition: color var(--t-fast) var(--ease); }
+a:hover { color: var(--seedy-white); }
+
+button, input, select, textarea { font-family: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+
+h1, h2, h3, p { margin: 0; }
+
+img { display: block; }
+
+svg { flex: none; }
+
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 3px; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+.hscroll { scrollbar-width: none; }
+.hscroll::-webkit-scrollbar { display: none; }
+
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* Icon strokes follow the boards: outline icons use round caps and joins. */
+.ic { stroke-linecap: round; stroke-linejoin: round; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
+}
+
+/* Big uppercase hero titles: --title-size, shrunk so the longest word (--fit-chars, from fitTitle()) stays on one
+   line of the parent, which is a size container. */
+.fit-title { font-size: var(--title-size, 64px); overflow-wrap: anywhere; }
+@supports (width: 1cqi) {
+  .fit-title { font-size: min(var(--title-size, 64px), 100cqi / (var(--fit-chars, 1) * 0.8)); }
+}

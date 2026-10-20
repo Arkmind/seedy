@@ -1,0 +1,64 @@
+/* Site header: the navigation bar (Navigation bar board; the rest of its styles are in navbar/navbar.css). Floats over
+   artwork on Home and Details. */
+
+/* The top bar stays at the top of the window. Over a hero it starts transparent; once the page scrolls it gets
+   the dark glass backdrop so rows and text don't show through. */
+.site-header {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+  padding: 20px var(--gutter); position: sticky; top: 0; z-index: 30;
+  transition: background-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.site-header.is-overlay { position: fixed; left: 0; right: 0; }
+.site-header.is-plain { border-bottom: 1px solid var(--seedy-row); }
+.site-header.is-stuck, .admin-header.is-stuck {
+  background: var(--seedy-scrim); box-shadow: 0 1px 0 var(--seedy-hairline);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+}
+.site-header.is-plain.is-stuck { box-shadow: none; }
+
+.brand { display: flex; align-items: center; gap: 10px; color: #ffffff; flex: none; }
+.brand:hover { color: #ffffff; }
+.brand-mark {
+  flex: none; background: var(--seedy-inverse); color: var(--seedy-ink-inverse);
+  display: flex; align-items: center; justify-content: center; font-weight: 900;
+}
+.brand-logo { display: block; object-fit: contain; }
+.brand-name { font-weight: 900; font-size: 22px; letter-spacing: -0.01em; }
+
+.header-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.avatar-btn { border: 0; padding: 0; background: transparent; cursor: pointer; border-radius: 50%; }
+.avatar-btn:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 3px; }
+.header-avatar {
+  display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%; flex: none;
+  background: var(--seedy-surface-2); color: #ffffff; font-weight: 800; font-size: 15px;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.header-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.header-avatar.is-light, .avatar-btn:hover .header-avatar { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+
+.menu-who { display: flex; align-items: center; gap: 12px; padding: 8px 12px; }
+.menu-who .two { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.menu-who-name { font-size: 15px; font-weight: 800; color: #ffffff; }
+.menu-who .sub { font-size: 12px; color: var(--seedy-text-3); }
+.menu-who .header-avatar { font-size: 14px; }
+
+/* Page frame for plain pages (Library, History, Search, Settings). */
+/* clip, not hidden: a hidden overflow would make the page a scroll box and the sticky top bar wouldn't stick. */
+.page { min-height: 100vh; background: var(--seedy-bg); color: var(--seedy-text); overflow-x: hidden; overflow-x: clip; }
+.page-main { display: flex; flex-direction: column; gap: 24px; padding: 24px var(--gutter) 72px; }
+.page-title-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.page-title { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.page-title h1 { font-size: 48px; line-height: 1; font-weight: 900; letter-spacing: -0.02em; color: #ffffff; }
+.page-count { font-size: 15px; font-weight: 600; color: var(--seedy-text-3); }
+.page-lede { font-size: 15px; line-height: 1.5; color: var(--seedy-text-2); }
+
+@media (max-width: 720px) {
+  .page-title h1 { font-size: 36px; }
+}
+
+/* Full-screen loading state. */
+.boot { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+
+.error-box { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 24px; border-radius: var(--r-panel); background: var(--seedy-panel); }
+.error-box h2 { font-size: 20px; font-weight: 800; color: #ffffff; }
+.error-box p { font-size: 14px; line-height: 1.5; color: var(--seedy-text-2); }

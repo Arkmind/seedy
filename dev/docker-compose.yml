@@ -1,0 +1,29 @@
+# Local test server for Seedy: Jellyfin 12.2 with generated media.
+# `make dev-install` (../build.sh --install-dev) puts the plugin in ./data/config/plugins/Seedy_<version>.
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:12.2
+    container_name: seedy-jellyfin
+    ports:
+      - "8096:8096"
+    volumes:
+      - ./data/config:/config
+      - ./data/cache:/cache
+      - ./data/media:/media
+    environment:
+      - JELLYFIN_PublishedServerUrl=http://localhost:8096
+    restart: unless-stopped
+
+  # Seerr for testing the request integration. Set it up with ./setup-seerr.py.
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seedy-seerr
+    init: true
+    ports:
+      - "5055:5055"
+    environment:
+      - LOG_LEVEL=info
+      - TZ=Europe/London
+    volumes:
+      - ./data/seerr:/app/config
+    restart: unless-stopped

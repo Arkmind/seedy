@@ -1,0 +1,112 @@
+/* Settings · Playback and Settings · Subtitles (MePlayback, MeSubtitles boards). */
+
+/* The boards' "This device" pill is 11 px in these rows. */
+.me-pb-page .device-tag { font-size: 11px; }
+
+/* ── Rows ── */
+.me-pb-row {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px;
+  padding: 16px 0; border-top: 1px solid var(--seedy-line);
+}
+.me-pb-label { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.me-pb-name { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #ffffff; }
+.me-pb-help { font-size: 13px; line-height: 1.45; color: var(--seedy-text-3); }
+.me-pb-row > .seg { display: flex; }
+/* The board's field: a 52 px number input (plus its default 2 px padding) with the value clear of the spin-button area. */
+.me-pb-row .num-field input { box-sizing: border-box; width: 56px; padding: 0 17px 0 2px; }
+
+/* ── Picker (listbox button) ── */
+.me-pb-pick {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 100%;
+  height: 44px; padding: 0 14px; border: 0; border-radius: var(--r-card);
+  background: var(--seedy-surface); color: #ffffff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.me-pb-pick-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.me-pb-pick > svg { flex: none; color: var(--seedy-text-2); transition: color var(--t-fast) var(--ease); }
+.me-pb-pick:hover, .me-pb-pick[aria-expanded='true'] { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.me-pb-pick:hover > svg, .me-pb-pick[aria-expanded='true'] > svg { color: var(--seedy-ink-inverse); }
+.me-pb-pick-pre { color: var(--seedy-text-3); transition: color var(--t-fast) var(--ease); }
+.me-pb-pick:hover .me-pb-pick-pre, .me-pb-pick[aria-expanded='true'] .me-pb-pick-pre { color: #5a5a5a; }
+
+.me-pb-listbox { max-height: min(360px, 60vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #2a2a2a transparent; max-width: none; }
+.me-pb-listbox .menu-item { flex: none; }
+.me-pb-listbox .menu-item[aria-selected='true'] { background: var(--seedy-surface); color: #ffffff; font-weight: 800; }
+.me-pb-listbox .menu-item:focus-visible { background: var(--seedy-surface); box-shadow: inset 0 0 0 2px var(--seedy-accent); }
+
+/* ── Advanced (collapsed) ── */
+.me-pb-adv { border-radius: var(--r-panel); background: var(--seedy-panel); }
+.me-pb-adv-sum {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
+  padding: 22px 24px; cursor: pointer; list-style: none; border-radius: var(--r-panel);
+}
+.me-pb-adv-sum::-webkit-details-marker { display: none; }
+.me-pb-adv-sum:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 3px; }
+.me-pb-adv-text { display: flex; flex-direction: column; gap: 4px; }
+.me-pb-adv-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 18px; font-weight: 800; color: #ffffff; }
+.me-pb-adv-help { font-size: 14px; line-height: 1.5; color: var(--seedy-text-2); }
+.me-pb-adv-toggle { font-size: 13px; font-weight: 700; color: var(--seedy-text-hero); transition: color var(--t-fast) var(--ease); }
+.me-pb-adv-sum:hover .me-pb-adv-toggle { color: #ffffff; }
+.me-pb-adv-body { display: flex; flex-direction: column; padding: 0 24px 24px; }
+
+/* ── Subtitles · When to show them ── */
+.me-pb-when { display: flex; flex-direction: column; gap: 14px; padding: 24px; border-radius: var(--r-panel); background: var(--seedy-panel); }
+.me-pb-when-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
+.me-pb-when-head h2, .me-pb-look-head h2 { font-size: 18px; font-weight: 800; color: #ffffff; }
+.me-pb-modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; }
+.me-pb-mode {
+  display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: var(--r-card);
+  background: var(--seedy-bg); box-shadow: inset 0 0 0 1px var(--seedy-surface-2); cursor: pointer;
+  transition: box-shadow var(--t-fast) var(--ease);
+}
+.me-pb-mode:hover { box-shadow: inset 0 0 0 1px var(--seedy-text-3); }
+.me-pb-mode.is-on { box-shadow: inset 0 0 0 2px var(--seedy-accent); }
+.me-pb-mode:has(input:focus-visible) { outline: 2px solid var(--seedy-accent); outline-offset: 3px; }
+/* Rendered as on the board: the light radio, level with the first line. */
+.me-pb-mode input { flex: none; width: 14px; height: 14px; margin: 4px 1px 0 0; color-scheme: light; accent-color: var(--seedy-accent); cursor: pointer; }
+.me-pb-mode input:focus-visible { outline: none; }
+.me-pb-mode-body { display: flex; flex-direction: column; gap: 4px; }
+.me-pb-mode-name { font-size: 15px; font-weight: 700; color: #ffffff; }
+.me-pb-mode-help { font-size: 13px; line-height: 1.45; color: var(--seedy-text-2); }
+
+/* ── Subtitles · How they look ── */
+.me-pb-look { display: flex; flex-direction: column; gap: 16px; padding: 24px; border-radius: var(--r-panel); background: var(--seedy-panel); }
+.me-pb-look-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.me-pb-preview { position: relative; aspect-ratio: 16 / 7; border-radius: var(--r-card); overflow: hidden; background: #0d141c; container-type: inline-size; }
+.me-pb-preview > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.me-pb-preview-line { position: absolute; left: 0; right: 0; display: flex; justify-content: center; padding: 0 8%; transition: bottom 300ms ease, top 300ms ease; }
+.me-pb-preview-line > span {
+  padding: 2px 10px; border-radius: 4px; line-height: 1.3; text-align: center;
+  font-size: calc(var(--pv-px, 18) * 1px); font-size: max(calc(var(--pv-px, 18) * 0.62px), calc(var(--pv-px, 18) * 100cqw / 772));
+  transition: font-size var(--t-fast) var(--ease), color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+}
+.me-pb-preview-tag {
+  position: absolute; top: 10px; left: 10px; padding: 3px 9px; border-radius: var(--r-pill);
+  background: rgba(14, 14, 14, 0.8); font-size: 11px; font-weight: 700; color: var(--seedy-text-hero);
+}
+.me-pb-look-row {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px;
+  padding: 14px 0 0; border-top: 1px solid var(--seedy-line);
+}
+.me-pb-look-name { font-size: 15px; font-weight: 700; color: #ffffff; }
+.me-pb-look-row > .seg { display: flex; }
+.me-pb-look .seg-btn { padding: 0 12px; }
+.me-pb-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.me-pb-swatch {
+  width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+  box-shadow: inset 0 0 0 1px #3a3a3a; transition: box-shadow var(--t-fast) var(--ease);
+}
+.me-pb-swatch:hover { box-shadow: inset 0 0 0 1px var(--seedy-text-2); }
+.me-pb-swatch[aria-checked='true'] { box-shadow: 0 0 0 3px var(--seedy-panel), 0 0 0 5px #ffffff; }
+.me-pb-swatch:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 6px; }
+.me-pb-note { font-size: 13px; line-height: 1.5; color: var(--seedy-text-3); }
+
+@media (max-width: 720px) {
+  /* Switches and number fields stay beside their label; pickers and segmented controls take the row below. */
+  .me-pb-label { flex-basis: 170px; }
+  .me-pb-pick { min-width: 0 !important; width: 100%; }
+  .me-pb-row > .seg, .me-pb-look-row > .seg { flex: 1 1 100%; }
+  .me-pb-row > .seg .seg-btn, .me-pb-look-row > .seg .seg-btn { flex: 1 1 auto; }
+  .me-pb-adv-sum { padding: 20px; }
+  .me-pb-adv-body { padding: 0 20px 20px; }
+}
