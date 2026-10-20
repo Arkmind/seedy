@@ -112,11 +112,21 @@ private fun languageName(code: String?): String? {
     return name.takeIf { it.isNotBlank() && it != code }?.replaceFirstChar { it.titlecase(io.github.arkmind.seedy.core.i18n.I18n.locale) } ?: code
 }
 
+/** A track title that only names its language ("English", "Français", "eng") adds nothing to the label. */
+private fun sameLanguage(title: String, code: String?): Boolean {
+    if (code.isNullOrBlank()) return false
+    val locale = java.util.Locale.forLanguageTag(code)
+    val names = listOf(code, locale.getDisplayLanguage(java.util.Locale.ENGLISH), locale.getDisplayLanguage(locale), locale.getDisplayLanguage(io.github.arkmind.seedy.core.i18n.I18n.locale))
+    return names.any { it.isNotBlank() && it.equals(title.trim(), ignoreCase = true) }
+}
+
 /** An audio track as the player lists it: "English" over "5.1 · Atmos · Original" or "Audio description · 2.0". */
 fun audioTrackLabel(s: org.jellyfin.sdk.model.api.MediaStream): Pair<String, String> {
     val language = languageName(s.language)
     val name = language ?: s.title ?: s.displayTitle ?: t("Track {n}", "n" to s.index)
-    val extra = s.title?.takeIf { language != null && !it.contains(Regex("\\b(5\\.1|7\\.1|2\\.0|stereo|mono)\\b", RegexOption.IGNORE_CASE)) }
+    val extra = s.title?.takeIf {
+        language != null && !sameLanguage(it, s.language) && !it.contains(Regex("\\b(5\\.1|7\\.1|2\\.0|stereo|mono)\\b", RegexOption.IGNORE_CASE))
+    }
     val spatial = when (s.audioSpatialFormat) {
         org.jellyfin.sdk.model.api.AudioSpatialFormat.DOLBY_ATMOS -> "Atmos"
         org.jellyfin.sdk.model.api.AudioSpatialFormat.DTSX -> "DTS:X"
@@ -143,7 +153,7 @@ fun subtitleTrackLabel(s: org.jellyfin.sdk.model.api.MediaStream): Pair<String, 
         s.isForced -> t("{language} (forced)", "language" to base)
         else -> base
     }
-    val title = s.title?.takeIf { languageName(s.language) != null && !it.equals(base, true) }
+    val title = s.title?.takeIf { languageName(s.language) != null && !it.equals(base, true) && !sameLanguage(it, s.language) }
     return name to join(title, if (s.isDefault) t("Default") else null)
 }
 
