@@ -12,7 +12,11 @@ const libBase = () => new URL(`${import.meta.env.BASE_URL}assets/libmedia-${__LI
 
 let lib: Promise<typeof AVPlayer> | null = null;
 function loadLib(): Promise<typeof AVPlayer> {
-  lib ??= import(/* @vite-ignore */ libBase() + 'avplayer.js').then((m: { default: typeof AVPlayer }) => m.default);
+  lib ??= import(/* @vite-ignore */ libBase() + 'avplayer.js').then((m: { default: typeof AVPlayer }) => {
+    // Fatal only: libmedia logs every expected fallback (no hardware decoder, no WebGPU) as a warning or an error.
+    m.default.setLogLevel(5);
+    return m.default;
+  });
   lib.catch(() => { lib = null; });
   return lib;
 }
