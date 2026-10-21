@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.tv.settings
 
+import androidx.compose.runtime.setValue
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -32,7 +33,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +51,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -286,7 +287,11 @@ private fun CodeRow(state: SettingsState, actions: SettingsActions, focus: Focus
                         keyboardActions = KeyboardActions(onDone = { typing = false; actions.approveCode() }),
                         modifier = Modifier.fillMaxWidth().focusRequester(field),
                     )
-                    LaunchedEffect(Unit) { field.focusSoon() }
+                    val keyboard = LocalSoftwareKeyboardController.current
+                    LaunchedEffect(Unit) {
+                        field.focusSoon()
+                        keyboard?.show()
+                    }
                 } else {
                     SText(c.code.ifEmpty { "······" }, size = 26.bsp, weight = 800, tracking = 0.3f, color = if (f) SeedyColors.InkInverse else if (c.code.isEmpty()) SeedyColors.Text3 else SeedyColors.White)
                 }

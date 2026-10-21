@@ -27,7 +27,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Dp
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.tv.parts.TvPressable
@@ -215,4 +214,3 @@ internal fun Modifier.cssBox(size: Float, ratio: Float, up: Boolean? = null): Mo
     layout(p.width, h) { p.place(0, (h - p.height) / 2) }
 }
 
-internal fun Dp.px(density: Float): Float = value * density

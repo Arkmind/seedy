@@ -85,8 +85,9 @@ class SettingsViewModel(
     private val configLock = Mutex()
     private var prefsVersion = 0
 
-    val state: StateFlow<SettingsState> = combine(session.seedyFlow, session.userFlow, core.device.flow, extras) { me, user, device, x ->
+    val state: StateFlow<SettingsState> = combine(session.seedyFlow, session.userFlow, core.device.flow, extras, core.store.data) { me, user, device, x, app ->
         x.copy(
+            deviceLanguage = app.lang,
             seedy = me != null,
             prefs = me?.prefs ?: UserPrefs(),
             defaults = me?.defaults ?: PlaybackPrefs(),
@@ -349,7 +350,7 @@ class SettingsViewModel(
             val list = session.api.localizationApi.getCultures().content
                 .filter { c -> !c.threeLetterIsoLanguageName.isNullOrEmpty() && seen.add(c.threeLetterIsoLanguageName!!) }
                 .map { c ->
-                    val local = if (I18n.lang == Lang.Fr) c.twoLetterIsoLanguageName?.takeIf { it.isNotEmpty() }?.let { Locale(it).getDisplayLanguage(shown) } else null
+                    val local = if (I18n.lang == Lang.Fr) c.twoLetterIsoLanguageName.takeIf { it.isNotEmpty() }?.let { Locale.forLanguageTag(it).getDisplayLanguage(shown) } else null
                     Choice(c.threeLetterIsoLanguageName!!, (local?.takeIf { it.isNotEmpty() } ?: c.displayName.orEmpty()).replaceFirstChar { it.uppercase(shown) })
                 }
                 .sortedBy { it.label.lowercase(shown) }

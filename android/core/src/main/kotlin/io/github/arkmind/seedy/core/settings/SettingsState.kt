@@ -6,7 +6,6 @@ import io.github.arkmind.seedy.core.data.DeviceSettings
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.Lang
 import io.github.arkmind.seedy.core.i18n.t
-import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.seedy.HomeRowPref
 import io.github.arkmind.seedy.core.seedy.HomeRowSetting
 import io.github.arkmind.seedy.core.seedy.PlaybackPrefs
@@ -77,6 +76,8 @@ data class SettingsState(
     val error: String? = null,
     val code: CodeState = CodeState(),
     val password: PasswordForm = PasswordForm(),
+    /** Without Seedy, the language is this device's. */
+    val deviceLanguage: String? = null,
 ) {
     val custom: Map<String, JsonElement> get() = prefs.custom
     fun customBool(key: String, default: Boolean): Boolean = custom[key]?.let { runCatching { it.jsonPrimitive.booleanOrNull }.getOrNull() } ?: default
@@ -85,7 +86,7 @@ data class SettingsState(
 
     val playback: PlaybackPrefs get() = prefs.playback
     val style: ResolvedStyle get() = ResolvedStyle.of(device, prefs.subtitles)
-    val language: String get() = customString(Keys.Language) ?: "auto"
+    val language: String get() = (if (seedy) customString(Keys.Language) else deviceLanguage) ?: "auto"
     val backdrops: Boolean get() = customBool(Keys.Backdrops, true)
 
     /** "auto", "en" or "fr" → its name. */
@@ -162,6 +163,8 @@ data class SettingsState(
     /* The settings home's lines under each page. */
 
     fun homeSummary(): String {
+        // Without Seedy, Home's rows are Jellyfin's: only the libraries and Latest can change.
+        if (!seedy) return t("Libraries on Home")
         val rows = rows()
         val on = rows.count { it.enabled }
         val count = t("{n} of {total} rows", "n" to on, "total" to rows.size)
@@ -170,6 +173,7 @@ data class SettingsState(
 
     fun playbackSummary(): String {
         val q = if (device.qualityHome <= 0) t("Auto quality") else t("{rate} at home", "rate" to Choices.bitrate(device.qualityHome))
+        if (!seedy) return q
         val intro = when (playback.skipIntro) {
             "auto" -> t("intros skip")
             "off" -> t("intros play")
@@ -186,7 +190,7 @@ data class SettingsState(
         return listOfNotNull(mode, languageName(config?.subtitleLanguagePreference), look).joinToString(" · ")
     }
 
-    fun displaySummary(): String = languageLabel() + " · " + if (backdrops) t("backdrops on") else t("backdrops off")
+    fun displaySummary(): String = if (!seedy) languageLabel() else languageLabel() + " · " + if (backdrops) t("backdrops on") else t("backdrops off")
 
     fun gesturesSummary(): String {
         val parts = listOfNotNull(
@@ -245,7 +249,7 @@ data class SettingsState(
 
         fun displayLanguage(code: String): String {
             val shown = if (I18n.lang == Lang.Fr) Locale.FRENCH else Locale.ENGLISH
-            val name = runCatching { Locale(Bibliographic[code] ?: code).getDisplayLanguage(shown) }.getOrNull()
+            val name = runCatching { Locale.forLanguageTag(Bibliographic[code] ?: code).getDisplayLanguage(shown) }.getOrNull()
             if (name.isNullOrEmpty() || name.equals(code, ignoreCase = true)) return code
             return name.replaceFirstChar { it.uppercase(shown) }
         }
