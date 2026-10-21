@@ -12,10 +12,22 @@ val signing = Properties().apply {
 }
 fun signingValue(key: String, env: String): String? = signing.getProperty(key) ?: System.getenv(env)
 
-// The version comes from the release tag in CI (-PappVersion=0.2.0); the code from it (0.2.0 → 2000) unless given.
+// The version comes from the release tag in CI (-PappVersion=0.2.0 or 0.2.0-beta.1); the code from it unless given.
+// Pre-releases come before their release (0.2.0-alpha.N → 20001+N, -beta.N → 20031+N, -rc.N → 20061+N, 0.2.0 → 20099),
+// so Google Play always gets a higher code than the build before.
 val appVersion = (findProperty("appVersion") as String?) ?: "0.1.0"
-val appVersionCode = (findProperty("appVersionCode") as String?)?.toInt()
-    ?: appVersion.split('.').map { it.toIntOrNull() ?: 0 }.let { (it.getOrElse(0) { 0 } * 1_000_000) + (it.getOrElse(1) { 0 } * 1_000) + it.getOrElse(2) { 0 } }.coerceAtLeast(1)
+val appVersionCode = (findProperty("appVersionCode") as String?)?.toInt() ?: run {
+    val m = Regex("""^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([A-Za-z]+)\.?(\d+)?)?""").find(appVersion)
+    val (major, minor, patch) = (1..3).map { m?.groupValues?.get(it)?.toIntOrNull() ?: 0 }
+    val n = (m?.groupValues?.get(5)?.toIntOrNull() ?: 0).coerceIn(0, 28)
+    val stage = when (m?.groupValues?.get(4)?.lowercase().orEmpty()) {
+        "" -> 99
+        "beta" -> 31 + n
+        "rc" -> 61 + n
+        else -> 1 + n
+    }
+    ((major * 100 + minor) * 100 + patch) * 100 + stage
+}
 
 android {
     namespace = "io.github.arkmind.seedy"
