@@ -184,7 +184,7 @@ class IdentifyViewModel(session: UserSession, private val id: String) : ViewMode
             meta = meta,
             source = ids.filter { (k, _) -> k.lowercase() in setOf("tmdb", "tvdb", "imdb") }.sortedBy { listOf("tmdb", "tvdb", "imdb").indexOf(it.first.lowercase()) }
                 .joinToString(" · ") { (k, v) -> "${MetadataViewModel.providerLabel(k, k)} $v" },
-            art = text("ImageUrl")?.takeIf { it.isNotBlank() }?.let { api.remoteImageUrl(it, text("SearchProviderName")) },
+            art = text("ImageUrl")?.takeIf { it.isNotBlank() }?.let { api.remoteImageUrl(it) },
             current = ids.any { (k, v) -> current[k.lowercase()] == v },
             result = r,
         )

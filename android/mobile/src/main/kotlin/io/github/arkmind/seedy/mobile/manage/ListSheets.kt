@@ -69,7 +69,7 @@ import io.github.arkmind.seedy.ui.theme.currentSession
 @Composable
 fun AddToSheet(kind: ListKind, target: AddTarget, onDismiss: () -> Unit, onNew: () -> Unit) {
     val session = currentSession()
-    val vm = viewModel(key = "add-to:$kind:" + target.ids.joinToString(",")) { AddToViewModel(session, kind, target) }
+    val vm = viewModel(key = "add-to:$kind:" + System.identityHashCode(target)) { AddToViewModel(session, kind, target) }
     val state by vm.state.collectAsStateWithLifecycle()
     AddToContent(state, vm, target, onDismiss, onNew)
 }
@@ -78,7 +78,7 @@ fun AddToSheet(kind: ListKind, target: AddTarget, onDismiss: () -> Unit, onNew: 
 @Composable
 fun NewCollectionSheet(target: AddTarget, onDismiss: () -> Unit, onMade: (String) -> Unit) {
     val session = currentSession()
-    val vm = viewModel(key = "add-to:${ListKind.Collection}:" + target.ids.joinToString(",")) { AddToViewModel(session, ListKind.Collection, target) }
+    val vm = viewModel(key = "add-to:${ListKind.Collection}:" + System.identityHashCode(target)) { AddToViewModel(session, ListKind.Collection, target) }
     TextSheet(
         t("New collection"), t("Starts with {name}", "name" to target.name), t("Create collection"),
         { name -> vm.create(name); onMade(t("Made {name}", "name" to name.trim())) }, onDismiss, placeholder = t("Name it"),
@@ -158,7 +158,7 @@ fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String) 
 @Composable
 fun NewPlaylistSheet(target: AddTarget, onDismiss: () -> Unit, onMade: (String) -> Unit) {
     val session = currentSession()
-    val vm = viewModel(key = "new-playlist:" + target.ids.joinToString(",")) { NewPlaylistViewModel(session, target) }
+    val vm = viewModel(key = "new-playlist:" + System.identityHashCode(target)) { NewPlaylistViewModel(session, target) }
     val state by vm.state.collectAsStateWithLifecycle()
     NewPlaylistContent(state, vm, onDismiss) { message -> onDismiss(); onMade(message) }
 }

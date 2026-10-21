@@ -177,6 +177,8 @@ class MetadataViewModel(session: UserSession, private val id: String) : ViewMode
 
     private fun write(s: MetadataState): JsonObject {
         val out = item.toMutableMap()
+        // Jellyfin 12 can't read its own trickplay info back (a 500); it's read-only anyway.
+        out.remove("Trickplay")
         fun str(key: String, v: String) {
             out[key] = if (v.isBlank()) JsonNull else JsonPrimitive(v.trim())
         }

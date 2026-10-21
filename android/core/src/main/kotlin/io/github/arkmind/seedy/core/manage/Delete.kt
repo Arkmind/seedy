@@ -9,6 +9,10 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.CancellationException
+import io.github.arkmind.seedy.core.admin.normId
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +25,16 @@ import java.text.NumberFormat
  * folder), whether Seerr forgets it too, a warning when Sonarr or Radarr would fetch it again, and the title typed out
  * to confirm. Seedy's preview says all that; without the plugin the sizes come from the media sources.
  */
+
+/** Titles deleted anywhere in the app, so the pages still showing them (a library's grid) drop them. */
+object Removals {
+    private val events = MutableSharedFlow<Set<String>>(extraBufferCapacity = 8)
+    val flow: SharedFlow<Set<String>> = events.asSharedFlow()
+
+    fun tell(ids: Collection<String>) {
+        events.tryEmit(ids.map(::normId).toSet())
+    }
+}
 
 /** A line of the breakdown: "Season 1", "10 episodes · 2160p HEVC", "214 GB". */
 data class DeleteLine(val title: String, val sub: String, val size: String)
@@ -43,8 +57,10 @@ data class DeleteState(
     /** What to type to confirm (the title, or "delete" for several). */
     val word: String = "",
     val typed: String = "",
-    /** "252 GB" on the button. */
+    /** "252 GB". */
     val size: String = "",
+    /** "Delete 252 GB", "Delete playlist". */
+    val button: String = "",
     val busy: Boolean = false,
     val error: String? = null,
 ) {
@@ -129,6 +145,7 @@ class DeleteViewModel(session: UserSession, private val ids: List<String>, priva
                 _state.update { it.copy(busy = false, error = t("Couldn’t delete it. {error}", "error" to errorText(e))) }
                 return@launch
             }
+            Removals.tell(gone)
             var seerrFailed = false
             if (s.seerr && s.clearSeerr) {
                 for (m in p.items.mapNotNull { it.seerr }) {
@@ -150,6 +167,19 @@ class DeleteViewModel(session: UserSession, private val ids: List<String>, priva
         /** The sheet's text from a preview. */
         fun describe(p: DeletePreview, continuing: Boolean = false): DeleteState {
             val one = p.items.singleOrNull()
+            // A playlist or collection goes alone: what's in it stays on the server.
+            if (one != null && (one.type == "Playlist" || one.type == "BoxSet")) {
+                val playlist = one.type == "Playlist"
+                return DeleteState(
+                    loading = false,
+                    title = t("Delete {name}?", "name" to one.name),
+                    sub = if (playlist) t("Playlist") else t("Collection"),
+                    text = if (playlist) t("This deletes the playlist for everyone it’s shared with. What’s in it stays on the server.")
+                    else t("This deletes the collection. What’s in it stays on the server."),
+                    word = one.name,
+                    button = if (playlist) t("Delete playlist") else t("Delete collection"),
+                )
+            }
             val unit = sizeUnit(p.bytes)
             val size = fileSize(p.bytes, unit)
             val lines = if (one != null) {
@@ -199,6 +229,7 @@ class DeleteViewModel(session: UserSession, private val ids: List<String>, priva
                 },
                 word = one?.name ?: t("delete"),
                 size = size,
+                button = t("Delete {size}", "size" to size),
             )
         }
 

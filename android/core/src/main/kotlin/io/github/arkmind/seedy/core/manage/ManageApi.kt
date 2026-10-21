@@ -208,11 +208,11 @@ class ManageApi(private val session: UserSession) {
         http.raw(HttpMethod.POST, "/Items/RemoteSearch/Apply/$id", mapOf("replaceAllImages" to replaceImages), result)
     }
 
-    fun remoteImageUrl(imageUrl: String, provider: String?): String {
-        val base = session.api.baseUrl.orEmpty().trimEnd('/')
-        val q = "imageUrl=" + java.net.URLEncoder.encode(imageUrl, "UTF-8") + (provider?.let { "&providerName=" + java.net.URLEncoder.encode(it, "UTF-8") } ?: "")
-        return "$base/Items/RemoteSearch/Image?$q"
-    }
+    /**
+     * A match's picture. Jellyfin 12 no longer proxies them (/Items/RemoteSearch/Image answers 404), so the phone loads
+     * the provider's own address, at a poster's size where the provider has sizes (TMDb).
+     */
+    fun remoteImageUrl(imageUrl: String): String = imageUrl.replace("image.tmdb.org/t/p/original/", "image.tmdb.org/t/p/w342/")
 
     suspend fun images(id: String): List<JsonObject> =
         (http.element(HttpMethod.GET, "/Items/$id/Images") as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()

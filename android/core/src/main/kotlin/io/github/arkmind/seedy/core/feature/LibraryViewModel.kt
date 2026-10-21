@@ -85,6 +85,12 @@ class LibraryViewModel(session: UserSession, private val id: UUID) : ViewModel()
             }
             _state.update { it.copy(view = view, libraries = libraries, tab = tabsFor(view.collectionType).first().first) }
             reload()
+            // A title deleted elsewhere (its details page) leaves this grid too.
+            launch {
+                io.github.arkmind.seedy.core.manage.Removals.flow.collect { gone ->
+                    removed(_state.value.items.filter { io.github.arkmind.seedy.core.admin.normId(it.id.toString()) in gone }.map { it.id }.toSet())
+                }
+            }
             launch {
                 val n = runCatching { browse.items(ItemsQuery(parentId = view.id, includeTypes = typesFor(view.collectionType), limit = 0, images = emptyList(), fields = emptyList())).totalRecordCount }.getOrNull()
                 _state.update { it.copy(total = n) }

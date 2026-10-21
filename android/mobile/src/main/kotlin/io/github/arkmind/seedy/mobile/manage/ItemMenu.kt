@@ -95,6 +95,6 @@ fun ManageSheetHost(sheets: ManageSheets, say: (String) -> Unit, onDeleted: (Lis
         "collection" -> AddToSheet(ListKind.Collection, target, sheets::close) { sheets.open = "new-collection" }
         "new-playlist" -> NewPlaylistSheet(target, sheets::close, say)
         "new-collection" -> NewCollectionSheet(target, sheets::close, say)
-        "delete" -> DeleteSheet(target.ids, sheets::close, onDeleted, sheets.continuing)
+        "delete" -> DeleteSheet(target.ids, sheets::close, onDeleted, sheets.continuing, key = target)
     }
 }

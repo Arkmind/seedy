@@ -21,7 +21,9 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -93,6 +95,9 @@ fun MetadataRoute(id: String, onBack: () -> Unit) {
 fun MetadataScreen(state: MetadataState, actions: MetadataActions, poster: String?, onBack: () -> Unit) {
     var message by remember { mutableStateOf<String?>(null) }
     var sheet by remember { mutableStateOf<String?>(null) }
+    val focus = LocalFocusManager.current
+    // A sheet takes the keyboard: the field behind it lets go first.
+    LaunchedEffect(sheet) { if (sheet != null) focus.clearFocus() }
     val back = LeaveGuard(state.dirty, t("Your changes to {name} aren’t saved yet.", "name" to state.name), onBack)
     SettingsPage(
         t("Edit metadata"),

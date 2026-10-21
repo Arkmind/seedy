@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.asPaddingValues
@@ -99,22 +100,32 @@ fun IdentifyScreen(state: IdentifyState, actions: IdentifyActions, onBack: () ->
                             BoardField(state.year, actions::setYear, keyboard = KeyboardType.Number, onDone = actions::search)
                         }
                     }
-                    for (row in state.ids.chunked(2)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    val search = @Composable { modifier: Modifier ->
+                        val enabled = !state.searching && state.name.isNotBlank()
+                        Row(
+                            modifier.height(46.dp).clip(RoundedCornerShape(13.dp)).background(if (enabled) SeedyColors.Inverse else SeedyColors.Surface2).tap(enabled = enabled, onClick = actions::search),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            val ink = if (enabled) SeedyColors.InkInverse else SeedyColors.Text3
+                            SIcon(ManageIcons.Search, size = 16.dp, color = ink)
+                            SText(if (state.searching) t("Searching…") else t("Search"), size = 15.sp, weight = 700, color = ink, maxLines = 1)
+                        }
+                    }
+                    val rows = state.ids.chunked(2)
+                    for (row in rows) {
+                        // An id alone on the last line has Search beside it, as on the board.
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom) {
                             for (f in row) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     FieldLabel(t("{provider} ID", "provider" to f.label))
                                     BoardField(f.value, { actions.setId(f.key, it) }, placeholder = if (f.key.equals("Imdb", true)) "tt…" else t("Optional"), onDone = actions::search)
                                 }
                             }
-                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                            if (row.size == 1) search(Modifier.weight(1f))
                         }
                     }
-                    PillButton(
-                        if (state.searching) t("Searching…") else t("Search"), actions::search, Modifier.fillMaxWidth(), style = PillStyle.Light,
-                        enabled = !state.searching && state.name.isNotBlank(), height = 46.dp,
-                        leading = { SIcon(ManageIcons.Search, size = 16.dp, color = SeedyColors.InkInverse) },
-                    )
+                    if (rows.lastOrNull()?.size != 1) search(Modifier.fillMaxWidth())
                 }
                 Results(state, actions)
                 SaveBarRoom()

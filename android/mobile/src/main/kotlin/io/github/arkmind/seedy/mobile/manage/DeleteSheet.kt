@@ -38,9 +38,9 @@ import io.github.arkmind.seedy.ui.theme.currentSession
 
 /** Delete (board ItemDelete) for [ids]; [onDeleted] gets what went and what to say, then the sheet closes. */
 @Composable
-fun DeleteSheet(ids: List<String>, onDismiss: () -> Unit, onDeleted: (List<String>, String) -> Unit, continuing: Boolean = false) {
+fun DeleteSheet(ids: List<String>, onDismiss: () -> Unit, onDeleted: (List<String>, String) -> Unit, continuing: Boolean = false, key: Any = ids) {
     val session = currentSession()
-    val vm = viewModel(key = "delete:" + ids.joinToString(",")) { DeleteViewModel(session, ids, continuing) }
+    val vm = viewModel(key = "delete:" + System.identityHashCode(key)) { DeleteViewModel(session, ids, continuing) }
     val state by vm.state.collectAsStateWithLifecycle()
     DeleteContent(state, vm, onDismiss) { gone, message -> onDismiss(); onDeleted(gone, message) }
 }
@@ -53,7 +53,7 @@ fun DeleteContent(state: DeleteState, actions: DeleteActions, onDismiss: () -> U
         footer = {
             state.error?.let { SText(it, size = 12.sp, weight = 600, color = SeedyColors.Danger) }
             BigButton(
-                if (state.busy) t("Deleting…") else if (state.size.isNotEmpty()) t("Delete {size}", "size" to state.size) else t("Delete"),
+                if (state.busy) t("Deleting…") else state.button.ifEmpty { t("Delete") },
                 { actions.delete(onDeleted) }, enabled = state.canDelete, icon = ManageIcons.Trash, style = BigButtonStyle.Danger,
             )
         },
@@ -73,7 +73,7 @@ fun DeleteContent(state: DeleteState, actions: DeleteActions, onDismiss: () -> U
             state.loading -> repeat(3) { Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(13.dp)).background(SeedyColors.Row)) }
             else -> {
                 SText(state.text, size = 14.sp, lineHeight = 1.5f, color = SeedyColors.TextHero)
-                Breakdown(state)
+                if (state.lines.isNotEmpty() || state.paths.isNotEmpty()) Breakdown(state)
                 if (state.seerr) CheckRow(t("Also clear it in Seerr"), t("So it can be requested again later"), state.clearSeerr, actions::toggleSeerr)
                 state.warning?.let { Warning(it) }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -90,7 +90,8 @@ fun DetailsRoute(id: UUID) {
                 onRequest = { ask = it },
                 onMarkSeason = vm::toggleSeasonPlayed,
                 onMore = if (item != null && item.type != BaseItemKind.PERSON) ({
-                    if (item.canDelete == true) bulk.loadDeleteSub(listOf(item.id.toString()))
+                    // The Delete line says how much goes ("2 seasons · 252 GB"); a playlist or collection takes no files.
+                    if (item.canDelete == true && item.type != BaseItemKind.PLAYLIST && item.type != BaseItemKind.BOX_SET) bulk.loadDeleteSub(listOf(item.id.toString()))
                     menu = true
                 }) else null,
             ),
