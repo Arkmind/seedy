@@ -34,30 +34,29 @@ import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.admin.MenuItem
+import io.github.arkmind.seedy.mobile.admin.MenuSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.PillStyle
 import io.github.arkmind.seedy.mobile.admin.SaveBar
 import io.github.arkmind.seedy.mobile.admin.SaveBarRoom
+import io.github.arkmind.seedy.mobile.admin.TabPills
 import io.github.arkmind.seedy.mobile.admin.TextSheet
 import io.github.arkmind.seedy.mobile.admin.avatarColour
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.settings.CardRows
-
+import io.github.arkmind.seedy.mobile.settings.PickRow
+import io.github.arkmind.seedy.mobile.settings.Section
+import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SheetState
+import io.github.arkmind.seedy.mobile.settings.SwitchRow
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import kotlinx.serialization.json.JsonPrimitive
-import io.github.arkmind.seedy.mobile.admin.MenuItem
-import io.github.arkmind.seedy.mobile.admin.MenuSheet
-import io.github.arkmind.seedy.mobile.admin.LeaveGuard
-import io.github.arkmind.seedy.mobile.admin.TabPills
-import io.github.arkmind.seedy.mobile.settings.SettingsPage
-import io.github.arkmind.seedy.mobile.settings.Section
-import io.github.arkmind.seedy.mobile.settings.SwitchRow
-import io.github.arkmind.seedy.mobile.settings.PickRow
 
 /** Board "Android · Server · Edit user": the header, the tabs and the account tab; the other tabs in UserTabs.kt. */
 @Composable

@@ -7,11 +7,13 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -34,8 +36,6 @@ import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.padding
 
 /*
  * Parts the System pages share beyond the admin kit: the search field of the plugin catalog and the log viewer, small

@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.arkmind.seedy.core.admin.people.DeviceKind
 import io.github.arkmind.seedy.core.admin.people.DeviceRow
 import io.github.arkmind.seedy.core.admin.people.DevicesActions
 import io.github.arkmind.seedy.core.admin.people.DevicesState
@@ -31,33 +32,32 @@ import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.AdminIcons
+import io.github.arkmind.seedy.mobile.admin.CardNote
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.admin.MenuItem
+import io.github.arkmind.seedy.mobile.admin.MenuSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.PillStyle
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
 import io.github.arkmind.seedy.mobile.admin.SpacedDots
+import io.github.arkmind.seedy.mobile.admin.StatusLine
+import io.github.arkmind.seedy.mobile.admin.TabPills
 import io.github.arkmind.seedy.mobile.admin.avatarColour
 import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.mobile.parts.SeedyField
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.DeviceTag
+import io.github.arkmind.seedy.mobile.settings.FootNote
 import io.github.arkmind.seedy.mobile.settings.FormSheet
+import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.settings.SettingsPage
+import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import io.github.arkmind.seedy.mobile.admin.MenuItem
-import io.github.arkmind.seedy.mobile.admin.MenuSheet
-import io.github.arkmind.seedy.mobile.admin.CardNote
-import io.github.arkmind.seedy.mobile.admin.StatusLine
-import io.github.arkmind.seedy.mobile.admin.SheetButtons
-import io.github.arkmind.seedy.mobile.admin.TabPills
-import io.github.arkmind.seedy.mobile.settings.SettingsPage
-import io.github.arkmind.seedy.mobile.settings.FootNote
-import io.github.arkmind.seedy.ui.icons.IconDef
-import io.github.arkmind.seedy.core.admin.people.DeviceKind
-import io.github.arkmind.seedy.mobile.settings.RowLine
-import io.github.arkmind.seedy.mobile.settings.Card
 
 /* Busy servers collect hundreds of devices; show them a page at a time. */
 private const val Page = 40

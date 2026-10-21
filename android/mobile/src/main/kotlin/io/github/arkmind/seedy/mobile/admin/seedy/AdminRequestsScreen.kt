@@ -36,22 +36,32 @@ import io.github.arkmind.seedy.core.admin.seedy.SeerrAccount
 import io.github.arkmind.seedy.core.admin.seedy.SeerrUser
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
+import io.github.arkmind.seedy.mobile.admin.Dot
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.FieldBlock
+import io.github.arkmind.seedy.mobile.admin.LoadingCards
+import io.github.arkmind.seedy.mobile.admin.MenuItem
+import io.github.arkmind.seedy.mobile.admin.MenuSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
 import io.github.arkmind.seedy.mobile.admin.RadioRow
-import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.admin.TextSheet
 import io.github.arkmind.seedy.mobile.admin.avatarColour
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
+import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.PickRow
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.Section
 import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
+import io.github.arkmind.seedy.mobile.settings.SheetHead
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
+import io.github.arkmind.seedy.mobile.settings.settingsRow
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.BaseText
@@ -59,16 +69,6 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import kotlinx.coroutines.launch
-import io.github.arkmind.seedy.mobile.admin.ErrorCard
-import io.github.arkmind.seedy.mobile.admin.LoadingCards
-import io.github.arkmind.seedy.mobile.admin.TextSheet
-import io.github.arkmind.seedy.mobile.admin.MenuItem
-import io.github.arkmind.seedy.mobile.admin.MenuSheet
-import io.github.arkmind.seedy.mobile.admin.FieldBlock
-import io.github.arkmind.seedy.mobile.admin.Dot
-import io.github.arkmind.seedy.mobile.settings.SheetHead
-import io.github.arkmind.seedy.mobile.settings.settingsRow
-import io.github.arkmind.seedy.mobile.settings.Card
 
 private val Shows = listOf(
     Triple("showDiscover", "Discover row", "Popular titles not in the library"),

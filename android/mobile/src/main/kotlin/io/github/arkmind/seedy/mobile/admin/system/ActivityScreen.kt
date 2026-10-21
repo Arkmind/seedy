@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -25,12 +26,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.text.BasicText
-import androidx.compose.ui.platform.LocalDensity
-import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.core.admin.system.ActivityActions
 import io.github.arkmind.seedy.core.admin.system.ActivityLevel
 import io.github.arkmind.seedy.core.admin.system.ActivityRow
@@ -40,32 +39,33 @@ import io.github.arkmind.seedy.core.admin.system.LevelFilter
 import io.github.arkmind.seedy.core.admin.system.TypeFilter
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.settings.Choice
-import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.admin.EmptyCard
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.LivePill
+import io.github.arkmind.seedy.mobile.admin.MenuPill
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
-import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.admin.SkeletonCard
 import io.github.arkmind.seedy.mobile.admin.StatTile
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.CssColumn
+import io.github.arkmind.seedy.mobile.settings.Faint
+import io.github.arkmind.seedy.mobile.settings.FootNote
+import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
+import io.github.arkmind.seedy.mobile.settings.cssExcess
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
+import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import io.github.arkmind.seedy.mobile.admin.ErrorCard
-import io.github.arkmind.seedy.mobile.admin.EmptyCard
-import io.github.arkmind.seedy.mobile.admin.SkeletonCard
-import io.github.arkmind.seedy.mobile.admin.MenuPill
-import io.github.arkmind.seedy.mobile.admin.LivePill
-import io.github.arkmind.seedy.mobile.settings.FootNote
-import io.github.arkmind.seedy.mobile.settings.SectionTitle
-import io.github.arkmind.seedy.mobile.settings.CssColumn
-import io.github.arkmind.seedy.mobile.settings.cssExcess
-import io.github.arkmind.seedy.mobile.settings.Faint
 
 /** The board's dots: grey for information, green when something finished well, amber for warnings, red for errors. */
 private fun levelDot(l: ActivityLevel): Color = when (l) {

@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.admin.people.Days
@@ -42,15 +43,25 @@ import io.github.arkmind.seedy.core.admin.people.strings
 import io.github.arkmind.seedy.core.admin.sameId
 import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.mobile.admin.AccentRow
+import io.github.arkmind.seedy.mobile.admin.ChipFlow
+import io.github.arkmind.seedy.mobile.admin.FormError
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
+import io.github.arkmind.seedy.mobile.admin.RoundButton
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
 import io.github.arkmind.seedy.mobile.admin.TextSheet
 import io.github.arkmind.seedy.mobile.parts.SeedyField
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.CardRows
 import io.github.arkmind.seedy.mobile.settings.FormSheet
-
+import io.github.arkmind.seedy.mobile.settings.PickRow
+import io.github.arkmind.seedy.mobile.settings.RowLabel
+import io.github.arkmind.seedy.mobile.settings.Section
 import io.github.arkmind.seedy.mobile.settings.SheetState
+import io.github.arkmind.seedy.mobile.settings.StackRow
+import io.github.arkmind.seedy.mobile.settings.SwitchRow
+import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.SText
@@ -58,18 +69,6 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import io.github.arkmind.seedy.mobile.admin.AccentRow
-import io.github.arkmind.seedy.mobile.admin.ChipFlow
-import io.github.arkmind.seedy.mobile.admin.RoundButton
-import io.github.arkmind.seedy.mobile.admin.SheetButtons
-import io.github.arkmind.seedy.mobile.admin.FormError
-import io.github.arkmind.seedy.mobile.settings.Section
-import io.github.arkmind.seedy.mobile.settings.SwitchRow
-import io.github.arkmind.seedy.mobile.settings.PickRow
-import io.github.arkmind.seedy.mobile.settings.StackRow
-import io.github.arkmind.seedy.mobile.settings.RowLabel
-import io.github.arkmind.seedy.ui.icons.IconDef
-import androidx.compose.ui.text.style.TextAlign
 
 /* A user's other tabs (web/src/screens/server/UserEdit.tsx, built from the phone kit): libraries and devices,
  * parental controls, password and Seedy. */

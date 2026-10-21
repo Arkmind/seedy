@@ -1,7 +1,5 @@
 package io.github.arkmind.seedy.mobile.settings
 
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -18,14 +16,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import io.github.arkmind.seedy.ui.components.boxShadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -41,6 +40,7 @@ import io.github.arkmind.seedy.core.settings.RowView
 import io.github.arkmind.seedy.core.settings.SettingsActions
 import io.github.arkmind.seedy.core.settings.SettingsState
 import io.github.arkmind.seedy.core.settings.SettingsState.Companion.Keys
+import io.github.arkmind.seedy.ui.components.boxShadow
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.SettingsIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent

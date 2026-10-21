@@ -33,23 +33,23 @@ import io.github.arkmind.seedy.core.admin.media.ServerSettingsViewModel
 import io.github.arkmind.seedy.core.admin.media.SettingActions
 import io.github.arkmind.seedy.core.admin.media.SplashState
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.mobile.admin.FieldBlock
+import io.github.arkmind.seedy.mobile.admin.FieldSection
+import io.github.arkmind.seedy.mobile.admin.MonoText
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.PillStyle
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
+import io.github.arkmind.seedy.mobile.settings.FormSheet
 import io.github.arkmind.seedy.mobile.settings.SaveLine
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
-import io.github.arkmind.seedy.mobile.admin.FieldBlock
-import io.github.arkmind.seedy.mobile.admin.FieldSection
-import io.github.arkmind.seedy.mobile.admin.SheetButtons
-import io.github.arkmind.seedy.mobile.settings.FormSheet
-import io.github.arkmind.seedy.mobile.admin.MonoText
 
 /** Board "Android · Server · Settings", and its Expert settings page. */
 @Composable
@@ -145,8 +145,8 @@ fun ServerSettingsScreen(
 @Composable
 private fun ServerCard(state: ServerSettingsState, actions: ServerSettingsActions) {
     FieldSection(t("Server")) {
-        FieldBlock(t("Server name"), state.serverName, actions::setServerName, help = t("Shown to apps when they find this server"), placeholder = state.serverNamePlaceholder, autoCorrect = true)
-        FieldBlock(t("Sign-in message"), state.signInMessage, actions::setSignInMessage, help = t("Shown under the sign-in form"), lines = 2, autoCorrect = true)
+        FieldBlock(t("Server name"), state.serverName, actions::setServerName, help = t("Shown to apps when they find this server"), placeholder = state.serverNamePlaceholder, autoCorrect = true, helpRatio = null)
+        FieldBlock(t("Sign-in message"), state.signInMessage, actions::setSignInMessage, help = t("Shown under the sign-in form"), lines = 2, autoCorrect = true, helpRatio = null)
     }
 }
 

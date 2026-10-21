@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -25,16 +25,22 @@ import io.github.arkmind.seedy.core.admin.system.BackupsActions
 import io.github.arkmind.seedy.core.admin.system.BackupsState
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.settings.Choice
-import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.admin.EmptyCard
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
 import io.github.arkmind.seedy.mobile.admin.NameTag
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
-import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.admin.RoundButton
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
+import io.github.arkmind.seedy.mobile.admin.SkeletonCard
 import io.github.arkmind.seedy.mobile.parts.Toast
+import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.FormSheet
 import io.github.arkmind.seedy.mobile.settings.PickRow
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.Section
+import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
@@ -42,12 +48,6 @@ import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import io.github.arkmind.seedy.mobile.admin.ErrorCard
-import io.github.arkmind.seedy.mobile.admin.EmptyCard
-import io.github.arkmind.seedy.mobile.admin.SkeletonCard
-import io.github.arkmind.seedy.mobile.admin.RoundButton
-import io.github.arkmind.seedy.mobile.admin.SheetButtons
-import io.github.arkmind.seedy.mobile.settings.SectionTitle
 
 private val KeepChoices = listOf(1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 26, 52)
 

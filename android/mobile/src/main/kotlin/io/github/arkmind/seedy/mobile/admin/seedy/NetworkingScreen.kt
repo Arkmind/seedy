@@ -1,9 +1,14 @@
 package io.github.arkmind.seedy.mobile.admin.seedy
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.admin.seedy.NetworkConfig
 import io.github.arkmind.seedy.core.admin.seedy.NetworkingActions
 import io.github.arkmind.seedy.core.admin.seedy.NetworkingState
@@ -23,36 +29,30 @@ import io.github.arkmind.seedy.core.admin.seedy.validPublished
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.settings.Choice
+import io.github.arkmind.seedy.mobile.admin.BoardField
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.FieldBlock
+import io.github.arkmind.seedy.mobile.admin.FieldSection
+import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.admin.LoadingCards
+import io.github.arkmind.seedy.mobile.admin.PillButton
+import io.github.arkmind.seedy.mobile.admin.PillStyle
+import io.github.arkmind.seedy.mobile.admin.RemovableChip
+import io.github.arkmind.seedy.mobile.admin.SaveBar
 import io.github.arkmind.seedy.mobile.admin.SaveBarRoom
+import io.github.arkmind.seedy.mobile.admin.SheetFoot
+import io.github.arkmind.seedy.mobile.admin.TextSheet
+import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.settings.PickRow
 import io.github.arkmind.seedy.mobile.settings.Section
 import io.github.arkmind.seedy.mobile.settings.Segmented
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
-import io.github.arkmind.seedy.mobile.settings.SwitchRow
-import io.github.arkmind.seedy.ui.theme.SeedyColors
-import io.github.arkmind.seedy.mobile.admin.ErrorCard
-import io.github.arkmind.seedy.mobile.admin.LoadingCards
-import io.github.arkmind.seedy.mobile.admin.SaveBar
-import io.github.arkmind.seedy.mobile.admin.TextSheet
-import io.github.arkmind.seedy.mobile.admin.FieldBlock
-import io.github.arkmind.seedy.mobile.admin.FieldSection
-import io.github.arkmind.seedy.mobile.admin.BoardField
-import io.github.arkmind.seedy.mobile.admin.PillButton
-import io.github.arkmind.seedy.mobile.admin.PillStyle
-import io.github.arkmind.seedy.mobile.admin.RemovableChip
-import io.github.arkmind.seedy.mobile.admin.SheetFoot
 import io.github.arkmind.seedy.mobile.settings.SheetHead
-import io.github.arkmind.seedy.mobile.browse.BottomSheet
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.unit.sp
+import io.github.arkmind.seedy.mobile.settings.SwitchRow
 import io.github.arkmind.seedy.ui.theme.SText
-import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.ui.theme.SeedyColors
 
 /** A list the page edits in a sheet. */
 private enum class NetList { Filter, Published, Home, Proxies, Listen }

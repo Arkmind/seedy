@@ -28,10 +28,16 @@ import io.github.arkmind.seedy.core.admin.seedy.providerName
 import io.github.arkmind.seedy.core.admin.seedy.tunerName
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.settings.Choice
+import io.github.arkmind.seedy.mobile.admin.BoardField
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.admin.FieldBlock
+import io.github.arkmind.seedy.mobile.admin.FieldSection
+import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
+import io.github.arkmind.seedy.mobile.admin.SaveBar
 import io.github.arkmind.seedy.mobile.admin.SaveBarRoom
+import io.github.arkmind.seedy.mobile.admin.SearchPickSheet
 import io.github.arkmind.seedy.mobile.settings.PickRow
 import io.github.arkmind.seedy.mobile.settings.Section
 import io.github.arkmind.seedy.mobile.settings.SectionFoot
@@ -43,12 +49,6 @@ import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import kotlinx.coroutines.launch
-import io.github.arkmind.seedy.mobile.admin.LoadingCards
-import io.github.arkmind.seedy.mobile.admin.SaveBar
-import io.github.arkmind.seedy.mobile.admin.SearchPickSheet
-import io.github.arkmind.seedy.mobile.admin.FieldBlock
-import io.github.arkmind.seedy.mobile.admin.FieldSection
-import io.github.arkmind.seedy.mobile.admin.BoardField
 
 /** A tuner switch, for the tuner types it applies to (as the web lists them). */
 private class TunerSwitch(val name: String, val help: String, val types: Set<String>, val get: (TunerHost) -> Boolean, val set: (TunerHost, Boolean) -> TunerHost)

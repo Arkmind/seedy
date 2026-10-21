@@ -42,20 +42,20 @@ import io.github.arkmind.seedy.core.admin.system.TasksState
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.admin.AdminIcons
 import io.github.arkmind.seedy.mobile.admin.Bar
-import io.github.arkmind.seedy.mobile.settings.Card
-import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.RoundButton
+import io.github.arkmind.seedy.mobile.admin.SkeletonCard
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.FootNote
+import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import io.github.arkmind.seedy.mobile.admin.ErrorCard
-import io.github.arkmind.seedy.mobile.admin.RoundButton
-import io.github.arkmind.seedy.mobile.admin.SkeletonCard
-import io.github.arkmind.seedy.mobile.settings.FootNote
-import io.github.arkmind.seedy.mobile.settings.SectionTitle
 
 /**
  * Board "Android · Server · Scheduled tasks": the tasks by group, each with what it does, when it runs and what it did

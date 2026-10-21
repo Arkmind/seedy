@@ -32,13 +32,13 @@ import io.github.arkmind.seedy.core.settings.ResolvedStyle
 import io.github.arkmind.seedy.core.settings.SettingsActions
 import io.github.arkmind.seedy.core.settings.SettingsState
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.ui.components.PassScene
 import io.github.arkmind.seedy.ui.components.SubtitleLine
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import io.github.arkmind.seedy.mobile.settings.RowLine
-import io.github.arkmind.seedy.mobile.settings.Card
 
 /** Board "Android · Settings · Subtitles": when they turn on (Jellyfin's mode and language) and how they look here. */
 @Composable

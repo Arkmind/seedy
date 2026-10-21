@@ -36,6 +36,10 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.seedy.PlaybackPrefs
 import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.core.settings.Choices
+import io.github.arkmind.seedy.mobile.admin.BoardField
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.FieldBlock
+import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.RadioRow
 import io.github.arkmind.seedy.mobile.parts.Toast
@@ -46,16 +50,12 @@ import io.github.arkmind.seedy.mobile.settings.SegRow
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SheetState
+import io.github.arkmind.seedy.mobile.settings.StackRow
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import io.github.arkmind.seedy.mobile.admin.ErrorCard
-import io.github.arkmind.seedy.mobile.admin.LoadingCards
-import io.github.arkmind.seedy.mobile.admin.FieldBlock
-import io.github.arkmind.seedy.mobile.admin.BoardField
-import io.github.arkmind.seedy.mobile.settings.StackRow
 
 private val PauseSeconds = listOf(5, 10, 30, 0)
 

@@ -32,9 +32,17 @@ import io.github.arkmind.seedy.core.admin.media.SwitchSetting
 import io.github.arkmind.seedy.core.admin.media.TextSetting
 import io.github.arkmind.seedy.core.admin.media.numberText
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.mobile.admin.BoardField
+import io.github.arkmind.seedy.mobile.admin.FolderItem
+import io.github.arkmind.seedy.mobile.admin.FolderSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
+import io.github.arkmind.seedy.mobile.admin.RoundButton
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
 import io.github.arkmind.seedy.mobile.parts.SeedyField
+import io.github.arkmind.seedy.mobile.settings.FormSheet
 import io.github.arkmind.seedy.mobile.settings.PickRow
+import io.github.arkmind.seedy.mobile.settings.RowLabel
+import io.github.arkmind.seedy.mobile.settings.Section
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SheetState
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
@@ -43,14 +51,6 @@ import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import io.github.arkmind.seedy.mobile.admin.BoardField
-import io.github.arkmind.seedy.mobile.admin.FolderItem
-import io.github.arkmind.seedy.mobile.admin.FolderSheet
-import io.github.arkmind.seedy.mobile.admin.RoundButton
-import io.github.arkmind.seedy.mobile.admin.SheetButtons
-import io.github.arkmind.seedy.mobile.settings.FormSheet
-import io.github.arkmind.seedy.mobile.settings.RowLabel
-import io.github.arkmind.seedy.mobile.settings.Section
 
 /*
  * Parts the media pages share beside the admin and settings kits, for the media core's settings models: cards of

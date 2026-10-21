@@ -77,9 +77,15 @@ import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.SeedyField
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.FormSheet
+import io.github.arkmind.seedy.mobile.settings.PickOption
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.SectionFoot
 import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SheetHead
+import io.github.arkmind.seedy.mobile.settings.cssExcess
+import io.github.arkmind.seedy.mobile.settings.cssText
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.components.boxShadow
 import io.github.arkmind.seedy.ui.icons.AppIcons
@@ -91,11 +97,6 @@ import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import io.github.arkmind.seedy.mobile.settings.PickOption
-import io.github.arkmind.seedy.mobile.settings.cssExcess
-import io.github.arkmind.seedy.mobile.settings.Card
-import io.github.arkmind.seedy.mobile.settings.RowLine
-import io.github.arkmind.seedy.mobile.settings.FormSheet
 
 /*
  * The phone server boards' parts ("Android · Server · …"), beside the settings kit they share (SettingsPage,
@@ -292,7 +293,7 @@ fun NoticeCard(title: String, help: String, action: String?, dot: Color, backgro
         Box(Modifier.size(10.dp).background(dot, CircleShape))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             SText(title, size = 13.sp, weight = 700, color = SeedyColors.White)
-            if (help.isNotEmpty()) SText(help, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text2)
+            if (help.isNotEmpty()) SText(help, Modifier.cssText(12, 1.4f), size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text2)
         }
         if (action != null) PillButton(action, onAction, style = PillStyle.Light)
     }
@@ -309,7 +310,7 @@ fun ErrorCard(title: String, onRetry: () -> Unit, modifier: Modifier = Modifier,
 fun EmptyCard(title: String, text: String?, modifier: Modifier = Modifier.padding(horizontal = 16.dp), action: (@Composable () -> Unit)? = null) {
     Card(modifier, padding = 16.dp, gap = 2.dp) {
         SText(title, size = 13.sp, weight = 700, color = SeedyColors.White)
-        if (!text.isNullOrEmpty()) SText(text, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
+        if (!text.isNullOrEmpty()) SText(text, Modifier.cssText(12, 1.4f), size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
         if (action != null) Box(Modifier.padding(top = 10.dp)) { action() }
     }
 }
@@ -677,7 +678,10 @@ fun BoardField(
     }
 }
 
-/** A labelled field: the name (14 px bold), the field, a line under it (or the error in red). */
+/**
+ * A labelled field: the name (14 px bold), the field, a line under it (or the error in red) at a [helpRatio] line
+ * height (null: `normal`, as the server Settings board sets it).
+ */
 @Composable
 fun FieldBlock(
     label: String,
@@ -691,9 +695,11 @@ fun FieldBlock(
     password: Boolean = false,
     lines: Int = 1,
     autoCorrect: Boolean = false,
+    helpRatio: Float? = 1.4f,
     onDone: () -> Unit = {},
     onBlur: () -> Unit = {},
 ) {
+    val line = if (helpRatio != null) Modifier.cssText(12, helpRatio) else Modifier
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SText(label, size = 14.sp, weight = 700, color = SeedyColors.White)
         BoardField(
@@ -701,8 +707,8 @@ fun FieldBlock(
             autoCorrect = autoCorrect, onDone = onDone, onBlur = onBlur,
         )
         when {
-            error != null -> if (error.isNotEmpty()) SText(error, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Danger)
-            !help.isNullOrEmpty() -> SText(help, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
+            error != null -> if (error.isNotEmpty()) SText(error, line, size = 12.sp, lineHeight = helpRatio, color = SeedyColors.Danger)
+            !help.isNullOrEmpty() -> SText(help, line, size = 12.sp, lineHeight = helpRatio, color = SeedyColors.Text3)
         }
     }
 }
@@ -766,7 +772,7 @@ fun BoxScope.SaveBar(
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             if (text.isNotEmpty()) SText(text, size = 13.sp, weight = 700, color = SeedyColors.Pending)
-            if (!note.isNullOrEmpty()) SText(note, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text2)
+            if (!note.isNullOrEmpty()) SText(note, Modifier.cssText(12, 1.4f), size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text2)
         }
         Row(Modifier.height(40.dp).clip(CircleShape).tap(enabled = !saving, onClick = onDiscard).padding(horizontal = if (compact) 8.dp else 16.dp), verticalAlignment = Alignment.CenterVertically) {
             SText(discardLabel, size = 13.sp, weight = 700, color = SeedyColors.Text, maxLines = 1)
