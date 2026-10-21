@@ -58,7 +58,7 @@ private fun retentionLabel(n: Int): String = when (n) {
 }
 
 /** The two switch columns of the profiles table. */
-private val SwitchColumn = 58.dp
+private val SwitchColumn = 64.dp
 
 /** Seedy › Play log (no phone board: the server boards' kit with the web board AdminPlayLog's content). */
 @Composable

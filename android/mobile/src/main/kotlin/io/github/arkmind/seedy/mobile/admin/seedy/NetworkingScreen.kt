@@ -77,12 +77,13 @@ fun NetworkingScreen(state: NetworkingState, actions: NetworkingActions, onBack:
                 }
             }
             if (bar) {
-                val note = if (state.watching > 0) " · " + tn(state.watching, "{n} person is watching", "{n} people are watching") else ""
                 UnsavedBar(
-                    tn(changes, "{n} unsaved change", "{n} unsaved changes") + note, t("Save and restart"),
+                    tn(changes, "{n} unsaved change", "{n} unsaved changes"), t("Save and restart"),
                     onDiscard = actions::discard,
                     onSave = { if (state.portText.isNotEmpty()) actions.say(t("Ports are numbers from 1 to 65535.")) else confirm = true },
                     saving = state.saving, busy = if (state.restarting) t("Restarting the server…") else null,
+                    compact = true,
+                    note = if (state.watching > 0) tn(state.watching, "{n} person is watching", "{n} people are watching") else null,
                 )
             }
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter).padding(bottom = if (bar) 90.dp else 0.dp))

@@ -48,7 +48,7 @@ import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
 import io.github.arkmind.seedy.mobile.settings.PickRow
 import io.github.arkmind.seedy.mobile.settings.Section
-import io.github.arkmind.seedy.mobile.settings.SectionFoot
+import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
@@ -169,9 +169,12 @@ fun AdminRequestsScreen(state: AdminRequestsState, actions: AdminRequestsActions
             }
         }
 
-        SectionHead(t("Accounts"), if (state.matching) t("Matching…") else t("Match again"), actions::matchAgain, enabled = !state.matching)
+        SectionTitle(t("Accounts"))
         Accounts(state, actions, onLink = { linking = it }, onMenu = { menu = it })
-        SectionFoot(t("Matched automatically when Seerr uses Jellyfin sign-in."))
+        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            SText(t("Matched automatically when Seerr uses Jellyfin sign-in."), Modifier.weight(1f), size = 12.sp, lineHeight = 1.45f, color = SeedyColors.Text3)
+            PillButton(if (state.matching) t("Matching…") else t("Match again"), actions::matchAgain, enabled = !state.matching, height = 36.dp)
+        }
         if (c != null) AutoSaveLine(state.save)
     }
 }

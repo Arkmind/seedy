@@ -265,15 +265,6 @@ private fun StepButton(icon: IconDef, enabled: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** A section's title with a small action at its right ("Match again"). */
-@Composable
-fun SectionHead(title: String, action: String, onAction: () -> Unit, enabled: Boolean = true) {
-    Row(Modifier.fillMaxWidth().padding(end = 16.dp), verticalAlignment = Alignment.Bottom) {
-        Box(Modifier.weight(1f)) { SectionTitle(title) }
-        PillButton(action, onAction, Modifier.padding(bottom = 4.dp), enabled = enabled, height = 32.dp)
-    }
-}
-
 /** What went wrong loading a page, with Try again. */
 @Composable
 fun LoadFailed(title: String, error: String, onRetry: () -> Unit) {
@@ -311,6 +302,9 @@ fun BoxScope.UnsavedBar(
     busy: String? = null,
     discardLabel: String = t("Discard"),
     savingLabel: String = t("Saving…"),
+    note: String? = null,
+    /** Tighter buttons, for a long [saveLabel] ("Save and restart"). */
+    compact: Boolean = false,
 ) {
     val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Row(
@@ -326,11 +320,14 @@ fun BoxScope.UnsavedBar(
             SText(busy, Modifier.weight(1f), size = 13.sp, weight = 700, color = SeedyColors.Pending)
             return@Row
         }
-        SText(text, Modifier.weight(1f), size = 13.sp, weight = 700, color = SeedyColors.Pending)
-        Row(Modifier.height(40.dp).clip(CircleShape).tap(enabled = !saving, onClick = onDiscard).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (text.isNotEmpty()) SText(text, size = 13.sp, weight = 700, color = SeedyColors.Pending)
+            if (!note.isNullOrEmpty()) SText(note, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text2)
+        }
+        Row(Modifier.height(40.dp).clip(CircleShape).tap(enabled = !saving, onClick = onDiscard).padding(horizontal = if (compact) 8.dp else 16.dp), verticalAlignment = Alignment.CenterVertically) {
             SText(discardLabel, size = 13.sp, weight = 700, color = SeedyColors.Text, maxLines = 1)
         }
-        Box(Modifier.height(44.dp).clip(CircleShape).background(SeedyColors.Inverse).tap(enabled = !saving, onClick = onSave).padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.height(44.dp).clip(CircleShape).background(SeedyColors.Inverse).tap(enabled = !saving, onClick = onSave).padding(horizontal = if (compact) 16.dp else 20.dp), contentAlignment = Alignment.Center) {
             SText(if (saving) savingLabel else saveLabel, size = 14.sp, weight = 800, color = SeedyColors.InkInverse, maxLines = 1)
         }
     }
@@ -484,7 +481,7 @@ fun <T> SearchPickSheet(
                     if (on) SIcon(WebIcons.Check, size = 18.dp, color = accent, stroke = 2.6f)
                 }
             }
-            if (shown.isEmpty()) SText(t("Nothing matches."), Modifier.padding(12.dp), size = 13.sp, color = SeedyColors.Text3)
+            if (shown.isEmpty()) SText(t("Nothing matches"), Modifier.padding(12.dp), size = 13.sp, color = SeedyColors.Text3)
         }
     }
 }
