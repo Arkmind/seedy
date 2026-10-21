@@ -146,104 +146,11 @@ class ServerSettingsViewModel(private val session: UserSession) : ViewModel(), S
 
     private fun publish(fields: Boolean = false) {
         if (!_state.value.loaded) return
-        val i = info
-        val culture = cfg.str("UICulture") ?: "en-US"
-        val langOptions = withCurrent(langs.map { Choice(it.value, it.name) }, culture)
-        val cache = cfg.str("CachePath")?.takeIf { it.isNotEmpty() } ?: i?.cachePath.orEmpty()
-        val metadata = cfg.str("MetadataPath")?.takeIf { it.isNotEmpty() } ?: i?.internalMetadataPath.orEmpty()
-        val splashOn = branding.bool("SplashscreenEnabled")
-        val custom = !branding.str("SplashscreenLocation").isNullOrEmpty()
-        val fanout = cfg.int("LibraryScanFanoutConcurrency")
-        val images = cfg.int("ParallelImageEncodingLimit")
-        val activity = cfg.int("ActivityLogRetentionDays")
-        val logs = cfg.int("LogFileRetentionDays")
-        val idle = cfg.int("InactiveSessionThreshold")
-        val slow = cfg.bool("EnableSlowResponseWarning")
-        val slowMs = cfg.int("SlowResponseThresholdMs", 500)
-        val refreshes = cfg.int("LibraryMetadataRefreshConcurrency")
-        val subs = cfg.objects("PathSubstitutions").map { Pair2(it.str("From").orEmpty(), it.str("To").orEmpty()) }
-        val cast = cfg.objects("CastReceiverApplications").map { Pair2(it.str("Name").orEmpty(), it.str("Id").orEmpty()) }
-
-        fun pick(key: String, name: String, help: String?, values: List<Int>, current: Int, label: (Int) -> String): ChoiceSetting {
-            val options = choices(values, current, label)
-            return ChoiceSetting(key, name, help, label(current), current.toString(), options)
-        }
-        val days = { n: Int -> tn(n, "{n} day", "{n} days") }
-
-        val expert = listOf(
-            SettingsGroup(
-                null,
-                listOf(
-                    TextSetting("CorsHosts", t("Allowed web origins"), t("Sites allowed to call this server from a browser. * allows all"), (typedText("cfg:CorsHosts") ?: cfg.strings("CorsHosts").joinToString(", ")), "*", mono = true),
-                    LinkSetting("pathSubs", t("Path substitution"), t("Rewrite server paths for apps that read files directly, like Kodi"), if (subs.isEmpty()) t("Add a rule") else tn(subs.size, "{n} rule · Edit", "{n} rules · Edit")),
-                    NumberSetting("LibraryMonitorDelay", t("Wait after a file changes"), t("Before folder watching scans it"), "${cfg.int("LibraryMonitorDelay", 60)} s", cfg.int("LibraryMonitorDelay", 60).toDouble(), 0.0, 3600.0, "s"),
-                    TextSetting("SortRemoveWords", t("Ignore when sorting"), t("Leading words skipped in A–Z order"), (typedText("cfg:SortRemoveWords") ?: cfg.strings("SortRemoveWords").joinToString(", ")), "the, a, an"),
-                    pick("LibraryMetadataRefreshConcurrency", t("Parallel metadata refreshes"), t("Items refreshed at once"), ScanFanout, refreshes) { if (it == 0) t("Auto") else tn(it, "{n} item", "{n} items") },
-                    LinkSetting("castApps", t("Cast receiver apps"), t("Chromecast apps people can pick when casting"), if (cast.isEmpty()) t("Add an app") else cast.joinToString(", ") { it.a.ifEmpty { it.b } }),
-                    SwitchSetting("EnableLegacyAuthorization", t("Legacy authorization"), t("Accept the old sign-in header some older apps still send"), cfg.bool("EnableLegacyAuthorization")),
-                ),
-            ),
-            SettingsGroup(
-                t("Custom CSS for Jellyfin's app"),
-                listOf(TextSetting("CustomCss", "", null, typedText("branding:CustomCss") ?: branding.str("CustomCss").orEmpty(), t("/* No custom CSS */"), mono = true, lines = 7)),
-                foot = t("Applies to Jellyfin's own web app at /web. Seedy has its own theme under Branding & playback."),
-            ),
-        )
-        val groups = listOf(
-            SettingsGroup(null, listOf(ChoiceSetting("UICulture", t("Server language"), t("For notifications, logs and generated names"), labelOf(langOptions, culture), culture, langOptions))),
-            SettingsGroup(
-                t("Paths"),
-                listOf(
-                    LinkSetting("CachePath", t("Cache"), t("Images and other files Jellyfin can rebuild"), cache),
-                    LinkSetting("MetadataPath", t("Metadata"), t("Artwork and info downloaded for your library"), metadata),
-                ),
-                foot = t("Changes need a restart."),
-            ),
-            SettingsGroup(
-                t("Sign-in"),
-                listOf(
-                    SwitchSetting("QuickConnectAvailable", t("Quick Connect"), t("Sign in on a TV with a code from a signed-in device"), cfg.bool("QuickConnectAvailable")),
-                    LinkSetting("splash", t("Splash screen"), t("Image shown while apps load"), if (!splashOn) t("Off") else if (custom) t("Custom image") else t("Default")),
-                ),
-            ),
-            SettingsGroup(
-                t("Performance"),
-                listOf(
-                    pick("LibraryScanFanoutConcurrency", t("Parallel library scans"), t("Items a scan works on at once"), ScanFanout, fanout) { if (it == 0) t("Auto") else tn(it, "{n} item", "{n} items") },
-                    pick("ParallelImageEncodingLimit", t("Parallel image encoding"), t("Image jobs at once"), ScanFanout, images) { if (it == 0) t("Auto") else tn(it, "{n} job", "{n} jobs") },
-                ),
-            ),
-            SettingsGroup(
-                t("Logging and sessions"),
-                listOfNotNull(
-                    // Jellyfin's clean-up tasks read 0 days as "delete everything", not "keep forever".
-                    pick("ActivityLogRetentionDays", t("Keep activity log for"), t("Sign-ins, playback and changes"), ActivityDays, activity.coerceAtLeast(1), days),
-                    pick("LogFileRetentionDays", t("Keep log files for"), t("Server log files on disk"), LogDays, logs.coerceAtLeast(1), days),
-                    pick("InactiveSessionThreshold", t("Close idle sessions after"), null, IdleMinutes, idle, ::idleLabel),
-                    SwitchSetting("AllowClientLogUpload", t("Let apps upload their logs"), t("Helps when debugging a device"), cfg.bool("AllowClientLogUpload")),
-                    SwitchSetting("EnableSlowResponseWarning", t("Warn about slow responses"), t("Logs requests slower than {ms} ms", "ms" to slowMs), slow),
-                    if (slow) NumberSetting("SlowResponseThresholdMs", t("Slow response threshold"), null, "$slowMs ms", slowMs.toDouble(), 50.0, 60000.0, "ms") else null,
-                    SwitchSetting("EnableMetrics", t("Metrics endpoint"), t("Prometheus metrics for monitoring tools"), cfg.bool("EnableMetrics")),
-                ),
-            ),
-            SettingsGroup(null, listOf(LinkSetting("expert", t("Expert settings"), t("Settings Jellyfin only exposes in its config file. Change them with care."), tn(expert[0].rows.size, "{n} setting", "{n} settings")))),
-        )
-        _state.update {
-            it.copy(
-                groups = groups,
-                expert = expert,
-                pathSubs = subs,
-                castApps = cast,
-                splash = it.splash.copy(enabled = splashOn, custom = custom, imageUrl = session.api.imageApi.getSplashscreenUrl(tag = "v$splashVersion", format = ImageFormat.JPG)),
-                serverNamePlaceholder = i?.serverName.orEmpty(),
-                serverName = if (fields) cfg.str("ServerName")?.takeIf { n -> n.isNotEmpty() } ?: i?.serverName.orEmpty() else it.serverName,
-                signInMessage = if (fields) branding.str("LoginDisclaimer").orEmpty() else it.signInMessage,
-            )
-        }
+        val url = session.api.imageApi.getSplashscreenUrl(tag = "v$splashVersion", format = ImageFormat.JPG)
+        _state.update { serverSettingsState(it, cfg, branding, info, langs, rawTyped, url, fields) }
     }
 
     /** What's typed and not saved yet, as typed. */
-    private fun typedText(key: String): String? = rawTyped[key]
     private val rawTyped = mutableMapOf<String, String>()
 
     /* ── Saving: "cfg:Key" or "branding:Key", one at a time ── */
@@ -432,4 +339,112 @@ class ServerSettingsViewModel(private val session: UserSession) : ViewModel(), S
 
     private fun say(text: String) = _state.update { it.copy(message = text) }
     override fun messageShown() = _state.update { it.copy(message = null) }
+}
+
+/**
+ * The page as these settings make it: [cfg] is /System/Configuration, [branding] the branding settings, [typed] text
+ * typed and not saved yet; [fields] fills the name and sign-in message too (else they keep what's being typed).
+ */
+fun serverSettingsState(
+    base: ServerSettingsState,
+    cfg: JsonObject,
+    branding: JsonObject,
+    info: SystemInfo?,
+    langs: List<LocalizationOption>,
+    typed: Map<String, String>,
+    splashUrl: String?,
+    fields: Boolean,
+): ServerSettingsState {
+    val i = info
+    val culture = cfg.str("UICulture") ?: "en-US"
+    val langOptions = withCurrent(langs.map { Choice(it.value, it.name) }, culture)
+    val cache = cfg.str("CachePath")?.takeIf { it.isNotEmpty() } ?: i?.cachePath.orEmpty()
+    val metadata = cfg.str("MetadataPath")?.takeIf { it.isNotEmpty() } ?: i?.internalMetadataPath.orEmpty()
+    val splashOn = branding.bool("SplashscreenEnabled")
+    val custom = !branding.str("SplashscreenLocation").isNullOrEmpty()
+    val fanout = cfg.int("LibraryScanFanoutConcurrency")
+    val images = cfg.int("ParallelImageEncodingLimit")
+    val activity = cfg.int("ActivityLogRetentionDays")
+    val logs = cfg.int("LogFileRetentionDays")
+    val idle = cfg.int("InactiveSessionThreshold")
+    val slow = cfg.bool("EnableSlowResponseWarning")
+    val slowMs = cfg.int("SlowResponseThresholdMs", 500)
+    val refreshes = cfg.int("LibraryMetadataRefreshConcurrency")
+    val subs = cfg.objects("PathSubstitutions").map { Pair2(it.str("From").orEmpty(), it.str("To").orEmpty()) }
+    val cast = cfg.objects("CastReceiverApplications").map { Pair2(it.str("Name").orEmpty(), it.str("Id").orEmpty()) }
+
+    fun pick(key: String, name: String, help: String?, values: List<Int>, current: Int, label: (Int) -> String): ChoiceSetting {
+        val options = choices(values, current, label)
+        return ChoiceSetting(key, name, help, label(current), current.toString(), options)
+    }
+    val days = { n: Int -> tn(n, "{n} day", "{n} days") }
+
+    val expert = listOf(
+        SettingsGroup(
+            null,
+            listOf(
+                TextSetting("CorsHosts", t("Allowed web origins"), t("Sites allowed to call this server from a browser. * allows all"), (typed["cfg:CorsHosts"] ?: cfg.strings("CorsHosts").joinToString(", ")), "*", mono = true),
+                LinkSetting("pathSubs", t("Path substitution"), t("Rewrite server paths for apps that read files directly, like Kodi"), if (subs.isEmpty()) t("Add a rule") else tn(subs.size, "{n} rule · Edit", "{n} rules · Edit")),
+                NumberSetting("LibraryMonitorDelay", t("Wait after a file changes"), t("Before folder watching scans it"), "${cfg.int("LibraryMonitorDelay", 60)} s", cfg.int("LibraryMonitorDelay", 60).toDouble(), 0.0, 3600.0, "s"),
+                TextSetting("SortRemoveWords", t("Ignore when sorting"), t("Leading words skipped in A–Z order"), (typed["cfg:SortRemoveWords"] ?: cfg.strings("SortRemoveWords").joinToString(", ")), "the, a, an"),
+                pick("LibraryMetadataRefreshConcurrency", t("Parallel metadata refreshes"), t("Items refreshed at once"), ScanFanout, refreshes) { if (it == 0) t("Auto") else tn(it, "{n} item", "{n} items") },
+                LinkSetting("castApps", t("Cast receiver apps"), t("Chromecast apps people can pick when casting"), if (cast.isEmpty()) t("Add an app") else cast.joinToString(", ") { it.a.ifEmpty { it.b } }),
+                SwitchSetting("EnableLegacyAuthorization", t("Legacy authorization"), t("Accept the old sign-in header some older apps still send"), cfg.bool("EnableLegacyAuthorization")),
+            ),
+        ),
+        SettingsGroup(
+            t("Custom CSS for Jellyfin's app"),
+            listOf(TextSetting("CustomCss", "", null, typed["branding:CustomCss"] ?: branding.str("CustomCss").orEmpty(), t("/* No custom CSS */"), mono = true, lines = 7)),
+            foot = t("Applies to Jellyfin's own web app at /web. Seedy has its own theme under Branding & playback."),
+        ),
+    )
+    val groups = listOf(
+        SettingsGroup(null, listOf(ChoiceSetting("UICulture", t("Server language"), t("For notifications, logs and generated names"), labelOf(langOptions, culture), culture, langOptions))),
+        SettingsGroup(
+            t("Paths"),
+            listOf(
+                LinkSetting("CachePath", t("Cache"), t("Images and other files Jellyfin can rebuild"), cache),
+                LinkSetting("MetadataPath", t("Metadata"), t("Artwork and info downloaded for your library"), metadata),
+            ),
+            foot = t("Changes need a restart."),
+        ),
+        SettingsGroup(
+            t("Sign-in"),
+            listOf(
+                SwitchSetting("QuickConnectAvailable", t("Quick Connect"), t("Sign in on a TV with a code from a signed-in device"), cfg.bool("QuickConnectAvailable")),
+                LinkSetting("splash", t("Splash screen"), t("Image shown while apps load"), if (!splashOn) t("Off") else if (custom) t("Custom image") else t("Default")),
+            ),
+        ),
+        SettingsGroup(
+            t("Performance"),
+            listOf(
+                pick("LibraryScanFanoutConcurrency", t("Parallel library scans"), t("Items a scan works on at once"), ScanFanout, fanout) { if (it == 0) t("Auto") else tn(it, "{n} item", "{n} items") },
+                pick("ParallelImageEncodingLimit", t("Parallel image encoding"), t("Image jobs at once"), ScanFanout, images) { if (it == 0) t("Auto") else tn(it, "{n} job", "{n} jobs") },
+            ),
+        ),
+        SettingsGroup(
+            t("Logging and sessions"),
+            listOfNotNull(
+                // Jellyfin's clean-up tasks read 0 days as "delete everything", not "keep forever".
+                pick("ActivityLogRetentionDays", t("Keep activity log for"), t("Sign-ins, playback and changes"), ActivityDays, activity.coerceAtLeast(1), days),
+                pick("LogFileRetentionDays", t("Keep log files for"), t("Server log files on disk"), LogDays, logs.coerceAtLeast(1), days),
+                pick("InactiveSessionThreshold", t("Close idle sessions after"), null, IdleMinutes, idle, ::idleLabel),
+                SwitchSetting("AllowClientLogUpload", t("Let apps upload their logs"), t("Helps when debugging a device"), cfg.bool("AllowClientLogUpload")),
+                SwitchSetting("EnableSlowResponseWarning", t("Warn about slow responses"), t("Logs requests slower than {ms} ms", "ms" to slowMs), slow),
+                if (slow) NumberSetting("SlowResponseThresholdMs", t("Slow response threshold"), null, "$slowMs ms", slowMs.toDouble(), 50.0, 60000.0, "ms") else null,
+                SwitchSetting("EnableMetrics", t("Metrics endpoint"), t("Prometheus metrics for monitoring tools"), cfg.bool("EnableMetrics")),
+            ),
+        ),
+        SettingsGroup(null, listOf(LinkSetting("expert", t("Expert settings"), t("Settings Jellyfin only exposes in its config file. Change them with care."), tn(expert[0].rows.size, "{n} setting", "{n} settings")))),
+    )
+    return base.copy(
+        groups = groups,
+        expert = expert,
+        pathSubs = subs,
+        castApps = cast,
+        splash = base.splash.copy(enabled = splashOn, custom = custom, imageUrl = splashUrl),
+        serverNamePlaceholder = i?.serverName.orEmpty(),
+        serverName = if (fields) cfg.str("ServerName")?.takeIf { n -> n.isNotEmpty() } ?: i?.serverName.orEmpty() else base.serverName,
+        signInMessage = if (fields) branding.str("LoginDisclaimer").orEmpty() else base.signInMessage,
+    )
 }

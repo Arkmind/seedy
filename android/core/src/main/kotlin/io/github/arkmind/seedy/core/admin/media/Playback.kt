@@ -193,13 +193,8 @@ class PlaybackViewModel(session: UserSession) : ViewModel(), PlaybackActions {
     val state: StateFlow<PlaybackState> = _state.asStateFlow()
     private val browser = FolderBrowser(http, viewModelScope)
 
-    /** As the server sent them, and the changes staged over them ("TrickplayOptions.X" for seek previews). */
-    private var enc = JsonObject(emptyMap())
-    private var srv = JsonObject(emptyMap())
-    private val encDraft = linkedMapOf<String, JsonElement>()
-    private val srvDraft = linkedMapOf<String, JsonElement>()
+    private val d = PlaybackDraft()
     private var version: String? = null
-    private var versionKnown = false
     private var running: Int? = null
     private var scan: GpuScan? = null
 
@@ -217,14 +212,13 @@ class PlaybackViewModel(session: UserSession) : ViewModel(), PlaybackActions {
                 _state.update { it.copy(loadError = t("Couldn’t load the playback settings")) }
                 return@launch
             }
-            enc = er.getOrThrow()
-            srv = sr.getOrThrow()
+            d.enc = er.getOrThrow()
+            d.srv = sr.getOrThrow()
             _state.update { it.copy(loaded = true, loadError = null) }
             publish()
         }
         viewModelScope.launch {
             version = runCatching { ffmpegVersion(http) }.getOrNull()
-            versionKnown = true
             publish()
         }
         viewModelScope.launch {
@@ -247,12 +241,80 @@ class PlaybackViewModel(session: UserSession) : ViewModel(), PlaybackActions {
 
     override fun retry() = load()
 
+    private fun publish() {
+        if (_state.value.loaded) _state.update { d.present(it, version, running, scan) }
+    }
+
+    override fun setAccel(id: String) { d.setAccel(id); publish() }
+    override fun setCodec(key: String, on: Boolean) { d.setCodec(key, on); publish() }
+    override fun setSwitch(key: String, on: Boolean) { d.setSwitch(key, on); publish() }
+    override fun setChoice(key: String, value: String) { d.setChoice(key, value); publish() }
+    override fun setNumber(key: String, value: Double) { d.setNumber(key, value); publish() }
+    override fun setText(key: String, value: String) { d.setText(key, value); publish() }
+
+    override fun open(key: String) {
+        if (!key.startsWith("folder:")) return
+        val field = key.removePrefix("folder:")
+        val title = if (field == "FallbackFontPath") t("Fallback fonts folder") else t("Transcode folder")
+        browser.open(title, t("Use this folder"), d.eStr(field)) { path -> d.stageEnc(field, json(path)); publish() }
+    }
+
+    override fun browse(path: String) = browser.go(path)
+    override fun pickFolder(path: String) = browser.pick(path)
+    override fun closePicker() = browser.close()
+
+    override fun discard() {
+        d.encDraft.clear()
+        d.srvDraft.clear()
+        publish()
+    }
+
+    private fun say(text: String) = _state.update { it.copy(message = text) }
+    override fun messageShown() = _state.update { it.copy(message = null) }
+
+    override fun save() {
+        if (_state.value.saving || !d.changed) return
+        _state.update { it.copy(saving = true) }
+        viewModelScope.launch {
+            val result = runCatching {
+                if (d.encDraft.isNotEmpty()) {
+                    // Jellyfin replaces the whole encoding configuration: the changes go over what the server has now.
+                    d.enc = http.patchObject("/System/Configuration/encoding", d.encDraft.toMap())
+                    d.encDraft.clear()
+                }
+                if (d.srvDraft.isNotEmpty()) {
+                    val fresh = http.getObject("/System/Configuration")
+                    val top = d.srvDraft.filterKeys { !it.startsWith("TrickplayOptions.") }
+                    val trick = d.srvDraft.filterKeys { it.startsWith("TrickplayOptions.") }.mapKeys { it.key.removePrefix("TrickplayOptions.") }
+                    var next = JsonObject(fresh + top)
+                    // Seek previews are one nested object: merged field by field too.
+                    if (trick.isNotEmpty()) next = next.with("TrickplayOptions", JsonObject(fresh.obj("TrickplayOptions") + trick))
+                    http.send("/System/Configuration", next)
+                    d.srv = next
+                    d.srvDraft.clear()
+                }
+            }
+            _state.update { it.copy(saving = false) }
+            publish()
+            result.onSuccess { say(t("Playback settings saved")) }
+                .onFailure { if (it is CancellationException) throw it; say(failText(it, t("Couldn’t save the playback settings."))) }
+        }
+    }
+}
+
+/** Playback's settings as the server sent them, and the changes staged over them ("TrickplayOptions.X" for seek previews). */
+class PlaybackDraft(var enc: JsonObject = JsonObject(emptyMap()), var srv: JsonObject = JsonObject(emptyMap())) {
+    val encDraft = linkedMapOf<String, JsonElement>()
+    val srvDraft = linkedMapOf<String, JsonElement>()
+
+    val changed: Boolean get() = encDraft.isNotEmpty() || srvDraft.isNotEmpty()
+
     /* ── Reading the staged values ── */
 
-    private fun e(key: String): JsonElement? = encDraft[key] ?: enc[key]
+    fun e(key: String): JsonElement? = encDraft[key] ?: enc[key]
     private fun eBool(key: String) = (e(key) as? JsonPrimitive)?.contentOrNull == "true"
     private fun eNum(key: String) = (e(key) as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull() ?: 0.0
-    private fun eStr(key: String) = (e(key) as? JsonPrimitive)?.contentOrNull.orEmpty()
+    fun eStr(key: String) = (e(key) as? JsonPrimitive)?.contentOrNull.orEmpty()
     private fun eList(key: String) = (e(key) as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty()
 
     private fun savedSrv(key: String): JsonElement? =
@@ -296,8 +358,8 @@ class PlaybackViewModel(session: UserSession) : ViewModel(), PlaybackActions {
         return NumberSetting("$prefix:$key", name, changedHelp(key in draft, fmt(saved), help), fmt(shown), shown, min, max, unit, decimals)
     }
 
-    private fun publish() {
-        if (!_state.value.loaded) return
+    /** The page as these settings make it ([base] carries what the page holds besides them). */
+    fun present(base: PlaybackState, version: String?, running: Int?, scan: GpuScan?): PlaybackState {
         val hw = eStr("HardwareAccelerationType").ifEmpty { "none" }
         val found = detectedAccels(scan)
         val accels = if (hw == "v4l2m2m") Accels + V4l2 else Accels
@@ -378,20 +440,18 @@ class PlaybackViewModel(session: UserSession) : ViewModel(), PlaybackActions {
         )
 
         val changes = encDraft.size + srvDraft.size
-        _state.update {
-            it.copy(
-                ffmpeg = ffmpeg,
-                ffmpegFound = path.isNotEmpty(),
-                accels = accels.map { a -> AccelRow(a.id, if (a.id == "none") t(a.name) else a.name, if (a.id in found) t("Detected on this server") else t(a.sub), hw == a.id, a.id in found) },
-                codecs = codecs,
-                groups = groups,
-                resume = resume(),
-                streaming = streaming(),
-                previews = previews(),
-                changes = changes,
-                unsaved = if (changes > 0) tn(changes, "{n} unsaved change", "{n} unsaved changes") + " · " + t("applies to new streams") else "",
-            )
-        }
+        return base.copy(
+            ffmpeg = ffmpeg,
+            ffmpegFound = path.isNotEmpty(),
+            accels = accels.map { a -> AccelRow(a.id, if (a.id == "none") t(a.name) else a.name, if (a.id in found) t("Detected on this server") else t(a.sub), hw == a.id, a.id in found) },
+            codecs = codecs,
+            groups = groups,
+            resume = resume(),
+            streaming = streaming(),
+            previews = previews(),
+            changes = changes,
+            unsaved = if (changes > 0) tn(changes, "{n} unsaved change", "{n} unsaved changes") + " · " + t("applies to new streams") else "",
+        )
     }
 
     private fun resume(): List<SettingsGroup> {
@@ -491,7 +551,7 @@ class PlaybackViewModel(session: UserSession) : ViewModel(), PlaybackActions {
 
     /* ── Staging ── */
 
-    private fun stageEnc(key: String, value: JsonElement) {
+    fun stageEnc(key: String, value: JsonElement) {
         if (enc[key] == value) encDraft.remove(key) else encDraft[key] = value
     }
 
@@ -502,15 +562,13 @@ class PlaybackViewModel(session: UserSession) : ViewModel(), PlaybackActions {
     private fun stage(key: String, value: JsonElement) {
         val field = key.substringAfter(':')
         if (key.startsWith("enc:")) stageEnc(field, value) else stageSrv(field, value)
-        publish()
     }
 
-    override fun setAccel(id: String) {
+    fun setAccel(id: String) {
         stageEnc("HardwareAccelerationType", json(id))
-        publish()
     }
 
-    override fun setCodec(key: String, on: Boolean) {
+    fun setCodec(key: String, on: Boolean) {
         if (key.startsWith("codec:")) {
             val codec = key.removePrefix("codec:")
             val rest = eList("HardwareDecodingCodecs") - codec
@@ -519,18 +577,16 @@ class PlaybackViewModel(session: UserSession) : ViewModel(), PlaybackActions {
             val saved = enc.strings("HardwareDecodingCodecs")
             stageEnc("HardwareDecodingCodecs", json(if (next.toSet() == saved.toSet()) saved else next))
         } else stageEnc(key.removePrefix("flag:"), json(on))
-        publish()
     }
 
-    override fun setSwitch(key: String, on: Boolean) {
+    fun setSwitch(key: String, on: Boolean) {
         if (key == "lowpower") {
             stageEnc("EnableIntelLowPowerH264HwEncoder", json(on))
             stageEnc("EnableIntelLowPowerHevcHwEncoder", json(on))
-            publish()
         } else stage(key, json(on))
     }
 
-    override fun setChoice(key: String, value: String) {
+    fun setChoice(key: String, value: String) {
         val field = key.substringAfter(':')
         val v: JsonElement = when (field) {
             "EncodingThreadCount" -> json(value.toIntOrNull() ?: -1)
@@ -539,7 +595,7 @@ class PlaybackViewModel(session: UserSession) : ViewModel(), PlaybackActions {
         stage(key, v)
     }
 
-    override fun setNumber(key: String, value: Double) {
+    fun setNumber(key: String, value: Double) {
         val v: JsonElement = when (key.substringAfter(':')) {
             "RemoteClientBitrateLimit" -> json((value * 1_000_000).roundToLong())
             "TrickplayOptions.Interval" -> json((value * 1000).roundToLong())
@@ -549,59 +605,10 @@ class PlaybackViewModel(session: UserSession) : ViewModel(), PlaybackActions {
         stage(key, v)
     }
 
-    override fun setText(key: String, value: String) {
+    fun setText(key: String, value: String) {
         if (key == "srv:TrickplayOptions.WidthResolutions") {
             val widths = value.split(',', ' ').mapNotNull { it.trim().toIntOrNull() }.filter { it in 64..3840 }.distinct().sorted()
             if (widths.isNotEmpty()) stage(key, JsonArray(widths.map { JsonPrimitive(it) }))
-        }
-    }
-
-    override fun open(key: String) {
-        if (!key.startsWith("folder:")) return
-        val field = key.removePrefix("folder:")
-        val title = if (field == "FallbackFontPath") t("Fallback fonts folder") else t("Transcode folder")
-        browser.open(title, t("Use this folder"), eStr(field)) { path -> stageEnc(field, json(path)); publish() }
-    }
-
-    override fun browse(path: String) = browser.go(path)
-    override fun pickFolder(path: String) = browser.pick(path)
-    override fun closePicker() = browser.close()
-
-    override fun discard() {
-        encDraft.clear()
-        srvDraft.clear()
-        publish()
-    }
-
-    private fun say(text: String) = _state.update { it.copy(message = text) }
-    override fun messageShown() = _state.update { it.copy(message = null) }
-
-    override fun save() {
-        if (_state.value.saving || (encDraft.isEmpty() && srvDraft.isEmpty())) return
-        _state.update { it.copy(saving = true) }
-        viewModelScope.launch {
-            val result = runCatching {
-                if (encDraft.isNotEmpty()) {
-                    // Jellyfin replaces the whole encoding configuration: the changes go over what the server has now.
-                    enc = http.patchObject("/System/Configuration/encoding", encDraft.toMap())
-                    encDraft.clear()
-                }
-                if (srvDraft.isNotEmpty()) {
-                    val fresh = http.getObject("/System/Configuration")
-                    val top = srvDraft.filterKeys { !it.startsWith("TrickplayOptions.") }
-                    val trick = srvDraft.filterKeys { it.startsWith("TrickplayOptions.") }.mapKeys { it.key.removePrefix("TrickplayOptions.") }
-                    var next = JsonObject(fresh + top)
-                    // Seek previews are one nested object: merged field by field too.
-                    if (trick.isNotEmpty()) next = next.with("TrickplayOptions", JsonObject(fresh.obj("TrickplayOptions") + trick))
-                    http.send("/System/Configuration", next)
-                    srv = next
-                    srvDraft.clear()
-                }
-            }
-            _state.update { it.copy(saving = false) }
-            publish()
-            result.onSuccess { say(t("Playback settings saved")) }
-                .onFailure { if (it is CancellationException) throw it; say(failText(it, t("Couldn’t save the playback settings."))) }
         }
     }
 }

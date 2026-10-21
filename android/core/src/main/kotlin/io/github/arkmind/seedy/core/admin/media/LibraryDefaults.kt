@@ -107,86 +107,7 @@ class LibraryDefaultsViewModel(session: UserSession, private val page: String) :
     private fun cfg(name: String) = configs[name] ?: JsonObject(emptyMap())
 
     private fun publish() {
-        val groups = when (page) {
-            LibraryPages.Display -> display(cfg(""), cfg("metadata"))
-            LibraryPages.Metadata -> metadata(cfg(""))
-            else -> nfo(cfg("xbmcmetadata"))
-        }
-        _state.update { it.copy(groups = groups) }
-    }
-
-    private fun sw(key: String, o: JsonObject, name: String, help: String?) = SwitchSetting(key, name, help, o.bool(key.substringAfter(':')))
-
-    private fun display(c: JsonObject, m: JsonObject): List<SettingsGroup> {
-        val dateOptions = listOf(Choice("file", t("When the file was created")), Choice("scan", t("When a scan found it")))
-        val date = if (m.bool("UseFileCreationTimeForDateAdded")) "file" else "scan"
-        return listOf(
-            SettingsGroup(
-                t("Browsing"),
-                listOf(
-                    sw(":EnableFolderView", c, t("Folders view"), t("Adds a library that shows the media folders as they are on disk")),
-                    sw(":DisplaySpecialsWithinSeasons", c, t("Specials inside their seasons"), t("Specials sit between the episodes they aired with")),
-                    sw(":EnableGroupingMoviesIntoCollections", c, t("Group movies into collections"), t("Movies in a collection show as one card in Movies")),
-                    sw(":EnableGroupingShowsIntoCollections", c, t("Group shows into collections"), t("Shows in a collection show as one card in Shows")),
-                    sw(":EnableExternalContentInSuggestions", c, t("Suggest channel content"), t("Live TV and channel titles can appear in suggestions")),
-                ),
-            ),
-            SettingsGroup(t("New titles"), listOf(ChoiceSetting("metadata:UseFileCreationTimeForDateAdded", t("Date added"), t("What “Recently added” sorts by"), labelOf(dateOptions, date), date, dateOptions))),
-        )
-    }
-
-    private fun metadata(c: JsonObject): List<SettingsGroup> {
-        val langs = cultures.filter { it.twoLetterISOLanguageName.isNotEmpty() }.map { Choice(it.twoLetterISOLanguageName, it.displayName) }
-        val ctry = countries.map { Choice(it.twoLetterISORegionName, it.displayName) }
-        val lang = c.str("PreferredMetadataLanguage").orEmpty()
-        val country = c.str("MetadataCountryCode").orEmpty()
-        val langOptions = withCurrent(langs, lang)
-        val countryOptions = withCurrent(ctry, country)
-        val sizes = ChapterSizes.map { (v, l) -> Choice(v, if (v == "MatchSource") t(l) else l) }
-        val size = c.str("ChapterImageResolution") ?: "MatchSource"
-        val minutes = (c.int("DummyChapterDuration") / 60.0).roundToInt()
-        val names = listOf(Choice("Legacy", t("Jellyfin’s own names")), Choice("Compatible", t("Kodi and Emby names")))
-        val convention = c.str("ImageSavingConvention") ?: "Legacy"
-        return listOf(
-            SettingsGroup(
-                t("Language and country"),
-                listOf(
-                    ChoiceSetting(":PreferredMetadataLanguage", t("Preferred language"), t("For titles, descriptions and artwork"), labelOf(langOptions, lang).ifEmpty { t("Not set") }, lang, langOptions),
-                    ChoiceSetting(":MetadataCountryCode", t("Country"), t("For release dates and age ratings"), labelOf(countryOptions, country).ifEmpty { t("Not set") }, country, countryOptions),
-                ),
-            ),
-            SettingsGroup(
-                t("Chapters"),
-                listOf(
-                    ChoiceSetting(":ChapterImageResolution", t("Chapter image size"), t("Pictures for the chapter list in the player"), labelOf(sizes, size), size, withCurrent(sizes, size)),
-                    NumberSetting(":DummyChapterDuration", t("Add chapters every"), t("For files without chapters of their own. 0 adds none"), if (minutes == 0) t("Never") else "$minutes min", minutes.toDouble(), 0.0, 240.0, "min"),
-                ),
-            ),
-            SettingsGroup(
-                t("Saved files"),
-                listOf(
-                    ChoiceSetting(":ImageSavingConvention", t("Artwork file names"), t("How artwork saved next to the media is named"), labelOf(names, convention), convention, withCurrent(names, convention)),
-                    sw(":SaveMetadataHidden", c, t("Hide saved files"), t("Marks artwork and NFO files Jellyfin writes as hidden")),
-                ),
-            ),
-        )
-    }
-
-    private fun nfo(n: JsonObject): List<SettingsGroup> {
-        val options = listOf(Choice("", t("Nobody"))) + users.map { Choice(normId(it.id), it.name) }
-        val user = normId(n.str("UserId")).takeIf { u -> options.any { it.value == u } } ?: ""
-        return listOf(
-            SettingsGroup(
-                t("NFO files"),
-                listOf(
-                    ChoiceSetting("xbmcmetadata:UserId", t("Save watched state for"), t("Writes which titles this person has watched into the files"), labelOf(options, user), user, options),
-                    TextSetting("xbmcmetadata:ReleaseDateFormat", t("Release date format"), t("As Kodi expects it, for example yyyy-MM-dd"), n.str("ReleaseDateFormat").orEmpty(), "yyyy-MM-dd", mono = true),
-                    sw("xbmcmetadata:SaveImagePathsInNfo", n, t("Save artwork paths"), t("Lists the artwork files inside each NFO")),
-                    sw("xbmcmetadata:EnablePathSubstitution", n, t("Use path substitution"), t("Rewrites those paths with the rules under Settings › Expert")),
-                    sw("xbmcmetadata:EnableExtraThumbsDuplication", n, t("Copy extra fanart to extrathumbs"), t("For older Kodi skins that look there")),
-                ),
-            ),
-        )
+        _state.update { it.copy(groups = libraryDefaultsGroups(page, configs, cultures, countries, users)) }
     }
 
     /* ── Saving: "config:Key" ── */
@@ -252,5 +173,92 @@ class LibraryDefaultsViewModel(session: UserSession, private val page: String) :
             LibraryPages.Metadata -> t("What new libraries start with. Each library can still choose its own.")
             else -> t("Kodi and other apps read these files next to the media. Jellyfin writes them for libraries that save artwork next to the media.")
         }
+    }
+}
+
+/** A shared library page's cards, from its settings objects ("" is the server configuration, else a named one). */
+fun libraryDefaultsGroups(page: String, configs: Map<String, JsonObject>, cultures: List<Culture>, countries: List<Country>, users: List<AdminUser>): List<SettingsGroup> {
+    val v = DefaultsView(cultures, countries, users)
+    fun cfg(name: String) = configs[name] ?: JsonObject(emptyMap())
+    return when (page) {
+        LibraryPages.Display -> v.display(cfg(""), cfg("metadata"))
+        LibraryPages.Metadata -> v.metadata(cfg(""))
+        else -> v.nfo(cfg("xbmcmetadata"))
+    }
+}
+
+private class DefaultsView(val cultures: List<Culture>, val countries: List<Country>, val users: List<AdminUser>) {
+    private fun sw(key: String, o: JsonObject, name: String, help: String?) = SwitchSetting(key, name, help, o.bool(key.substringAfter(':')))
+
+    fun display(c: JsonObject, m: JsonObject): List<SettingsGroup> {
+        val dateOptions = listOf(Choice("file", t("When the file was created")), Choice("scan", t("When a scan found it")))
+        val date = if (m.bool("UseFileCreationTimeForDateAdded")) "file" else "scan"
+        return listOf(
+            SettingsGroup(
+                t("Browsing"),
+                listOf(
+                    sw(":EnableFolderView", c, t("Folders view"), t("Adds a library that shows the media folders as they are on disk")),
+                    sw(":DisplaySpecialsWithinSeasons", c, t("Specials inside their seasons"), t("Specials sit between the episodes they aired with")),
+                    sw(":EnableGroupingMoviesIntoCollections", c, t("Group movies into collections"), t("Movies in a collection show as one card in Movies")),
+                    sw(":EnableGroupingShowsIntoCollections", c, t("Group shows into collections"), t("Shows in a collection show as one card in Shows")),
+                    sw(":EnableExternalContentInSuggestions", c, t("Suggest channel content"), t("Live TV and channel titles can appear in suggestions")),
+                ),
+            ),
+            SettingsGroup(t("New titles"), listOf(ChoiceSetting("metadata:UseFileCreationTimeForDateAdded", t("Date added"), t("What “Recently added” sorts by"), labelOf(dateOptions, date), date, dateOptions))),
+        )
+    }
+
+    fun metadata(c: JsonObject): List<SettingsGroup> {
+        val langs = cultures.filter { it.twoLetterISOLanguageName.isNotEmpty() }.map { Choice(it.twoLetterISOLanguageName, it.displayName) }
+        val ctry = countries.map { Choice(it.twoLetterISORegionName, it.displayName) }
+        val lang = c.str("PreferredMetadataLanguage").orEmpty()
+        val country = c.str("MetadataCountryCode").orEmpty()
+        val langOptions = withCurrent(langs, lang)
+        val countryOptions = withCurrent(ctry, country)
+        val sizes = ChapterSizes.map { (v, l) -> Choice(v, if (v == "MatchSource") t(l) else l) }
+        val size = c.str("ChapterImageResolution") ?: "MatchSource"
+        val minutes = (c.int("DummyChapterDuration") / 60.0).roundToInt()
+        val names = listOf(Choice("Legacy", t("Jellyfin’s own names")), Choice("Compatible", t("Kodi and Emby names")))
+        val convention = c.str("ImageSavingConvention") ?: "Legacy"
+        return listOf(
+            SettingsGroup(
+                t("Language and country"),
+                listOf(
+                    ChoiceSetting(":PreferredMetadataLanguage", t("Preferred language"), t("For titles, descriptions and artwork"), labelOf(langOptions, lang).ifEmpty { t("Not set") }, lang, langOptions),
+                    ChoiceSetting(":MetadataCountryCode", t("Country"), t("For release dates and age ratings"), labelOf(countryOptions, country).ifEmpty { t("Not set") }, country, countryOptions),
+                ),
+            ),
+            SettingsGroup(
+                t("Chapters"),
+                listOf(
+                    ChoiceSetting(":ChapterImageResolution", t("Chapter image size"), t("Pictures for the chapter list in the player"), labelOf(sizes, size), size, withCurrent(sizes, size)),
+                    NumberSetting(":DummyChapterDuration", t("Add chapters every"), t("For files without chapters of their own. 0 adds none"), if (minutes == 0) t("Never") else "$minutes min", minutes.toDouble(), 0.0, 240.0, "min"),
+                ),
+            ),
+            SettingsGroup(
+                t("Saved files"),
+                listOf(
+                    ChoiceSetting(":ImageSavingConvention", t("Artwork file names"), t("How artwork saved next to the media is named"), labelOf(names, convention), convention, withCurrent(names, convention)),
+                    sw(":SaveMetadataHidden", c, t("Hide saved files"), t("Marks artwork and NFO files Jellyfin writes as hidden")),
+                ),
+            ),
+        )
+    }
+
+    fun nfo(n: JsonObject): List<SettingsGroup> {
+        val options = listOf(Choice("", t("Nobody"))) + users.map { Choice(normId(it.id), it.name) }
+        val user = normId(n.str("UserId")).takeIf { u -> options.any { it.value == u } } ?: ""
+        return listOf(
+            SettingsGroup(
+                t("NFO files"),
+                listOf(
+                    ChoiceSetting("xbmcmetadata:UserId", t("Save watched state for"), t("Writes which titles this person has watched into the files"), labelOf(options, user), user, options),
+                    TextSetting("xbmcmetadata:ReleaseDateFormat", t("Release date format"), t("As Kodi expects it, for example yyyy-MM-dd"), n.str("ReleaseDateFormat").orEmpty(), "yyyy-MM-dd", mono = true),
+                    sw("xbmcmetadata:SaveImagePathsInNfo", n, t("Save artwork paths"), t("Lists the artwork files inside each NFO")),
+                    sw("xbmcmetadata:EnablePathSubstitution", n, t("Use path substitution"), t("Rewrites those paths with the rules under Settings › Expert")),
+                    sw("xbmcmetadata:EnableExtraThumbsDuplication", n, t("Copy extra fanart to extrathumbs"), t("For older Kodi skins that look there")),
+                ),
+            ),
+        )
     }
 }

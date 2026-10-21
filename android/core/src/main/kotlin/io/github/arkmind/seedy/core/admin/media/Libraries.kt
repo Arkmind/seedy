@@ -229,33 +229,10 @@ class LibrariesViewModel(
 
     private fun publish() {
         val list = folders ?: return
-        val scanTask = tasks?.firstOrNull { it.key == "RefreshLibrary" }
-        val running = scanTask?.state == "Running"
-        val lastEnd = scanTask?.lastExecutionResult?.endTimeUtc
-        val status = when {
-            running -> t("scanning now") + (scanTask?.currentProgressPercentage?.let { " · " + percentLabel(it) } ?: "")
-            realDate(lastEnd) != null -> t("last full scan {when}", "when" to atLabel(realDate(lastEnd)!!, clock))
-            else -> t("not scanned yet")
+        val (lede, cards) = librariesView(list, tasks, counts, clock) { f ->
+            f.primaryImageItemId?.let { id -> runCatching { session.api.imageApi.getItemImageUrl(UUID.fromString(dashed(id)), ImageType.PRIMARY, maxWidth = 240) }.getOrNull() }
         }
-        val lede = t(
-            "{libraries} · {status}. Open one for folders, metadata, subtitles and previews.",
-            "libraries" to tn(list.size, "{n} library", "{n} libraries"),
-            "status" to status,
-        )
-        val cards = list.map { f ->
-            val progress = f.refreshProgress ?: if (f.refreshStatus == "Active") 0.0 else if (running) scanTask?.currentProgressPercentage ?: 0.0 else null
-            LibraryCard(
-                id = f.itemId,
-                name = f.name,
-                meta = libraryMeta(f, counts[f.itemId]),
-                state = if (progress != null) t("Scanning · {pct}", "pct" to percentLabel(progress)) else scannedLabel(lastEnd, clock),
-                scanning = progress != null,
-                progress = ((progress ?: 0.0) / 100).toFloat().coerceIn(0f, 1f),
-                art = f.primaryImageItemId?.let { id -> runCatching { session.api.imageApi.getItemImageUrl(UUID.fromString(dashed(id)), ImageType.PRIMARY, maxWidth = 240) }.getOrNull() },
-                canStop = progress != null && running,
-            )
-        }
-        _state.update { it.copy(lede = lede, cards = cards, scanning = running) }
+        _state.update { it.copy(lede = lede, cards = cards, scanning = tasks?.firstOrNull { t -> t.key == "RefreshLibrary" }?.state == "Running") }
         _state.value.adding?.let { form -> _state.update { it.copy(adding = form.copy(taken = taken(form.name))) } }
     }
 
@@ -348,6 +325,37 @@ class LibrariesViewModel(
     }
 
     override fun opened() = _state.update { it.copy(open = null) }
+}
+
+/** The page's lede and a card per library ([art] gives a library's picture). */
+fun librariesView(list: List<VirtualFolder>, tasks: List<TaskInfo>?, counts: Map<String, Int>, clock: Clock, art: (VirtualFolder) -> String?): Pair<String, List<LibraryCard>> {
+    val scanTask = tasks?.firstOrNull { it.key == "RefreshLibrary" }
+    val running = scanTask?.state == "Running"
+    val lastEnd = scanTask?.lastExecutionResult?.endTimeUtc
+    val status = when {
+        running -> t("scanning now") + (scanTask?.currentProgressPercentage?.let { " · " + percentLabel(it) } ?: "")
+        realDate(lastEnd) != null -> t("last full scan {when}", "when" to atLabel(realDate(lastEnd)!!, clock))
+        else -> t("not scanned yet")
+    }
+    val lede = t(
+        "{libraries} · {status}. Open one for folders, metadata, subtitles and previews.",
+        "libraries" to tn(list.size, "{n} library", "{n} libraries"),
+        "status" to status,
+    )
+    val cards = list.map { f ->
+        val progress = f.refreshProgress ?: if (f.refreshStatus == "Active") 0.0 else if (running) scanTask?.currentProgressPercentage ?: 0.0 else null
+        LibraryCard(
+            id = f.itemId,
+            name = f.name,
+            meta = libraryMeta(f, counts[f.itemId]),
+            state = if (progress != null) t("Scanning · {pct}", "pct" to percentLabel(progress)) else scannedLabel(lastEnd, clock),
+            scanning = progress != null,
+            progress = ((progress ?: 0.0) / 100).toFloat().coerceIn(0f, 1f),
+            art = art(f),
+            canStop = progress != null && running,
+        )
+    }
+    return lede to cards
 }
 
 /** A new library's options, as the web dashboard starts them: Jellyfin's defaults for that kind, and [paths]. */

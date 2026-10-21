@@ -314,77 +314,7 @@ class LibraryViewModel(
 
     private fun publish() {
         val f = folder ?: return
-        val a = avail
-        val lang = opts.str("PreferredMetadataLanguage").orEmpty()
-        val country = opts.str("MetadataCountryCode").orEmpty()
-        val days = opts.int("AutomaticRefreshIntervalDays")
-        val langOptions = listOf(Choice("", t("Server default"))) + cultures.filter { it.twoLetterISOLanguageName.isNotEmpty() }.map { Choice(it.twoLetterISOLanguageName, it.displayName) }
-        val countryOptions = listOf(Choice("", t("Server default"))) + countries.map { Choice(it.twoLetterISORegionName, it.displayName) }
-        val running = scanTask?.state == "Running"
-        val progress = f.refreshProgress ?: if (f.refreshStatus == "Active") 0.0 else if (running) scanTask?.currentProgressPercentage ?: 0.0 else null
-        val (simAll, simChosen) = if (a != null) similarState(opts, a) else emptyList<String>() to emptyList()
-        val simOptions = if (simAll.isNotEmpty()) similarChoices(simAll, simChosen) else emptyList()
-        val codes = opts.strings("SubtitleDownloadLanguages")
-        fun nameOf(code: String) = cultures.firstOrNull { it.threeLetterISOLanguageName == code || code in it.threeLetterISOLanguageNames }?.displayName ?: code
-        val movies = f.collectionType == null || f.collectionType == "movies" || f.collectionType == "mixed"
-        val disabledSubs = opts.strings("DisabledSubtitleFetchers")
-        val disabledSegments = opts.strings("DisabledMediaSegmentProviders")
-        _state.update {
-            it.copy(
-                title = f.name,
-                lede = libraryMeta(f, count),
-                scanState = progress?.let { p -> t("Scanning · {pct}", "pct" to percentLabel(p)) },
-                scanProgress = ((progress ?: 0.0) / 100).toFloat().coerceIn(0f, 1f),
-                folders = f.locations,
-                language = langOptions.firstOrNull { o -> o.value == lang }?.label ?: lang,
-                languageValue = lang,
-                languageOptions = if (langOptions.any { o -> o.value == lang }) langOptions else langOptions + Choice(lang, lang),
-                country = countryOptions.firstOrNull { o -> o.value == country }?.label ?: country,
-                countryValue = country,
-                countryOptions = if (countryOptions.any { o -> o.value == country }) countryOptions else countryOptions + Choice(country, country),
-                refresh = refreshLabel(days),
-                refreshValue = days,
-                refreshOptions = (if (days in RefreshDays) RefreshDays else RefreshDays + days).map { d -> Choice(d, refreshLabel(d)) },
-                sources = a?.let { av -> buildSources(opts, av).map(::sourceRow) },
-                sourcesFailed = a == null && availFailed,
-                similar = simOptions.firstOrNull { o -> o.value == simChosen }?.label,
-                similarValue = simChosen,
-                similarOptions = simOptions,
-                subtitleLanguages = codes.map { c -> LanguageChip(c, nameOf(c)) },
-                moreLanguages = cultures.filter { c -> c.threeLetterISOLanguageName.isNotEmpty() && c.threeLetterISOLanguageName !in codes }.map { c -> LanguageChip(c.threeLetterISOLanguageName, c.displayName) },
-                subtitleFetchers = a?.subtitleFetchers.orEmpty().map { s -> SwitchItem("fetcher:" + s.name, t("Download from {name}", "name" to s.name), null, s.name !in disabledSubs) },
-                subtitleSwitches = listOf(
-                    sw("SkipSubtitlesIfEmbeddedSubtitlesPresent", t("Skip if the file has subtitles")),
-                    sw("SkipSubtitlesIfAudioTrackMatches", t("Skip if the audio matches")),
-                    sw("RequirePerfectSubtitleMatch", t("Only perfect matches")),
-                    sw("SaveSubtitlesWithMedia", t("Save next to the media")),
-                ),
-                scanSwitches = listOfNotNull(
-                    sw("EnableRealtimeMonitor", t("Watch folders for changes")),
-                    sw("EnableTrickplayImageExtraction", t("Seek previews (trickplay)")),
-                    sw("EnableChapterImageExtraction", t("Chapter images")),
-                    sw("SaveTrickplayWithMedia", t("Save previews next to the media")),
-                    if (movies) sw("AutomaticallyAddToCollection", t("Add to collections automatically")) else null,
-                    sw("SaveLocalMetadata", t("Save artwork next to the media")),
-                ),
-                segmentProviders = a?.let { av ->
-                    orderByList(av.mediaSegmentProviders.map { p -> p.name }, opts.strings("MediaSegmentProviderOrder")).map { n -> SwitchItem("segment:$n", n, null, n !in disabledSegments) }
-                },
-            )
-        }
-    }
-
-    private fun sw(key: String, name: String) = SwitchItem(key, name, null, opts.bool(key))
-
-    private fun sourceRow(s: Source): SourceRow {
-        val special = ImageOnlyNames[s.name]
-        val kind = when {
-            s.meta && s.image -> t("Details and artwork")
-            s.meta -> t("Details")
-            special != null -> t(special.second)
-            else -> t("Artwork")
-        }
-        return SourceRow(s.name, special?.let { t(it.first) } ?: s.name, kind, s.enabled)
+        _state.update { libraryState(it, f, opts, avail, availFailed, cultures, countries, count, scanTask) }
     }
 
     /* ── Saving ── */
@@ -557,4 +487,86 @@ class LibraryViewModel(
                 .onFailure { say(t("Couldn’t remove it. {error}", "error" to errorText(it))) }
         }
     }
+}
+
+/** One library's page from its folder, its options as edited here and what the server offers for its kind. */
+fun libraryState(
+    base: LibraryState,
+    f: VirtualFolder,
+    opts: JsonObject,
+    a: AvailableOptions?,
+    availFailed: Boolean,
+    cultures: List<Culture>,
+    countries: List<Country>,
+    count: Int?,
+    scanTask: TaskInfo?,
+): LibraryState {
+    val lang = opts.str("PreferredMetadataLanguage").orEmpty()
+    val country = opts.str("MetadataCountryCode").orEmpty()
+    val days = opts.int("AutomaticRefreshIntervalDays")
+    val langOptions = listOf(Choice("", t("Server default"))) + cultures.filter { it.twoLetterISOLanguageName.isNotEmpty() }.map { Choice(it.twoLetterISOLanguageName, it.displayName) }
+    val countryOptions = listOf(Choice("", t("Server default"))) + countries.map { Choice(it.twoLetterISORegionName, it.displayName) }
+    val running = scanTask?.state == "Running"
+    val progress = f.refreshProgress ?: if (f.refreshStatus == "Active") 0.0 else if (running) scanTask?.currentProgressPercentage ?: 0.0 else null
+    val (simAll, simChosen) = if (a != null) similarState(opts, a) else emptyList<String>() to emptyList()
+    val simOptions = if (simAll.isNotEmpty()) similarChoices(simAll, simChosen) else emptyList()
+    val codes = opts.strings("SubtitleDownloadLanguages")
+    fun nameOf(code: String) = cultures.firstOrNull { it.threeLetterISOLanguageName == code || code in it.threeLetterISOLanguageNames }?.displayName ?: code
+    val movies = f.collectionType == null || f.collectionType == "movies" || f.collectionType == "mixed"
+    val disabledSubs = opts.strings("DisabledSubtitleFetchers")
+    val disabledSegments = opts.strings("DisabledMediaSegmentProviders")
+    return base.copy(
+        title = f.name,
+        lede = libraryMeta(f, count),
+        scanState = progress?.let { p -> t("Scanning · {pct}", "pct" to percentLabel(p)) },
+        scanProgress = ((progress ?: 0.0) / 100).toFloat().coerceIn(0f, 1f),
+        folders = f.locations,
+        language = langOptions.firstOrNull { o -> o.value == lang }?.label ?: lang,
+        languageValue = lang,
+        languageOptions = if (langOptions.any { o -> o.value == lang }) langOptions else langOptions + Choice(lang, lang),
+        country = countryOptions.firstOrNull { o -> o.value == country }?.label ?: country,
+        countryValue = country,
+        countryOptions = if (countryOptions.any { o -> o.value == country }) countryOptions else countryOptions + Choice(country, country),
+        refresh = refreshLabel(days),
+        refreshValue = days,
+        refreshOptions = (if (days in RefreshDays) RefreshDays else RefreshDays + days).map { d -> Choice(d, refreshLabel(d)) },
+        sources = a?.let { av -> buildSources(opts, av).map(::sourceRow) },
+        sourcesFailed = a == null && availFailed,
+        similar = simOptions.firstOrNull { o -> o.value == simChosen }?.label,
+        similarValue = simChosen,
+        similarOptions = simOptions,
+        subtitleLanguages = codes.map { c -> LanguageChip(c, nameOf(c)) },
+        moreLanguages = cultures.filter { c -> c.threeLetterISOLanguageName.isNotEmpty() && c.threeLetterISOLanguageName !in codes }.map { c -> LanguageChip(c.threeLetterISOLanguageName, c.displayName) },
+        subtitleFetchers = a?.subtitleFetchers.orEmpty().map { s -> SwitchItem("fetcher:" + s.name, t("Download from {name}", "name" to s.name), null, s.name !in disabledSubs) },
+        subtitleSwitches = listOf(
+            opts.sw("SkipSubtitlesIfEmbeddedSubtitlesPresent", t("Skip if the file has subtitles")),
+            opts.sw("SkipSubtitlesIfAudioTrackMatches", t("Skip if the audio matches")),
+            opts.sw("RequirePerfectSubtitleMatch", t("Only perfect matches")),
+            opts.sw("SaveSubtitlesWithMedia", t("Save next to the media")),
+        ),
+        scanSwitches = listOfNotNull(
+            opts.sw("EnableRealtimeMonitor", t("Watch folders for changes")),
+            opts.sw("EnableTrickplayImageExtraction", t("Seek previews (trickplay)")),
+            opts.sw("EnableChapterImageExtraction", t("Chapter images")),
+            opts.sw("SaveTrickplayWithMedia", t("Save previews next to the media")),
+            if (movies) opts.sw("AutomaticallyAddToCollection", t("Add to collections automatically")) else null,
+            opts.sw("SaveLocalMetadata", t("Save artwork next to the media")),
+        ),
+        segmentProviders = a?.let { av ->
+            orderByList(av.mediaSegmentProviders.map { p -> p.name }, opts.strings("MediaSegmentProviderOrder")).map { n -> SwitchItem("segment:$n", n, null, n !in disabledSegments) }
+        },
+    )
+}
+
+private fun JsonObject.sw(key: String, name: String) = SwitchItem(key, name, null, bool(key))
+
+private fun sourceRow(s: Source): SourceRow {
+    val special = ImageOnlyNames[s.name]
+    val kind = when {
+        s.meta && s.image -> t("Details and artwork")
+        s.meta -> t("Details")
+        special != null -> t(special.second)
+        else -> t("Artwork")
+    }
+    return SourceRow(s.name, special?.let { t(it.first) } ?: s.name, kind, s.enabled)
 }
