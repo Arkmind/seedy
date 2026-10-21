@@ -48,6 +48,8 @@ import io.github.arkmind.seedy.core.format.duration
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.player.PlayerState
+import io.github.arkmind.seedy.core.settings.ResolvedStyle
+import io.github.arkmind.seedy.ui.components.SubtitleLine
 import io.github.arkmind.seedy.tv.parts.TvPressable
 import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
@@ -110,6 +112,8 @@ fun TvPlayerScreen(
     focus: TvPlayerFocus,
     video: @Composable () -> Unit,
     subtitleSize: TextUnit = 40.bsp,
+    /** Settings · Subtitles › how they look on this TV (null: the player board's look). */
+    look: ResolvedStyle? = null,
     /** The time "Ends at" counts from (fixed in screenshot tests). */
     now: () -> LocalTime = LocalTime::now,
     /** A panel is open: subtitles step aside for it. */
@@ -125,7 +129,10 @@ fun TvPlayerScreen(
                     .background(Brush.verticalGradient(listOf(Color(0x000A0A0A), Color.Black.copy(alpha = 0.85f)))),
             )
         }
-        if (!panelOpen) Subtitles(state, if (controls) 400.bp else 96.bp, subtitleSize)
+        if (!panelOpen) {
+            if (look != null) LookSubtitles(state, look, if (controls && look.position == "lifted") 400.bp else 96.bp)
+            else Subtitles(state, if (controls) 400.bp else 96.bp, subtitleSize)
+        }
         if (controls) Controls(state, seekBack, seekForward, actions, focus, now)
         panel()
     }
@@ -330,6 +337,36 @@ private fun Scrubber(state: PlayerState, seekBack: Int, seekForward: Int, action
 @Composable
 private fun TimeText(text: String) {
     BasicText(text, style = BaseText.copy(fontSize = 18.bsp, fontWeight = FontWeight(600), color = SeedyColors.Text, fontFeatureSettings = "tnum"))
+}
+
+/** Subtitles in this TV's look (Settings · Subtitles): [bottom] above the bottom edge, or at the top. */
+@Composable
+private fun LookSubtitles(state: PlayerState, look: ResolvedStyle, bottom: androidx.compose.ui.unit.Dp) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val w = maxWidth
+        val h = maxHeight
+        for (cue in state.pictureCues) {
+            val bitmap = cue.bitmap ?: continue
+            val width = if (cue.size > 0f) w * cue.size else w * 0.5f
+            val height = if (cue.bitmapHeight > 0f) h * cue.bitmapHeight else width * (bitmap.height.toFloat() / bitmap.width)
+            val x = if (cue.position >= 0f) w * cue.position - width * (if (cue.positionAnchor == 1) 0.5f else if (cue.positionAnchor == 2) 1f else 0f) else (w - width) / 2
+            val y = if (cue.line >= 0f && cue.lineType == 0) h * cue.line else h - height - 48.bp
+            androidx.compose.foundation.Image(bitmap.asImageBitmap(), null, Modifier.offset(x, y).size(width, height))
+        }
+        if (state.lines.isNotEmpty()) {
+            val size = when (look.size) {
+                "small" -> 32.bsp
+                "large" -> 48.bsp
+                "xlarge" -> 56.bsp
+                else -> 40.bsp
+            }
+            val place = if (look.position == "top") Modifier.align(Alignment.TopCenter).padding(top = 96.bp) else Modifier.align(Alignment.BottomCenter).padding(bottom = bottom)
+            SubtitleLine(
+                state.lines.joinToString("\n"), look, size, place.fillMaxWidth(0.8f).widthIn(max = 1600.bp), preview = false,
+                boardPx = androidx.compose.ui.platform.LocalDensity.current.density / 2,
+            )
+        }
+    }
 }
 
 /** Text subtitles, [bottom] above the screen's bottom edge; picture subtitles where the file puts them. */

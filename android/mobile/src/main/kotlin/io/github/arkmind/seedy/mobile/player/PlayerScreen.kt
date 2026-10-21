@@ -51,6 +51,8 @@ import io.github.arkmind.seedy.core.format.clock
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.player.PlayerState
+import io.github.arkmind.seedy.core.settings.ResolvedStyle
+import io.github.arkmind.seedy.ui.components.SubtitleLine
 import io.github.arkmind.seedy.ui.components.SeekGlyph
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.IconPart
@@ -106,12 +108,32 @@ fun PhonePlayerScreen(
     /** Settings · Subtitles: the text size, and whether subtitles rise above the controls. */
     subtitleSize: TextUnit = 18.sp,
     lift: Boolean = true,
+    /** Settings · Subtitles › how they look on this phone (null: the player boards' look). */
+    look: ResolvedStyle? = null,
+    /** Settings · Gestures: a double tap on the left or right half skips back or forward. */
+    doubleTapSeek: Boolean = false,
     panel: @Composable () -> Unit = {},
 ) {
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         video()
-        Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures(onTap = { onToggleControls() }) })
-        Subtitles(state, lifted = controls && !locked && lift, subtitleSize = subtitleSize)
+        Box(
+            Modifier.fillMaxSize().pointerInput(doubleTapSeek, locked, seekBack, seekForward) {
+                if (doubleTapSeek && !locked) {
+                    detectTapGestures(
+                        onTap = { onToggleControls() },
+                        onDoubleTap = { o -> actions.onSeekBy(if (o.x < size.width / 2) -seekBack * 1000L else seekForward * 1000L) },
+                    )
+                } else {
+                    detectTapGestures(onTap = { onToggleControls() })
+                }
+            },
+        )
+        if (look != null) {
+            val up = controls && !locked
+            LookSubtitles(state, look, lifted = up && look.position == "lifted")
+        } else {
+            Subtitles(state, lifted = controls && !locked && lift, subtitleSize = subtitleSize)
+        }
         if (locked) {
             if (controls) {
                 Box(Modifier.align(Alignment.TopEnd).padding(14.dp)) {
@@ -350,6 +372,34 @@ private fun Subtitles(state: PlayerState, lifted: Boolean, subtitleSize: TextUni
                     shadow = Shadow(Color.Black.copy(alpha = 0.9f), Offset(0f, 2f), blurRadius = 6f), lineHeight = 1.3.em,
                 ),
             )
+        }
+    }
+}
+
+/** Subtitles in this phone's look: size, font, colours, outline, and where they sit (bottom, above the controls, top). */
+@Composable
+private fun LookSubtitles(state: PlayerState, look: ResolvedStyle, lifted: Boolean) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val w = maxWidth
+        val h = maxHeight
+        for (cue in state.pictureCues) {
+            val bitmap = cue.bitmap ?: continue
+            val width = if (cue.size > 0f) w * cue.size else w * 0.5f
+            val height = if (cue.bitmapHeight > 0f) h * cue.bitmapHeight else width * (bitmap.height.toFloat() / bitmap.width)
+            val x = if (cue.position >= 0f) w * cue.position - width * (if (cue.positionAnchor == 1) 0.5f else if (cue.positionAnchor == 2) 1f else 0f) else (w - width) / 2
+            val y = if (cue.line >= 0f && cue.lineType == 0) h * cue.line else h - height - 24.dp
+            Image(bitmap.asImageBitmap(), null, Modifier.offset(x, y).size(width, height))
+        }
+        if (state.lines.isNotEmpty()) {
+            val size = when (look.size) {
+                "small" -> 15.sp
+                "large" -> 22.sp
+                "xlarge" -> 26.sp
+                else -> 18.sp
+            }
+            val place = if (look.position == "top") Modifier.align(Alignment.TopCenter).padding(top = 24.dp)
+            else Modifier.align(Alignment.BottomCenter).padding(bottom = if (lifted) 150.dp else 24.dp)
+            SubtitleLine(state.lines.joinToString("\n"), look, size, place.padding(horizontal = 48.dp).widthIn(max = 720.dp), preview = false)
         }
     }
 }

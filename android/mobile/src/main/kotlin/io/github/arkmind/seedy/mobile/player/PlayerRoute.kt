@@ -70,6 +70,18 @@ fun PlayerRoute(id: UUID) {
     var seasonEpisodes by remember { mutableStateOf<List<BaseItemDto>?>(null) }
 
     FullScreenSideways(activity)
+    // Settings · Playback › Picture in picture: going to the home screen while a video plays keeps it in a window.
+    val autoPip = player.settings.pictureInPicture && state.playing
+    DisposableEffect(activity, autoPip) {
+        val params = PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9))
+        if (android.os.Build.VERSION.SDK_INT >= 31) activity?.setPictureInPictureParams(params.setAutoEnterEnabled(autoPip).build())
+        val leaving = Runnable { if (autoPip && android.os.Build.VERSION.SDK_INT < 31) runCatching { activity?.enterPictureInPictureMode(params.build()) } }
+        activity?.addOnUserLeaveHintListener(leaving)
+        onDispose {
+            activity?.removeOnUserLeaveHintListener(leaving)
+            if (android.os.Build.VERSION.SDK_INT >= 31) activity?.setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build())
+        }
+    }
     DisposableEffect(activity) {
         val listener = Consumer<PictureInPictureModeChangedInfo> { pip = it.isInPictureInPictureMode }
         activity?.addOnPictureInPictureModeChangedListener(listener)
@@ -111,6 +123,8 @@ fun PlayerRoute(id: UUID) {
             else -> 18.sp
         },
         lift = subtitlePrefs?.lift ?: true,
+        look = player.subtitleLook,
+        doubleTapSeek = player.settings.doubleTapSeek,
         actions = PlayerActions(
             onBack = { nav.back() },
             onPlayPause = { touched++; player.playPause() },

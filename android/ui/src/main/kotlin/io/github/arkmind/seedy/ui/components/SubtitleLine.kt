@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -74,7 +75,7 @@ fun SubtitleLine(text: String, style: ResolvedStyle, size: TextUnit, modifier: M
             base.copy(background = Color.Transparent, shadow = Shadow(Color.Black.copy(alpha = 0.9f), Offset(0f, 2f * u), blur((if (preview) 4f else 8f) * u))),
         )
     }
-    Box(modifier.cssLines(px, 1.3f)) {
+    Box(modifier.cssLines(px, 1.3f), contentAlignment = Alignment.TopCenter) {
         // The outline layers lie under the line itself; only the first one draws the background.
         layers.forEachIndexed { i, s -> BasicText(text, style = if (i == 0) s else s.copy(background = Color.Transparent)) }
     }
