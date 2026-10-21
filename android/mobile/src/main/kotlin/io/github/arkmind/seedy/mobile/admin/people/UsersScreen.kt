@@ -69,7 +69,8 @@ fun UsersScreen(state: UsersState, actions: UsersActions, onBack: () -> Unit, op
             if (adding) AddUserSheet(state, actions) { adding = false; actions.clearAddError() }
             menu?.let { u -> UserMenu(u, onEdit = { open(u.id) }, onEnable = { actions.setDisabled(u.id, false) }, onConfirm = { confirm = it to u }) { menu = null } }
             confirm?.let { (what, u) -> UserConfirm(what, u, actions) { confirm = null } }
-            Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter))
+            // Over the Add user button.
+            Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter).padding(bottom = 76.dp))
         },
     ) {
         val filters = listOf(

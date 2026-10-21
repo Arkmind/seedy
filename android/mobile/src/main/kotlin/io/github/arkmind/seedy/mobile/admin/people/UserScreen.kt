@@ -108,7 +108,8 @@ fun UserScreen(state: UserEditState, actions: UserEditActions, onBack: () -> Uni
                     t("Leave without saving"), { actions.discard(); onBack() }, { leaving = false }, danger = true,
                 )
             }
-            Toast(state.message, actions::messageShown, Modifier.align(if (state.changes > 0) Alignment.Center else Alignment.BottomCenter))
+            // Over the save bar when it shows.
+            Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter).padding(bottom = if (state.changes > 0) 72.dp else 0.dp))
         },
     ) {
         if (!state.loaded) return@PeoplePage
