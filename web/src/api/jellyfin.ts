@@ -19,6 +19,8 @@ const uid = () => getSession()?.userId ?? '';
 export const authenticateByName = (Username: string, Pw: string) =>
   request<AuthResult>('POST', '/Users/AuthenticateByName', { body: { Username, Pw }, token: null });
 export const getMe = (token?: string) => request<User>('GET', '/Users/Me', token ? { token } : {});
+/* The users the server shows on its sign-in screen (not hidden, and allowed from where the request comes from). */
+export const getPublicUsers = () => request<User[]>('GET', '/Users/Public', { token: null });
 export const logout = () => post<void>('/Sessions/Logout');
 export const quickConnectEnabled = () => request<boolean>('GET', '/QuickConnect/Enabled', { token: null });
 export const quickConnectInitiate = () => request<{ Secret: string; Code: string; Authenticated: boolean }>('POST', '/QuickConnect/Initiate', { token: null });
