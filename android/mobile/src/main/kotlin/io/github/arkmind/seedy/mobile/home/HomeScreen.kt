@@ -190,7 +190,7 @@ private fun HeroPage(entry: FeaturedEntry, onOpen: (BaseItemDto) -> Unit, onPlay
     val item = entry.item
     Box(Modifier.fillMaxSize()) {
         // The board crops the 16:9 backdrop to the right of centre (its viewBox starts 86% of the way across).
-        viewer.images?.backdrop(item, 1280)?.let { url ->
+        viewer.images?.backdrop(item, 1280)?.takeIf { viewer.backdrops }?.let { url ->
             AsyncImage(url, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = BiasAlignment(0.72f, 0f))
         }
         Box(

@@ -154,8 +154,8 @@ fun TvHomeScreen(
 /** The focused title's backdrop at the top right, faded into the page on its left and bottom. */
 @Composable
 private fun Backdrop(item: BaseItemDto?) {
-    val images = LocalViewer.current.images
-    Crossfade(item?.let { images?.backdrop(it, 1920) }, label = "backdrop") { url ->
+    val viewer = LocalViewer.current
+    Crossfade(item?.takeIf { viewer.backdrops }?.let { viewer.images?.backdrop(it, 1920) }, label = "backdrop") { url ->
         Box(Modifier.fillMaxSize()) {
             if (url != null) {
                 AsyncImage(url, null, Modifier.align(Alignment.TopEnd).size(1480.bp, 760.bp), contentScale = ContentScale.Crop)

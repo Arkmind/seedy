@@ -10,6 +10,8 @@ data class Viewer(
     val brand: String = "Seedy",
     /** Settings · Home screen › "Use episode pictures" (off: episodes show their show's artwork). */
     val episodeImages: Boolean = true,
+    /** Settings · Display › "Backdrops" (off: no artwork behind details pages and the home banner). */
+    val backdrops: Boolean = true,
     /** Requests are on: Seedy is installed and connected to Seerr. */
     val requests: Boolean = false,
     /** Null in previews and screenshot tests, which draw the artwork's placeholder. */

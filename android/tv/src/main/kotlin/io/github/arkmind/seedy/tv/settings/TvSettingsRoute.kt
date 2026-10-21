@@ -18,7 +18,7 @@ import io.github.arkmind.seedy.ui.theme.currentSession
 
 /** Settings on the TV (boards "Android TV · Settings · …"), with the rail lit on Settings. */
 @Composable
-fun TvSettingsRoute(appVersion: String) {
+fun TvSettingsRoute(appVersion: String, onPlace: (TvPlace) -> Unit = {}) {
     val session = currentSession()
     val core = checkNotNull(LocalCore.current)
     val nav = LocalTvNav.current
@@ -28,7 +28,7 @@ fun TvSettingsRoute(appVersion: String) {
     val places = if (LocalViewer.current.requests) TvPlace.entries else TvPlace.entries - TvPlace.Requests
     Box(Modifier.fillMaxSize()) {
         TvSettingsScreen(state, vm, appVersion, onLeave = nav::back)
-        // The rail's places are the shell's: picking one goes back to it.
-        TvRail(places, current = null, onPlace = { nav.back() }, onProfile = vm::switchProfile, onSettings = {}, settingsCurrent = true)
+        // The rail's places are the shell's: picking one leaves Settings for it.
+        TvRail(places, current = null, onPlace = onPlace, onProfile = vm::switchProfile, onSettings = {}, settingsCurrent = true)
     }
 }

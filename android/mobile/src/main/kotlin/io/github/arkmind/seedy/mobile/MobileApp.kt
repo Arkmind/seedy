@@ -70,22 +70,22 @@ import io.github.arkmind.seedy.mobile.signin.ProfilesScreen
 import io.github.arkmind.seedy.mobile.signin.QuickConnectSheet
 import io.github.arkmind.seedy.mobile.signin.SignInFor
 import io.github.arkmind.seedy.ui.theme.LocalViewer
+import io.github.arkmind.seedy.ui.theme.rememberAccent
+import io.github.arkmind.seedy.ui.theme.rememberViewer
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.SeedyTheme
-import io.github.arkmind.seedy.ui.theme.Viewer
 import io.github.arkmind.seedy.ui.theme.parseHexColor
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import java.util.UUID
 
 /** The phone app: follows the session from "Add your server" through sign-in to the signed-in tabs. */
 @Composable
 fun MobileApp(core: SeedyCore, appVersion: String = "") {
     val state by core.sessions.state.collectAsStateWithLifecycle()
+    val signedIn = (state as? SessionState.SignedIn)?.session
     val accent = when (val s = state) {
-        is SessionState.SignedIn -> parseHexColor(s.session.seedy?.branding?.accent ?: s.session.server.seedy?.accent)
+        is SessionState.SignedIn -> rememberAccent(signedIn, s.session.server.seedy?.accent)
         is SessionState.SignedOut -> parseHexColor(s.server.seedy?.accent)
         else -> null
     }
@@ -195,16 +195,7 @@ private data object TabsKey
 private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) {
     val scope = rememberCoroutineScope()
     val images = remember(session) { Images(session.api) }
-    val viewer = remember(session) {
-        Viewer(
-            name = session.user.name.orEmpty(),
-            imageUrl = images.user(session.userId, session.user.primaryImageTag),
-            brand = session.seedy?.branding?.name ?: "Seedy",
-            episodeImages = session.seedy?.prefs?.custom?.get("home.episodeImages")?.jsonPrimitive?.booleanOrNull ?: true,
-            requests = session.hasRequests,
-            images = images,
-        )
-    }
+    val viewer = rememberViewer(session, images)
     val stack = remember(session) { mutableStateListOf<Any>(TabsKey) }
     var tab by rememberSaveable { mutableStateOf(Tab.Home) }
     val nav = remember(stack) { MobileNav(stack) { tab = it } }

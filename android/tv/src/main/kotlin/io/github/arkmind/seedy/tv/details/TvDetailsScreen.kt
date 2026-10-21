@@ -114,7 +114,7 @@ fun TvDetailsScreen(state: DetailsViewModel.State, actions: TvDetailsActions, ca
     val episodesFocus = remember { FocusRequester() }
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
         val art = item?.let { viewer.images?.backdrop(it, 1920) } ?: state.children?.firstNotNullOfOrNull { viewer.images?.backdrop(it, 1920) }
-        if (art != null && item?.type != BaseItemKind.PERSON) AsyncImage(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        if (art != null && item?.type != BaseItemKind.PERSON && viewer.backdrops) AsyncImage(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         Box(
             Modifier.fillMaxSize().background(
                 Brush.horizontalGradient(0f to SeedyColors.Bg, 0.32f to SeedyColors.Bg.copy(alpha = 0.92f), 0.62f to SeedyColors.Bg.copy(alpha = 0.4f), 1f to SeedyColors.Bg.copy(alpha = 0.1f)),

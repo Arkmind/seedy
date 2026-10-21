@@ -67,21 +67,21 @@ import io.github.arkmind.seedy.tv.signin.TvAddServerScreen
 import io.github.arkmind.seedy.tv.signin.TvPasswordScreen
 import io.github.arkmind.seedy.tv.signin.TvProfilesScreen
 import io.github.arkmind.seedy.ui.theme.LocalViewer
+import io.github.arkmind.seedy.ui.theme.rememberAccent
+import io.github.arkmind.seedy.ui.theme.rememberViewer
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.SeedyTheme
-import io.github.arkmind.seedy.ui.theme.Viewer
 import io.github.arkmind.seedy.ui.theme.parseHexColor
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.jsonPrimitive
 
 /** The Android TV app: the same journey as the phone (server, profile, home), drawn for the remote. */
 @Composable
 fun TvApp(core: SeedyCore, appVersion: String = "") {
     val state by core.sessions.state.collectAsStateWithLifecycle()
+    val signedIn = (state as? SessionState.SignedIn)?.session
     val accent = when (val s = state) {
-        is SessionState.SignedIn -> parseHexColor(s.session.seedy?.branding?.accent ?: s.session.server.seedy?.accent)
+        is SessionState.SignedIn -> rememberAccent(signedIn, s.session.server.seedy?.accent)
         is SessionState.SignedOut -> parseHexColor(s.server.seedy?.accent)
         else -> null
     }
@@ -178,16 +178,7 @@ private data object PlacesKey
 private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) {
     val scope = rememberCoroutineScope()
     val images = remember(session) { Images(session.api) }
-    val viewer = remember(session) {
-        Viewer(
-            name = session.user.name.orEmpty(),
-            imageUrl = images.user(session.userId, session.user.primaryImageTag),
-            brand = session.seedy?.branding?.name ?: "Seedy",
-            episodeImages = session.seedy?.prefs?.custom?.get("home.episodeImages")?.jsonPrimitive?.booleanOrNull ?: true,
-            requests = session.hasRequests,
-            images = images,
-        )
-    }
+    val viewer = rememberViewer(session, images)
     val places = if (viewer.requests) TvPlace.entries else TvPlace.entries - TvPlace.Requests
     var place by rememberSaveable { mutableStateOf(TvPlace.Home) }
     val stack = remember(session) { mutableStateListOf<Any>(PlacesKey) }
@@ -232,7 +223,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                 entry<TvRoute.Details> { TvDetailsRoute(it.id) }
                 entry<TvRoute.Library> { TvLibraryRoute(it.id) }
                 entry<TvRoute.Player> { TvPlayerRoute(it.id) }
-                entry<TvRoute.Settings> { TvSettingsRoute(appVersion) }
+                entry<TvRoute.Settings> { TvSettingsRoute(appVersion, onPlace = { place = it; nav.back() }) }
                 entry<TvRoute.SeerrTitle> { TvSeerrTitleRoute(it.mediaType, it.tmdbId) }
             },
         )
