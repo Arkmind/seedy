@@ -30,6 +30,12 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.ParentDataModifier
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
+import kotlin.math.roundToInt
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,6 +53,7 @@ import io.github.arkmind.seedy.mobile.admin.PillStyle
 import io.github.arkmind.seedy.mobile.admin.RowLine
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.cssBox
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
@@ -60,6 +67,66 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
  * Users board's tab bar, plugin tiles, status dots, a menu sheet with lines under its items, loading and error cards,
  * and downloads from the server.
  */
+
+/**
+ * The line under a page's title (13 px, 1.5 line height), boxed as CSS boxes it: whole lines of 19.5 px, the glyphs
+ * centred the way the boards' browser rounds them (half a pixel up when the box is a pixel shorter than the text).
+ */
+@Composable
+fun Lede(text: String) {
+    SText(
+        text,
+        Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp).layout { measurable, constraints ->
+            val p = measurable.measure(constraints)
+            val line = 1.5f * 13.dp.toPx()
+            val lines = (p.height / line).roundToInt().coerceAtLeast(1)
+            val h = (lines * line).roundToInt()
+            layout(p.width, h) { p.place(0, kotlin.math.floor((h - p.height) / 2f).toInt()) }
+        },
+        size = 13.sp, lineHeight = 1.5f, color = SeedyColors.Text2,
+    )
+}
+
+/**
+ * A group's title (12 px capitals) over its card, 22 px below what's above and 8 px above the card. The boards' browser
+ * gives a 12 px line 17 px (its ascent and descent each round to whole pixels), which the card positions follow.
+ */
+@Composable
+fun GroupTitle(text: String) {
+    SText(text, Modifier.padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 8.dp).cssBox(12, 17f / 12f), size = 12.sp, weight = 800, tracking = 0.1f, color = SeedyColors.Text3, uppercase = true, maxLines = 1)
+}
+
+/** How many pixels taller than its CSS box a row came out (Compose rounds each 16.8 px line up to 17). */
+private class CssExcess(val px: Float) : ParentDataModifier {
+    override fun Density.modifyParentData(parentData: Any?): Any = this@CssExcess
+}
+
+fun Modifier.cssExcess(px: Float): Modifier = this.then(CssExcess(px))
+
+/** What [lines] lines of [lineHeight] px gain when Compose rounds their box up to whole pixels. */
+fun lineExcess(lines: Int, lineHeight: Float): Float = if (lines <= 0) 0f else kotlin.math.ceil(lines * lineHeight) - lines * lineHeight
+
+/**
+ * A card's rows stacked the CSS way: each row's CSS height (its height less its [cssExcess]) adds up in fractions and
+ * every row is drawn at the rounded position, so a long card keeps in step with the board instead of gaining a
+ * fraction of a pixel per row.
+ */
+@Composable
+fun CssColumn(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Layout(content, modifier) { measurables, constraints ->
+        val loose = constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity)
+        val placeables = measurables.map { it.measure(loose) }
+        var y = 0f
+        val tops = placeables.mapIndexed { i, p ->
+            val top = y
+            y += p.height - ((measurables[i].parentData as? CssExcess)?.px ?: 0f)
+            top
+        }
+        layout(constraints.maxWidth, y.roundToInt()) {
+            placeables.forEachIndexed { i, p -> p.place(0, tops[i].roundToInt()) }
+        }
+    }
+}
 
 /** A pill that opens a list ("Everyone ▾", "All levels ▾"). */
 @Composable

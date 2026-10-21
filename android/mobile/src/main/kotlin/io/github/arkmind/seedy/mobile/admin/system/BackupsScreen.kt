@@ -35,7 +35,6 @@ import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.settings.FormSheet
 import io.github.arkmind.seedy.mobile.settings.PickRow
 import io.github.arkmind.seedy.mobile.settings.Section
-import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
@@ -58,7 +57,7 @@ fun BackupsScreen(state: BackupsState, actions: BackupsActions, onBack: () -> Un
     var pathOf by remember { mutableStateOf<BackupRow?>(null) }
     SettingsPage(
         t("Backups"),
-        lede = t("Snapshots taken while the server runs. Restoring one replaces the current server state and restarts it."),
+        lede = null,
         onBack = onBack,
         overlay = {
             SheetHost(sheet)
@@ -80,6 +79,7 @@ fun BackupsScreen(state: BackupsState, actions: BackupsActions, onBack: () -> Un
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter))
         },
     ) {
+        Lede(t("Snapshots taken while the server runs. Restoring one replaces the current server state and restarts it."))
         Section(t("New backup")) {
             for (p in state.parts) row { SwitchRow(p.name, p.help, p.on) { on -> actions.setPart(p.key, on) } }
         }
@@ -105,7 +105,7 @@ fun BackupsScreen(state: BackupsState, actions: BackupsActions, onBack: () -> Un
         }
 
         val rows = state.rows
-        SectionTitle(if (rows != null) "${t("On this server")} · ${rows.size}" else t("On this server"))
+        GroupTitle(if (rows != null) "${t("On this server")} · ${rows.size}" else t("On this server"))
         when {
             rows == null && state.listError != null -> ErrorCard(state.listError!!, actions::retry)
             rows == null -> SkeletonCard(2)

@@ -85,10 +85,11 @@ fun LogsScreen(state: LogsState, actions: LogsActions, onBack: () -> Unit, copy:
     }
     SettingsPage(
         t("Logs"),
-        lede = state.lede,
+        lede = null,
         onBack = onBack,
         overlay = { Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter)) },
     ) {
+        Lede(state.lede)
         val files = state.files
         Box(Modifier.padding(top = 14.dp)) {
             when {

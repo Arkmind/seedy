@@ -47,7 +47,6 @@ import io.github.arkmind.seedy.mobile.admin.FootNote
 import io.github.arkmind.seedy.mobile.admin.RowLine
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
-import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
@@ -63,7 +62,7 @@ fun TasksScreen(state: TasksState, actions: TasksActions, onBack: () -> Unit, op
     var editing by remember { mutableStateOf<String?>(null) }
     SettingsPage(
         t("Scheduled tasks"),
-        lede = state.lede,
+        lede = null,
         onBack = onBack,
         overlay = {
             val task = editing?.let { id -> state.groups?.flatMap { it.tasks }?.firstOrNull { it.id == id } }
@@ -71,17 +70,18 @@ fun TasksScreen(state: TasksState, actions: TasksActions, onBack: () -> Unit, op
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter))
         },
     ) {
+        Lede(state.lede)
         val groups = state.groups
         when {
             groups == null && state.error != null -> {
                 Box(Modifier.padding(top = 22.dp)) { ErrorCard(state.error!!, actions::retry) }
             }
             groups == null -> for (n in listOf(4, 3, 2)) {
-                SectionTitle(" ")
+                GroupTitle(" ")
                 SkeletonCard(n)
             }
             else -> for (g in groups) {
-                SectionTitle(g.label)
+                GroupTitle(g.label)
                 Card(Modifier.padding(horizontal = 16.dp)) {
                     g.tasks.forEachIndexed { i, task ->
                         if (i > 0) RowLine()

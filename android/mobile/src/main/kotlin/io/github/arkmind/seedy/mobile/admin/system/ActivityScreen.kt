@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -24,7 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.ui.platform.LocalDensity
+import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.core.admin.system.ActivityActions
 import io.github.arkmind.seedy.core.admin.system.ActivityLevel
 import io.github.arkmind.seedy.core.admin.system.ActivityRow
@@ -43,7 +49,6 @@ import io.github.arkmind.seedy.mobile.admin.RowLine
 import io.github.arkmind.seedy.mobile.admin.StatTile
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
-import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
@@ -73,7 +78,7 @@ fun ActivityScreen(state: ActivityState, actions: ActivityActions, onBack: () ->
     var confirm by remember { mutableStateOf<ActivityRow?>(null) }
     SettingsPage(
         t("Activity log"),
-        lede = state.lede,
+        lede = null,
         onBack = onBack,
         overlay = {
             SheetHost(sheet)
@@ -84,6 +89,7 @@ fun ActivityScreen(state: ActivityState, actions: ActivityActions, onBack: () ->
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter))
         },
     ) {
+        Lede(state.lede)
         Tiles(state.tiles, actions)
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             MenuPill(state.personLabel, { sheet.open(t("Person"), state.people, state.person, actions::setPerson) })
@@ -99,16 +105,18 @@ fun ActivityScreen(state: ActivityState, actions: ActivityActions, onBack: () ->
         when {
             days == null && state.error != null -> Box(Modifier.padding(top = 22.dp)) { ErrorCard(state.error!!, actions::retry) }
             days == null -> {
-                SectionTitle(" ")
+                GroupTitle(" ")
                 SkeletonCard(5)
             }
             days.isEmpty() -> Box(Modifier.padding(top = 22.dp)) { EmptyCard(state.emptyTitle.orEmpty(), state.emptyText) }
             else -> for (d in days) {
-                SectionTitle(d.label)
+                GroupTitle(d.label)
                 Card(Modifier.padding(horizontal = 16.dp)) {
-                    d.rows.forEachIndexed { i, r ->
-                        if (i > 0) RowLine()
-                        EventRow(r) { confirm = r }
+                    CssColumn {
+                        d.rows.forEachIndexed { i, r ->
+                            if (i > 0) RowLine()
+                            EventRow(r) { confirm = r }
+                        }
                     }
                 }
             }
@@ -144,14 +152,23 @@ private fun EventRow(r: ActivityRow, onAction: () -> Unit) {
         },
         tween(600), label = "row",
     )
-    Row(Modifier.fillMaxWidth().background(bg).padding(start = 16.dp, end = 14.dp, top = 12.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    var lines by remember { mutableIntStateOf(1) }
+    // The detail's 16.8 px lines come out 17 px each; the card stacks rows by their CSS heights.
+    val line = 1.4f * 12f * LocalDensity.current.density
+    Row(Modifier.cssExcess(lineExcess(lines, line)).fillMaxWidth().background(bg).padding(start = 16.dp, end = 14.dp, top = 12.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(Modifier.padding(top = 5.dp).size(10.dp).background(levelDot(r.level), CircleShape))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SText(r.title, Modifier.weight(1f), size = 14.sp, weight = 700, color = SeedyColors.White)
                 SText(r.time, size = 12.sp, weight = 600, color = SeedyColors.Text3, maxLines = 1)
             }
-            SText(listOf(r.tag, r.detail).filter { it.isNotEmpty() }.joinToString(" · "), size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
+            BasicText(
+                listOf(r.tag, r.detail).filter { it.isNotEmpty() }.joinToString(" · "),
+                // The boards' browser sets a 1.4 line a pixel higher than Compose does.
+                Modifier.offset(y = (-1).dp),
+                style = BaseText.copy(fontSize = 12.sp, lineHeight = 1.4.em, color = SeedyColors.Text3),
+                onTextLayout = { lines = it.lineCount },
+            )
             r.action?.let { a ->
                 Box(Modifier.padding(top = 6.dp)) { PillButton(a.label, onAction, style = PillStyle.Light) }
             }

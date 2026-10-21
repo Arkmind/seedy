@@ -40,7 +40,6 @@ import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
 import io.github.arkmind.seedy.mobile.settings.FormSheet
-import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
@@ -60,7 +59,7 @@ fun PluginsScreen(state: PluginsState, actions: PluginsActions, onBack: () -> Un
     var restarting by remember { mutableStateOf(false) }
     SettingsPage(
         t("Plugins"),
-        lede = state.lede,
+        lede = null,
         onBack = onBack,
         overlay = {
             menuFor?.let { p ->
@@ -102,6 +101,7 @@ fun PluginsScreen(state: PluginsState, actions: PluginsActions, onBack: () -> Un
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter))
         },
     ) {
+        Lede(state.lede)
         when {
             state.view == PluginsView.Installed && state.updates > 0 -> PillRow {
                 PillButton(if (state.updatingAll) t("Updating…") else t("Update all"), actions::updateAll, style = PillStyle.Light, enabled = !state.updatingAll)
@@ -187,7 +187,7 @@ private fun Catalog(state: PluginsState, actions: PluginsActions) {
     when {
         groups == null && state.catalogError != null -> Box(Modifier.padding(top = 14.dp)) { ErrorCard(state.catalogError!!, actions::retry) }
         groups == null -> {
-            SectionTitle(" ")
+            GroupTitle(" ")
             SkeletonCard(5, tile = true)
         }
         groups.isEmpty() -> Box(Modifier.padding(top = 14.dp)) {
@@ -198,7 +198,7 @@ private fun Catalog(state: PluginsState, actions: PluginsActions) {
             )
         }
         else -> for (g in groups) {
-            SectionTitle(g.label)
+            GroupTitle(g.label)
             Card(Modifier.padding(horizontal = 16.dp)) {
                 g.rows.forEachIndexed { i, p ->
                     if (i > 0) RowLine()
