@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -25,12 +26,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.text.BasicText
-import androidx.compose.ui.platform.LocalDensity
-import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.core.admin.system.ActivityActions
 import io.github.arkmind.seedy.core.admin.system.ActivityLevel
 import io.github.arkmind.seedy.core.admin.system.ActivityRow
@@ -40,20 +39,30 @@ import io.github.arkmind.seedy.core.admin.system.LevelFilter
 import io.github.arkmind.seedy.core.admin.system.TypeFilter
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.settings.Choice
-import io.github.arkmind.seedy.mobile.admin.Card
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
-import io.github.arkmind.seedy.mobile.admin.FootNote
+import io.github.arkmind.seedy.mobile.admin.EmptyCard
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.LivePill
+import io.github.arkmind.seedy.mobile.admin.MenuPill
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
-import io.github.arkmind.seedy.mobile.admin.RowLine
+import io.github.arkmind.seedy.mobile.admin.SkeletonCard
 import io.github.arkmind.seedy.mobile.admin.StatTile
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.CssColumn
+import io.github.arkmind.seedy.mobile.settings.Faint
+import io.github.arkmind.seedy.mobile.settings.FootNote
+import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
+import io.github.arkmind.seedy.mobile.settings.cssExcess
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
+import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
@@ -63,10 +72,13 @@ private fun levelDot(l: ActivityLevel): Color = when (l) {
     ActivityLevel.Error -> SeedyColors.Danger
     ActivityLevel.Warn -> SeedyColors.Pending
     ActivityLevel.Ok -> SeedyColors.Ok
-    ActivityLevel.Info -> Color(0xFF6A6A6A)
+    ActivityLevel.Info -> Faint
 }
 
 private val ErrorTint = Color(0x12FF8A8A)
+
+/** What [lines] lines of [lineHeight] px gain when Compose rounds their box up to whole pixels. */
+private fun lineExcess(lines: Int, lineHeight: Float): Float = if (lines <= 0) 0f else kotlin.math.ceil(lines * lineHeight) - lines * lineHeight
 
 /**
  * Board "Android · Server · Activity log": today in four tiles, who and which level to show, Live, then the log by
@@ -78,7 +90,7 @@ fun ActivityScreen(state: ActivityState, actions: ActivityActions, onBack: () ->
     var confirm by remember { mutableStateOf<ActivityRow?>(null) }
     SettingsPage(
         t("Activity log"),
-        lede = null,
+        lede = state.lede,
         onBack = onBack,
         overlay = {
             SheetHost(sheet)
@@ -89,7 +101,6 @@ fun ActivityScreen(state: ActivityState, actions: ActivityActions, onBack: () ->
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter))
         },
     ) {
-        Lede(state.lede)
         Tiles(state.tiles, actions)
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             MenuPill(state.personLabel, { sheet.open(t("Person"), state.people, state.person, actions::setPerson) })
@@ -105,12 +116,12 @@ fun ActivityScreen(state: ActivityState, actions: ActivityActions, onBack: () ->
         when {
             days == null && state.error != null -> Box(Modifier.padding(top = 22.dp)) { ErrorCard(state.error!!, actions::retry) }
             days == null -> {
-                GroupTitle(" ")
+                SectionTitle(" ")
                 SkeletonCard(5)
             }
             days.isEmpty() -> Box(Modifier.padding(top = 22.dp)) { EmptyCard(state.emptyTitle.orEmpty(), state.emptyText) }
             else -> for (d in days) {
-                GroupTitle(d.label)
+                SectionTitle(d.label)
                 Card(Modifier.padding(horizontal = 16.dp)) {
                     CssColumn {
                         d.rows.forEachIndexed { i, r ->

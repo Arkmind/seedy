@@ -35,24 +35,33 @@ import io.github.arkmind.seedy.core.admin.seedy.AdminRequestsState
 import io.github.arkmind.seedy.core.admin.seedy.SeerrAccount
 import io.github.arkmind.seedy.core.admin.seedy.SeerrUser
 import io.github.arkmind.seedy.core.i18n.t
-import io.github.arkmind.seedy.mobile.admin.ActionSheet
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
+import io.github.arkmind.seedy.mobile.admin.Dot
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.FieldBlock
+import io.github.arkmind.seedy.mobile.admin.LoadingCards
+import io.github.arkmind.seedy.mobile.admin.MenuItem
+import io.github.arkmind.seedy.mobile.admin.MenuSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
 import io.github.arkmind.seedy.mobile.admin.RadioRow
-import io.github.arkmind.seedy.mobile.admin.RowLine
+import io.github.arkmind.seedy.mobile.admin.TextSheet
 import io.github.arkmind.seedy.mobile.admin.avatarColour
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
+import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.PickRow
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.Section
 import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
+import io.github.arkmind.seedy.mobile.settings.SheetHead
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
+import io.github.arkmind.seedy.mobile.settings.settingsRow
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.BaseText
@@ -92,19 +101,15 @@ fun AdminRequestsScreen(state: AdminRequestsState, actions: AdminRequestsActions
             SheetHost(sheet)
             if (keySheet) {
                 val replacing = !state.config?.requests?.apiKeyHint.isNullOrEmpty()
-                FieldSheet(
+                TextSheet(
                     if (replacing) t("Replace API key") else t("Add API key"),
                     t("Copy the key from Settings › General in Seerr. Seedy keeps it on the server and only shows its last four characters."),
-                    "", { v -> if (v.isNotBlank()) scope.launch { actions.saveKey(v)?.let(actions::say) } }, { keySheet = false },
-                    placeholder = t("Seerr API key"), password = true, action = t("Save key"),
+                    t("Save key"), { v -> if (v.isNotBlank()) scope.launch { actions.saveKey(v)?.let(actions::say) } }, { keySheet = false },
+                    placeholder = t("Seerr API key"), password = true, required = false,
                 )
             }
             menu?.let { a ->
-                ActionSheet(
-                    a.name,
-                    listOf(t("Link account") to { linking = a }, t("Unlink") to { actions.unlink(a.userId) }),
-                    { menu = null }, danger = setOf(1),
-                )
+                MenuSheet(a.name, listOf(MenuItem(t("Link account")) { linking = a }, MenuItem(t("Unlink"), danger = true) { actions.unlink(a.userId) }), { menu = null })
             }
             linking?.let { a -> LinkSheet(a, state.accounts.orEmpty(), actions) { linking = null } }
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter))
@@ -112,7 +117,7 @@ fun AdminRequestsScreen(state: AdminRequestsState, actions: AdminRequestsActions
     ) {
         val c = state.config
         when {
-            c == null && state.loadError != null -> LoadFailed(t("Couldn’t load Seedy’s settings"), state.loadError.orEmpty(), actions::retry)
+            c == null && state.loadError != null -> ErrorCard(t("Couldn’t load Seedy’s settings"), actions::retry, Modifier.padding(top = 16.dp), detail = state.loadError.orEmpty())
             c == null -> LoadingCards(3)
             else -> {
                 val r = c.requests
@@ -183,7 +188,7 @@ fun AdminRequestsScreen(state: AdminRequestsState, actions: AdminRequestsActions
 private fun Connection(state: AdminRequestsState, actions: AdminRequestsActions, onOpen: () -> Unit) {
     val line = state.conn
     val hasUrl = !state.config?.requests?.url.isNullOrEmpty()
-    Column(Modifier.seedyRow(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.settingsRow(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.padding(top = 6.dp)) { Dot(toneColor(line.tone)) }
             val text = buildAnnotatedString {
@@ -205,16 +210,16 @@ private fun Connection(state: AdminRequestsState, actions: AdminRequestsActions,
 @Composable
 private fun Accounts(state: AdminRequestsState, actions: AdminRequestsActions, onLink: (SeerrAccount) -> Unit, onMenu: (SeerrAccount) -> Unit) {
     val list = state.accounts
-    Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+    Card(Modifier.padding(horizontal = 16.dp)) {
         when {
-            list == null && state.accountsError != null -> Row(Modifier.seedyRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            list == null && state.accountsError != null -> Row(Modifier.settingsRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Dot(SeedyColors.Danger)
                 SText(t("Couldn’t load the accounts.") + " " + state.accountsError, Modifier.weight(1f), size = 13.sp, color = SeedyColors.Text2)
                 PillButton(t("Try again"), actions::retryAccounts, height = 36.dp)
             }
             list == null -> repeat(3) { i ->
                 if (i > 0) RowLine()
-                Box(Modifier.seedyRow().heightIn(min = 60.dp))
+                Box(Modifier.settingsRow().heightIn(min = 60.dp))
             }
             else -> list.forEachIndexed { i, a ->
                 if (i > 0) RowLine()

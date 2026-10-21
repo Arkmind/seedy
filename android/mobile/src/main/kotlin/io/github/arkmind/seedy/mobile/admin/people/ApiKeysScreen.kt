@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -25,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.admin.people.ApiKeysActions
@@ -34,17 +32,25 @@ import io.github.arkmind.seedy.core.admin.people.KeyRow
 import io.github.arkmind.seedy.core.admin.people.StaleDays
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.admin.AdminIcons
+import io.github.arkmind.seedy.mobile.admin.CardNote
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
-import io.github.arkmind.seedy.mobile.admin.FootNote
+import io.github.arkmind.seedy.mobile.admin.FormError
+import io.github.arkmind.seedy.mobile.admin.Mono
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.PillStyle
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
+import io.github.arkmind.seedy.mobile.admin.StatusLine
 import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.mobile.parts.SeedyField
 import io.github.arkmind.seedy.mobile.parts.Toast
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.FootNote
 import io.github.arkmind.seedy.mobile.settings.FormSheet
+import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.ui.icons.SIcon
-import io.github.arkmind.seedy.ui.theme.BaseText
+import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
@@ -54,7 +60,7 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 fun ApiKeysScreen(state: ApiKeysState, actions: ApiKeysActions, onBack: () -> Unit) {
     var adding by remember { mutableStateOf(false) }
     var revoking by remember { mutableStateOf<KeyRow?>(null) }
-    PeoplePage(
+    SettingsPage(
         t("API keys"),
         t("For apps that talk to this server without signing in, like Seerr, Sonarr or a monitoring tool. Each key has full admin access."),
         onBack,
@@ -71,20 +77,17 @@ fun ApiKeysScreen(state: ApiKeysState, actions: ApiKeysActions, onBack: () -> Un
         },
     ) {
         PillRow {
-            PillButton(t("New key"), { adding = true }, style = PillStyle.Light, leading = { SIcon(AdminIcons.Plus, size = 15.dp, color = SeedyColors.InkInverse) })
+            PillButton(t("New key"), { adding = true }, style = PillStyle.Light, leading = { SIcon(WebIcons.Plus, size = 15.dp, color = SeedyColors.InkInverse) })
         }
         state.created?.let { (app, key) -> Created(app, key, actions) }
         val keys = state.keys
-        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+        Card(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
             when {
-                keys == null && state.error != null -> Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SText(t("Couldn’t load the keys.") + " " + state.error, size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2)
-                    PillButton(t("Try again"), actions::reload)
-                }
+                keys == null && state.error != null -> CardNote(t("Couldn’t load the keys.") + " " + state.error, action = t("Try again"), onAction = actions::reload)
                 keys == null -> SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3)
-                keys.isEmpty() -> SText(t("No keys yet. Create one for each app that needs to reach the server."), Modifier.padding(16.dp), size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2)
+                keys.isEmpty() -> CardNote(t("No keys yet. Create one for each app that needs to reach the server."))
                 else -> keys.forEachIndexed { i, k ->
-                    if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+                    if (i > 0) RowLine()
                     KeyLine(k, busy = state.busy == k.token) { revoking = k }
                 }
             }
@@ -92,8 +95,6 @@ fun ApiKeysScreen(state: ApiKeysState, actions: ApiKeysActions, onBack: () -> Un
         FootNote(t("Revoking a key cuts that app off immediately. Keys unused for {n} days are flagged so you can clean them up.", "n" to StaleDays))
     }
 }
-
-private val Mono = BaseText.copy(fontFamily = FontFamily.Monospace)
 
 @Composable
 private fun KeyLine(k: KeyRow, busy: Boolean, onRevoke: () -> Unit) {
@@ -111,10 +112,7 @@ private fun KeyLine(k: KeyRow, busy: Boolean, onRevoke: () -> Unit) {
                     SText(k.created, size = 12.sp, color = SeedyColors.Text3, maxLines = 1)
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box(Modifier.size(6.dp).background(if (k.stale) SeedyColors.Pending else SeedyColors.Ok, CircleShape))
-                SText(k.used, size = 12.sp, weight = 600, color = if (k.stale) SeedyColors.Pending else SeedyColors.Text2)
-            }
+            StatusLine(k.used, if (k.stale) SeedyColors.Pending else SeedyColors.Ok, color = if (k.stale) SeedyColors.Pending else SeedyColors.Text2, weight = 600)
         }
         PillButton(if (busy) t("Revoking…") else t("Revoke"), onRevoke, style = PillStyle.Danger, enabled = !busy, height = 36.dp)
     }
@@ -157,9 +155,6 @@ private fun NewKeySheet(state: ApiKeysState, actions: ApiKeysActions, onClose: (
             SeedyField(app, { app = it.take(64); sent = false; actions.clearCreateError() }, placeholder = "Home Assistant", onDone = { sent = true; actions.create(app) })
         }
         state.createError?.let { FormError(it) }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-            PillButton(t("Cancel"), onClose)
-            PillButton(if (state.creating) t("Creating…") else t("Create key"), { sent = true; actions.create(app) }, style = PillStyle.Light, enabled = !state.creating)
-        }
+        SheetButtons(if (state.creating) t("Creating…") else t("Create key"), { sent = true; actions.create(app) }, onClose, enabled = !state.creating)
     }
 }

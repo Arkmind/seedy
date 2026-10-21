@@ -34,13 +34,16 @@ import io.github.arkmind.seedy.core.admin.media.LibraryCard
 import io.github.arkmind.seedy.core.admin.media.NewLibraryForm
 import io.github.arkmind.seedy.core.admin.media.NewLibraryKinds
 import io.github.arkmind.seedy.core.i18n.t
-import io.github.arkmind.seedy.mobile.admin.AdminIcons
+import io.github.arkmind.seedy.mobile.admin.AccentRow
 import io.github.arkmind.seedy.mobile.admin.Bar
+import io.github.arkmind.seedy.mobile.admin.Chip
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
-import io.github.arkmind.seedy.mobile.admin.FootNote
+import io.github.arkmind.seedy.mobile.admin.MonoText
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.PillStyle
+import io.github.arkmind.seedy.mobile.admin.RoundButton
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
 import io.github.arkmind.seedy.mobile.admin.Thumb
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
@@ -48,6 +51,10 @@ import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.mobile.parts.SeedyField
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.FootNote
+import io.github.arkmind.seedy.mobile.settings.FormSheet
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -117,10 +124,7 @@ fun LibrariesScreen(state: LibrariesState, actions: LibrariesActions, onBack: ()
 @Composable
 private fun LibraryCardView(c: LibraryCard, actions: LibrariesActions, open: () -> Unit, refresh: () -> Unit) {
     val accent = LocalAccent.current
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel).padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
+    Card(padding = 12.dp, gap = 10.dp) {
         Row(Modifier.fillMaxWidth().tap(onClick = open), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Thumb(c.art, 96.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -152,14 +156,14 @@ private fun Empty(actions: LibrariesActions) {
         SIcon(WebIcons.Folder, size = 26.dp, color = SeedyColors.Text2)
         SText(t("No libraries yet"), size = 15.sp, weight = 800, color = SeedyColors.White)
         SText(t("Add a library and point it at the folders with your movies, shows or music. Jellyfin scans them and fetches the artwork."), size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2, align = TextAlign.Center)
-        PillButton(t("Add library"), actions::startAdd, style = PillStyle.Light, leading = { SIcon(AdminIcons.Plus, size = 14.dp, color = SeedyColors.InkInverse) })
+        PillButton(t("Add library"), actions::startAdd, style = PillStyle.Light, leading = { SIcon(WebIcons.Plus, size = 14.dp, color = SeedyColors.InkInverse) })
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AddLibrarySheet(f: NewLibraryForm, actions: LibrariesActions) {
-    ScrollSheet(t("Add library"), t("Point it at the folders on the server that hold this kind of media. Jellyfin scans them and fetches details and artwork."), actions::closeAdd) {
+    FormSheet(t("Add library"), t("Point it at the folders on the server that hold this kind of media. Jellyfin scans them and fetches details and artwork."), actions::closeAdd, scroll = true) {
         FieldLabel(t("Kind"))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             for (k in NewLibraryKinds) Chip(t(k.label), f.kind == k.value, { actions.setKind(k.value) })
@@ -172,13 +176,13 @@ private fun AddLibrarySheet(f: NewLibraryForm, actions: LibrariesActions) {
             for (p in f.paths) {
                 Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     MonoText(p, Modifier.weight(1f), maxLines = 2)
-                    IconDot(WebIcons.Close, { actions.removePath(p) })
+                    RoundButton(WebIcons.Close, { actions.removePath(p) }, size = 32.dp, iconSize = 14.dp, tint = SeedyColors.Text2, dim = 0.4f)
                 }
-                Box(Modifier.fillMaxWidth().size(1.dp).background(SeedyColors.Line))
+                RowLine()
             }
-            AddRow(t("Add folder"), actions::addPath)
+            AccentRow(t("Add folder"), actions::addPath, roomy = true)
         }
         f.error?.let { SText(it, size = 12.sp, color = SeedyColors.Danger) }
-        SheetButtons(if (f.busy) t("Adding…") else t("Add library"), actions::submit, actions::closeAdd, enabled = f.name.isNotBlank() && !f.taken && f.paths.isNotEmpty() && !f.busy)
+        SheetButtons(if (f.busy) t("Adding…") else t("Add library"), actions::submit, actions::closeAdd, Modifier.padding(top = 4.dp), enabled = f.name.isNotBlank() && !f.taken && f.paths.isNotEmpty() && !f.busy)
     }
 }

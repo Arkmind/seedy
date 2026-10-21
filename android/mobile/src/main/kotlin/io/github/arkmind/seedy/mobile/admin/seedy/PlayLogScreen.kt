@@ -1,6 +1,5 @@
 package io.github.arkmind.seedy.mobile.admin.seedy
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,17 +25,22 @@ import io.github.arkmind.seedy.core.admin.seedy.PlayLogAdminState
 import io.github.arkmind.seedy.core.admin.seedy.PlayLogProfile
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
-import io.github.arkmind.seedy.mobile.admin.ActionSheet
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.admin.Dot
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.LoadingCards
+import io.github.arkmind.seedy.mobile.admin.MenuItem
+import io.github.arkmind.seedy.mobile.admin.MenuSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
-import io.github.arkmind.seedy.mobile.admin.RowLine
 import io.github.arkmind.seedy.mobile.admin.avatarColour
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
+import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.PickRow
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.Section
 import io.github.arkmind.seedy.mobile.settings.SectionFoot
 import io.github.arkmind.seedy.mobile.settings.SectionTitle
@@ -44,6 +48,7 @@ import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
+import io.github.arkmind.seedy.mobile.settings.settingsRow
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 
@@ -74,11 +79,11 @@ fun PlayLogScreen(state: PlayLogAdminState, actions: PlayLogAdminActions, onBack
         overlay = {
             SheetHost(sheet)
             menu?.let { p ->
-                val options = buildList<Pair<String, () -> Unit>> {
-                    add(t("Export plays") to { onExport(p) })
-                    if (p.plays > 0) add(t("Clear plays") to { clearing = p })
+                val items = buildList {
+                    add(MenuItem(t("Export plays")) { onExport(p) })
+                    if (p.plays > 0) add(MenuItem(t("Clear plays"), danger = true) { clearing = p })
                 }
-                ActionSheet(p.name, options, { menu = null }, danger = if (p.plays > 0) setOf(1) else emptySet())
+                MenuSheet(p.name, items, { menu = null })
             }
             clearing?.let { p ->
                 ConfirmSheet(
@@ -99,7 +104,7 @@ fun PlayLogScreen(state: PlayLogAdminState, actions: PlayLogAdminActions, onBack
     ) {
         val c = state.config
         when {
-            c == null && state.loadError != null -> LoadFailed(t("Couldn’t load Seedy’s settings"), state.loadError.orEmpty(), actions::retry)
+            c == null && state.loadError != null -> ErrorCard(t("Couldn’t load Seedy’s settings"), actions::retry, Modifier.padding(top = 16.dp), detail = state.loadError.orEmpty())
             c == null -> LoadingCards(2)
             else -> {
                 val log = c.playLog
@@ -133,16 +138,16 @@ fun PlayLogScreen(state: PlayLogAdminState, actions: PlayLogAdminActions, onBack
 @Composable
 private fun Profiles(state: PlayLogAdminState, actions: PlayLogAdminActions, onMenu: (PlayLogProfile) -> Unit) {
     val list = state.profiles
-    Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+    Card(Modifier.padding(horizontal = 16.dp)) {
         when {
-            list == null && state.profilesError != null -> Row(Modifier.seedyRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            list == null && state.profilesError != null -> Row(Modifier.settingsRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Dot(SeedyColors.Danger)
                 SText(t("Couldn’t load the profiles.") + " " + state.profilesError, Modifier.weight(1f), size = 13.sp, color = SeedyColors.Text2)
                 PillButton(t("Try again"), actions::retryProfiles, height = 36.dp)
             }
             list == null -> repeat(3) { i ->
                 if (i > 0) RowLine()
-                Box(Modifier.seedyRow())
+                Box(Modifier.settingsRow())
             }
             else -> {
                 Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 14.dp, top = 14.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {

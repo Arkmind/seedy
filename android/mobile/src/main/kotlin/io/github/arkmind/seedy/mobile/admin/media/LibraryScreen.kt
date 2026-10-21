@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,21 +41,28 @@ import io.github.arkmind.seedy.core.admin.media.LibraryViewModel
 import io.github.arkmind.seedy.core.admin.media.SourceRow
 import io.github.arkmind.seedy.core.admin.media.SwitchItem
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.settings.Choice
+import io.github.arkmind.seedy.mobile.admin.AccentRow
 import io.github.arkmind.seedy.mobile.admin.Bar
-import io.github.arkmind.seedy.mobile.admin.Card
+import io.github.arkmind.seedy.mobile.admin.Chip
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.admin.MonoText
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.PillStyle
-import io.github.arkmind.seedy.mobile.admin.RowLine
+import io.github.arkmind.seedy.mobile.admin.RoundButton
+import io.github.arkmind.seedy.mobile.admin.SearchPickSheet
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Toast
-import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
+import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.PickRow
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.SaveLine
+import io.github.arkmind.seedy.mobile.settings.Section
 import io.github.arkmind.seedy.mobile.settings.SectionFoot
+import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
@@ -117,8 +123,8 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
                     t("Refresh metadata"), actions::refreshMetadata, { ask = Ask.None },
                 )
                 Ask.Language -> SearchPickSheet(
-                    t("Add language"), t("Find a language"), state.moreLanguages.map { it.code to it.name }, actions::addSubtitleLanguage, { ask = Ask.None },
-                    empty = if (state.moreLanguages.isEmpty()) t("Loading languages…") else t("No language matches"),
+                    t("Add language"), null, state.moreLanguages.map { Choice(it.code, it.name) }, null, actions::addSubtitleLanguage, { ask = Ask.None },
+                    searchLabel = t("Find a language"), empty = if (state.moreLanguages.isEmpty()) t("Loading languages…") else t("No language matches"), limit = 120,
                 )
                 Ask.None -> Unit
             }
@@ -147,7 +153,7 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
             }
         }
 
-        MediaSectionTitle(t("Folders"))
+        SectionTitle(t("Folders"))
         Card(Modifier.padding(horizontal = 16.dp)) {
             for (p in state.folders) {
                 Row(
@@ -156,21 +162,21 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     MonoText(p, Modifier.weight(1f), maxLines = 3)
-                    IconDot(WebIcons.Close, { removing = p }, enabled = state.folders.size > 1)
+                    RoundButton(WebIcons.Close, { removing = p }, size = 32.dp, iconSize = 14.dp, tint = SeedyColors.Text2, enabled = state.folders.size > 1, dim = 0.4f)
                 }
                 RowLine()
             }
-            AddRow(t("Add folder"), actions::addFolder)
+            AccentRow(t("Add folder"), actions::addFolder, roomy = true)
         }
-        if (state.folders.size == 1) MediaSectionFoot(t("A library needs at least one folder"))
+        if (state.folders.size == 1) SectionFoot(t("A library needs at least one folder"))
 
-        MediaSection(t("Metadata")) {
+        Section(t("Metadata")) {
             row { PickRow(t("Language"), null, state.language.ifEmpty { "…" }) { sheet.open(t("Language"), state.languageOptions, state.languageValue, actions::setLanguage) } }
             row { PickRow(t("Country"), null, state.country.ifEmpty { "…" }) { sheet.open(t("Country"), state.countryOptions, state.countryValue, actions::setCountry) } }
             row { PickRow(t("Refresh every"), null, state.refresh) { sheet.open(t("Refresh every"), state.refreshOptions, state.refreshValue, actions::setRefresh) } }
         }
 
-        MediaSectionTitle(t("Sources, in order · drag to reorder"))
+        SectionTitle(t("Sources, in order · drag to reorder"))
         Card(Modifier.padding(horizontal = 16.dp)) {
             val sources = state.sources
             when {
@@ -184,7 +190,7 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
             }
         }
         if (state.similarOptions.isNotEmpty()) {
-            MediaSection(null) {
+            Section(null) {
                 row {
                     PickRow(t("Recommendations from"), t("Feeds More like this and Because you watched"), state.similar.orEmpty()) {
                         sheet.open(t("Recommendations from"), state.similarOptions, state.similarValue, actions::setSimilar)
@@ -193,7 +199,7 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
             }
         }
 
-        MediaSection(t("Subtitles")) {
+        Section(t("Subtitles")) {
             row {
                 Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 14.dp, top = 12.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SText(t("Download in"), size = 14.sp, weight = 700, color = SeedyColors.White)
@@ -209,12 +215,12 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
             for (s in state.subtitleSwitches) row { Switch(s, actions) }
         }
 
-        MediaSection(t("Scanning and previews")) {
+        Section(t("Scanning and previews")) {
             for (s in state.scanSwitches) row { Switch(s, actions) }
         }
 
         val segments = state.segmentProviders
-        MediaSection(t("Skip markers from"), foot = t("Media segment providers, in order")) {
+        Section(t("Skip markers from"), foot = t("Media segment providers, in order")) {
             when {
                 segments == null -> row { SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3) }
                 segments.isEmpty() -> row { SText(t("None installed"), Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3) }
@@ -222,7 +228,7 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
             }
         }
 
-        MediaSection(t("All libraries")) {
+        Section(t("All libraries")) {
             row { PickRow(t("Display"), t("Folders view, specials and collections"), "") { open(LibraryPages.Display) } }
             row { PickRow(t("Metadata"), t("Language, chapters and saved files"), "") { open(LibraryPages.Metadata) } }
             row { PickRow(t("NFO files"), t("Files Kodi and other apps read"), "") { open(LibraryPages.Nfo) } }

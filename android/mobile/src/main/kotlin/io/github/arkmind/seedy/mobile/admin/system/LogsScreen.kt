@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -36,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
@@ -51,20 +49,26 @@ import io.github.arkmind.seedy.core.admin.system.isErrorLevel
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.mobile.admin.AdminIcons
-import io.github.arkmind.seedy.mobile.admin.Card
-import io.github.arkmind.seedy.mobile.admin.FootNote
+import io.github.arkmind.seedy.mobile.admin.CardNote
+import io.github.arkmind.seedy.mobile.admin.EmptyCard
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.LivePill
+import io.github.arkmind.seedy.mobile.admin.Mono
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
-import io.github.arkmind.seedy.mobile.admin.RowLine
+import io.github.arkmind.seedy.mobile.admin.SkeletonCard
+import io.github.arkmind.seedy.mobile.admin.StatusLine
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.FootNote
 import io.github.arkmind.seedy.mobile.settings.PageHeader
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.Segmented
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
-import io.github.arkmind.seedy.mobile.settings.cssBox
+import io.github.arkmind.seedy.mobile.settings.cssText
 import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
-import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
@@ -73,8 +77,6 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
  * Logs, built from the phone boards' kit with the web board "Server · Logs": the files newest first, then a file in
  * the viewer (search, level, follow, copy, download), opened over the list.
  */
-
-private val Mono = BaseText.copy(fontFamily = FontFamily.Monospace)
 
 @Composable
 fun LogsScreen(state: LogsState, actions: LogsActions, onBack: () -> Unit, copy: () -> Unit, download: (String) -> Unit) {
@@ -86,11 +88,10 @@ fun LogsScreen(state: LogsState, actions: LogsActions, onBack: () -> Unit, copy:
     }
     SettingsPage(
         t("Logs"),
-        lede = null,
+        lede = state.lede,
         onBack = onBack,
         overlay = { Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter)) },
     ) {
-        Lede(state.lede)
         val files = state.files
         Box(Modifier.padding(top = 14.dp)) {
             when {
@@ -130,12 +131,7 @@ private fun FileRow(f: LogFileRow, onClick: () -> Unit) {
 
 /** "● Writing": the file is still being written. */
 @Composable
-private fun Writing() {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        Box(Modifier.size(6.dp).background(SeedyColors.Ok, CircleShape))
-        SText(t("Writing"), size = 11.sp, weight = 700, color = SeedyColors.TextHero, maxLines = 1)
-    }
-}
+private fun Writing() = StatusLine(t("Writing"), SeedyColors.Ok, size = 11.sp, gap = 5.dp)
 
 /** The viewer: the file's lines in a dark panel filling the page under the search and its buttons. */
 @Composable
@@ -161,7 +157,7 @@ fun LogViewer(v: LogViewerState, actions: LogsActions, onBack: () -> Unit, copy:
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
         Column(Modifier.fillMaxSize().imePadding()) {
             PageHeader(v.label, onBack)
-            Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp).cssBox(13, 1.5f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp).cssText(13, 1.5f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 BasicText(v.sub, Modifier.weight(1f, fill = false), style = Mono.copy(fontSize = 12.sp, color = SeedyColors.Text2), maxLines = 1)
                 if (v.live) Writing()
             }
@@ -191,10 +187,7 @@ fun LogViewer(v: LogViewerState, actions: LogsActions, onBack: () -> Unit, copy:
             }
             Box(Modifier.weight(1f).fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = max(16.dp, nav + 8.dp)).clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
                 when {
-                    v.error != null -> Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SText(v.error!!, size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Danger)
-                        PillButton(t("Try again"), actions::retry)
-                    }
+                    v.error != null -> CardNote(v.error!!, SeedyColors.Danger, t("Try again"), actions::retry)
                     v.loading -> Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         for (w in listOf(0.72f, 0.58f, 0.86f, 0.64f, 0.5f, 0.78f)) Box(Modifier.fillMaxWidth(w).height(10.dp).clip(RoundedCornerShape(5.dp)).background(SeedyColors.Surface))
                     }

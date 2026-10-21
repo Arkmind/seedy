@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,18 +32,21 @@ import io.github.arkmind.seedy.core.admin.media.PlaybackState
 import io.github.arkmind.seedy.core.admin.media.PlaybackViewModel
 import io.github.arkmind.seedy.core.admin.media.SettingActions
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.mobile.admin.Chip
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.admin.Dot
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.RadioRow
-import io.github.arkmind.seedy.mobile.admin.RowLine
 import io.github.arkmind.seedy.mobile.admin.SaveBar
 import io.github.arkmind.seedy.mobile.admin.SaveBarRoom
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.parts.Toast
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.SectionFoot
+import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
-import io.github.arkmind.seedy.mobile.settings.cssBox
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
@@ -130,22 +131,22 @@ private fun Transcoding(state: PlaybackState, actions: PlaybackActions, rows: Se
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Box(Modifier.size(7.dp).background(ink, CircleShape))
-            SText(line, Modifier.cssBox(12, io.github.arkmind.seedy.ui.theme.NotoLineRatio, up = true), size = 12.sp, weight = 600, color = SeedyColors.TextHero)
+            Dot(ink)
+            SText(line, size = 12.sp, weight = 600, color = SeedyColors.TextHero)
         }
     } ?: Box(Modifier.padding(top = 12.dp).height(36.dp))
 
-    MediaSectionTitle(t("Hardware acceleration"))
-    Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+    SectionTitle(t("Hardware acceleration"))
+    Card(Modifier.padding(horizontal = 16.dp)) {
         state.accels.forEachIndexed { i, a ->
             if (i > 0) RowLine()
             RadioRow(a.name, a.sub, a.on, { actions.setAccel(a.id) }, subColor = if (a.detected) SeedyColors.Ok else SeedyColors.Text3)
         }
     }
-    MediaSectionFoot(t("Uses the GPU for converting video. Much faster than the CPU, especially for HDR."))
+    SectionFoot(t("Uses the GPU for converting video. Much faster than the CPU, especially for HDR."))
 
     if (state.codecs.isNotEmpty()) {
-        MediaSectionTitle(t("Decode on the GPU"))
+        SectionTitle(t("Decode on the GPU"))
         FlowRow(
             Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel).padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -153,7 +154,7 @@ private fun Transcoding(state: PlaybackState, actions: PlaybackActions, rows: Se
         ) {
             for (c in state.codecs) Chip(c.name, c.on, { actions.setCodec(c.key, !c.on) })
         }
-        MediaSectionFoot(t("Formats your GPU can read. Turned-off ones fall back to the CPU."))
+        SectionFoot(t("Formats your GPU can read. Turned-off ones fall back to the CPU."))
     }
 
     SettingCards(state.groups, rows, sheets)

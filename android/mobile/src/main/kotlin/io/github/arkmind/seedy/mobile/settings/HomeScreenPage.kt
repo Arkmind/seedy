@@ -1,7 +1,5 @@
 package io.github.arkmind.seedy.mobile.settings
 
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -18,14 +16,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import io.github.arkmind.seedy.ui.components.boxShadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -41,6 +40,7 @@ import io.github.arkmind.seedy.core.settings.RowView
 import io.github.arkmind.seedy.core.settings.SettingsActions
 import io.github.arkmind.seedy.core.settings.SettingsState
 import io.github.arkmind.seedy.core.settings.SettingsState.Companion.Keys
+import io.github.arkmind.seedy.ui.components.boxShadow
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.SettingsIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
@@ -64,17 +64,17 @@ fun HomeScreenPage(state: SettingsState, actions: SettingsActions, nav: Settings
     SettingsPage(t("Home screen"), t("Which rows you see and in what order. Follows your profile to every device."), nav.back, overlay = { SheetHost(sheet) }) {
         if (state.seedy) {
             SectionTitle(t("Rows"))
-            Column(Modifier.padding(horizontal = 16.dp)) {
+            CssColumn(Modifier.padding(horizontal = 16.dp)) {
                 val mine = state.prefs.rowOrder == "mine"
                 Segmented(listOf(Choice(false, t("Order automatically")), Choice(true, t("My order"))), mine, actions::setRowOrder, height = 38.dp, size = 13)
                 SText(
                     t("Press and hold a row, then drag it. Rows you turn off stay hidden."),
-                    Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 10.dp).cssBox(12, 1.45f, up = true), size = 12.sp, lineHeight = 1.45f, color = SeedyColors.Text3,
+                    Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 10.dp).cssText(12, 1.45f), size = 12.sp, lineHeight = 1.45f, color = SeedyColors.Text3,
                 )
                 RowList(state, actions, dragging)
                 SText(
                     t("Continue watching always comes right after the featured banner when it has something."),
-                    Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp).cssBox(12, 1.45f, up = true), size = 12.sp, lineHeight = 1.45f, color = SeedyColors.Text3,
+                    Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp).cssText(12, 1.45f), size = 12.sp, lineHeight = 1.45f, color = SeedyColors.Text3,
                 )
             }
         }
@@ -169,7 +169,7 @@ private fun RowList(state: SettingsState, actions: SettingsActions, preview: Str
     Column(Modifier.fillMaxWidth().background(SeedyColors.Panel, RoundedCornerShape(18.dp))) {
         shown.forEachIndexed { i, r ->
             val lifted = r.kind == (drag ?: preview)
-            if (i > 0 && !lifted) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+            if (i > 0 && !lifted) RowLine()
             RowItem(
                 r, lifted,
                 Modifier.onSizeChanged { heights[r.kind] = it.height }
@@ -206,7 +206,7 @@ private fun RowItem(r: RowView, lifted: Boolean, modifier: Modifier, grip: Modif
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(grip.size(38.dp, 44.dp), contentAlignment = Alignment.Center) {
-            SIcon(SettingsIcons.Grip, size = 20.dp, color = if (lifted) SeedyColors.White else Quiet)
+            SIcon(SettingsIcons.Grip, size = 20.dp, color = if (lifted) SeedyColors.White else Faint)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

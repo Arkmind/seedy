@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -25,16 +25,22 @@ import io.github.arkmind.seedy.core.admin.system.BackupsActions
 import io.github.arkmind.seedy.core.admin.system.BackupsState
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.settings.Choice
-import io.github.arkmind.seedy.mobile.admin.Card
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.admin.EmptyCard
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
 import io.github.arkmind.seedy.mobile.admin.NameTag
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
-import io.github.arkmind.seedy.mobile.admin.RowLine
+import io.github.arkmind.seedy.mobile.admin.RoundButton
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
+import io.github.arkmind.seedy.mobile.admin.SkeletonCard
 import io.github.arkmind.seedy.mobile.parts.Toast
+import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.FormSheet
 import io.github.arkmind.seedy.mobile.settings.PickRow
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.Section
+import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
@@ -57,7 +63,7 @@ fun BackupsScreen(state: BackupsState, actions: BackupsActions, onBack: () -> Un
     var pathOf by remember { mutableStateOf<BackupRow?>(null) }
     SettingsPage(
         t("Backups"),
-        lede = null,
+        lede = t("Snapshots taken while the server runs. Restoring one replaces the current server state and restarts it."),
         onBack = onBack,
         overlay = {
             SheetHost(sheet)
@@ -70,16 +76,12 @@ fun BackupsScreen(state: BackupsState, actions: BackupsActions, onBack: () -> Un
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(SeedyColors.Row).padding(horizontal = 14.dp, vertical = 12.dp),
                         size = 13.sp, color = SeedyColors.Text,
                     )
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-                        PillButton(t("Close"), { pathOf = null })
-                        PillButton(t("Copy path"), { copyPath(b.path); pathOf = null }, style = PillStyle.Light)
-                    }
+                    SheetButtons(t("Copy path"), { copyPath(b.path); pathOf = null }, { pathOf = null }, cancel = t("Close"))
                 }
             }
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter))
         },
     ) {
-        Lede(t("Snapshots taken while the server runs. Restoring one replaces the current server state and restarts it."))
         Section(t("New backup")) {
             for (p in state.parts) row { SwitchRow(p.name, p.help, p.on) { on -> actions.setPart(p.key, on) } }
         }
@@ -105,7 +107,7 @@ fun BackupsScreen(state: BackupsState, actions: BackupsActions, onBack: () -> Un
         }
 
         val rows = state.rows
-        GroupTitle(if (rows != null) "${t("On this server")} · ${rows.size}" else t("On this server"))
+        SectionTitle(if (rows != null) "${t("On this server")} · ${rows.size}" else t("On this server"))
         when {
             rows == null && state.listError != null -> ErrorCard(state.listError!!, actions::retry)
             rows == null -> SkeletonCard(2)

@@ -4,7 +4,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -34,22 +33,29 @@ import io.github.arkmind.seedy.core.admin.people.UserRow
 import io.github.arkmind.seedy.core.admin.people.UsersActions
 import io.github.arkmind.seedy.core.admin.people.UsersState
 import io.github.arkmind.seedy.core.i18n.t
-import io.github.arkmind.seedy.mobile.admin.ActionSheet
+import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
-import io.github.arkmind.seedy.mobile.admin.AdminIcons
+import io.github.arkmind.seedy.mobile.admin.CardNote
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.FloatingPill
+import io.github.arkmind.seedy.mobile.admin.FormError
+import io.github.arkmind.seedy.mobile.admin.MenuItem
+import io.github.arkmind.seedy.mobile.admin.MenuSheet
 import io.github.arkmind.seedy.mobile.admin.NameTag
-import io.github.arkmind.seedy.mobile.admin.PillButton
-import io.github.arkmind.seedy.mobile.admin.PillStyle
 import io.github.arkmind.seedy.mobile.admin.RadioRow
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
 import io.github.arkmind.seedy.mobile.admin.avatarColour
 import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.mobile.parts.SeedyField
 import io.github.arkmind.seedy.mobile.parts.Toast
+import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.FormSheet
+import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.settings.Segmented
+import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
+import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 
@@ -60,12 +66,12 @@ fun UsersScreen(state: UsersState, actions: UsersActions, onBack: () -> Unit, op
     var menu by remember { mutableStateOf<UserRow?>(null) }
     var confirm by remember { mutableStateOf<Pair<String, UserRow>?>(null) }
     androidx.compose.runtime.LaunchedEffect(state.opened) { if (state.opened != null) adding = false }
-    PeoplePage(
+    SettingsPage(
         t("Users"),
         lede = state.lede ?: "…",
         onBack = onBack,
         overlay = {
-            if (state.users != null) FloatingPill(t("Add user"), AdminIcons.Plus) { adding = true }
+            if (state.users != null) FloatingPill(t("Add user"), WebIcons.Plus) { adding = true }
             if (adding) AddUserSheet(state, actions) { adding = false; actions.clearAddError() }
             menu?.let { u -> UserMenu(u, onEdit = { open(u.id) }, onEnable = { actions.setDisabled(u.id, false) }, onConfirm = { confirm = it to u }) { menu = null } }
             confirm?.let { (what, u) -> UserConfirm(what, u, actions) { confirm = null } }
@@ -73,18 +79,14 @@ fun UsersScreen(state: UsersState, actions: UsersActions, onBack: () -> Unit, op
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter).padding(bottom = 76.dp))
         },
     ) {
-        val filters = listOf(
-            Triple(UserFilter.All, t("All"), state.count(UserFilter.All)),
-            Triple(UserFilter.Admins, t("Admins"), state.count(UserFilter.Admins)),
-            Triple(UserFilter.Disabled, t("Disabled"), state.count(UserFilter.Disabled)),
-        )
-        CountSegmented(filters, state.filter, actions::filter, Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp))
+        val filters = listOf(Choice(UserFilter.All, t("All")), Choice(UserFilter.Admins, t("Admins")), Choice(UserFilter.Disabled, t("Disabled")))
+        Segmented(filters, state.filter, actions::filter, Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp), size = 13, count = { state.count(it).toString() })
         val shown = state.shown
-        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+        Card(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
             when {
-                shown == null && state.error != null -> Empty(t("Couldn’t load the users. {error}", "error" to state.error.orEmpty()), t("Try again"), actions::reload)
-                shown == null -> Empty("…")
-                shown.isEmpty() -> Empty(
+                shown == null && state.error != null -> CardNote(t("Couldn’t load the users. {error}", "error" to state.error.orEmpty()), action = t("Try again"), onAction = actions::reload)
+                shown == null -> CardNote("…")
+                shown.isEmpty() -> CardNote(
                     when (state.filter) {
                         UserFilter.Admins -> t("No administrators.")
                         UserFilter.Disabled -> t("No disabled accounts. Everyone can sign in.")
@@ -92,21 +94,13 @@ fun UsersScreen(state: UsersState, actions: UsersActions, onBack: () -> Unit, op
                     },
                 )
                 else -> shown.forEachIndexed { i, u ->
-                    if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+                    if (i > 0) RowLine()
                     UserLine(u, onClick = { open(u.id) }, onMenu = { menu = u })
                 }
             }
         }
         // Room for the Add user button over the last row.
         Spacer(Modifier.height(110.dp))
-    }
-}
-
-@Composable
-private fun Empty(text: String, action: String? = null, onAction: () -> Unit = {}) {
-    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SText(text, size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2)
-        if (action != null) PillButton(action, onAction)
     }
 }
 
@@ -135,14 +129,14 @@ private fun UserLine(u: UserRow, onClick: () -> Unit, onMenu: () -> Unit) {
 /** A long press on a row: what the web's row menu does. */
 @Composable
 private fun UserMenu(u: UserRow, onEdit: () -> Unit, onEnable: () -> Unit, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
-    val options = buildList<Pair<String, () -> Unit>> {
-        add(t("Edit") to onEdit)
+    val items = buildList {
+        add(MenuItem(t("Edit"), run = onEdit))
         // Not your own account, and an administrator loses admin access before being disabled.
-        if (!u.isMe && (u.disabled || !u.isAdmin)) add(if (u.disabled) t("Enable account") to onEnable else t("Disable account") to { onConfirm("disable") })
-        add(t("Sign out everywhere") to { onConfirm("signout") })
-        if (!u.isMe) add(t("Delete user") to { onConfirm("delete") })
+        if (!u.isMe && (u.disabled || !u.isAdmin)) add(if (u.disabled) MenuItem(t("Enable account"), run = onEnable) else MenuItem(t("Disable account")) { onConfirm("disable") })
+        add(MenuItem(t("Sign out everywhere")) { onConfirm("signout") })
+        if (!u.isMe) add(MenuItem(t("Delete user"), danger = true) { onConfirm("delete") })
     }
-    ActionSheet(u.name, options, onDismiss, danger = if (u.isMe) emptySet() else setOf(options.lastIndex))
+    MenuSheet(u.name, items, onDismiss)
 }
 
 @Composable
@@ -197,14 +191,11 @@ private fun AddUserSheet(state: UsersState, actions: UsersActions, onClose: () -
             }
             state.addError?.let { FormError(it) }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-            PillButton(t("Cancel"), onClose)
-            PillButton(
-                if (state.adding) t("Adding…") else t("Add user"),
-                { actions.addUser(name, password, copyFrom) },
-                style = PillStyle.Light,
-                enabled = name.isNotBlank() && !taken && !state.adding,
-            )
-        }
+        SheetButtons(
+            if (state.adding) t("Adding…") else t("Add user"),
+            { actions.addUser(name, password, copyFrom) },
+            onClose,
+            enabled = name.isNotBlank() && !taken && !state.adding,
+        )
     }
 }

@@ -26,8 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.admin.TaskTrigger
@@ -41,12 +39,12 @@ import io.github.arkmind.seedy.core.admin.triggerText
 import io.github.arkmind.seedy.core.admin.weekdayLabel
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.settings.Choice
-import io.github.arkmind.seedy.mobile.admin.AdminIcons
 import io.github.arkmind.seedy.mobile.admin.PillButton
-import io.github.arkmind.seedy.mobile.admin.PillStyle
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.PickOption
 import io.github.arkmind.seedy.mobile.settings.Segmented
 import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -146,13 +144,10 @@ fun ScheduleSheet(task: TaskRow, saving: Boolean, onSave: (List<TaskTrigger>) ->
                             note = ""
                             draft = draft + next
                         }
-                    }, leading = { SIcon(AdminIcons.Plus, size = 14.dp, color = SeedyColors.White) })
+                    }, leading = { SIcon(WebIcons.Plus, size = 14.dp, color = SeedyColors.White) })
                 }
 
-                Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-                    PillButton(t("Cancel"), onDismiss)
-                    PillButton(if (saving) t("Saving…") else t("Save schedule"), { onSave(draft) }, style = PillStyle.Light, enabled = changed && !saving)
-                }
+                SheetButtons(if (saving) t("Saving…") else t("Save schedule"), { onSave(draft) }, onDismiss, Modifier.padding(top = 6.dp), enabled = changed && !saving)
             }
         }
     }
@@ -183,17 +178,6 @@ private fun <T> ColumnScope.PickPage(title: String, options: List<Choice<T>>, va
     val start = options.indexOfFirst { it.value == value }.coerceAtLeast(0)
     val list = rememberLazyListState(initialFirstVisibleItemIndex = (start - 3).coerceAtLeast(0))
     LazyColumn(Modifier.weight(1f, fill = false).padding(start = 12.dp, end = 12.dp, bottom = 24.dp), state = list) {
-        itemsIndexed(options) { _, o ->
-            val on = o.value == value
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(12.dp)).background(if (on) SeedyColors.Surface else Color.Transparent)
-                    .tap(role = Role.RadioButton) { onPick(o.value); onBack() }.padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                SText(o.label, Modifier.weight(1f), size = 15.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.White else SeedyColors.Text)
-                if (on) SIcon(WebIcons.Check, size = 18.dp, color = accent, stroke = 2.6f)
-            }
-        }
+        itemsIndexed(options) { _, o -> PickOption(o.label, o.value == value) { onPick(o.value); onBack() } }
     }
 }
