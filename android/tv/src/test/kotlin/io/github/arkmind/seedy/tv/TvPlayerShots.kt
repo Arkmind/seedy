@@ -114,6 +114,12 @@ class TvPlayerShots {
 
     @Test fun episodes() = shot("TVPlayerEpisodes") { TvEpisodesPanel(state, state.seasons[2].id, listOf(Samples.thePass, Samples.glassHarbor), {}, {}) }
 
+    /** No board: a long-running show's twenty seasons scroll in the bar and leave the episodes where they are. */
+    @Test fun episodesManySeasons() = shot("TVPlayerEpisodesManySeasons") {
+        val many = state.copy(seasons = (1..20).map { n -> Samples.northbound.copy(id = UUID.nameUUIDFromBytes("Season $n".toByteArray()), name = "Season $n") })
+        TvEpisodesPanel(many, many.seasons[2].id, listOf(Samples.thePass, Samples.glassHarbor), {}, {})
+    }
+
     @Test fun settings() = shot("TVPlayerSettings") {
         TvSettingsPanel(state, SettingsPage.Main, PictureSize.Fit, false, {}, {}, {}, {}, {}, {})
     }

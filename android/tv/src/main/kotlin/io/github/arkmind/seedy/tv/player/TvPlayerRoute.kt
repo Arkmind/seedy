@@ -65,6 +65,8 @@ fun TvPlayerRoute(id: UUID) {
 
     var controls by remember { mutableStateOf(true) }
     var tool by remember { mutableStateOf<TvTool?>(null) }
+    // The tool whose panel is open, so its button gets the remote back when the panel closes.
+    var opener by remember { mutableStateOf<TvTool?>(null) }
     var page by remember { mutableStateOf(SettingsPage.Main) }
     var picture by remember { mutableStateOf(PictureSize.Fit) }
     var info by remember { mutableStateOf(false) }
@@ -85,11 +87,16 @@ fun TvPlayerRoute(id: UUID) {
             controls = false
         }
     }
-    // Where the remote lands: Skip when there's something to skip, else Pause; the hidden-controls catcher otherwise.
+    // Where the remote lands: the button whose panel just closed; else Skip when there's something to skip, else
+    // Pause; the hidden-controls catcher when the controls are away.
     LaunchedEffect(controls, tool) {
         when {
             tool != null -> Unit
-            controls -> (if (state.skip != null) focus.skip else focus.play).focusSoon()
+            controls -> {
+                val back = opener?.let { focus.tools.getValue(it) }
+                opener = null
+                if (back == null || !back.focusSoon()) (if (state.skip != null) focus.skip else focus.play).focusSoon()
+            }
             else -> root.focusSoon()
         }
     }
@@ -158,6 +165,7 @@ fun TvPlayerRoute(id: UUID) {
                 onNext = player::playNext,
                 onTool = { t ->
                     page = if (t == TvTool.Chapters) SettingsPage.Chapters else SettingsPage.Main
+                    opener = t
                     tool = t
                 },
                 onActivity = { touched++ },
