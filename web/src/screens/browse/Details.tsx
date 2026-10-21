@@ -6,7 +6,7 @@ import type { BaseItem } from '../../api/types';
 import { seerrDetails, type SeerrDetails } from '../../api/seedy';
 import { meStore } from '../../lib/app-state';
 import { duration, episodeTag, fmtDate, plural, progressFraction, remainingSeconds, runtime, ticksToSeconds, timeLeft, timecode, yearRange, dayOf } from '../../lib/format';
-import { Link, navigate, setQuery, useLocation } from '../../lib/router';
+import { Link, back, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { manageChanged } from './manage/host';
 import { Header } from '../../ui/navbar/Header';
@@ -34,8 +34,7 @@ export function Details({ id }: { id: string }) {
   useEffect(() => {
     if (!managed.n) return;
     if (managed.deleted.includes(id) || (item?.SeriesId && managed.deleted.includes(item.SeriesId))) {
-      if (window.history.length > 1) window.history.back();
-      else navigate('/', { replace: true });
+      back(item?.SeriesId && !managed.deleted.includes(item.SeriesId) ? `/details/${item.SeriesId}` : '/');
     } else setVersion((v) => v + 1);
   }, [managed.n]);
 

@@ -416,12 +416,15 @@ export function RowSkeleton({ title, width = 300, count = 6 }: { title: Componen
 }
 
 /* Library cards in the board's grid (minmax(240px, 1fr), gap 28 × 20). */
-export function CardGrid({ items, onReplace, origin, gridRef }: {
-  items: BaseItem[]; onReplace: (next: BaseItem) => void; origin?: string; gridRef?: RefObject<HTMLDivElement>;
+/* What a grid needs to let people pick titles: whether picking is on, what's picked, and a toggle. */
+export interface GridSelect { active: boolean; has: (id: string) => boolean; toggle: (item: BaseItem, index: number, shift: boolean) => void }
+
+export function CardGrid({ items, onReplace, origin, gridRef, select }: {
+  items: BaseItem[]; onReplace: (next: BaseItem) => void; origin?: string; gridRef?: RefObject<HTMLDivElement>; select?: GridSelect;
 }) {
   return (
     <div class="lib-grid" ref={gridRef}>
-      {items.map((it) => (
+      {items.map((it, i) => (
         <div key={it.Id} class="grid-slot" data-sort={(it.SortName ?? it.Name ?? '').charAt(0)}>
           <LibraryCard
             item={it}
@@ -430,6 +433,7 @@ export function CardGrid({ items, onReplace, origin, gridRef }: {
             origin={origin}
             onToggleWatched={() => togglePlayed(it, onReplace)}
             onToggleFavorite={() => toggleFavorite(it, onReplace)}
+            select={select && { active: select.active, selected: select.has(it.Id), toggle: (shift) => select.toggle(it, i, shift) }}
           />
         </div>
       ))}

@@ -53,3 +53,39 @@
   .lib-tools { justify-content: flex-start; }
   .lib-sort-k { display: none; }
 }
+
+/* Picking several titles (Library · select several board). */
+.lib-sel {
+  position: sticky; top: calc(var(--header-h, 0px) + 12px); z-index: 30;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 10px 10px 12px; border-radius: 18px; background: var(--seedy-surface);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+.lib-sel-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.lib-sel-close, .lib-sel-more {
+  flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; padding: 0;
+  border: 0; border-radius: var(--r-card); background: var(--seedy-surface-2); color: #ffffff; cursor: pointer;
+}
+.lib-sel-count { font-size: 18px; font-weight: 800; color: #ffffff; white-space: nowrap; }
+.lib-sel-all {
+  height: 36px; padding: 0 10px; border: 0; border-radius: var(--r-ctl); background: transparent;
+  color: var(--seedy-text-hero); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.lib-sel-all:hover { background: var(--seedy-surface-2); color: #ffffff; }
+.lib-sel-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.lib-sel-btn {
+  display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border: 0; border-radius: var(--r-card);
+  background: var(--seedy-surface-2); color: #ffffff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.lib-sel-btn.is-danger { background: rgba(255, 138, 138, 0.14); color: var(--seedy-danger); }
+.lib-sel-btn:not(:disabled):hover, .lib-sel-btn[aria-expanded='true'], .lib-sel-close:hover, .lib-sel-more:not(:disabled):hover, .lib-sel-more[aria-expanded='true'] {
+  background: var(--seedy-inverse); color: var(--seedy-ink-inverse);
+}
+.lib-sel-btn.is-danger:not(:disabled):hover { background: var(--seedy-danger); color: var(--seedy-ink-inverse); }
+.lib-sel-btn:disabled, .lib-sel-more:disabled, .lib-sel-all:disabled { opacity: 0.5; cursor: default; }
+@media (max-width: 720px) {
+  .lib-sel { gap: 8px; padding: 8px; }
+  .lib-sel-actions { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+  .lib-sel-btn { padding: 0 12px; }
+}
