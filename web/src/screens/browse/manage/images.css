@@ -1,0 +1,134 @@
+/* Edit images (ItemImages board). Prefix ig-. */
+
+.ig-layout { display: grid; grid-template-columns: 440px minmax(0, 1fr); align-items: start; gap: 24px; }
+
+/* Slots. */
+.ig-slots { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ig-slot {
+  display: flex; align-items: center; gap: 14px; min-width: 0; padding: 10px; border-radius: 14px;
+  background: var(--seedy-row); cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.ig-slot:hover { background: #1c1c1c; }
+.ig-slot.is-on { background: #1c1c1c; box-shadow: inset 0 0 0 2px var(--seedy-accent); }
+
+.ig-art {
+  position: relative; flex: none; display: block; width: 44px; aspect-ratio: 2 / 3; border-radius: var(--r-badge);
+  overflow: hidden; background: #1a232e;
+}
+.ig-art.is-still, .ig-art.is-thumb { width: 60px; aspect-ratio: 16 / 9; }
+.ig-art.is-cover { aspect-ratio: 1; }
+.ig-art.is-logo { width: 92px; aspect-ratio: 3 / 1; }
+.ig-art.is-banner { width: 92px; aspect-ratio: 5.4 / 1; }
+.ig-art > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ig-art.is-logo > img { inset: 3px 6px; width: calc(100% - 12px); height: calc(100% - 6px); object-fit: contain; }
+.ig-dash { position: absolute; inset: 0; box-sizing: border-box; border: 2px dashed #3a3a3a; border-radius: var(--r-badge); }
+.ig-checks { position: absolute; inset: 0; background: repeating-conic-gradient(#262626 0% 25%, #1f1f1f 0% 50%) 0 0 / 12px 12px; }
+
+/* Backdrops: each mini thumb removes its backdrop. Three to a line, more lines as they come. */
+.ig-thumbs { flex: none; display: flex; flex-wrap: wrap; gap: 4px; max-width: 140px; }
+.ig-thumb {
+  position: relative; flex: none; width: 44px; aspect-ratio: 16 / 9; padding: 0; border: 0; border-radius: var(--r-badge);
+  overflow: hidden; background: #1a232e; cursor: pointer;
+}
+.ig-thumb > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ig-thumb-x {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.62); color: var(--seedy-white); opacity: 0; transition: opacity var(--t-fast) var(--ease);
+}
+.ig-thumb:hover .ig-thumb-x, .ig-thumb:focus-visible .ig-thumb-x, .ig-thumb:disabled .ig-thumb-x:has(.im-spin) { opacity: 1; }
+.ig-thumb:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 1px; }
+.ig-thumb:disabled { cursor: default; }
+
+.ig-slot-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ig-slot-name { font-size: 14px; font-weight: 800; color: var(--seedy-white); }
+.ig-slot-sub { font-size: 12px; line-height: 1.4; color: var(--seedy-text-3); }
+.ig-slot-actions { flex: none; display: flex; gap: 6px; }
+.ig-btn {
+  display: flex; align-items: center; justify-content: center; height: 36px; padding: 0 12px; border: 0; border-radius: var(--r-ctl);
+  background: #262626; color: var(--seedy-text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.ig-btn.is-icon { width: 36px; padding: 0; color: var(--seedy-text-hero); }
+.ig-btn:not(:disabled):hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.ig-btn:disabled { cursor: default; opacity: 0.5; }
+.ig-btn:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 2px; }
+
+/* The chosen slot's art from providers. */
+.ig-panel { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.ig-panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.ig-panel-title { margin: 0; font-size: 15px; font-weight: 800; color: var(--seedy-white); }
+.ig-filters { display: flex; gap: 8px; min-width: 0; }
+.ig-provider { width: 180px; }
+.ig-language { width: 170px; }
+.ig-upload {
+  display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border: 0; border-radius: var(--r-card);
+  background: var(--seedy-surface); color: var(--seedy-white); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.ig-upload:not(:disabled):hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.ig-upload:disabled { cursor: default; opacity: 0.6; }
+.ig-upload:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 2px; }
+.ig-file { display: none; }
+
+.ig-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.ig-grid.is-Primary { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.ig-grid.is-Banner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ig-tile { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.ig-tile > .skel-line { width: 70%; }
+.ig-img {
+  position: relative; display: block; border-radius: var(--r-ctl); overflow: hidden; background: var(--seedy-row);
+  outline: 2px solid transparent; outline-offset: 3px; transition: outline-color var(--t-fast) var(--ease);
+}
+.ig-img > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ig-img.is-logo > img { inset: 10%; width: 80%; height: 80%; object-fit: contain; }
+.ig-tile:hover .ig-img, .ig-tile:focus-within .ig-img, .ig-tile.is-busy .ig-img { outline-color: var(--seedy-accent); }
+.ig-used {
+  position: absolute; top: 6px; left: 6px; display: flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: var(--r-pill);
+  background: var(--seedy-scrim); font-size: 11px; font-weight: 800; color: var(--seedy-ok);
+}
+.ig-over {
+  position: absolute; inset: 0; display: flex; flex-wrap: wrap; align-content: center; align-items: center; justify-content: center; gap: 8px;
+  padding: 8px; background: rgba(0, 0, 0, 0.55); opacity: 0; pointer-events: none; transition: opacity var(--t-fast) var(--ease);
+}
+.ig-tile:hover .ig-over, .ig-tile:focus-within .ig-over, .ig-tile.is-busy .ig-over { opacity: 1; pointer-events: auto; }
+.ig-use, .ig-view {
+  display: flex; align-items: center; gap: 8px; height: 38px; box-sizing: border-box; border: 0; border-radius: var(--r-btn-sm);
+  font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; text-decoration: none;
+}
+.ig-use { padding: 0 14px; background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-weight: 800; }
+.ig-use:disabled { cursor: default; }
+.ig-view { padding: 0 12px; background: rgba(31, 31, 31, 0.92); color: var(--seedy-text); font-weight: 700; }
+.ig-view:hover { color: var(--seedy-white); background: var(--seedy-surface-2); }
+.ig-use:focus-visible, .ig-view:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 2px; }
+.ig-meta { font-size: 12px; color: var(--seedy-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.ig-note {
+  margin: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 18px 20px; border-radius: var(--r-panel); background: var(--seedy-row); font-size: 15px; line-height: 1.5; color: var(--seedy-text-2);
+}
+
+.ig-saved { display: flex; align-items: center; gap: 8px; }
+
+@media (max-width: 1100px) {
+  .ig-layout { grid-template-columns: 360px minmax(0, 1fr); }
+  .ig-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ig-grid.is-Primary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ig-grid.is-Banner { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 820px) {
+  .ig-layout { grid-template-columns: minmax(0, 1fr); }
+  .ig-filters { flex-wrap: wrap; width: 100%; }
+  .ig-provider, .ig-language { width: auto; flex: 1 1 140px; }
+  .ig-upload { flex: 1 1 auto; justify-content: center; }
+}
+@media (max-width: 480px) {
+  .ig-slot { gap: 10px; }
+  .ig-grid.is-Primary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ig-grid.is-Backdrop, .ig-grid.is-Thumb, .ig-grid.is-Logo { grid-template-columns: minmax(0, 1fr); }
+}
+@media (hover: none) {
+  /* No pointer to hover with: the buttons stay on the art. */
+  .ig-over { opacity: 1; pointer-events: auto; background: linear-gradient(0deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 60%); align-content: flex-end; }
+  .ig-thumb-x { opacity: 1; background: rgba(0, 0, 0, 0.4); }
+}
