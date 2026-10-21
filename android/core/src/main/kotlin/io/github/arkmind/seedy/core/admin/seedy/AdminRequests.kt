@@ -117,6 +117,7 @@ interface AdminRequestsActions {
     fun unlink(userId: String) {}
     fun retry() {}
     fun retryAccounts() {}
+    fun say(text: String) {}
     fun messageShown() {}
     /** Saves the API key; null when it worked, else what to tell the person. */
     suspend fun saveKey(key: String): String? = null
@@ -292,6 +293,8 @@ class AdminRequestsViewModel(private val session: UserSession) : ViewModel(), Ad
             t("Couldn’t link the account.") + " " + errorText(e)
         }
     }
+
+    override fun say(text: String) = extra.update { it.copy(message = text) }
 
     override fun messageShown() = extra.update { it.copy(message = null) }
 

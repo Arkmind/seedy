@@ -258,6 +258,7 @@ interface LiveTvAdminActions {
     fun removeProvider(id: String) {}
     /** The editor closed: the server may have saved a guide source while finding lineups. */
     fun reload() {}
+    fun retry() {}
     /** Channel mapping changed: [unmapped] channels of that guide source have no listings now. */
     fun mapped(providerId: String, unmapped: Int) {}
     fun say(text: String) {}
@@ -567,6 +568,11 @@ class LiveTvAdminViewModel(
     }
 
     override fun reload() = load(silent = true)
+
+    override fun retry() {
+        load()
+        refreshStatus()
+    }
 
     /* ── Channel mapping ── */
 
