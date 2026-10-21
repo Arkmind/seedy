@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.2.2.0",
+        "changelog": "## What's Changed\n* Fix/android sticky header by @Arkmind in https://github.com/Arkmind/seedy/pull/7\n* Fix/web phone header by @Arkmind in https://github.com/Arkmind/seedy/pull/8\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.2.1...v0.2.2",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.2.2/seedy_0.2.2.0.zip",
+        "checksum": "f7ad51d2c8cb3d52b2e605b209d6a185",
+        "timestamp": "2026-10-21T03:49:42Z"
+      },
+      {
         "version": "0.2.1.0",
         "changelog": "## What's Changed\n* Fix/android branding by @Arkmind in https://github.com/Arkmind/seedy/pull/5\n* Chore/android release zip by @Arkmind in https://github.com/Arkmind/seedy/pull/6\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.2.0...v0.2.1",
         "targetAbi": "12.0.0.0",
