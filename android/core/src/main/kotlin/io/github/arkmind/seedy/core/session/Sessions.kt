@@ -107,7 +107,21 @@ class Sessions(context: Context, private val jellyfin: Jellyfin, private val sto
         val server = store.current().currentServer ?: return set(SessionState.NoServer)
         val account = server.account(server.lastUserId)
         val token = account?.let { tokenFor(server, it) }
-        if (account == null || token == null) set(SessionState.SignedOut(server)) else resume(server, account, token)
+        if (account == null || token == null) {
+            set(SessionState.SignedOut(server))
+            recheck(server)
+        } else {
+            resume(server, account, token)
+        }
+    }
+
+    /** Signed out, the profiles show the server's branding: ask again whether Seedy is there (it may be new). */
+    private suspend fun recheck(server: SavedServer) {
+        val seedy = withContext(Dispatchers.IO) { SeedyApi.probe(jellyfin.createApi(baseUrl = server.address), unanswered = server.seedy) }
+        if (seedy == server.seedy) return
+        store.updateServer(server.id) { it.copy(seedy = seedy) }
+        val now = state.value
+        if (now is SessionState.SignedOut && now.server.id == server.id) set(SessionState.SignedOut(now.server.copy(seedy = seedy)))
     }
 
     /** Opens a saved session. False when it can't: the token was revoked (sign in again) or the server is away. */
@@ -168,14 +182,16 @@ class Sessions(context: Context, private val jellyfin: Jellyfin, private val sto
     }
 
     private suspend fun open(server: SavedServer, account: SavedAccount, api: ApiClient, user: UserDto) {
-        val me = if (server.seedy != null) withContext(Dispatchers.IO) { runCatching { SeedyApi(api).me() }.getOrNull() } else null
+        // Asked again each time: the plugin may have been installed, updated or removed since the server was added.
+        val seedy = withContext(Dispatchers.IO) { SeedyApi.probe(api, unanswered = server.seedy) }
+        val me = if (seedy != null) withContext(Dispatchers.IO) { runCatching { SeedyApi(api).me() }.getOrNull() } else null
         store.update { d ->
             d.copy(
                 currentServerId = server.id,
-                servers = d.servers.map { if (it.id == server.id) it.copy(lastUserId = account.userId) else it },
+                servers = d.servers.map { if (it.id == server.id) it.copy(lastUserId = account.userId, seedy = seedy) else it },
             )
         }
-        set(SessionState.SignedIn(UserSession(server, account, api, user, me)))
+        set(SessionState.SignedIn(UserSession(server.copy(seedy = seedy), account, api, user, me)))
     }
 
     private suspend fun forget(server: SavedServer, userId: String) {

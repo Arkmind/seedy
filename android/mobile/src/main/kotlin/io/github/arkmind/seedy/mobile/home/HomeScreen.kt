@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.arkmind.seedy.core.feature.HomeViewModel
+import io.github.arkmind.seedy.core.requests.SeerrTitle
+import io.github.arkmind.seedy.mobile.requests.SeerrTitleCard
 import io.github.arkmind.seedy.core.format.cardTitle
 import io.github.arkmind.seedy.core.format.episodeShort
 import io.github.arkmind.seedy.core.format.heroMeta
@@ -88,6 +90,7 @@ fun HomeScreen(
     onSeeAll: (HomeViewModel.Row) -> Unit,
     bottomPadding: Dp,
     listState: LazyListState = rememberLazyListState(),
+    onSeerr: (SeerrTitle) -> Unit = {},
 ) {
     LazyColumn(
         Modifier.fillMaxSize().background(SeedyColors.Bg),
@@ -105,7 +108,7 @@ fun HomeScreen(
             }
         }
         for (row in state.visibleRows) {
-            item(key = row.row.id) { HomeRowView(row, onOpen, onSeeAll) }
+            item(key = row.row.id) { HomeRowView(row, onOpen, onSeeAll, onSeerr) }
         }
     }
 }
@@ -244,13 +247,25 @@ private fun heroTitleSize(title: String, maxWidth: Dp): TextUnit {
 }
 
 @Composable
-private fun HomeRowView(row: HomeViewModel.Row, onOpen: (BaseItemDto) -> Unit, onSeeAll: (HomeViewModel.Row) -> Unit) {
+private fun HomeRowView(row: HomeViewModel.Row, onOpen: (BaseItemDto) -> Unit, onSeeAll: (HomeViewModel.Row) -> Unit, onSeerr: (SeerrTitle) -> Unit) {
     Column(Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
             SText(row.title, Modifier.weight(1f), size = 16.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
             if (row.row.kind != "mymedia") {
                 SText(t("See all"), Modifier.tap { onSeeAll(row) }, size = 13.sp, weight = 600, color = SeedyColors.Text2)
             }
+        }
+        if (row.seerrRow) {
+            // Discover and Upcoming movies: the Requests tab's posters.
+            val titles = row.seerr
+            LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (titles == null) {
+                    items(4) { Box(Modifier.width(120.dp).aspectRatio(2f / 3f).clip(RoundedCornerShape(11.dp)).background(SeedyColors.Surface)) }
+                } else {
+                    items(titles, key = { "${it.mediaType}:${it.tmdbId}" }) { SeerrTitleCard(it, row.row.kind == "upcomingMovies", { onSeerr(it) }) }
+                }
+            }
+            return@Column
         }
         val items = row.items
         LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

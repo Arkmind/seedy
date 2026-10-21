@@ -1,9 +1,12 @@
 package io.github.arkmind.seedy.core.home
 
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.requests.RequestsApi
+import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.seedy.FeaturedEntry
 import io.github.arkmind.seedy.core.seedy.HomeRow
 import io.github.arkmind.seedy.core.seedy.Top10Entry
+import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -85,8 +88,8 @@ class Home(private val session: UserSession) {
                 enableImageTypes = CardImages, fields = CardFields, enableTotalRecordCount = false,
             ).content.items
             "nextup" -> nextUp(limit = 16)
-            "because" -> row.seedId?.let { seed ->
-                api.libraryApi.getSimilarItems(itemId = UUID.fromString(seed), userId = userId, limit = 16, fields = CardFields).content.items
+            "because" -> libraryUuid(row.seedId)?.let { seed ->
+                api.libraryApi.getSimilarItems(itemId = seed, userId = userId, limit = 16, fields = CardFields).content.items
             }.orEmpty()
             "genres" -> row.genre?.let { genre ->
                 api.libraryApi.getItems(
@@ -95,15 +98,15 @@ class Home(private val session: UserSession) {
                 ).content.items
             }.orEmpty()
             "mymedia" -> libraries.filter { it.collectionType in Browsable }
-            "latest" -> row.libraryId?.let { lib ->
+            "latest" -> libraryUuid(row.libraryId)?.let { lib ->
                 api.libraryApi.getLatestMedia(
-                    userId = userId, parentId = UUID.fromString(lib), limit = 16, enableUserData = true, imageTypeLimit = 1,
+                    userId = userId, parentId = lib, limit = 16, enableUserData = true, imageTypeLimit = 1,
                     groupItems = true, enableImageTypes = CardImages, fields = CardFields,
                 ).content
             }.orEmpty()
-            "collections" -> row.collectionId?.let { id ->
+            "collections" -> libraryUuid(row.collectionId)?.let { id ->
                 api.libraryApi.getItems(
-                    userId = userId, parentId = UUID.fromString(id), limit = 20,
+                    userId = userId, parentId = id, limit = 20,
                     sortBy = listOf(ItemSortBy.PREMIERE_DATE, ItemSortBy.SORT_NAME), fields = CardFields,
                 ).content.items
             }.orEmpty()
@@ -112,6 +115,16 @@ class Home(private val session: UserSession) {
                 enableImageTypes = listOf(ImageType.PRIMARY, ImageType.BACKDROP, ImageType.THUMB),
                 fields = listOf(ItemFields.PRIMARY_IMAGE_ASPECT_RATIO, ItemFields.OVERVIEW),
             ).content.items
+            else -> emptyList()
+        }
+    }
+
+    /** Discover and Upcoming movies: Seerr's titles, to request (they come from Seerr, not the library). */
+    suspend fun seerr(row: HomeRow): List<SeerrTitle> = io {
+        val requests = RequestsApi(api)
+        when (row.kind) {
+            "discover" -> requests.discover().results
+            "upcomingMovies" -> requests.upcoming().results
             else -> emptyList()
         }
     }
@@ -138,8 +151,14 @@ class Home(private val session: UserSession) {
     private suspend fun <T> io(block: suspend () -> T): T = withContext(Dispatchers.IO) { block() }
 
     companion object {
-        /** Row kinds the apps show so far. */
-        val Supported = setOf("featured", "continue", "nextup", "top10", "because", "genres", "mymedia", "latest", "collections", "upcomingShows")
+        /** Row kinds the apps show (all of Seedy's). */
+        val Supported = setOf(
+            "featured", "continue", "nextup", "top10", "because", "genres", "mymedia", "latest", "collections", "upcomingShows",
+            "discover", "upcomingMovies",
+        )
+
+        /** Rows of Seerr titles rather than library items. */
+        val SeerrKinds = setOf("discover", "upcomingMovies")
 
         val CardFields = listOf(
             ItemFields.PRIMARY_IMAGE_ASPECT_RATIO, ItemFields.GENRES, ItemFields.CHILD_COUNT, ItemFields.RECURSIVE_ITEM_COUNT,

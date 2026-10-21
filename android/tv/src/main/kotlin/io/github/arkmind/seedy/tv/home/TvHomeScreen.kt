@@ -57,6 +57,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.arkmind.seedy.core.feature.HomeViewModel
+import io.github.arkmind.seedy.core.requests.SeerrTitle
+import io.github.arkmind.seedy.tv.requests.TitleAction
+import io.github.arkmind.seedy.tv.requests.TitleCard
 import io.github.arkmind.seedy.core.format.cardTitle
 import io.github.arkmind.seedy.core.format.episodeShort
 import io.github.arkmind.seedy.core.format.join
@@ -107,6 +110,7 @@ fun TvHomeScreen(
     onOpen: (BaseItemDto) -> Unit,
     onPlay: (BaseItemDto) -> Unit = {},
     firstCard: FocusRequester = remember { FocusRequester() },
+    onSeerr: (SeerrTitle) -> Unit = {},
 ) {
     val rows = state.visibleRows
     var pick by remember { mutableStateOf<HeroPick?>(null) }
@@ -133,7 +137,8 @@ fun TvHomeScreen(
                         active = index == focusedRow,
                         firstCard = if (index == 0) firstCard else null,
                         onFocus = { item ->
-                            pick = HeroPick(item, row.title)
+                            // Seerr's titles aren't in the library, so the hero stays on the last one that is.
+                            if (item != null) pick = HeroPick(item, row.title)
                             if (focusedRow != index) {
                                 focusedRow = index
                                 scope.launch { list.animateScrollToItem(index) }
@@ -141,6 +146,7 @@ fun TvHomeScreen(
                         },
                         onOpen = onOpen,
                         onPlay = onPlay,
+                        onSeerr = onSeerr,
                         cardScroll = cardRows,
                     )
                 }
@@ -229,9 +235,10 @@ private fun TvRow(
     row: HomeViewModel.Row,
     active: Boolean,
     firstCard: FocusRequester?,
-    onFocus: (BaseItemDto) -> Unit,
+    onFocus: (BaseItemDto?) -> Unit,
     onOpen: (BaseItemDto) -> Unit,
     onPlay: (BaseItemDto) -> Unit,
+    onSeerr: (SeerrTitle) -> Unit,
     cardScroll: BringIntoViewSpec,
 ) {
     Column(Modifier.padding(top = RingRoom), verticalArrangement = Arrangement.spacedBy(18.bp - RingRoom)) {
@@ -242,9 +249,22 @@ private fun TvRow(
         LazyRow(
             Modifier.offset(x = -RingRoom),
             horizontalArrangement = Arrangement.spacedBy(28.bp),
-            verticalAlignment = Alignment.CenterVertically,
+            // Posters grow when focused: keep their tops in line, as on the Requests place.
+            verticalAlignment = if (row.seerrRow) Alignment.Top else Alignment.CenterVertically,
             contentPadding = PaddingValues(start = RingRoom, end = 96.bp, top = RingRoom, bottom = RingRoom),
         ) {
+            if (row.seerrRow) {
+                // Discover and Upcoming movies: the Requests place's posters; OK opens the title.
+                itemsIndexed(row.seerr.orEmpty(), key = { _, it -> "${it.mediaType}:${it.tmdbId}" }) { i, title ->
+                    TitleCard(
+                        title, row.row.kind == "upcomingMovies",
+                        if (title.status == "available" && title.jellyfinItemId != null) TitleAction.Open else TitleAction.Details,
+                        onClick = { onSeerr(title) },
+                        modifier = (if (i == 0 && firstCard != null) Modifier.focusRequester(firstCard) else Modifier)
+                            .onFocusChanged { if (it.isFocused) onFocus(null) },
+                    )
+                }
+            }
             itemsIndexed(items, key = { _, it -> it.id }) { i, item ->
                 TvCard(
                     item = item,

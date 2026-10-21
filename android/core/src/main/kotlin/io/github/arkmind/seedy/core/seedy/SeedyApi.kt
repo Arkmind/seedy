@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.core.seedy
 
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.exception.ApiClientException
+import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import org.jellyfin.sdk.api.client.extensions.get
 import org.jellyfin.sdk.api.client.extensions.post
 
@@ -26,13 +27,15 @@ class SeedyApi(private val api: ApiClient) {
 
     companion object {
         /**
-         * Asks a server whether it runs Seedy: its public client info, or null for plain Jellyfin (404), for a plugin
-         * whose API this app can't read, and when the answer doesn't come.
+         * Asks a server whether it runs Seedy: its public client info, or null for plain Jellyfin (404) and for a
+         * plugin whose API this app can't read. When no answer comes, [unanswered] (what was known before).
          */
-        suspend fun probe(api: ApiClient): SeedyClient? = try {
+        suspend fun probe(api: ApiClient, unanswered: SeedyClient? = null): SeedyClient? = try {
             api.get<SeedyClient>("/Seedy/Client").content.takeIf { it.api in SupportedSeedyApi }
-        } catch (_: ApiClientException) {
+        } catch (_: InvalidStatusException) {
             null
+        } catch (_: ApiClientException) {
+            unanswered
         }
     }
 }

@@ -108,6 +108,13 @@ class RequestsApi(private val api: ApiClient) {
             queryParameters = mapOf("scope" to scope, "filter" to filter, "sort" to "added", "skip" to skip, "take" to take),
         ).content
 
+    /** Home's Discover row: what's popular that the server doesn't have. */
+    suspend fun discover(page: Int = 1): SeerrTitles =
+        api.get<SeerrTitles>("/Seedy/Requests/Discover", queryParameters = mapOf("page" to page)).content
+
+    /** Home's Upcoming movies row, with their release dates. */
+    suspend fun upcoming(): SeerrTitles = api.get<SeerrTitles>("/Seedy/Requests/Upcoming").content
+
     suspend fun titles(kind: TitlesKind, page: Int = 1): SeerrTitles =
         api.get<SeerrTitles>("/Seedy/Requests/Titles/{kind}", mapOf("kind" to kind.key), mapOf("page" to page)).content
 

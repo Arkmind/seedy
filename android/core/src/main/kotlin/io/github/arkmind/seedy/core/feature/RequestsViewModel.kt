@@ -34,11 +34,18 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
 
     data class Row(val kind: TitlesKind, val items: List<SeerrTitle>? = null)
 
+    /** My requests or All requests, a page at a time as the list scrolls (web: the Sentinel under the list). */
+    data class Page(val items: List<SeerrRequest>? = null, val total: Int = 0, val loading: Boolean = false) {
+        val more: Boolean get() = items != null && items.size < total
+    }
+
     data class State(
         val tab: Tab = Tab.Discover,
         val summary: RequestSummary? = null,
-        val mine: List<SeerrRequest>? = null,
-        val all: List<SeerrRequest>? = null,
+        /** The person's latest requests (Seedy's Mine: up to 60), for the in-progress card and TV's request cards. */
+        val latest: List<SeerrRequest>? = null,
+        val mine: Page = Page(),
+        val all: Page = Page(),
         val rows: List<Row> = TitlesKind.entries.map { Row(it) },
         /** Requests with an approve, decline or retry on its way. */
         val busy: Set<Int> = emptySet(),
@@ -46,7 +53,7 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
     ) {
         /** Open requests of the person's: not on the server yet and not declined. */
         val open: List<SeerrRequest>
-            get() = mine.orEmpty().filter { it.status != "available" && it.requestStatus != "declined" }
+            get() = latest.orEmpty().filter { it.status != "available" && it.requestStatus != "declined" }
         val waiting: Int get() = open.count { it.requestStatus == "pending" }
         val downloading: Int get() = open.count { it.download != null }
         /** Approved, and Seerr hasn't found a download yet. */
@@ -54,13 +61,15 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
 
         /** On the server in the last week, so the card still shows them. */
         val recent: List<SeerrRequest>
-            get() = mine.orEmpty().filter { r ->
+            get() = latest.orEmpty().filter { r ->
                 r.status == "available" && (parseDay(r.availableAt ?: r.updatedAt)?.let { -daysFromToday(it) <= 7 } ?: false)
             }
         val ready: Int get() = recent.size
 
         /** The requests the in-progress card counts: the open ones and the ones that just arrived. */
         val inProgress: List<SeerrRequest> get() = open + recent
+
+        fun page(tab: Tab): Page = if (tab == Tab.All) all else mine
     }
 
     private val _state = MutableStateFlow(State())
@@ -75,30 +84,62 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
             val summary = io { api.summary() }
             _state.update { it.copy(summary = summary ?: it.summary) }
         }
-        viewModelScope.launch { loadMine() }
+        viewModelScope.launch { loadLatest() }
         for (kind in TitlesKind.entries) {
             viewModelScope.launch {
                 val titles = io { api.titles(kind).results }.orEmpty()
                 _state.update { s -> s.copy(rows = s.rows.map { if (it.kind == kind) it.copy(items = titles) else it }) }
             }
         }
-        if (_state.value.tab == Tab.All) viewModelScope.launch { loadAll() }
+        reloadPages()
     }
 
-    private suspend fun loadMine() {
-        val mine = io { api.mine().results }
-        _state.update { it.copy(mine = mine ?: it.mine ?: emptyList()) }
+    private suspend fun loadLatest() {
+        val latest = io { api.mine().results }
+        _state.update { it.copy(latest = latest ?: it.latest ?: emptyList()) }
     }
 
-    private suspend fun loadAll() {
-        val all = io { api.list(scope = "all").results }
-        _state.update { it.copy(all = all ?: it.all ?: emptyList()) }
+    /** The open lists again from the top, as many as were already shown (after a change, or on coming back). */
+    private fun reloadPages() {
+        val s = _state.value
+        for (tab in listOf(Tab.Mine, Tab.All)) {
+            if (s.page(tab).items != null || s.tab == tab) load(tab, reset = true)
+        }
     }
 
     fun setTab(tab: Tab) {
         _state.update { it.copy(tab = tab) }
-        if (tab == Tab.All && _state.value.all == null) viewModelScope.launch { loadAll() }
+        if (tab != Tab.Discover && _state.value.page(tab).items == null) load(tab, reset = true)
     }
+
+    /** The next page of [tab]'s list, when there is one. */
+    fun loadMore(tab: Tab) = load(tab, reset = false)
+
+    private fun load(tab: Tab, reset: Boolean) {
+        val page = _state.value.page(tab)
+        if (page.loading || (!reset && !page.more)) return
+        val shown = page.items.orEmpty().size
+        val skip = if (reset) 0 else shown
+        val take = if (reset) shown.coerceIn(PageSize, 100) else PageSize
+        setPage(tab) { it.copy(loading = true) }
+        viewModelScope.launch {
+            val r = io { api.list(scope = if (tab == Tab.All) "all" else "mine", take = take, skip = skip) }
+            setPage(tab) { p ->
+                when {
+                    r == null -> p.copy(loading = false, items = p.items ?: emptyList())
+                    reset -> Page(r.results, r.total, loading = false)
+                    else -> {
+                        // A request can move between pages while the list is open: don't show it twice.
+                        val seen = p.items.orEmpty().map { it.requestId }.toSet()
+                        Page(p.items.orEmpty() + r.results.filter { it.requestId !in seen }, r.total, loading = false)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun setPage(tab: Tab, change: (Page) -> Page) =
+        _state.update { if (tab == Tab.All) it.copy(all = change(it.all)) else it.copy(mine = change(it.mine)) }
 
     fun approve(r: SeerrRequest) = act(r, t("Approved {title}", "title" to r.title), t("Couldn’t approve {title}", "title" to r.title)) { api.approve(it) }
 
@@ -113,8 +154,8 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
         viewModelScope.launch {
             val ok = io { call(r.requestId); true } ?: false
             _state.update { it.copy(busy = it.busy - r.requestId, message = if (ok) done else failed) }
-            loadMine()
-            if (_state.value.all != null) loadAll()
+            loadLatest()
+            reloadPages()
             io { api.summary() }?.let { s -> _state.update { it.copy(summary = s) } }
         }
     }
@@ -131,7 +172,7 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
                 else -> t("Couldn't request {title}", "title" to title.title)
             }
             _state.update { it.copy(message = message) }
-            if (result != null) loadMine()
+            if (result != null) loadLatest()
         }
     }
 
@@ -155,6 +196,10 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
     }
 
     fun clearMessage() = _state.update { it.copy(message = null) }
+
+    companion object {
+        private const val PageSize = 30
+    }
 
     private suspend fun <T> io(block: suspend () -> T): T? = withContext(Dispatchers.IO) { runCatching { block() }.getOrNull() }
 }

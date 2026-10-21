@@ -46,7 +46,10 @@ import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.MobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.player.PlayerRoute
+import io.github.arkmind.seedy.core.requests.TitlesKind
+import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.mobile.requests.RequestsTab
+import io.github.arkmind.seedy.mobile.requests.openSeerr
 import io.github.arkmind.seedy.mobile.requests.SeerrTitlesRoute
 import io.github.arkmind.seedy.mobile.requests.SeerrTitleRoute
 import io.github.arkmind.seedy.mobile.search.SearchRoute
@@ -70,6 +73,8 @@ import io.github.arkmind.seedy.mobile.signin.ProfilesScreen
 import io.github.arkmind.seedy.mobile.signin.QuickConnectSheet
 import io.github.arkmind.seedy.mobile.signin.SignInFor
 import io.github.arkmind.seedy.ui.theme.LocalViewer
+import io.github.arkmind.seedy.core.seedy.logoUrl
+import io.github.arkmind.seedy.ui.components.LocalBrandLogo
 import io.github.arkmind.seedy.ui.theme.rememberAccent
 import io.github.arkmind.seedy.ui.theme.rememberViewer
 import io.github.arkmind.seedy.ui.theme.SText
@@ -77,7 +82,6 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.SeedyTheme
 import io.github.arkmind.seedy.ui.theme.parseHexColor
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 /** The phone app: follows the session from "Add your server" through sign-in to the signed-in tabs. */
 @Composable
@@ -89,14 +93,22 @@ fun MobileApp(core: SeedyCore, appVersion: String = "") {
         is SessionState.SignedOut -> parseHexColor(s.server.seedy?.accent)
         else -> null
     }
+    val me = signedIn?.seedyFlow?.collectAsStateWithLifecycle()?.value
+    val logo = when (val s = state) {
+        is SessionState.SignedIn -> (me?.branding ?: s.session.server.seedy)?.logoUrl(s.session.server.address)
+        is SessionState.SignedOut -> s.server.seedy?.logoUrl(s.server.address)
+        else -> null
+    }
     SeedyTheme(accent = accent ?: SeedyColors.Accent) {
-        Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
-            when (val s = state) {
-                SessionState.Starting -> Unit
-                SessionState.NoServer -> AddServerEntry(core, onBack = null)
-                is SessionState.SignedOut -> SignInFlow(core, s.server)
-                is SessionState.Unreachable -> Unreachable(core, s.server)
-                is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
+        CompositionLocalProvider(LocalBrandLogo provides logo) {
+            Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
+                when (val s = state) {
+                    SessionState.Starting -> Unit
+                    SessionState.NoServer -> AddServerEntry(core, onBack = null)
+                    is SessionState.SignedOut -> SignInFlow(core, s.server)
+                    is SessionState.Unreachable -> Unreachable(core, s.server)
+                    is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
+                }
             }
         }
     }
@@ -222,7 +234,14 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                                 HomeScreen(
                                     state, account,
                                     onOpen = nav::open, onPlay = nav::play, onSearch = { nav.go(Route.Search) },
-                                    onSeeAll = { row -> row.row.libraryId?.let { nav.go(Route.Library(UUID.fromString(it))) } },
+                                    onSeeAll = { row ->
+                                        when (row.row.kind) {
+                                            "discover" -> tab = Tab.Requests
+                                            "upcomingMovies" -> nav.go(Route.SeerrTitles(TitlesKind.UpcomingMovies.key))
+                                            else -> libraryUuid(row.row.libraryId)?.let { nav.go(Route.Library(it)) }
+                                        }
+                                    },
+                                    onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
                                     bottomPadding = tabBarHeight(),
                                 )
                             }

@@ -129,3 +129,7 @@ data class Top10(val items: List<Top10Entry> = emptyList(), val quiet: Boolean =
 
 @Serializable
 data class Top10Entry(val item: BaseItemDto, val profiles: Int = 0, val plays: Int = 0)
+
+/** The logo uploaded in Seedy admin · Branding, versioned so a new upload shows at once; null when there's none. */
+fun SeedyClient.logoUrl(address: String): String? =
+    if (hasLogo) "${address.trimEnd('/')}/Seedy/Client/Logo?v=$logoVersion" else null

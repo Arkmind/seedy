@@ -47,6 +47,7 @@ import io.github.arkmind.seedy.tv.nav.TvNav
 import io.github.arkmind.seedy.tv.nav.TvRoute
 import io.github.arkmind.seedy.tv.player.TvPlayerRoute
 import io.github.arkmind.seedy.tv.requests.TvRequestsPlace
+import io.github.arkmind.seedy.tv.requests.openSeerr
 import io.github.arkmind.seedy.tv.requests.TvSeerrTitleRoute
 import io.github.arkmind.seedy.tv.search.TvSearchPlace
 import io.github.arkmind.seedy.tv.settings.TvSettingsRoute
@@ -67,6 +68,8 @@ import io.github.arkmind.seedy.tv.signin.TvAddServerScreen
 import io.github.arkmind.seedy.tv.signin.TvPasswordScreen
 import io.github.arkmind.seedy.tv.signin.TvProfilesScreen
 import io.github.arkmind.seedy.ui.theme.LocalViewer
+import io.github.arkmind.seedy.core.seedy.logoUrl
+import io.github.arkmind.seedy.ui.components.LocalBrandLogo
 import io.github.arkmind.seedy.ui.theme.rememberAccent
 import io.github.arkmind.seedy.ui.theme.rememberViewer
 import io.github.arkmind.seedy.ui.theme.SText
@@ -85,14 +88,22 @@ fun TvApp(core: SeedyCore, appVersion: String = "") {
         is SessionState.SignedOut -> parseHexColor(s.server.seedy?.accent)
         else -> null
     }
+    val me = signedIn?.seedyFlow?.collectAsStateWithLifecycle()?.value
+    val logo = when (val s = state) {
+        is SessionState.SignedIn -> (me?.branding ?: s.session.server.seedy)?.logoUrl(s.session.server.address)
+        is SessionState.SignedOut -> s.server.seedy?.logoUrl(s.server.address)
+        else -> null
+    }
     SeedyTheme(accent = accent ?: SeedyColors.Accent) {
-        Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
-            when (val s = state) {
-                SessionState.Starting -> Unit
-                SessionState.NoServer -> AddServerEntry(core)
-                is SessionState.SignedOut -> SignInFlow(core, s.server)
-                is SessionState.Unreachable -> Unreachable(core, s.server)
-                is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
+        CompositionLocalProvider(LocalBrandLogo provides logo) {
+            Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
+                when (val s = state) {
+                    SessionState.Starting -> Unit
+                    SessionState.NoServer -> AddServerEntry(core)
+                    is SessionState.SignedOut -> SignInFlow(core, s.server)
+                    is SessionState.Unreachable -> Unreachable(core, s.server)
+                    is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
+                }
             }
         }
     }
@@ -200,7 +211,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                         when (place) {
                             TvPlace.Home -> {
                                 val state by home.state.collectAsStateWithLifecycle()
-                                TvHomeScreen(state, onOpen = nav::open, onPlay = nav::play)
+                                TvHomeScreen(state, onOpen = nav::open, onPlay = nav::play, onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) })
                             }
                             TvPlace.Search -> TvSearchPlace()
                             TvPlace.Movies -> LibraryPlace(home, CollectionType.MOVIES)
