@@ -8,6 +8,7 @@ import { meStore } from '../../lib/app-state';
 import { duration, episodeTag, fmtDate, plural, progressFraction, remainingSeconds, runtime, ticksToSeconds, timeLeft, timecode, yearRange, dayOf } from '../../lib/format';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
+import { manageChanged } from './manage/host';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { MenuItem, toast } from '../../ui/overlay';
@@ -28,6 +29,15 @@ import { t, tn } from '../../lib/i18n';
 export function Details({ id }: { id: string }) {
   const [version, setVersion] = useState(0);
   const { data: item, error, loading, reload } = useAsync(() => getItem(id), [id, version]);
+  /* A dialog changed this title (metadata, match, images) or deleted it. */
+  const managed = useStore(manageChanged);
+  useEffect(() => {
+    if (!managed.n) return;
+    if (managed.deleted.includes(id) || (item?.SeriesId && managed.deleted.includes(item.SeriesId))) {
+      if (window.history.length > 1) window.history.back();
+      else navigate('/', { replace: true });
+    } else setVersion((v) => v + 1);
+  }, [managed.n]);
 
   useEffect(() => {
     if (!item) return;
@@ -137,6 +147,12 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
     if (ep) navigate(playPath(ep, { restart }));
     else toast(t('Nothing to play yet'), 'error');
   };
+  const playFirst = async () => {
+    const eps = (await getEpisodes(item.Id, undefined, { limit: 40, isMissing: false }).catch(() => null))?.Items ?? [];
+    const first = eps.find((e) => (e.ParentIndexNumber ?? 1) > 0 && e.LocationType !== 'Virtual') ?? eps[0];
+    if (first) navigate(playPath(first, { restart: true }));
+    else toast(t('Nothing to play yet'), 'error');
+  };
   const shuffle = async () => {
     const ep = await playRandom({ parentId: item.Id, includeItemTypes: ['Episode'], isMissing: false }).catch(() => undefined);
     if (ep) navigate(playPath(ep));
@@ -186,19 +202,7 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
             />
             <SquareToggle icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
             <MoreActions item={item}>
-              {(close) => (
-                <>
-                  {pt && <MenuItem icon="refresh" label={t('Play from the beginning')} sub={pt.ep.Name} onSelect={() => { close(); play(true); }} />}
-                  {list.length > 0 && (
-                    <MenuItem icon="episodes" label={t('Go to season')} onSelect={() => {
-                      close();
-                      const el = document.getElementById('seasons');
-                      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      (el?.querySelector('[role="tab"][aria-selected="true"]') as HTMLElement | null)?.focus({ preventScroll: true });
-                    }} />
-                  )}
-                </>
-              )}
+              {(close) => list.length > 0 && <MenuItem icon="restart" label={t('Play from the first episode')} onSelect={() => { close(); void playFirst(); }} />}
             </MoreActions>
           </>
         }

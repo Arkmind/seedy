@@ -1,6 +1,5 @@
 import { Fragment, type ComponentChildren } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { JELLYFIN_WEB } from '../../api/client';
 import { getEpisodes, getLocalTrailers, getSimilar, setPlayed } from '../../api/jellyfin';
 import { backdropUrl, cardArt } from '../../api/images';
 import type { BaseItem, Person } from '../../api/types';
@@ -10,12 +9,13 @@ import { Link, href, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { Art, CastCard, ItemCard, SkeletonCards, WatchedCheck, playPath } from '../../ui/cards';
 import { Icon } from '../../ui/icons';
-import { MenuButton, MenuItem, toast } from '../../ui/overlay';
+import { toast } from '../../ui/overlay';
 import { Row } from '../../ui/Row';
 import { CUSTOM, useCustom } from '../me/prefs';
 import { useThemeMedia } from '../me/theme';
 import { findView, isNewEpisode, join, yearOf } from './parts';
 import { t } from '../../lib/i18n';
+import { ItemMenu } from './manage/menu';
 
 /* ───────── Which library a title belongs to (header tab + back link) ───────── */
 
@@ -265,34 +265,9 @@ export function SquareToggle({ on, onLabel, offLabel, icon, onClick }: { on: boo
   );
 }
 
+/* The hero's ⋯ button: the page's own entries, then the item actions (Details · More menu board). */
 export function MoreActions({ item, children }: { item: BaseItem; children?: (close: () => void) => ComponentChildren }) {
-  const copy = async (close: () => void) => {
-    close();
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      toast(t('Link copied'));
-    } catch {
-      toast("Couldn't copy the link", 'error');
-    }
-  };
-  return (
-    <MenuButton
-      width={260}
-      button={({ ref, open, toggle }) => (
-        <button ref={ref} type="button" class={'btn btn-square' + (open ? ' is-flipped' : '')} aria-label={t('More actions')} aria-haspopup="menu" aria-expanded={open ? 'true' : 'false'} onClick={toggle}>
-          <Icon name="more" size={22} />
-        </button>
-      )}
-    >
-      {(close) => (
-        <>
-          {children?.(close)}
-          <MenuItem icon="external" label={t('Open in Jellyfin')} href={`${JELLYFIN_WEB}#/details?id=${item.Id}`} />
-          <MenuItem icon="link" label={t('Copy link')} onSelect={() => copy(close)} />
-        </>
-      )}
-    </MenuButton>
-  );
+  return <ItemMenu item={item} shortcut>{children}</ItemMenu>;
 }
 
 export function airsPhrase(days?: string[]): string {

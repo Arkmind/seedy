@@ -11,15 +11,16 @@ import { NewPlaylistDialog } from './playlist';
 
 export type ManageKind = 'metadata' | 'identify' | 'images' | 'playlist' | 'delete';
 
-interface Open { kind: ManageKind; items: BaseItem[] }
+interface Open { kind: ManageKind; items: BaseItem[]; name?: string }
 
 const openStore = createStore<Open | null>(null);
 
 /* Bumped after a dialog saved something; `deleted` lists the ids that are gone. */
 export const manageChanged = createStore<{ n: number; deleted: string[] }>({ n: 0, deleted: [] });
 
-export function openManage(kind: ManageKind, items: BaseItem | BaseItem[]) {
-  openStore.set({ kind, items: Array.isArray(items) ? items : [items] });
+/* `name` prefills New playlist (what the person typed in the playlist search). */
+export function openManage(kind: ManageKind, items: BaseItem | BaseItem[], opts: { name?: string } = {}) {
+  openStore.set({ kind, items: Array.isArray(items) ? items : [items], name: opts.name });
 }
 
 function changed(deleted: string[] = []) {
@@ -36,7 +37,7 @@ export function ManageHost() {
     case 'metadata': return <EditMetadataDialog item={item} onClose={close} onDone={() => done()} />;
     case 'identify': return <IdentifyDialog item={item} onClose={close} onDone={() => done()} />;
     case 'images': return <ImagesDialog item={item} onClose={close} onDone={() => done()} />;
-    case 'playlist': return <NewPlaylistDialog items={open.items} onClose={close} onDone={() => done()} />;
+    case 'playlist': return <NewPlaylistDialog items={open.items} name={open.name} onClose={close} onDone={() => done()} />;
     case 'delete': return <DeleteDialog items={open.items} onClose={close} onDone={(ids) => done(ids)} />;
   }
 }
