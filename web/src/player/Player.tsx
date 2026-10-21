@@ -22,11 +22,13 @@ import { toast } from '../ui/overlay';
 import { parseAss } from './ass';
 import { closestTrack, lastTracks, trackSig } from './carry';
 import { ChaptersPanel } from './ChaptersPanel';
+import { Compare } from './Compare';
 import { TEXT_SUB_CODECS, type ProfileOptions } from './device-profile';
 import { EndOfMovie, type TileRect } from './EndOfMovie';
 import { EpisodesPanel } from './EpisodesPanel';
 import { externalApps, openExternal } from './external';
 import { keyAction } from './keys';
+import { MediaBridge } from './media';
 import { useNativeCues } from './native-cues';
 import { PausedOverlay } from './PausedOverlay';
 import {
@@ -248,7 +250,7 @@ function statusText(stream: ActiveStream, isAudio: boolean, vw: number, vh: numb
   if (stream.kind === 'Transcoding') return [tr('Transcoding'), resLabel(vw, vh)].filter(Boolean).join(' · ');
   const v = videoStream(s);
   const pic = [resLabel(v?.Width, v?.Height), hdrLabel(v?.VideoRangeType)].filter(Boolean).join(' ');
-  return [tr(stream.kind), pic, ch].filter(Boolean).join(' · ');
+  return [stream.engine === 'soft' ? tr('Decoded here') : tr(stream.kind), pic, ch].filter(Boolean).join(' · ');
 }
 
 /* Whether the server hands this subtitle to Seedy to draw (text, styled, PGS) rather than burning it in. */
@@ -353,6 +355,10 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const isMovie = item.Type === 'Movie';
 
   const mediaRef = useRef<HTMLVideoElement>(null);
+  /* Where the experimental player draws, and what the controls drive: the <video> element or that player. */
+  const softRef = useRef<HTMLDivElement>(null);
+  const bridgeRef = useRef<MediaBridge | null>(null);
+  const media = () => (bridgeRef.current ??= new MediaBridge(mediaRef.current!));
   const sessRef = useRef<PlaybackSession | null>(null);
   const ms0 = item.MediaSources?.[0];
   const startSeconds = useMemo(() => {
@@ -390,7 +396,8 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     startSeconds,
     profile: profileOptions(dev),
     burnWhenConverting: dev.burnInWhenConverting,
-    burnSubtitle: dev.subtitleBurnIn === 'styled' && isStyledSub(subtitleStreams(ms0).find((x) => x.Index === initialTracks.subtitleIndex))
+    burnSubtitle: dev.subtitleBurnIn === 'styled' && isStyledSub(subtitleStreams(ms0).find((x) => x.Index === initialTracks.subtitleIndex)),
+    soft: dev.softPlayer
   });
   const lastPos = useRef(startSeconds);
   const [attempt, setAttempt] = useState(0);
@@ -495,6 +502,14 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     if (!s) return;
     const me = mediaRef.current?.error;
     console.warn('[seedy] playback error', code, st.method, me ? `${me.code} ${me.message}` : '');
+    /* The experimental player couldn't play it, or not fast enough: the server converts it, as without that player. */
+    if (st.engine === 'soft') {
+      toast(code === 'soft-slow'
+        ? tr('This device couldn’t keep up, so the server is converting this video')
+        : tr('The experimental player couldn’t play this, so the server is converting it'));
+      s.change({ soft: 'off' }).then((ns) => { if (ns && wantPlay.current && !inGroup()) s.play(); }, fail);
+      return;
+    }
     /* A file the browser said it could play but couldn't: let the server convert it once. */
     if (st.method === 'DirectPlay' && !triedFallback.current) {
       triedFallback.current = true;
@@ -510,7 +525,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
 
   /* ── Session (re-created on "Try again") ── */
   useEffect(() => {
-    const el = mediaRef.current!;
+    const el = media();
     setFatal(null);
     el.volume = Math.max(0, Math.min(1, m.volume));
     el.muted = m.muted;
@@ -529,7 +544,9 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
       if (quality === 'auto') opts.maxBitrate = bitrateFor('auto', loc);
       const sess = new PlaybackSession(itemRef.current, el, {
         onStream: (st) => setStream(st),
-        onFatal: (code, st) => onFatalRef.current(code, st)
+        onFatal: (code, st) => onFatalRef.current(code, st),
+        softHost: () => softRef.current,
+        isolate: isolateReload
       }, opts);
       s = sess;
       sessRef.current = sess;
@@ -561,6 +578,18 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt]);
 
+  /* The experimental player decodes on several threads only in a cross-origin isolated page, which the server makes
+     of a page load that asks for it. Asked once per page: a browser that can't isolate plays on one thread. */
+  function isolateReload(seconds: number): boolean {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('isolate') === '1') return false;
+    q.set('isolate', '1');
+    q.set('t', String(secondsToTicks(seconds)));
+    q.delete('restart');
+    window.location.replace(window.location.pathname + '?' + q.toString());
+    return true;
+  }
+
   const retry = () => {
     setFatal(null);
     setStream(null);
@@ -570,7 +599,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   /* ── Media element → state, reports, SyncPlay readiness ── */
   const endedRef = useRef<() => void>(() => undefined);
   useEffect(() => {
-    const el = mediaRef.current!;
+    const el = media();
     const read = (patch: Partial<MediaState> = {}) => {
       const s = sessRef.current;
       const offset = s?.stream?.timeOffset ?? 0;
@@ -673,12 +702,14 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     return () => evs.forEach(([e, fn]) => v.removeEventListener(e, fn));
   }, []);
   const textCues: Cue[] = loaded?.kind === 'vtt' ? loaded.cues : NO_CUES;
-  const nativeCues = loaded?.kind === 'vtt' && subIndex >= 0 && !stream?.burnIn
+  const soft = stream?.engine === 'soft';
+  /* (The experimental player has no text tracks: Seedy draws every subtitle over it.) */
+  const nativeCues = loaded?.kind === 'vtt' && subIndex >= 0 && !stream?.burnIn && !soft
     && (dev.subtitleEngine === 'browser' || (dev.subtitleEngine === 'auto' && pip));
   useNativeCues(mediaRef.current, textCues, nativeCues, subOffset, subStyle);
 
   /* ── Actions ── */
-  const el = () => mediaRef.current!;
+  const el = () => media();
   const sess = () => sessRef.current;
 
   const play = () => {
@@ -715,12 +746,12 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     if (document.fullscreenElement) { void document.exitFullscreen().catch(() => undefined); return; }
     const root = document.documentElement;
     if (root.requestFullscreen) void root.requestFullscreen().catch(() => undefined);
-    else (el() as HTMLVideoElement & { webkitEnterFullscreen?: () => void }).webkitEnterFullscreen?.();
+    else (mediaRef.current as HTMLVideoElement & { webkitEnterFullscreen?: () => void } | null)?.webkitEnterFullscreen?.();
   };
-  const pipSupported = !isAudio && typeof document !== 'undefined' && (document as Document & { pictureInPictureEnabled?: boolean }).pictureInPictureEnabled === true;
+  const pipSupported = !isAudio && !soft && typeof document !== 'undefined' && (document as Document & { pictureInPictureEnabled?: boolean }).pictureInPictureEnabled === true;
   const togglePip = () => {
     if (document.pictureInPictureElement) void document.exitPictureInPicture().catch(() => undefined);
-    else void el().requestPictureInPicture?.().catch(() => toast(tr("Picture in picture isn't available"), 'error'));
+    else void mediaRef.current?.requestPictureInPicture?.().catch(() => toast(tr("Picture in picture isn't available"), 'error'));
   };
 
   const exit = () => {
@@ -1019,16 +1050,16 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   useEffect(() => bindSyncPlayer({
     itemId: item.Id,
     play: () => sess()?.play(),
-    pause: () => mediaRef.current?.pause(),
+    pause: () => media().pause(),
     seek: (sec) => {
       const s = sess();
       if (s && Math.abs(s.position() - sec) > 0.5) s.seek(sec);
     },
     position: () => sess()?.position() ?? 0,
-    paused: () => mediaRef.current?.paused ?? true,
+    paused: () => media().paused,
     load: (id, sec) => navigate(`/play/${id}?t=${secondsToTicks(sec)}`, { replace: true }),
     stop: () => {
-      mediaRef.current?.pause();
+      media().pause();
       toast(tr('The group stopped playback'));
     }
   }), [item.Id]);
@@ -1248,11 +1279,19 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
 
       <video
         ref={mediaRef}
-        class={'pl-video' + (endShown ? ' is-tile' : '') + (endShown && tileSettled ? ' is-settled' : '') + (isAudio ? ' is-hidden' : '')}
+        class={'pl-video' + (endShown ? ' is-tile' : '') + (endShown && tileSettled ? ' is-settled' : '') + (isAudio || soft ? ' is-hidden' : '')}
         style={videoStyle}
         playsInline
         preload="auto"
         aria-label={item.Name}
+      />
+      <div
+        ref={softRef}
+        class={'pl-video pl-soft' + (endShown ? ' is-tile' : '') + (endShown && tileSettled ? ' is-settled' : '') + (soft ? '' : ' is-hidden')}
+        style={videoStyle}
+        role={soft ? 'img' : undefined}
+        aria-label={soft ? item.Name : undefined}
+        aria-hidden={soft ? undefined : 'true'}
       />
 
       <div
@@ -1270,6 +1309,11 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
         }}
         onDblClick={() => { if (!isAudio) toggleFullscreen(); }}
       />
+
+      {/* "Every video (for testing)": the usual player on the right of a bar that moves. */}
+      {soft && dev.softPlayer === 'always' && !endShown && sessRef.current && (
+        <Compare item={item} master={media()} opts={sessRef.current.opts} describe={(st, w, h) => statusText(st, false, w, h)} />
+      )}
 
       {panel && <div class="pl-dim" aria-hidden="true" />}
       <div class="pl-grad-top pl-fade" aria-hidden="true" />

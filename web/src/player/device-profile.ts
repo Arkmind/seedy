@@ -41,6 +41,12 @@ export function browserSupport(): BrowserSupport {
   const nativeHls = !!v.canPlayType('application/vnd.apple.mpegurl').replace(/no/, '');
   let hdr = false;
   try { hdr = window.matchMedia('(dynamic-range: high)').matches || window.matchMedia('(video-dynamic-range: high)').matches; } catch { /* old browsers */ }
+  /* Browsers that tone-map HDR for an SDR screen themselves (as jellyfin-web counts them): everything on Apple devices,
+     desktop Chromium and Firefox on macOS. Android Chrome and Firefox elsewhere would show washed-out colours. */
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const firefox = /Firefox\//.test(ua) && !ios;
+  const safari = !chromium && !firefox && /Safari\//.test(ua);
+  const toneMaps = ios || safari || (chromium && !/Android/.test(ua)) || (firefox && /Macintosh/.test(ua));
   cached = {
     h264: can('video/mp4; codecs="avc1.42E01E, mp4a.40.2"') || can('video/mp4; codecs="avc1.640029"'),
     hevc: can('video/mp4; codecs="hvc1.1.6.L120.90"') || can('video/mp4; codecs="hev1.1.6.L120.90"') || can('video/mp4; codecs="hvc1.2.4.L153.B0"'),
@@ -58,7 +64,7 @@ export function browserSupport(): BrowserSupport {
     mkv: chromium || can('video/x-matroska') || can('video/mkv'),
     hls: !!ms?.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"') || nativeHls,
     nativeHls,
-    hdr
+    hdr: hdr || toneMaps
   };
   return cached;
 }

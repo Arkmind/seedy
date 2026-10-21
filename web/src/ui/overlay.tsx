@@ -19,24 +19,38 @@ export function Popover({
   width?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top?: number; bottom?: number; left?: number; right?: number }>({});
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left?: number; right?: number; maxHeight?: number; overflowY?: 'auto' }>({});
 
   useLayoutEffect(() => {
     if (!open || !anchor.current) return;
     const place = () => {
-      const r = anchor.current!.getBoundingClientRect();
-      const vw = window.innerWidth;
+      const a = anchor.current;
+      if (!a) return;
+      const r = a.getBoundingClientRect();
+      // The window without its scrollbars: what fixed positions count from.
+      const vw = document.documentElement.clientWidth;
+      const vh = document.documentElement.clientHeight;
+      // Its whole height, even while capped below.
+      const full = ref.current?.scrollHeight ?? 0;
+      const h = Math.min(full, vh - 16);
       const next: typeof pos = {};
-      if (placement === 'below') next.top = r.bottom + 8;
-      else next.bottom = window.innerHeight - r.top + 8;
+      // Under its button, moved up as far as it takes for its bottom to stay in the window.
+      if (placement === 'below') next.top = Math.max(8, Math.min(r.bottom + 8, vh - 8 - h));
+      else next.bottom = vh - r.top + 8;
+      // Taller than the window: it scrolls.
+      if (full > vh - 16) Object.assign(next, { maxHeight: vh - 16, overflowY: 'auto' });
       if (align === 'end') next.right = Math.max(8, vw - r.right);
       else next.left = Math.max(8, r.left);
       setPos(next);
     };
     place();
+    // Its height is only known once it's drawn, and changes with what it shows.
+    const resized = typeof ResizeObserver === 'function' && ref.current ? new ResizeObserver(place) : null;
+    if (ref.current) resized?.observe(ref.current);
     window.addEventListener('resize', place);
     window.addEventListener('scroll', place, true);
     return () => {
+      resized?.disconnect();
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };

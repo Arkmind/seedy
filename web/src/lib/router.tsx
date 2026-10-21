@@ -29,9 +29,17 @@ if (!(window.history.state as { key?: string } | null)?.key) {
 }
 if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
 
+/* The experimental player's page is cross-origin isolated (see Player), which blocks YouTube trailers: everything but
+   the player opens as a fresh page from there. */
+const leavesIsolation = (path: string) => window.crossOriginIsolated && !/^\/play\//i.test(path);
+
 window.addEventListener('popstate', () => {
   // Back/forward can't be cancelled, so step back to where we were when a guard says stay.
   const attempted = current();
+  if (leavesIsolation(attempted.path)) {
+    window.location.reload();
+    return;
+  }
   if (guards.size && !allowed(attempted.path + (attempted.query.toString() ? '?' + attempted.query.toString() : ''))) {
     window.history.pushState({ key: loc.key }, '', window.location.href.replace(window.location.pathname + window.location.search, APP_BASE + loc.path + (loc.query.toString() ? '?' + loc.query.toString() : '')));
     return;
@@ -56,6 +64,10 @@ const allowed = (to: string) => [...guards].every((g) => g(to));
 
 export function navigate(path: string, opts: { replace?: boolean; keepScroll?: boolean; force?: boolean } = {}) {
   if (!opts.force && !allowed(path)) return;
+  if (leavesIsolation(path)) {
+    window.location[opts.replace ? 'replace' : 'assign'](href(path));
+    return;
+  }
   scrollPositions.set(loc.key, window.scrollY);
   const key = Math.random().toString(36).slice(2, 10);
   const target = href(path);
@@ -66,7 +78,8 @@ export function navigate(path: string, opts: { replace?: boolean; keepScroll?: b
 }
 
 export function back(fallback = '/') {
-  if (loc.key !== 'root' && window.history.length > 1) window.history.back();
+  // The isolated player page started with a reload: what came before belongs to the page it replaced.
+  if ((loc.key !== 'root' || window.crossOriginIsolated) && window.history.length > 1) window.history.back();
   else navigate(fallback, { replace: true });
 }
 

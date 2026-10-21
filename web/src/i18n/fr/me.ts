@@ -293,6 +293,12 @@ const fr: Record<string, string> = {
   'Turn on if this device or your receiver decodes TrueHD': 'À activer si cet appareil ou votre ampli décode le TrueHD',
   'Play Matroska files directly': 'Lire les fichiers Matroska directement',
   'Off has the server repackage MKV files first': 'Désactivé, le serveur réempaquette d’abord les fichiers MKV',
+  'Experimental player': 'Lecteur expérimental',
+  'Decodes HEVC and other formats here instead of the server converting them. Needs a fast processor': 'Décode le HEVC et d’autres formats ici plutôt que de laisser le serveur les convertir. Demande un processeur rapide',
+  'This browser can’t run it': 'Ce navigateur ne peut pas le faire fonctionner',
+  'When needed, up to 1080p': 'Si nécessaire, jusqu’en 1080p',
+  'When needed, any size': 'Si nécessaire, toutes tailles',
+  'Every video (for testing)': 'Toutes les vidéos (pour tester)',
 
   // Subtitles
   'When subtitles turn on by themselves, and how they look on this device.': 'Quand les sous-titres s’activent d’eux-mêmes, et leur apparence sur cet appareil.',

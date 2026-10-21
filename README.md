@@ -18,7 +18,9 @@ plugin repository and the server address opens Seedy instead of Jellyfin's web a
   channel up/down, last channel and a channel list. Works with M3U (IPTV) and HDHomeRun tuners and XMLTV guides.
 - **A player.** Skip intro, recap and credits from media segments (works with the Intro Skipper plugin), chapters and
   seek previews on the scrubber, audio and subtitle tracks (styled ASS/SSA and PGS drawn in the browser), Up next,
-  pause screen, end-of-movie picks, Watch together (SyncPlay), cast to other Jellyfin apps.
+  pause screen, end-of-movie picks, Watch together (SyncPlay), cast to other Jellyfin apps. An experimental player
+  (Settings · Playback · Advanced) decodes HEVC and other formats the browser can't play, instead of the server
+  converting them; it hands the video back to the server when the device can't keep up.
 - **A play log.** It feeds the Top 10, the viewing history page, row order and genre rows. Jellyfin itself only keeps
   the last play of each title.
 - **Personal settings** at `/settings`: profile and sign-in, home screen, playback, subtitles, display (accent,
@@ -97,7 +99,8 @@ make build      # or ./build.sh
 Needs [Bun](https://bun.sh), Python 3, and either the .NET 10 SDK or Docker (it then builds in
 `mcr.microsoft.com/dotnet/sdk:10.0`). It typechecks and builds the web app into `src/Jellyfin.Plugin.Seedy/Web`
 (embedded in the DLL), publishes the plugin, and writes `artifacts/seedy_<version>.zip` plus a single-release
-`artifacts/manifest.json`.
+`artifacts/manifest.json`. The first build downloads the experimental player's WebAssembly decoders from libmedia's
+repository (pinned and checked, see `web/vite/libmedia.ts`).
 
 To install a build by hand: stop Jellyfin, copy `Jellyfin.Plugin.Seedy.dll` and `meta.json` from
 `artifacts/package/` into `<jellyfin config>/plugins/Seedy_<version>/`, then start Jellyfin again.
@@ -145,7 +148,8 @@ web/                      Preact + TypeScript + Vite
   src/screens/me          personal settings (/settings)
   src/screens/admin       Seedy's admin pages and the dashboard shell
   src/screens/server      the server dashboard; its Jellyfin API calls are in api.ts
-  src/player              the player (on demand and live)
+  src/player              the player (on demand and live), and the experimental player (soft-*.ts)
+  vite/libmedia.ts        serves libmedia and its decoders for the experimental player
   src/i18n/fr             French translations
 Makefile                  shortcuts for the build and the test server (`make` lists them)
 scripts/                  release helper (plugin repository manifest)
@@ -156,7 +160,8 @@ dev/                      local test server, media generator, Seerr setup
 
 Seedy builds on [Jellyfin](https://jellyfin.org) and talks to [Seerr](https://github.com/seerr-team/seerr)
 (Jellyseerr / Overseerr). The web app uses [Preact](https://preactjs.com) (MIT), [hls.js](https://github.com/video-dev/hls.js)
-(Apache-2.0) and the [Noto Sans](https://fonts.google.com/noto) fonts (SIL Open Font License).
+(Apache-2.0), [libmedia](https://github.com/zhaohappy/libmedia) (LGPL-3.0-or-later, with decoders from FFmpeg) for the
+experimental player, and the [Noto Sans](https://fonts.google.com/noto) fonts (SIL Open Font License).
 
 Seedy is an independent project, not affiliated with or endorsed by the Jellyfin project.
 
