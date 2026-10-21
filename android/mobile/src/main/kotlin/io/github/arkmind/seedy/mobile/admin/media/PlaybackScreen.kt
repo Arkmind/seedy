@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -33,6 +34,7 @@ import io.github.arkmind.seedy.core.admin.media.PlaybackState
 import io.github.arkmind.seedy.core.admin.media.PlaybackViewModel
 import io.github.arkmind.seedy.core.admin.media.SettingActions
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.RadioRow
@@ -56,10 +58,25 @@ fun PlaybackRoute() {
     val vm = viewModel { PlaybackViewModel(session) }
     val state by vm.state.collectAsStateWithLifecycle()
     var page by rememberSaveable { mutableStateOf<String?>(null) }
+    var leaving by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { vm.load() }
     LaunchedEffect(Unit) { vm.live() }
-    BackHandler(enabled = page != null) { page = null }
-    PlaybackScreen(state, vm, page, onBack = { if (page != null) page = null else nav.back() }, openPage = { page = it })
+    val back = {
+        when {
+            page != null -> page = null
+            state.changes > 0 -> leaving = true
+            else -> nav.back()
+        }
+    }
+    BackHandler(enabled = page != null || state.changes > 0) { back() }
+    PlaybackScreen(state, vm, page, onBack = back, openPage = { page = it })
+    if (leaving) {
+        ConfirmSheet(
+            t("Leave without saving?"),
+            t("Your changes to the playback settings haven’t been saved yet. If you leave now, they’re lost."),
+            t("Leave without saving"), { vm.discard(); nav.back() }, { leaving = false }, danger = true,
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
