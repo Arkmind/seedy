@@ -1,7 +1,7 @@
 name: Android release
 
 # Publishing a GitHub Release (tag such as v0.2.0) also builds the Android app with that version: the signed APK is
-# attached to the release, and the app bundle goes to Google Play's internal track when the Play secret is set
+# attached to the release (also zipped), and the app bundle goes to Google Play's internal track when the Play secret is set
 # (promote it from there in the Play Console). The bundle is also kept as the run's artifact, for uploading by hand.
 # Pre-releases (tag such as v0.2.0-beta.1, "Set as a pre-release" ticked) build the app the same way; the plugin
 # workflow skips them.
@@ -60,10 +60,12 @@ jobs:
           name: seedy-android-${{ env.VERSION }}-bundle
           path: android/app/build/outputs/bundle/release/app-release.aab
 
-      - name: Attach the APK to the release
+      - name: Attach the APK to the release (as is, and zipped)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$GITHUB_REF_NAME" "seedy-android-$VERSION.apk" --clobber
+        run: |
+          zip -j "seedy-android-$VERSION.zip" "seedy-android-$VERSION.apk"
+          gh release upload "$GITHUB_REF_NAME" "seedy-android-$VERSION.apk" "seedy-android-$VERSION.zip" --clobber
 
       - name: Send the bundle to Google Play (internal track)
         if: env.HAS_PLAY == 'true'
