@@ -42,7 +42,6 @@ import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
 import io.github.arkmind.seedy.mobile.settings.SaveLine
-import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.theme.SText
@@ -142,7 +141,7 @@ fun ServerSettingsScreen(
 /** The board's Server card: the name and the sign-in message, typed in place. */
 @Composable
 private fun ServerCard(state: ServerSettingsState, actions: ServerSettingsActions) {
-    SectionTitle(t("Server"))
+    MediaSectionTitle(t("Server"))
     Column(
         Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel).padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),

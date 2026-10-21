@@ -42,7 +42,6 @@ import io.github.arkmind.seedy.mobile.admin.SaveBarRoom
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.settings.SectionFoot
-import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.cssBox
 import io.github.arkmind.seedy.ui.theme.SText
@@ -115,21 +114,21 @@ private fun Transcoding(state: PlaybackState, actions: PlaybackActions, rows: Se
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Box(Modifier.size(7.dp).background(ink, CircleShape))
-            SText(line, Modifier.cssBox(12, io.github.arkmind.seedy.ui.theme.NotoLineRatio), size = 12.sp, weight = 600, color = SeedyColors.TextHero)
+            SText(line, Modifier.cssBox(12, io.github.arkmind.seedy.ui.theme.NotoLineRatio, up = true), size = 12.sp, weight = 600, color = SeedyColors.TextHero)
         }
     } ?: Box(Modifier.padding(top = 12.dp).height(36.dp))
 
-    SectionTitle(t("Hardware acceleration"))
+    MediaSectionTitle(t("Hardware acceleration"))
     Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
         state.accels.forEachIndexed { i, a ->
             if (i > 0) RowLine()
             RadioRow(a.name, a.sub, a.on, { actions.setAccel(a.id) }, subColor = if (a.detected) SeedyColors.Ok else SeedyColors.Text3)
         }
     }
-    SectionFoot(t("Uses the GPU for converting video. Much faster than the CPU, especially for HDR."))
+    MediaSectionFoot(t("Uses the GPU for converting video. Much faster than the CPU, especially for HDR."))
 
     if (state.codecs.isNotEmpty()) {
-        SectionTitle(t("Decode on the GPU"))
+        MediaSectionTitle(t("Decode on the GPU"))
         FlowRow(
             Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel).padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -137,7 +136,7 @@ private fun Transcoding(state: PlaybackState, actions: PlaybackActions, rows: Se
         ) {
             for (c in state.codecs) Chip(c.name, c.on, { actions.setCodec(c.key, !c.on) })
         }
-        SectionFoot(t("Formats your GPU can read. Turned-off ones fall back to the CPU."))
+        MediaSectionFoot(t("Formats your GPU can read. Turned-off ones fall back to the CPU."))
     }
 
     SettingCards(state.groups, rows, sheets)

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -64,7 +65,8 @@ import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.SeedyField
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.PickRow
-import io.github.arkmind.seedy.mobile.settings.Section
+import io.github.arkmind.seedy.mobile.settings.CardRows
+import io.github.arkmind.seedy.mobile.settings.cssBox
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SheetState
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
@@ -106,10 +108,39 @@ fun MediaSheetHost(sheets: MediaSheets, onNumber: (String, Double) -> Unit) {
 @Composable
 fun SettingCards(groups: List<SettingsGroup>, actions: SettingActions, sheets: MediaSheets) {
     for (g in groups) {
-        Section(g.title, g.foot) {
+        MediaSection(g.title, g.foot) {
             for (r in g.rows) row { SettingRow(r, actions, sheets) }
         }
     }
+}
+
+/**
+ * A section's title as the boards draw it: 12 px capitals in a 17 px line (Chrome's normal line height rounds the
+ * font's ascent and descent each to a whole pixel), 22 px above and 8 px below.
+ */
+@Composable
+fun MediaSectionTitle(text: String) {
+    SText(text, Modifier.padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 8.dp).cssBox(12, 17f / 12f), size = 12.sp, weight = 800, tracking = 0.1f, color = SeedyColors.Text3, uppercase = true)
+}
+
+/** The settings kit's section with [MediaSectionTitle]: an optional title (none leaves 16 px), the card, a line under it. */
+@Composable
+fun MediaSection(title: String?, foot: String? = null, build: CardRows.() -> Unit) {
+    if (title != null) MediaSectionTitle(title) else Spacer(Modifier.height(16.dp))
+    val rows = CardRows().apply(build).rows
+    Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+        rows.forEachIndexed { i, row ->
+            if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+            row()
+        }
+    }
+    if (foot != null) MediaSectionFoot(foot)
+}
+
+/** The line under a card (12 px, 1.45 line height), its box rounded to the nearest pixel. */
+@Composable
+fun MediaSectionFoot(text: String) {
+    SText(text, Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp).cssBox(12, 1.45f), size = 12.sp, lineHeight = 1.45f, color = SeedyColors.Text3)
 }
 
 @Composable
@@ -166,7 +197,7 @@ fun BoardField(
     )
     val shape = RoundedCornerShape(13.dp)
     Box(
-        modifier.fillMaxWidth().then(if (multi) Modifier.heightIn(min = (14 * 1.4f * lines + 24).dp) else Modifier.height(46.dp))
+        modifier.fillMaxWidth().then(if (multi) Modifier.heightIn(min = (14 * 1.4f * lines + 24).toInt().dp) else Modifier.height(46.dp))
             .clip(shape).background(SeedyColors.Surface)
             .then(if (focused) Modifier.border(2.dp, accent, shape) else Modifier)
             .padding(horizontal = 14.dp, vertical = if (multi) 12.dp else 0.dp),
@@ -177,7 +208,6 @@ fun BoardField(
             value = value,
             onValueChange = onChange,
             singleLine = !multi,
-            minLines = if (multi) lines else 1,
             interactionSource = interaction,
             textStyle = style,
             cursorBrush = SolidColor(accent),

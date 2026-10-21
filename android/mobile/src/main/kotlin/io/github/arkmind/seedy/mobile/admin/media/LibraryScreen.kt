@@ -56,9 +56,7 @@ import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
 import io.github.arkmind.seedy.mobile.settings.PickRow
 import io.github.arkmind.seedy.mobile.settings.SaveLine
-import io.github.arkmind.seedy.mobile.settings.Section
 import io.github.arkmind.seedy.mobile.settings.SectionFoot
-import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
@@ -149,7 +147,7 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
             }
         }
 
-        SectionTitle(t("Folders"))
+        MediaSectionTitle(t("Folders"))
         Card(Modifier.padding(horizontal = 16.dp)) {
             for (p in state.folders) {
                 Row(
@@ -164,15 +162,15 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
             }
             AddRow(t("Add folder"), actions::addFolder)
         }
-        if (state.folders.size == 1) SectionFoot(t("A library needs at least one folder"))
+        if (state.folders.size == 1) MediaSectionFoot(t("A library needs at least one folder"))
 
-        Section(t("Metadata")) {
+        MediaSection(t("Metadata")) {
             row { PickRow(t("Language"), null, state.language.ifEmpty { "…" }) { sheet.open(t("Language"), state.languageOptions, state.languageValue, actions::setLanguage) } }
             row { PickRow(t("Country"), null, state.country.ifEmpty { "…" }) { sheet.open(t("Country"), state.countryOptions, state.countryValue, actions::setCountry) } }
             row { PickRow(t("Refresh every"), null, state.refresh) { sheet.open(t("Refresh every"), state.refreshOptions, state.refreshValue, actions::setRefresh) } }
         }
 
-        SectionTitle(t("Sources, in order · drag to reorder"))
+        MediaSectionTitle(t("Sources, in order · drag to reorder"))
         Card(Modifier.padding(horizontal = 16.dp)) {
             val sources = state.sources
             when {
@@ -186,7 +184,7 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
             }
         }
         if (state.similarOptions.isNotEmpty()) {
-            Section(null) {
+            MediaSection(null) {
                 row {
                     PickRow(t("Recommendations from"), t("Feeds More like this and Because you watched"), state.similar.orEmpty()) {
                         sheet.open(t("Recommendations from"), state.similarOptions, state.similarValue, actions::setSimilar)
@@ -195,7 +193,7 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
             }
         }
 
-        Section(t("Subtitles")) {
+        MediaSection(t("Subtitles")) {
             row {
                 Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 14.dp, top = 12.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SText(t("Download in"), size = 14.sp, weight = 700, color = SeedyColors.White)
@@ -211,12 +209,12 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
             for (s in state.subtitleSwitches) row { Switch(s, actions) }
         }
 
-        Section(t("Scanning and previews")) {
+        MediaSection(t("Scanning and previews")) {
             for (s in state.scanSwitches) row { Switch(s, actions) }
         }
 
         val segments = state.segmentProviders
-        Section(t("Skip markers from"), foot = t("Media segment providers, in order")) {
+        MediaSection(t("Skip markers from"), foot = t("Media segment providers, in order")) {
             when {
                 segments == null -> row { SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3) }
                 segments.isEmpty() -> row { SText(t("None installed"), Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3) }
@@ -224,7 +222,7 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
             }
         }
 
-        Section(t("All libraries")) {
+        MediaSection(t("All libraries")) {
             row { PickRow(t("Display"), t("Folders view, specials and collections"), "") { open(LibraryPages.Display) } }
             row { PickRow(t("Metadata"), t("Language, chapters and saved files"), "") { open(LibraryPages.Metadata) } }
             row { PickRow(t("NFO files"), t("Files Kodi and other apps read"), "") { open(LibraryPages.Nfo) } }
