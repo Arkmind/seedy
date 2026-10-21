@@ -131,7 +131,8 @@ class HomeAdminViewModel(private val session: UserSession) : ViewModel(), HomeAd
     )
 
     private fun loadPicks() {
-        val ids = (state.value.home?.featured?.picks.orEmpty()).filter { it !in extra.value.picks }
+        val home = extra.value.draft ?: store.config.value?.home
+        val ids = home?.featured?.picks.orEmpty().filter { it !in extra.value.picks }
         if (ids.isEmpty()) return
         viewModelScope.launch {
             val uuids = ids.mapNotNull { uuidOf(it) }
@@ -145,10 +146,12 @@ class HomeAdminViewModel(private val session: UserSession) : ViewModel(), HomeAd
     }
 
     override fun edit(fn: (HomeConfig) -> HomeConfig) {
-        val s = state.value
-        val cur = s.home ?: return
-        val next = fn(cur)
-        extra.update { it.copy(draft = if (s.saved != null && countChanges(next, s.saved) == 0) null else next) }
+        // From the sources, not [state]: it follows them a moment later, and quick taps would build on a stale draft.
+        val saved = store.config.value?.home ?: return
+        extra.update { x ->
+            val next = fn(x.draft ?: saved)
+            x.copy(draft = if (countChanges(next, saved) == 0) null else next)
+        }
         loadPicks()
     }
 
