@@ -7,14 +7,6 @@ import { t } from '../lib/i18n';
 
 /* ── Popover anchored to a button ── */
 
-function inFixedBar(el: HTMLElement): boolean {
-  for (let e: HTMLElement | null = el; e && e !== document.body; e = e.parentElement) {
-    const p = getComputedStyle(e).position;
-    if (p === 'fixed' || p === 'sticky') return true;
-  }
-  return false;
-}
-
 export function Popover({
   anchor, open, onClose, children, align = 'end', placement = 'below', width
 }: {
@@ -27,29 +19,38 @@ export function Popover({
   width?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ position?: 'fixed' | 'absolute'; top?: number; bottom?: number; left?: number; right?: number }>({});
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left?: number; right?: number; maxHeight?: number; overflowY?: 'auto' }>({});
 
   useLayoutEffect(() => {
     if (!open || !anchor.current) return;
-    /* Below an anchor that scrolls with the page, the menu is part of the page, so one near the bottom makes the page
-       longer instead of running off the screen. Under a fixed or sticky bar (the header, the player) it stays fixed. */
-    const fixed = placement === 'above' || inFixedBar(anchor.current);
     const place = () => {
-      const r = anchor.current!.getBoundingClientRect();
-      // The page's width without its scrollbar: what `right` counts from.
+      const a = anchor.current;
+      if (!a) return;
+      const r = a.getBoundingClientRect();
+      // The window without its scrollbars: what fixed positions count from.
       const vw = document.documentElement.clientWidth;
-      const dy = fixed ? 0 : window.scrollY;
-      const next: typeof pos = { position: fixed ? 'fixed' : 'absolute' };
-      if (placement === 'below') next.top = r.bottom + 8 + dy;
-      else next.bottom = window.innerHeight - r.top + 8;
+      const vh = document.documentElement.clientHeight;
+      // Its whole height, even while capped below.
+      const full = ref.current?.scrollHeight ?? 0;
+      const h = Math.min(full, vh - 16);
+      const next: typeof pos = {};
+      // Under its button, moved up as far as it takes for its bottom to stay in the window.
+      if (placement === 'below') next.top = Math.max(8, Math.min(r.bottom + 8, vh - 8 - h));
+      else next.bottom = vh - r.top + 8;
+      // Taller than the window: it scrolls.
+      if (full > vh - 16) Object.assign(next, { maxHeight: vh - 16, overflowY: 'auto' });
       if (align === 'end') next.right = Math.max(8, vw - r.right);
       else next.left = Math.max(8, r.left);
       setPos(next);
     };
     place();
+    // Its height is only known once it's drawn, and changes with what it shows.
+    const resized = typeof ResizeObserver === 'function' && ref.current ? new ResizeObserver(place) : null;
+    if (ref.current) resized?.observe(ref.current);
     window.addEventListener('resize', place);
     window.addEventListener('scroll', place, true);
     return () => {
+      resized?.disconnect();
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };
@@ -91,7 +92,7 @@ export function Popover({
 
   if (!open) return null;
   return createPortal(
-    <div ref={ref} class={'popover' + (pos.position === 'absolute' ? ' is-in-page' : '')} style={{ ...pos, width: width ? width + 'px' : undefined }}>
+    <div ref={ref} class="popover" style={{ ...pos, width: width ? width + 'px' : undefined }}>
       {children}
     </div>,
     document.body
