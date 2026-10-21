@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.2.5.0",
+        "changelog": "## What's Changed\n* Feature/experimental\n  - Front-end player experimental\n* Docs/readme\n* Feature/android\n  - Admin page on android mobile\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.2.3...v0.2.5",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.2.5/seedy_0.2.5.0.zip",
+        "checksum": "52c796c480fdddfda5d5b87dfb3cdeca",
+        "timestamp": "2026-10-21T20:11:27Z"
+      },
+      {
         "version": "0.2.3.0",
         "changelog": "## What's Changed\n* Fix/android tv player episodes by @Arkmind in https://github.com/Arkmind/seedy/pull/9\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.2.2...v0.2.3",
         "targetAbi": "12.0.0.0",
