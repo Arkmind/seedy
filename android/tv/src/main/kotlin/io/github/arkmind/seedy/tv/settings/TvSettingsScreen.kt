@@ -204,7 +204,7 @@ private fun lede(s: TvSection, state: SettingsState): String = when (s) {
     TvSection.Playback -> t("Quality, sound, what happens between episodes, and skipping. Quality is set per device.")
     TvSection.Subtitles -> t("When subtitles turn on by themselves, and how they look on this TV.")
     TvSection.Display -> t("Language, colour and what shows while you browse.")
-    TvSection.Remote -> t("What the remote's buttons do while a video plays. These stay on this TV.")
+    TvSection.Remote -> t("What the remote’s buttons do while a video plays. These stay on this TV.")
     TvSection.About -> listOfNotNull("Seedy", state.serverName.takeIf { it.isNotEmpty() }).joinToString(" · ")
 }
 
