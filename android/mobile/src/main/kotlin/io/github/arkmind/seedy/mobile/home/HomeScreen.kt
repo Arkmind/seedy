@@ -1,5 +1,7 @@
 package io.github.arkmind.seedy.mobile.home
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -7,8 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +40,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -48,8 +54,6 @@ import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.arkmind.seedy.core.feature.HomeViewModel
-import io.github.arkmind.seedy.core.requests.SeerrTitle
-import io.github.arkmind.seedy.mobile.requests.SeerrTitleCard
 import io.github.arkmind.seedy.core.format.cardTitle
 import io.github.arkmind.seedy.core.format.episodeShort
 import io.github.arkmind.seedy.core.format.heroMeta
@@ -59,9 +63,11 @@ import io.github.arkmind.seedy.core.format.remainingSeconds
 import io.github.arkmind.seedy.core.format.timeLeft
 import io.github.arkmind.seedy.core.format.yearRange
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.seedy.FeaturedEntry
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.requests.SeerrTitleCard
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.components.BrandMark
 import io.github.arkmind.seedy.ui.components.ProfileSquare
@@ -72,6 +78,7 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import io.github.arkmind.seedy.ui.theme.SeedyMotion
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import kotlin.math.min
@@ -92,33 +99,41 @@ fun HomeScreen(
     listState: LazyListState = rememberLazyListState(),
     onSeerr: (SeerrTitle) -> Unit = {},
 ) {
-    LazyColumn(
-        Modifier.fillMaxSize().background(SeedyColors.Bg),
-        state = listState,
-        contentPadding = PaddingValues(bottom = bottomPadding + 24.dp),
-    ) {
-        item(key = "hero") {
-            val featured = state.featured
-            if (state.hasHero && !featured.isNullOrEmpty()) {
-                Hero(featured, account, onOpen, onPlay, onSearch)
-            } else {
-                Box(Modifier.fillMaxWidth().height(if (state.hasHero && featured == null) 540.dp else 96.dp)) {
-                    Header(account, onSearch)
+    Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            state = listState,
+            contentPadding = PaddingValues(bottom = bottomPadding + 24.dp),
+        ) {
+            item(key = "hero") {
+                val featured = state.featured
+                if (state.hasHero && !featured.isNullOrEmpty()) {
+                    Hero(featured, onOpen, onPlay)
+                } else {
+                    Box(Modifier.fillMaxWidth().height(if (state.hasHero && featured == null) 540.dp else 96.dp))
                 }
             }
+            for (row in state.visibleRows) {
+                item(key = row.row.id) { HomeRowView(row, onOpen, onSeeAll, onSeerr) }
+            }
         }
-        for (row in state.visibleRows) {
-            item(key = row.row.id) { HomeRowView(row, onOpen, onSeeAll, onSeerr) }
-        }
+        // The header stays put (as the web's): clear over the banner, on the page's colour once the page moves.
+        val stuck by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 } }
+        Header(account, onSearch, stuck)
     }
 }
 
 @Composable
-private fun Header(account: AccountActions, onSearch: () -> Unit) {
+private fun Header(account: AccountActions, onSearch: () -> Unit, stuck: Boolean) {
     val viewer = LocalViewer.current
     val top = max(36.dp, WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 12.dp)
+    // The web blurs what's under its 85 % scrim; without a blur, anything see-through shows the artwork, so it's solid.
+    val scrim by animateColorAsState(if (stuck) SeedyColors.Bg else Color.Transparent, tween(SeedyMotion.Fast), label = "header")
+    val line by animateColorAsState(if (stuck) SeedyColors.Hairline else Color.Transparent, tween(SeedyMotion.Fast), label = "header-line")
     Row(
-        Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = top),
+        Modifier.fillMaxWidth().background(scrim)
+            .drawBehind { drawRect(line, topLeft = Offset(0f, size.height - 1.dp.toPx()), size = Size(size.width, 1.dp.toPx())) }
+            .padding(start = 20.dp, end = 16.dp, top = top, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -160,10 +175,8 @@ private fun AccountButton(account: AccountActions) {
 @Composable
 private fun Hero(
     entries: List<FeaturedEntry>,
-    account: AccountActions,
     onOpen: (BaseItemDto) -> Unit,
     onPlay: (BaseItemDto) -> Unit,
-    onSearch: () -> Unit,
 ) {
     val pager = rememberPagerState { entries.size }
     Box(Modifier.fillMaxWidth().height(540.dp)) {
@@ -172,7 +185,6 @@ private fun Hero(
             Modifier.fillMaxWidth().height(180.dp)
                 .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent))),
         )
-        Header(account, onSearch)
         Row(
             Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
