@@ -50,6 +50,8 @@ data class IdentifyState(
     /** Null before the first search. */
     val matches: List<Match>? = null,
     val picked: Int? = null,
+    /** Where the matches come from ("TMDb", "TVDb"). */
+    val sources: List<String> = emptyList(),
     val replaceImages: Boolean = true,
     val applying: Boolean = false,
     val error: String? = null,
@@ -150,7 +152,8 @@ class IdentifyViewModel(session: UserSession, private val id: String) : ViewMode
             val result = runCatching { api.remoteSearch(kind, body) }
             result.onSuccess { list ->
                 val matches = rank(list.map(::match), s.name, s.year.toIntOrNull())
-                _state.update { it.copy(searching = false, matches = matches, picked = if (matches.isNotEmpty()) 0 else null) }
+                val sources = list.mapNotNull { (it["SearchProviderName"] as? JsonPrimitive)?.contentOrNull?.let(::providerName) }.distinct()
+                _state.update { it.copy(searching = false, matches = matches, sources = sources, picked = if (matches.isNotEmpty()) 0 else null) }
             }.onFailure { e ->
                 if (e is CancellationException) throw e
                 _state.update { it.copy(searching = false, matches = it.matches ?: emptyList(), error = t("The search didn’t work. {error}", "error" to errorText(e))) }
@@ -199,6 +202,7 @@ class IdentifyViewModel(session: UserSession, private val id: String) : ViewMode
         private fun providerName(name: String): String = when (name) {
             "TheMovieDb" -> "TMDb"
             "TheTVDB", "TheTvdb" -> "TVDb"
+            "The Open Movie Database" -> "OMDb"
             else -> name
         }
 

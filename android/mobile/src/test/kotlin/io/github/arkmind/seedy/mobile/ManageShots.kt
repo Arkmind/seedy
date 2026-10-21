@@ -217,6 +217,7 @@ class ManageShots {
             IdentifyState(
                 loading = false, type = "Series", name = "Northbound", year = "2024",
                 ids = listOf(ProviderField("Tmdb", "TMDb", ""), ProviderField("Tvdb", "TVDb", ""), ProviderField("Imdb", "IMDb", "")),
+                sources = listOf("TMDb", "TVDb"),
                 matches = listOf(
                     Match("Northbound", "2024 · TMDb", "TMDb 219408 · TVDb 402117", null, false, r),
                     Match("Northbound", "2011 · TVDb", "TVDb 241077", null, true, r),

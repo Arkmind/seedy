@@ -139,7 +139,7 @@ private fun Results(state: IdentifyState, actions: IdentifyActions) {
     val matches = state.matches
     Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         SText(if (matches == null) t("Searching…") else state.summary, size = 15.sp, weight = 800, color = SeedyColors.White)
-        val from = matches.orEmpty().mapNotNull { m -> m.meta.split(" · ").lastOrNull()?.takeIf { it in setOf("TMDb", "TVDb", "IMDb") } }.distinct()
+        val from = state.sources
         if (from.isNotEmpty()) SText(t("From {providers} · sorted by how close they are", "providers" to io.github.arkmind.seedy.core.admin.listing(from)), size = 12.sp, color = SeedyColors.Text3)
     }
     when {
