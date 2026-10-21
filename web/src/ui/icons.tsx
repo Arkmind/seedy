@@ -89,7 +89,11 @@ const ICONS = {
   alert: { w: 2, body: <><circle cx="12" cy="12" r="9" />{p('M12 7.5v5.5')}{p('M12 16.5h.01')}</> },
   speed: { w: 2, body: <>{p('M4.5 17a8.5 8.5 0 1 1 15 0')}{p('M12 13l4-4')}</> },
   quality: { w: 2, body: <><rect x="3" y="5" width="18" height="14" rx="3" />{p('M7 10v4')}{p('M7 12h3')}{p('M10 10v4')}{p('M13.5 10h2a2 2 0 0 1 0 4h-2z')}</> },
-  grip: { w: 2, body: <>{p('M8 9h8')}{p('M8 15h8')}</> }
+  grip: { w: 2, body: <>{p('M8 9h8')}{p('M8 15h8')}</> },
+  // Item dialogs: metadata, identify, images
+  lockOpen: { w: 2, body: <><rect x="5" y="11" width="14" height="9" rx="2" />{p('M8 11V8a4 4 0 0 1 7.7-1.5')}</> },
+  bin: { w: 2, body: <>{p('M4 7h16')}{p('M10 11v6')}{p('M14 11v6')}{p('M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12')}{p('M9 7V4h6v3')}</> },
+  uploadUp: { w: 2.2, body: <>{p('M12 16V4')}{p('M7 9l5-5 5 5')}{p('M5 20h14')}</> }
 } satisfies Record<string, IconDef>;
 
 export type IconName = keyof typeof ICONS;

@@ -162,12 +162,19 @@ export function setUnauthorizedHandler(fn: (token: string | null | undefined) =>
 export async function request<T>(
   method: string,
   path: string,
-  opts: { query?: Query; body?: unknown; token?: string | null; raw?: boolean; signal?: AbortSignal; form?: FormData } = {}
+  opts: {
+    query?: Query; body?: unknown; token?: string | null; raw?: boolean; signal?: AbortSignal; form?: FormData;
+    /* A body sent as it is, with its own content type (image uploads). */
+    data?: { type: string; body: BodyInit };
+  } = {}
 ): Promise<T> {
   const headers: Record<string, string> = { Authorization: authHeader(opts.token), Accept: 'application/json' };
   let body: BodyInit | undefined;
   if (opts.form) body = opts.form;
-  else if (opts.body !== undefined) {
+  else if (opts.data) {
+    headers['Content-Type'] = opts.data.type;
+    body = opts.data.body;
+  } else if (opts.body !== undefined) {
     headers['Content-Type'] = 'application/json';
     body = JSON.stringify(opts.body);
   }

@@ -1,6 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { t } from '../../../lib/i18n';
-import { Icon } from '../../../ui/icons';
+import { Icon, type IconName } from '../../../ui/icons';
 import { Sheet } from '../../../ui/overlay';
 import './manage.css';
 
@@ -37,7 +37,7 @@ export function ItemDialog({ onClose, width, id, poster, danger, overline, title
           <h2 id={id + '-h'} class="im-title">{title}</h2>
           {sub && <span class="im-sub">{sub}</span>}
         </div>
-        <button type="button" class="im-close" aria-label={t('Close')} onClick={onClose}><Icon name="close" size={18} /></button>
+        <button type="button" class="im-close" aria-label={t('Close')} onClick={onClose}><Icon name="close" size={18} stroke={2.2} /></button>
       </div>
       <div class="im-body">{children}</div>
       {(foot || actions) && (
@@ -50,20 +50,44 @@ export function ItemDialog({ onClose, width, id, poster, danger, overline, title
   );
 }
 
-/* Footer buttons: Cancel (plain), the main action (light) or a destructive one (red). */
-export function ItemButton({ kind = 'plain', icon, children, onClick, disabled, type = 'button' }: {
+/* Footer buttons: Cancel (plain), the main action (light) or a destructive one (red). While `busy`, a spinner takes
+   the icon's place and the button stops taking clicks. */
+export function ItemButton({ kind = 'plain', icon, stroke = 2.4, children, onClick, disabled, busy, type = 'button' }: {
   kind?: 'plain' | 'primary' | 'danger';
-  icon?: Parameters<typeof Icon>[0]['name'];
+  icon?: IconName;
+  stroke?: number;
   children: ComponentChildren;
   onClick?: () => void;
   disabled?: boolean;
+  busy?: boolean;
   type?: 'button' | 'submit';
 }) {
   return (
-    <button type={type} class={'im-btn is-' + kind} onClick={onClick} disabled={disabled}>
-      {icon && <Icon name={icon} size={18} stroke={2.4} />}
+    <button type={type} class={'im-btn is-' + kind} onClick={onClick} disabled={disabled || busy} aria-busy={busy ? 'true' : undefined}>
+      {busy ? <span aria-hidden="true" class="im-spin" /> : icon && <Icon name={icon} size={18} stroke={stroke} />}
       {children}
     </button>
+  );
+}
+
+/* A select in the 44 px field box, with the boards' chevron. */
+export function ItemSelect({ id, value, onChange, label, children, disabled, class: cls }: {
+  id?: string;
+  value: string;
+  onChange: (v: string) => void;
+  /* Names the select when no <label> points at it. */
+  label?: string;
+  children: ComponentChildren;
+  disabled?: boolean;
+  class?: string;
+}) {
+  return (
+    <span class={'im-select' + (cls ? ' ' + cls : '')}>
+      <select id={id} class="im-input" aria-label={label} value={value} disabled={disabled} onChange={(e) => onChange((e.target as HTMLSelectElement).value)}>
+        {children}
+      </select>
+      <Icon name="chevronDown" size={16} />
+    </span>
   );
 }
 
