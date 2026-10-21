@@ -61,6 +61,8 @@ import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.shell.RailInset
 import io.github.arkmind.seedy.tv.shell.TvPlace
 import io.github.arkmind.seedy.tv.shell.TvRail
+import io.github.arkmind.seedy.ui.components.LocalOverlayHost
+import io.github.arkmind.seedy.ui.components.OverlayHost
 import io.github.arkmind.seedy.tv.signin.TvAddServerScreen
 import io.github.arkmind.seedy.tv.signin.TvPasswordScreen
 import io.github.arkmind.seedy.tv.signin.TvProfilesScreen
@@ -200,7 +202,10 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                 entry<PlacesKey> {
                     // Back on a place other than Home goes Home first.
                     BackHandler(enabled = place != TvPlace.Home) { place = TvPlace.Home }
+                    // A place's dialogs are drawn over the rail too.
+                    val overlay = remember { OverlayHost() }
                     Box(Modifier.fillMaxSize()) {
+                        CompositionLocalProvider(LocalOverlayHost provides overlay) {
                         when (place) {
                             TvPlace.Home -> {
                                 val state by home.state.collectAsStateWithLifecycle()
@@ -213,6 +218,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                             TvPlace.Favorites -> TvFavoritesPlace()
                             TvPlace.Requests -> TvRequestsPlace(onSearch = { place = TvPlace.Search })
                         }
+                        }
                         TvRail(
                             places = places,
                             current = place,
@@ -220,6 +226,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                             onProfile = { scope.launch { core.sessions.switchProfile() } },
                             onSettings = { nav.go(TvRoute.Settings) },
                         )
+                        overlay.content?.invoke()
                     }
                 }
                 entry<TvRoute.Details> { TvDetailsRoute(it.id) }

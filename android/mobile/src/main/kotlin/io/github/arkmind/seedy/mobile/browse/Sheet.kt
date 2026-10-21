@@ -32,7 +32,7 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
  * as its content up to 150 px from the top. Back or a tap on the dimmed page closes it.
  */
 @Composable
-fun BottomSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) = io.github.arkmind.seedy.mobile.parts.AboveTabBar {
+fun BottomSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) = io.github.arkmind.seedy.ui.components.Overlay {
     BackHandler(onBack = onDismiss)
     val shown = remember { MutableTransitionState(false).apply { targetState = true } }
     BoxWithConstraints(Modifier.fillMaxSize()) {

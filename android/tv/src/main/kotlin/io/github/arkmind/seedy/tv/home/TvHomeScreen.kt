@@ -238,10 +238,12 @@ private fun TvRow(
         SText(row.title, size = 24.bsp, weight = 800, color = if (active) SeedyColors.White else SeedyColors.TextHero, maxLines = 1)
         val items = row.items.orEmpty()
         CompositionLocalProvider(LocalBringIntoViewSpec provides cardScroll) {
+        // Room on the left too, so the first card's ring isn't cut.
         LazyRow(
+            Modifier.offset(x = -RingRoom),
             horizontalArrangement = Arrangement.spacedBy(28.bp),
             verticalAlignment = Alignment.CenterVertically,
-            contentPadding = PaddingValues(start = 0.bp, end = 96.bp, top = RingRoom, bottom = RingRoom),
+            contentPadding = PaddingValues(start = RingRoom, end = 96.bp, top = RingRoom, bottom = RingRoom),
         ) {
             itemsIndexed(items, key = { _, it -> it.id }) { i, item ->
                 TvCard(

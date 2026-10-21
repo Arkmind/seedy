@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -78,6 +79,11 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.util.Locale
 
+/** The card the remote was last on. */
+class LastFocus {
+    var requester: FocusRequester? = null
+}
+
 /** What OK does on a Discover card. */
 enum class TitleAction { Request, Open, Details }
 
@@ -99,6 +105,7 @@ fun TvRequestsPlace(onSearch: () -> Unit) {
     LaunchedEffect(Unit) { vm.refresh() }
     val canRequest = session.canRequest
     var seasons by remember { mutableStateOf<SeerrTitle?>(null) }
+    val last = remember { LastFocus() }
     TvRequestsScreen(
         state,
         TvRequestsActions(
@@ -113,10 +120,11 @@ fun TvRequestsPlace(onSearch: () -> Unit) {
             onMessageShown = vm::clearMessage,
         ),
         canRequest = canRequest,
+        last = last,
     )
     seasons?.let { title ->
         val target = SeasonsTarget(tmdbId = title.tmdbId, title = title.title, year = title.year, posterPath = title.posterPath, backdropPath = title.backdropPath)
-        TvRequestSeasonsDialog(target, onDismiss = { seasons = null }, onDone = { vm.markRequested(title, it.status) })
+        TvRequestSeasonsDialog(target, onDismiss = { seasons = null }, onDone = { vm.markRequested(title, it.status) }, returnFocus = { last.requester?.requestFocus() ?: false })
     }
 }
 
@@ -155,6 +163,8 @@ fun TvRequestsScreen(
     canRequest: Boolean,
     today: LocalDate = LocalDate.now(),
     firstCard: FocusRequester = remember { FocusRequester() },
+    /** The card the remote was last on, to go back to after the seasons dialog. */
+    last: LastFocus = remember { LastFocus() },
 ) {
     val list = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -190,8 +200,9 @@ fun TvRequestsScreen(
                             SText(t("Your requests"), size = 24.bsp, weight = 800, color = SeedyColors.White, maxLines = 1)
                             CompositionLocalProvider(LocalBringIntoViewSpec provides cardRows) {
                                 LazyRow(
+                                    Modifier.offset(x = -RingRoom),
                                     horizontalArrangement = Arrangement.spacedBy(24.bp),
-                                    contentPadding = PaddingValues(end = 96.bp, top = RingRoom, bottom = RingRoom),
+                                    contentPadding = PaddingValues(start = RingRoom, end = 96.bp, top = RingRoom, bottom = RingRoom),
                                 ) {
                                     items(mine, key = { "req:${it.requestId}" }) { r ->
                                         RequestCard(r, { actions.onRequest(r) }, Modifier.onFocusChanged { if (it.isFocused) { activeRow = -1; focusAt(1) } })
@@ -208,19 +219,21 @@ fun TvRequestsScreen(
                         val items = row.items
                         CompositionLocalProvider(LocalBringIntoViewSpec provides cardRows) {
                             LazyRow(
+                                Modifier.offset(x = -RingRoom),
                                 horizontalArrangement = Arrangement.spacedBy(24.bp),
                                 verticalAlignment = Alignment.Top,
-                                contentPadding = PaddingValues(end = 96.bp, top = RingRoom, bottom = RingRoom),
+                                contentPadding = PaddingValues(start = RingRoom, end = 96.bp, top = RingRoom, bottom = RingRoom),
                             ) {
                                 if (items == null) {
                                     items(7) { Box(Modifier.width(196.bp).aspectRatio(2f / 3f).clip(RoundedCornerShape(16.bp)).background(SeedyColors.Surface)) }
                                 } else {
                                     itemsIndexed(items, key = { _, it -> "${it.mediaType}:${it.tmdbId}" }) { j, title ->
+                                        val self = remember { FocusRequester() }
                                         TitleCard(
                                             title, row.kind.upcoming, titleAction(title, canRequest), today,
                                             onClick = { actions.onTitle(title) },
-                                            modifier = (if (i == 0 && j == 0) Modifier.focusRequester(firstCard) else Modifier)
-                                                .onFocusChanged { if (it.isFocused) { activeRow = i; focusAt(index) } },
+                                            modifier = (if (i == 0 && j == 0) Modifier.focusRequester(firstCard) else Modifier).focusRequester(self)
+                                                .onFocusChanged { if (it.isFocused) { last.requester = self; activeRow = i; focusAt(index) } },
                                         )
                                     }
                                 }

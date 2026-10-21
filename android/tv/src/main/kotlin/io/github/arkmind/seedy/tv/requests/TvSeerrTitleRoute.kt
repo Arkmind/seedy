@@ -85,6 +85,7 @@ fun TvSeerrTitleRoute(mediaType: String, tmdbId: Int) {
     val vm = viewModel(key = "seerr:$mediaType:$tmdbId") { SeerrTitleViewModel(session, mediaType, tmdbId) }
     val state by vm.state.collectAsStateWithLifecycle()
     var seasons by remember { mutableStateOf(false) }
+    val primary = remember { FocusRequester() }
     val d = state.details
     val local = libraryUuid(d?.jellyfinItemId)
     TvSeerrTitleScreen(
@@ -98,13 +99,14 @@ fun TvSeerrTitleRoute(mediaType: String, tmdbId: Int) {
             onRetry = vm::load,
             onMessageShown = vm::clearMessage,
         ),
+        primaryFocus = primary,
     )
     if (seasons && d != null) {
         val target = SeasonsTarget(
             tmdbId = d.tmdbId, title = d.title, year = d.year ?: parseDay(d.releaseDate)?.year?.toString(),
             posterPath = d.posterPath, backdropPath = d.backdropPath, fromLibrary = local != null,
         )
-        TvRequestSeasonsDialog(target, onDismiss = { seasons = false }, onDone = vm::markRequested, details = d)
+        TvRequestSeasonsDialog(target, onDismiss = { seasons = false }, onDone = vm::markRequested, details = d, returnFocus = { primary.requestFocus() })
     }
 }
 

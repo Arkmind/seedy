@@ -76,8 +76,23 @@ fun TvRequestSeasonsDialog(
     onDone: (SeasonsResult) -> Unit = {},
     details: SeerrDetails? = null,
     initial: List<Int>? = null,
+    /** Where the remote goes back to once the dialog has closed (it keeps the remote while it's open). */
+    returnFocus: (() -> Boolean)? = null,
 ) {
     val session = currentSession()
+    val view = androidx.compose.ui.platform.LocalView.current
+    if (returnFocus != null) {
+        // The dialog may still be on screen for a frame (and keeps the remote while it is): try each frame.
+        androidx.compose.runtime.DisposableEffect(Unit) {
+            onDispose {
+                var tries = 0
+                fun attempt() {
+                    if (!runCatching { returnFocus() }.getOrDefault(false) && ++tries < 30) view.postOnAnimation(::attempt)
+                }
+                view.postOnAnimation(::attempt)
+            }
+        }
+    }
     val vm = viewModel(key = "request-seasons") { RequestSeasonsViewModel(session) }
     LaunchedEffect(target, initial) { vm.open(target, details, initial) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -108,7 +123,7 @@ fun TvRequestSeasonsContent(
     firstFocus: FocusRequester = remember { FocusRequester() },
     /** The season the remote starts on (default: the first that can be requested). */
     focusSeason: Int? = null,
-) {
+) = io.github.arkmind.seedy.ui.components.Overlay {
     BackHandler(onBack = onDismiss)
     val panel = Color(0xFF141414)
     BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xC7050505))) {

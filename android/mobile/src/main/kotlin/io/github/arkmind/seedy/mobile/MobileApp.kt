@@ -59,8 +59,8 @@ import io.github.arkmind.seedy.mobile.home.HomeScreen
 import io.github.arkmind.seedy.mobile.parts.PrimaryButton
 import io.github.arkmind.seedy.mobile.parts.Tab
 import io.github.arkmind.seedy.mobile.parts.TabBar
-import io.github.arkmind.seedy.mobile.parts.LocalOverlayHost
-import io.github.arkmind.seedy.mobile.parts.OverlayHost
+import io.github.arkmind.seedy.ui.components.LocalOverlayHost
+import io.github.arkmind.seedy.ui.components.OverlayHost
 import io.github.arkmind.seedy.mobile.parts.pagePadding
 import io.github.arkmind.seedy.mobile.parts.tabBarHeight
 import io.github.arkmind.seedy.mobile.parts.tap

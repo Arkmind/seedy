@@ -69,7 +69,7 @@ fun TvDetailsRoute(id: UUID) {
         val item = state.item
         val target = item?.let { vm.seasonsTarget(images?.poster(it, 300), images?.backdrop(it, 1280)) }
         if (ask != null && target != null) {
-            TvRequestSeasonsDialog(target, onDismiss = { ask = null; runCatching { play.requestFocus() } }, onDone = vm::markRequested, details = state.seerr, initial = ask)
+            TvRequestSeasonsDialog(target, onDismiss = { ask = null }, onDone = vm::markRequested, details = state.seerr, initial = ask, returnFocus = { play.requestFocus() })
         }
     }
 }
