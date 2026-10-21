@@ -1,0 +1,19 @@
+{
+ "Couldn’t read the server’s disks.": "Impossible de lire les disques du serveur.",
+ "Disk": "Disque",
+ "Image cache": "Cache des images",
+ "Media libraries": "Médiathèques",
+ "Network share": "Partage réseau",
+ "Program data": "Données du programme",
+ "RAM disk, emptied on restart": "Disque en RAM, vidé au redémarrage",
+ "Server data": "Données du serveur",
+ "Storage": "Stockage",
+ "The server didn’t report any disks.": "Le serveur n’a signalé aucun disque.",
+ "Web client": "Client web",
+ "Web files": "Fichiers web",
+ "{free} left on {mount}": "{free} restants sur {mount}",
+ "{free} left on {mount}, where metadata and the cache live": "{free} restants sur {mount}, où se trouvent les métadonnées et le cache",
+ "{free} left on {mount}, where {names} live": "{free} restants sur {mount}, où se trouvent {names}",
+ "{name} is {pct}% full": "{name} est plein à {pct} %",
+ "{used} of {total}": "{used} sur {total}"
+}

@@ -78,6 +78,9 @@ import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.SeedyField
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.CssBox
+import io.github.arkmind.seedy.mobile.settings.CssColumn
+import io.github.arkmind.seedy.mobile.settings.cssRow
 import io.github.arkmind.seedy.mobile.settings.FormSheet
 import io.github.arkmind.seedy.mobile.settings.PickOption
 import io.github.arkmind.seedy.mobile.settings.RowLine
@@ -119,6 +122,9 @@ object AdminIcons {
     val Stop = IconDef(0f, listOf(IconPart("M7 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z", filled = true)))
     val Caret = IconDef(2.4f, "M6 9l6 6 6-6")
     val Check = IconDef(3f, "M5 12.5l4.5 4.5L19 7.5")
+    /** Storage: a disk, and a RAM disk's chip. */
+    val Disk = IconDef(2f, "M4 5h16v6H4z", "M4 13h16v6H4z", "M7.5 8h.01M7.5 16h.01")
+    val Ram = IconDef(2f, "M7 7h10v10H7z", "M9.5 3v4M14.5 3v4M9.5 17v4M14.5 17v4", "M3 9.5h4M3 14.5h4M17 9.5h4M17 14.5h4")
 }
 
 /* ── Pills and buttons ── */
@@ -286,13 +292,15 @@ fun DotLede(text: String, dot: Color, modifier: Modifier = Modifier) {
 /** A notice: a dot, a title and a line, and a light button on the right. */
 @Composable
 fun NoticeCard(title: String, help: String, action: String?, dot: Color, background: Color, onAction: () -> Unit, modifier: Modifier = Modifier) {
+    val text = remember { CssBox() }
     Row(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(background).padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+        modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(background).padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)
+            .cssRow(text, if (action != null) 40.dp else 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(Modifier.size(10.dp).background(dot, CircleShape))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        CssColumn(Modifier.weight(1f), 2.dp, text) {
             SText(title, size = 13.sp, weight = 700, color = SeedyColors.White)
             if (help.isNotEmpty()) SText(help, Modifier.cssText(12, 1.4f), size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text2)
         }

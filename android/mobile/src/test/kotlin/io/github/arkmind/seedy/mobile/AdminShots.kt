@@ -11,7 +11,12 @@ import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.arkmind.seedy.core.admin.FolderStorage
 import io.github.arkmind.seedy.core.admin.HubAlert
+import io.github.arkmind.seedy.core.admin.LibraryStorage
+import io.github.arkmind.seedy.core.admin.SystemStorage
+import io.github.arkmind.seedy.core.admin.diskNotice
+import io.github.arkmind.seedy.core.admin.disks
 import io.github.arkmind.seedy.core.admin.HubCount
 import io.github.arkmind.seedy.core.admin.HubGroup
 import io.github.arkmind.seedy.core.admin.HubLink
@@ -65,19 +70,41 @@ class AdminShots {
     @get:Rule val compose = createComposeRule()
 
     @Test
-    @Config(qualifiers = "w390dp-h2580dp-mdpi")
+    @Config(qualifiers = "w390dp-h3100dp-mdpi")
     fun server() = compose.adminShot("AndroidAdmin") {
         ServerHubScreen(AdminSamples.hub, object : ServerHubActions {}, onBack = {}, open = {})
     }
 }
 
 object AdminSamples {
+    private const val TiB = 1_099_511_627_776L
+    private const val GiB = 1_073_741_824L
+
+    private fun folder(path: String, mount: String, used: Long, total: Long, type: String = "Fixed") = FolderStorage(path, total - used, used, type, mount)
+
+    /** The board's four disks: server data, the libraries, a RAM disk for transcodes and the web client. */
+    val storage: SystemStorage = run {
+        val config = { path: String -> folder(path, "/config", (10.9 * TiB).toLong(), (12.5 * TiB).toLong()) }
+        val media = { path: String -> folder(path, "/media", (25.6 * TiB).toLong(), 40 * TiB) }
+        SystemStorage(
+            programDataFolder = config("/config/data"),
+            internalMetadataFolder = config("/config/data/metadata"),
+            cacheFolder = config("/config/cache"),
+            imageCacheFolder = config("/config/cache/images"),
+            logFolder = config("/config/log"),
+            transcodingTempFolder = folder("/config/cache/transcodes", "/config/cache/transcodes", (2.6 * GiB).toLong() + 1, 8 * GiB, "Ram"),
+            webFolder = folder("/usr/share/jellyfin/web", "/", 242 * GiB, (1.9 * TiB).toLong()),
+            libraries = listOf("Movies", "Shows", "Music", "Books").map { LibraryStorage(it.lowercase(), it, listOf(media("/media/" + it.lowercase()))) },
+        )
+    }
+
     private fun link(page: String, name: String, sub: String, tone: Tone = Tone.Normal, badge: Int = 0) = HubLink(page, name, sub, tone, badge)
 
     val hub = ServerHubState(
         lede = "seedy-server · Jellyfin 12.0 · Linux x64 · up 6 days",
         alerts = listOf(
             HubAlert("plugin", "File Transformation won’t load", "Built for Jellyfin 10.11; 12.0 needs a rebuilt version.", "Open plugins", danger = true, open = "plugins"),
+            disks(storage).first().let { d -> HubAlert("disk", "Server data is 87% full", diskNotice(d), "Storage", danger = false, open = "storage", tone = d.level) },
             HubAlert("updates", "2 plugin updates are ready", "Open Subtitles and Intro Skipper", "Review", danger = false, open = "plugins"),
         ),
         playing = listOf(
@@ -87,6 +114,7 @@ object AdminSamples {
         ),
         tasks = listOf(RunningTask("a", "Scan media library", "42%", 0.42f), RunningTask("b", "Generate trickplay images", "Queued", 0f)),
         counts = listOf(HubCount("248", "Movies"), HubCount("61", "Shows"), HubCount("2,914", "Episodes")),
+        disks = disks(storage),
         groups = listOf(
             HubGroup("Server", listOf(
                 link("settings", "Settings", "Name, paths, sign-in and logging"),
