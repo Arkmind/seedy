@@ -39,8 +39,10 @@ export function Popover({
       else next.bottom = vh - r.top + 8;
       // Taller than the window: it scrolls.
       if (full > vh - 16) Object.assign(next, { maxHeight: vh - 16, overflowY: 'auto' });
-      if (align === 'end') next.right = Math.max(8, vw - r.right);
-      else next.left = Math.max(8, r.left);
+      // Kept inside the window on both sides.
+      const w = ref.current?.offsetWidth ?? 0;
+      if (align === 'end') next.right = Math.max(8, Math.min(vw - r.right, vw - 8 - w));
+      else next.left = Math.max(8, Math.min(r.left, vw - 8 - w));
       setPos(next);
     };
     place();

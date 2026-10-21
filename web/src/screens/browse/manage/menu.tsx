@@ -84,7 +84,7 @@ export function ItemMenu({ item, children, shortcut }: {
         <Icon name="more" size={22} />
       </button>
       <Popover anchor={ref as RefObject<HTMLElement>} open={open} onClose={close} align="start" width={304}>
-        <div class="im-menu-wrap">
+        <div class={'im-menu-wrap' + (sub ? ' has-sub' : '')}>
           <div class="menu im-menu" role="menu" aria-label={t('More actions for {name}', { name: item.Name ?? '' })}>
             {children?.(close)}
             {listable && <SubItem icon="playlistAdd" label={t('Add to playlist')} open={sub === 'playlist'} onOpen={() => setSub('playlist')} />}
@@ -189,6 +189,12 @@ function PickerPanel({ label, placeholder, rows, onPick, newLabel, onNew, onBack
   const shown = useMemo(() => (rows ?? []).filter((r) => r.name.toLowerCase().includes(q.trim().toLowerCase())), [rows, q]);
   return (
     <div class="menu im-menu im-picker" role="menu" aria-label={label} onKeyDown={(e) => { if (e.key === 'ArrowLeft' && onBack && !(e.target as HTMLElement).matches('input')) { e.preventDefault(); onBack(); } }}>
+      {onBack && (
+        <button type="button" class="menu-item im-menu-item im-back" onClick={onBack}>
+          <Icon name="chevronLeft" size={18} />
+          <span class="im-menu-text"><span>{label}</span></span>
+        </button>
+      )}
       <label class="im-find">
         <Icon name="search" size={16} stroke={2.2} />
         <input type="text" aria-label={placeholder} placeholder={placeholder} value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)}

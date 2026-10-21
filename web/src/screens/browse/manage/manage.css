@@ -134,6 +134,12 @@ textarea.im-input { height: auto; padding: 12px 14px; line-height: 1.55; resize:
 .im-added { flex: none; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: var(--seedy-accent); }
 .im-pick-empty { margin: 0; padding: 8px 12px; font-size: 13px; color: var(--seedy-text-3); }
 .im-new { color: var(--seedy-white); font-weight: 700; }
+/* On a phone the side menu takes the main one's place, with a way back. */
+.im-back { display: none; }
+@media (max-width: 720px) {
+  .im-menu-wrap.has-sub > .im-menu { visibility: hidden; }
+  .im-side .im-back { display: flex; font-weight: 700; color: var(--seedy-white); }
+}
 
 /* ── Delete ── */
 
