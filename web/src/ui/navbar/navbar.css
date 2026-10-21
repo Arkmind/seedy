@@ -30,17 +30,17 @@
   transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
 }
 .nb-out { opacity: 0.6; }
-.site-header .nb-cast { background: var(--nb-solid); color: #ffffff; }
+.site-header .nb-cast, .site-header .nb-psearch-btn { background: var(--nb-solid); color: #ffffff; }
 .nb-account {
   display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 10px 0 4px; border: 0; border-radius: var(--r-pill);
   background: var(--nb-solid); color: #ffffff; cursor: pointer;
   transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
 }
 .nb-account .header-avatar { font-size: 14px; }
-.nb-req.is-glass, .site-header .nb-cast.is-glass, .nb-account.is-glass {
+.nb-req.is-glass, .site-header .nb-cast.is-glass, .site-header .nb-psearch-btn.is-glass, .nb-account.is-glass {
   background: var(--nb-glass); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
 }
-.nb-req:hover, .site-header .nb-cast:not(:disabled):hover, .site-header .nb-cast[aria-expanded='true'],
+.nb-req:hover, .site-header .nb-cast:not(:disabled):hover, .site-header .nb-cast[aria-expanded='true'], .site-header .nb-psearch-btn:hover,
 .nb-account:hover, .nb-account.is-current {
   background: var(--seedy-inverse); color: var(--seedy-ink-inverse);
 }
@@ -128,7 +128,7 @@
 .nb-account-phone { width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; flex: none; }
 .nb-account-phone .header-avatar { transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
 .nb-account-phone.is-current .header-avatar, .nb-account-phone:hover .header-avatar { background: var(--seedy-surface-2); color: #ffffff; }
-.nb.is-phone .nb-cast.is-glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.nb.is-phone .nb-cast.is-glass, .nb.is-phone .nb-psearch-btn.is-glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
 
 /* Tab bar at the bottom, under the thumb. */
 :root { --nb-tabbar-h: 100px; }

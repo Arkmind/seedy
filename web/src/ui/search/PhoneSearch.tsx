@@ -39,7 +39,7 @@ export function PhoneSearch({ onClose }: { onClose: () => void }) {
     input.current?.focus({ preventScroll: true });
   }, []);
   useEffect(() => {
-    const prev = document.querySelector<HTMLElement>('.nb-psearch-field');
+    const prev = document.querySelector<HTMLElement>('.nb-psearch-btn');
     const root = document.documentElement;
     const overflow = root.style.overflow;
     root.style.overflow = 'hidden';
