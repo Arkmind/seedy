@@ -1,0 +1,21 @@
+{
+  "Ready to watch": "Prêt à regarder",
+  "Asked Seerr again for {title}": "Nouvelle demande envoyée à Seerr pour {title}",
+  "Removed the request for {title}": "Demande de {title} supprimée",
+  "Couldn’t remove the request for {title}": "Impossible de supprimer la demande de {title}",
+  "{n} waiting": "{n} en attente",
+  "{n} downloading": "{n} en téléchargement",
+  "{n} ready": "{n} à regarder",
+  "{n} request in progress": "{n} demande en cours",
+  "{n} requests in progress": "{n} demandes en cours",
+  "You haven't requested anything yet": "Vous n’avez encore rien demandé",
+  "Find a movie or show in Discover or Search and ask for it.": "Trouvez un film ou une série dans Découvrir ou Rechercher, puis demandez-le.",
+  "Try again in a moment.": "Réessayez dans un instant.",
+  "Seerr has no titles for this list.": "Seerr n’a aucun titre pour cette liste.",
+  "Trending on Seerr": "Tendances sur Seerr",
+  "Search Seerr": "Rechercher sur Seerr",
+  "OK to request": "OK pour demander",
+  "OK to open": "OK pour ouvrir",
+  "OK for details": "OK pour les détails",
+  "{n} searching": "{n} en recherche"
+}

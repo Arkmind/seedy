@@ -22,6 +22,10 @@ public static partial class ConfigMapper
     [GeneratedRegex("^#[0-9a-fA-F]{6}$")]
     private static partial Regex HexColor();
 
+    /// <summary>The /Seedy API contract the Android apps were built against. Raise it when an endpoint the apps call
+    /// changes in a way older apps can't read; apps that know a lower level fall back to plain Jellyfin.</summary>
+    public const int ApiLevel = 1;
+
     /// <summary>Gets the stored configuration (defaults when the plugin isn't loaded).</summary>
     public static PluginConfiguration Current => Plugin.Instance?.Configuration ?? new PluginConfiguration();
 

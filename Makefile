@@ -6,7 +6,7 @@ SHELL := /usr/bin/env bash
 
 JELLYFIN_IMAGE := $(shell sed -n 's/^ *image: \(jellyfin\/jellyfin:.*\)/\1/p' dev/docker-compose.yml)
 
-.PHONY: help build typecheck clean web web-mock dev-up dev-down dev-logs dev-install dev-media dev-seerr dev-arr
+.PHONY: help build typecheck clean web web-mock android android-shared android-test android-shots dev-up dev-down dev-logs dev-install dev-media dev-seerr dev-arr
 
 help:
 	@awk 'BEGIN { FS = ":.*## " } /^## / { printf "\n%s\n", substr($$0, 4) } /^[a-z-]+:.*## / { printf "  \033[1m%-12s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -29,6 +29,20 @@ web: ## Run the web app with Vite (http://127.0.0.1:5173/seedy/), proxied to the
 
 web-mock: ## Same, answering /Seedy/* from fixtures (no plugin needed)
 	cd web && SEEDY_MOCK=1 bun run dev
+
+## Android apps (android/: one APK for phones and Android TV)
+
+android: ## Build the debug APK (android/app/build/outputs/apk/debug/)
+	cd android && ./gradlew :app:assembleDebug
+
+android-shared: ## Copy the web tokens and French dictionaries into the Android project
+	bun scripts/android-shared.ts
+
+android-test: ## Run the Android unit tests and compare screens with the recorded screenshots
+	cd android && ./gradlew testDebugUnitTest verifyRoborazziDebug
+
+android-shots: ## Re-record the Android screenshots (android/*/src/test/screenshots/)
+	cd android && ./gradlew recordRoborazziDebug
 
 ## Test server (dev/docker-compose.yml: Jellyfin on :8096, Seerr on :5055, Sonarr on :8989 and :8990 (4K), Radarr on :7878)
 

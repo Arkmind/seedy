@@ -3,6 +3,7 @@ name: Release
 # Publishing a GitHub Release (tag such as v0.2.0) builds the plugin, attaches seedy_<version>.zip to the release, and
 # adds the version to the plugin repository manifest on GitHub Pages (branch gh-pages), with the release's text as its
 # changelog. Jellyfin servers that added https://<owner>.github.io/<repo>/manifest.json then see the update.
+# Pre-releases (v0.2.0-beta.1…) are for the Android app only: the plugin isn't built or published for them.
 
 on:
   release:
@@ -13,6 +14,7 @@ permissions:
 
 jobs:
   release:
+    if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

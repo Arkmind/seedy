@@ -18,6 +18,12 @@ public sealed class BrandingDto
     [JsonPropertyName("logoVersion")] public string LogoVersion { get; set; } = "0";
     [JsonPropertyName("signInBackground")] public string SignInBackground { get; set; } = "backdrops";
     [JsonPropertyName("logoFileName")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? LogoFileName { get; set; }
+
+    /// <summary>Gets or sets the plugin version ("0.1.0"); only on the public /Seedy/Client answer.</summary>
+    [JsonPropertyName("version")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Version { get; set; }
+
+    /// <summary>Gets or sets the API contract the apps check (<see cref="ConfigMapper.ApiLevel"/>); only on /Seedy/Client.</summary>
+    [JsonPropertyName("api")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? Api { get; set; }
 }
 
 public sealed class PlaybackPrefsDto
