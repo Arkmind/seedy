@@ -41,10 +41,20 @@ class UserSession internal constructor(
     val server: SavedServer,
     val account: SavedAccount,
     val api: ApiClient,
-    val user: UserDto,
+    user: UserDto,
     me: SeedyMe?,
 ) {
+    private val _user = MutableStateFlow(user)
+
+    /** The person as Jellyfin knows them, with their Jellyfin settings (UserConfiguration); refreshed after a change. */
+    val userFlow: StateFlow<UserDto> = _user.asStateFlow()
+    val user: UserDto get() = _user.value
     val userId: UUID get() = user.id
+
+    /** Jellyfin settings or the picture changed: the screens and players opened from now on use them. */
+    fun updateUser(user: UserDto) {
+        _user.value = user
+    }
 
     private val _seedy = MutableStateFlow(me)
 
