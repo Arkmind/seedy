@@ -72,7 +72,9 @@ export function Popover({
         anchor.current?.focus();
       }
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        const items = Array.from(ref.current?.querySelectorAll<HTMLElement>('.menu-item:not([disabled])') ?? []);
+        // Within the menu that has focus (a side menu has its own).
+        const scope = (document.activeElement as HTMLElement | null)?.closest('[role="menu"]') ?? ref.current;
+        const items = Array.from(scope?.querySelectorAll<HTMLElement>('.menu-item:not([disabled])') ?? []);
         if (!items.length) return;
         e.preventDefault();
         const i = items.indexOf(document.activeElement as HTMLElement);
