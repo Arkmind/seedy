@@ -105,7 +105,8 @@ fun PillButton(
         PillStyle.Dark -> SeedyColors.White
     }
     Row(
-        modifier.height(height).clip(CircleShape).background(bg).tap(enabled = enabled, onClick = onClick).alpha(if (enabled) 1f else 0.5f).padding(horizontal = 16.dp),
+        // Disabled, the whole pill fades (the web's `opacity: .5`).
+        modifier.alpha(if (enabled) 1f else 0.5f).height(height).clip(CircleShape).background(bg).tap(enabled = enabled, onClick = onClick).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
