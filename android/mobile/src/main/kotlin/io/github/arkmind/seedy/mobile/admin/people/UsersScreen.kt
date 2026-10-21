@@ -48,7 +48,6 @@ import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.mobile.parts.SeedyField
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.settings.FormSheet
-import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.theme.SText
@@ -61,7 +60,7 @@ fun UsersScreen(state: UsersState, actions: UsersActions, onBack: () -> Unit, op
     var menu by remember { mutableStateOf<UserRow?>(null) }
     var confirm by remember { mutableStateOf<Pair<String, UserRow>?>(null) }
     androidx.compose.runtime.LaunchedEffect(state.opened) { if (state.opened != null) adding = false }
-    SettingsPage(
+    PeoplePage(
         t("Users"),
         lede = state.lede ?: "…",
         onBack = onBack,

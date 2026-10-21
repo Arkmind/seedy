@@ -44,11 +44,9 @@ import io.github.arkmind.seedy.mobile.admin.TextSheet
 import io.github.arkmind.seedy.mobile.admin.avatarColour
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.settings.CardRows
-import io.github.arkmind.seedy.mobile.settings.PickRow
-import io.github.arkmind.seedy.mobile.settings.Section
+
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SheetState
-import io.github.arkmind.seedy.mobile.settings.SwitchRow
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
@@ -162,14 +160,14 @@ internal fun helpFor(state: UserEditState, key: String, help: String, was: () ->
 internal fun CardRows.switch(state: UserEditState, actions: UserEditActions, key: String, name: String, help: String, default: Boolean = false, enabled: Boolean = true) {
     row {
         val on = state.policy.flag(key, default)
-        SwitchRow(name, helpFor(state, key, help) { if (state.saved.flag(key, default)) t("on") else t("off") }, on, enabled = enabled) { actions.setFlag(key, it) }
+        PeopleSwitchRow(name, helpFor(state, key, help) { if (state.saved.flag(key, default)) t("on") else t("off") }, on, enabled = enabled) { actions.setFlag(key, it) }
     }
 }
 
 internal fun <T> CardRows.pick(state: UserEditState, sheet: SheetState, key: String, name: String, help: String, options: List<Choice<T>>, value: T, was: T, onPick: (T) -> Unit) {
     row {
         val list = withValue(withValue(options, value), was)
-        PickRow(name, helpFor(state, key, help) { labelOf(list, was) }, labelOf(list, value)) { sheet.open(name, list, value, onPick) }
+        PeoplePickRow(name, helpFor(state, key, help) { labelOf(list, was) }, labelOf(list, value)) { sheet.open(name, list, value, onPick) }
     }
 }
 
@@ -178,7 +176,7 @@ private fun AccountTab(state: UserEditState, actions: UserEditActions, sheet: Sh
     val p = state.policy
     val s = state.saved
     val name = state.name
-    Section(t("Account")) {
+    PeopleSection(t("Account")) {
         switch(state, actions, "IsAdministrator", t("Administrator"), t("Full access to the server pages and every library"), enabled = !state.isMe)
         switch(state, actions, "EnableRemoteAccess", t("Allow remote access"), t("Sign in from outside the home network"), default = true)
         switch(state, actions, "IsHidden", t("Hide from the sign-in screen"), t("{name} must type the name to sign in", "name" to name))
@@ -191,7 +189,7 @@ private fun AccountTab(state: UserEditState, actions: UserEditActions, sheet: Sh
             actions.set("MaxActiveSessions", JsonPrimitive(it))
         }
     }
-    Section(t("Playback")) {
+    PeopleSection(t("Playback")) {
         switch(state, actions, "EnableMediaPlayback", t("Allow playback"), t("Turn off to allow browsing only"), default = true)
         switch(state, actions, "EnableVideoPlaybackTranscoding", t("Allow video transcoding"), t("Needed for devices that can’t play the original"), default = true)
         switch(state, actions, "EnableAudioPlaybackTranscoding", t("Allow audio transcoding"), t("Converts audio a device can’t play"), default = true)
@@ -204,7 +202,7 @@ private fun AccountTab(state: UserEditState, actions: UserEditActions, sheet: Sh
             actions.set("SyncPlayAccess", JsonPrimitive(it))
         }
     }
-    Section(t("Content and control")) {
+    PeopleSection(t("Content and control")) {
         switch(state, actions, "EnableContentDownloading", t("Download media"), t("Save files for offline viewing"), default = true)
         switch(state, actions, "EnableContentDeletion", t("Delete media"), t("Remove files from the server"))
         switch(state, actions, "EnableCollectionManagement", t("Manage collections"), t("Create and edit collections"))

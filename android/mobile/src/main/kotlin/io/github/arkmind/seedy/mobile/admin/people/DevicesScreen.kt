@@ -47,7 +47,6 @@ import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.DeviceTag
 import io.github.arkmind.seedy.mobile.settings.FormSheet
-import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
@@ -65,7 +64,7 @@ fun DevicesScreen(state: DevicesState, actions: DevicesActions, onBack: () -> Un
     var renaming by remember { mutableStateOf<DeviceRow?>(null) }
     var removing by remember { mutableStateOf<DeviceRow?>(null) }
     var signingOut by remember { mutableStateOf(false) }
-    SettingsPage(
+    PeoplePage(
         t("Devices"),
         t("Every app that has signed in. Removing one signs it out; it comes back the next time someone signs in with it."),
         onBack,

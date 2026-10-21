@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -29,6 +32,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layout
+import kotlin.math.roundToInt
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -42,7 +48,12 @@ import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.admin.people.DeviceKind
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.BoardSwitch
+import io.github.arkmind.seedy.mobile.settings.CardRows
+import io.github.arkmind.seedy.mobile.settings.DeviceTag
+import io.github.arkmind.seedy.mobile.settings.SectionFoot
 import io.github.arkmind.seedy.mobile.settings.cssBox
+import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
@@ -96,7 +107,8 @@ fun PeoplePage(
                     size = 22.sp, weight = 900, color = SeedyColors.White, maxLines = 1,
                 )
             }
-            if (lede != null) SText(lede, Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp).cssBox(13, 1.5f), size = 13.sp, lineHeight = 1.5f, color = SeedyColors.Text2)
+            // Android sets a 1.5 line's glyphs a pixel lower than Chrome does.
+            if (lede != null) SText(lede, Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp).cssBox(13, 1.5f).offset(y = (-1).dp), size = 13.sp, lineHeight = 1.5f, color = SeedyColors.Text2)
             content()
         }
         overlay()
@@ -229,4 +241,96 @@ private fun StepButton(icon: IconDef, onClick: (() -> Unit)?) {
         Modifier.size(40.dp).clip(CircleShape).background(SeedyColors.Surface).tap(enabled = onClick != null) { onClick?.invoke() },
         contentAlignment = Alignment.Center,
     ) { SIcon(icon, size = 16.dp, color = if (onClick != null) SeedyColors.White else SeedyColors.Stroke) }
+}
+
+/**
+ * A section as [io.github.arkmind.seedy.mobile.settings.Section] draws it, with the title's line as tall as
+ * Chrome makes a 12 px Noto line (17 px: ascent and descent rounded apart), which keeps the user page's long run of
+ * sections on the board's pixels.
+ */
+@Composable
+fun PeopleSection(title: String?, foot: String? = null, build: CardRows.() -> Unit) {
+    if (title != null) {
+        SText(title, Modifier.padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 8.dp).cssBox(12, 17f / 12f), size = 12.sp, weight = 800, tracking = 0.1f, color = SeedyColors.Text3, uppercase = true)
+    } else {
+        androidx.compose.foundation.layout.Spacer(Modifier.height(16.dp))
+    }
+    val rows = CardRows().apply(build).rows
+    Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+        rows.forEachIndexed { i, row ->
+            if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+            row()
+        }
+    }
+    if (foot != null) SectionFoot(foot)
+}
+
+/*
+ * The settings kit's switch and value rows, with a help line whose wrapped height rounds down the way the boards'
+ * 16.8 px lines add up (a two-line help is 33.6 px in CSS; a whole-pixel 34 would push every later row down).
+ */
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PeopleRowText(name: String, help: String?, device: Boolean, modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        if (device) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+                SText(name, size = 14.sp, weight = 700, color = SeedyColors.White)
+                DeviceTag()
+            }
+        } else {
+            SText(name, size = 14.sp, weight = 700, color = SeedyColors.White)
+        }
+        // Android rounds the name line out to 20 px where Chrome makes it 19: the help sits a pixel higher to match.
+        if (!help.isNullOrEmpty()) SText(help, Modifier.wrappedLines(12, 1.4f).offset(y = (-1).dp), size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
+    }
+}
+
+/** A wrapped text's box as tall as its lines add up to, rounded down (one line keeps its own height). */
+private fun Modifier.wrappedLines(size: Int, ratio: Float): Modifier = this.layout { measurable, constraints ->
+    val p = measurable.measure(constraints)
+    val line = ratio * size.dp.toPx()
+    val lines = (p.height / line).roundToInt()
+    val h = if (lines <= 1) p.height else kotlin.math.floor(lines * line).toInt()
+    layout(p.width, h) { p.place(0, 0) }
+}
+
+private fun Modifier.peopleRow(): Modifier = this.fillMaxWidth().padding(start = 16.dp, end = 14.dp, top = 12.dp, bottom = 12.dp).heightIn(min = 44.dp)
+
+@Composable
+fun PeopleSwitchRow(name: String, help: String?, on: Boolean, device: Boolean = false, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
+    Row(
+        Modifier.tap(role = Role.Switch, enabled = enabled) { onChange(!on) }.peopleRow(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        PeopleRowText(name, help, device, Modifier.weight(1f))
+        BoardSwitch(on, onChange, enabled)
+    }
+}
+
+/** A value that opens a list: grey with a chevron, never wider than half the row (longer values wrap, right-aligned). */
+@Composable
+fun PeoplePickRow(name: String, help: String?, value: String, valueColor: Color = SeedyColors.TextHero, onClick: () -> Unit) {
+    Layout(
+        content = {
+            PeopleRowText(name, help, false)
+            Row(Modifier.heightIn(min = 40.dp).padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                SText(value, Modifier.weight(1f, fill = false), size = 13.sp, weight = 600, color = valueColor, align = TextAlign.End)
+                SIcon(AppIcons.Chevron, size = 16.dp, color = SeedyColors.Text3)
+            }
+        },
+        modifier = Modifier.tap(onClick = onClick).peopleRow(),
+    ) { measurables, constraints ->
+        val gap = 12.dp.roundToPx()
+        val w = constraints.maxWidth
+        val button = measurables[1].measure(constraints.copy(minWidth = 0, maxWidth = w / 2, minHeight = 0))
+        val text = measurables[0].measure(constraints.copy(minWidth = 0, maxWidth = (w - gap - button.width).coerceAtLeast(0), minHeight = 0))
+        val h = maxOf(text.height, button.height, constraints.minHeight)
+        layout(w, h) {
+            text.place(0, (h - text.height) / 2)
+            button.place(w - button.width, (h - button.height) / 2)
+        }
+    }
 }

@@ -43,7 +43,6 @@ import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.mobile.parts.SeedyField
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.settings.FormSheet
-import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
@@ -55,7 +54,7 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 fun ApiKeysScreen(state: ApiKeysState, actions: ApiKeysActions, onBack: () -> Unit) {
     var adding by remember { mutableStateOf(false) }
     var revoking by remember { mutableStateOf<KeyRow?>(null) }
-    SettingsPage(
+    PeoplePage(
         t("API keys"),
         t("For apps that talk to this server without signing in, like Seerr, Sonarr or a monitoring tool. Each key has full admin access."),
         onBack,
