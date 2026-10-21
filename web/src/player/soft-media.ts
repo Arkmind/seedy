@@ -259,7 +259,11 @@ export class SoftMedia extends EventTarget implements MediaLike {
 
   /* ── HTMLMediaElement ── */
 
-  get currentTime() { return this.time; }
+  /* Live while playing (the comparison keeps in step with it), else where it stopped or is going. */
+  get currentTime() {
+    if (this.running && this.want && !this.seeking && this.player) return Number(this.player.currentTime) / 1000;
+    return this.time;
+  }
   set currentTime(v: number) { void this.seek(v); }
   get duration() { return this.dur; }
   get paused() { return !this.want; }

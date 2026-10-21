@@ -297,6 +297,8 @@ export class PlaybackSession {
   subtitleIndex = -1;
   started = false;
   stopped = false;
+  /* A copy played alongside (the comparison in Player): no start, progress or stop reports. */
+  silent = false;
   /* What plays: the <video> element, or the experimental player standing in for it. */
   readonly media: MediaBridge;
   private soft: SoftMedia | null = null;
@@ -492,7 +494,7 @@ export class PlaybackSession {
   }
 
   private onPlaying() {
-    if (this.started || this.stopped || !this.stream) return;
+    if (this.started || this.stopped || !this.stream || this.silent) return;
     this.started = true;
     reportPlaybackStart(this.body()).catch(() => undefined);
   }

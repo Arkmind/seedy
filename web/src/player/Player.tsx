@@ -22,6 +22,7 @@ import { toast } from '../ui/overlay';
 import { parseAss } from './ass';
 import { closestTrack, lastTracks, trackSig } from './carry';
 import { ChaptersPanel } from './ChaptersPanel';
+import { Compare } from './Compare';
 import { TEXT_SUB_CODECS, type ProfileOptions } from './device-profile';
 import { EndOfMovie, type TileRect } from './EndOfMovie';
 import { EpisodesPanel } from './EpisodesPanel';
@@ -1308,6 +1309,11 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
         }}
         onDblClick={() => { if (!isAudio) toggleFullscreen(); }}
       />
+
+      {/* "Every video (for testing)": the usual player on the right of a bar that moves. */}
+      {soft && dev.softPlayer === 'always' && !endShown && sessRef.current && (
+        <Compare item={item} master={media()} opts={sessRef.current.opts} describe={(st, w, h) => statusText(st, false, w, h)} />
+      )}
 
       {panel && <div class="pl-dim" aria-hidden="true" />}
       <div class="pl-grad-top pl-fade" aria-hidden="true" />

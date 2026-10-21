@@ -23,6 +23,30 @@
 .pl-soft { overflow: hidden; }
 .pl-soft-box { position: absolute; inset: 0; }
 
+/* ── Comparison ("Every video (for testing)"): experimental player left, usual player right, a bar that moves ── */
+.pl-cmp { position: absolute; inset: 0; pointer-events: none; }
+.pl-cmp-video { transition: none; background: transparent; }
+.pl-cmp-bar {
+  position: absolute; top: 0; bottom: 0; width: 32px; margin-left: -16px;
+  display: grid; place-items: center; pointer-events: auto; cursor: ew-resize; touch-action: none; outline: none;
+}
+.pl-cmp-line {
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px;
+  background: rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+.pl-cmp-handle {
+  position: relative; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%;
+  background: #ffffff; color: #0e0e0e; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+.pl-cmp-handle svg { margin: 0 -3px; }
+.pl-cmp-bar:focus-visible .pl-cmp-handle { box-shadow: 0 0 0 3px var(--seedy-accent), 0 2px 12px rgba(0, 0, 0, 0.5); }
+.pl-cmp-label {
+  position: absolute; top: 50%; transform: translateY(-50%); white-space: nowrap; pointer-events: none;
+  padding: 6px 12px; border-radius: 999px; background: rgba(0, 0, 0, 0.62); color: #ffffff; font-size: 13px; font-weight: 700;
+}
+.pl-cmp-label.is-left { right: calc(50% + 34px); }
+.pl-cmp-label.is-right { left: calc(50% + 34px); }
+
 .pl-hit { position: absolute; inset: 0; }
 .pl-root.is-end .pl-hit, .pl-root.is-end .pl-fade { display: none; }
 
