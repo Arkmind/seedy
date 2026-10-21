@@ -46,6 +46,12 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
+import io.github.arkmind.seedy.mobile.settings.FootNote
+import io.github.arkmind.seedy.mobile.settings.CssColumn
+import io.github.arkmind.seedy.mobile.settings.cssExcess
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.layout.onSizeChanged
+import kotlin.math.roundToInt
 
 /** Board "Android · Server": the admin pages' hub, opened from Settings › Server. */
 @Composable
@@ -86,11 +92,11 @@ fun ServerHubScreen(state: ServerHubState, actions: ServerHubActions, onBack: ()
                 )
             }
             sessionMenu?.let { s ->
-                val options = buildList<Pair<String, () -> Unit>> {
-                    if (s.canMessage) add(t("Send a message") to { messageTo = s })
-                    if (s.canStop) add(t("Stop playback") to { stopping = s })
+                val items = buildList {
+                    if (s.canMessage) add(MenuItem(t("Send a message")) { messageTo = s })
+                    if (s.canStop) add(MenuItem(t("Stop playback"), danger = true) { stopping = s })
                 }
-                ActionSheet(t("{name} on {device}", "name" to s.user, "device" to s.device), options, { sessionMenu = null }, danger = if (s.canStop) setOf(options.lastIndex) else emptySet())
+                MenuSheet(t("{name} on {device}", "name" to s.user, "device" to s.device), items, { sessionMenu = null })
             }
             messageTo?.let { s ->
                 TextSheet(
@@ -200,13 +206,10 @@ private fun TaskLine(name: String, state: String, progress: Float) {
 private fun Playing(state: ServerHubState, onMenu: (NowPlaying) -> Unit) {
     val playing = state.playing
     SectionTitle(if (playing == null) t("Playing now") else t("Playing now · {n}", "n" to playing.size))
-    Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    CssColumn(Modifier.padding(horizontal = 16.dp), gap = 10.dp) {
         when {
             playing == null -> Card(padding = 12.dp) { SText("…", size = 13.sp, color = SeedyColors.Text3) }
-            playing.isEmpty() -> Card(padding = 16.dp, gap = 2.dp) {
-                SText(t("Nothing playing"), size = 13.sp, weight = 700, color = SeedyColors.White)
-                SText(t("When someone starts watching, it shows up here with how it’s playing on their device."), size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
-            }
+            playing.isEmpty() -> EmptyCard(t("Nothing playing"), t("When someone starts watching, it shows up here with how it’s playing on their device."), Modifier)
             else -> for (s in playing) SessionCard(s) { onMenu(s) }
         }
     }
@@ -214,7 +217,9 @@ private fun Playing(state: ServerHubState, onMenu: (NowPlaying) -> Unit) {
 
 @Composable
 private fun SessionCard(s: NowPlaying, onMenu: () -> Unit) {
-    Card(padding = 12.dp, gap = 10.dp) {
+    // The 16:9 picture is 51.75 px on the board, and its 12 px lines (the method pill's too) are 16.8 px: 52 and 17 here.
+    var lines by remember { mutableIntStateOf(1) }
+    Card(Modifier.cssExcess(0.25f + 0.2f * lines), padding = 12.dp, gap = 10.dp) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Thumb(s.art, 92.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -225,9 +230,7 @@ private fun SessionCard(s: NowPlaying, onMenu: () -> Unit) {
                 }
             }
             if (s.canMessage || s.canStop) {
-                Box(Modifier.size(40.dp).clip(CircleShape).background(SeedyColors.Surface).tap(onClick = onMenu), contentAlignment = Alignment.Center) {
-                    SIcon(AdminIcons.Dots, size = 18.dp, color = SeedyColors.White)
-                }
+                RoundButton(AdminIcons.Dots, onMenu, iconSize = 18.dp)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -236,10 +239,10 @@ private fun SessionCard(s: NowPlaying, onMenu: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Box(Modifier.size(6.dp).background(MethodDots.getValue(s.kind), CircleShape))
+                Dot(MethodDots.getValue(s.kind), 6.dp)
                 SText(t(s.kind.label()), size = 12.sp, weight = 700, lineHeight = 1.4f, color = SeedyColors.Text, maxLines = 1)
             }
-            SText(s.detail, Modifier.weight(1f), size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
+            SText(s.detail, Modifier.weight(1f).onSizeChanged { lines = maxOf(1, (it.height / 17f).roundToInt()) }, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
         }
         Bar(s.progress, color = SeedyColors.White, height = 3.dp)
     }

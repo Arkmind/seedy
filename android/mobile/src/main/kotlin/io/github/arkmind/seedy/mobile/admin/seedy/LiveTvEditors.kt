@@ -38,12 +38,17 @@ import io.github.arkmind.seedy.mobile.settings.SectionFoot
 import io.github.arkmind.seedy.mobile.settings.SegRow
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
-import io.github.arkmind.seedy.mobile.settings.cssBox
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import kotlinx.coroutines.launch
+import io.github.arkmind.seedy.mobile.admin.LoadingCards
+import io.github.arkmind.seedy.mobile.admin.SaveBar
+import io.github.arkmind.seedy.mobile.admin.SearchPickSheet
+import io.github.arkmind.seedy.mobile.admin.FieldBlock
+import io.github.arkmind.seedy.mobile.admin.FieldSection
+import io.github.arkmind.seedy.mobile.admin.BoardField
 
 /** A tuner switch, for the tuner types it applies to (as the web lists them). */
 private class TunerSwitch(val name: String, val help: String, val types: Set<String>, val get: (TunerHost) -> Boolean, val set: (TunerHost, Boolean) -> TunerHost)
@@ -89,7 +94,7 @@ internal fun TunerEditor(draft: TunerHost, isNew: Boolean, state: LiveTvAdminSta
                     t("Remove tuner"), { draft.id?.let(actions::removeTuner); onClose() }, { removing = false }, danger = true,
                 )
             }
-            UnsavedBar("", t("Save tuner"), onClose, save, saving = busy, discardLabel = t("Cancel"), savingLabel = t("Checking…"))
+            SaveBar("", onClose, save, saving = busy, saveLabel = t("Save tuner"), discardLabel = t("Cancel"), savingLabel = t("Checking…"))
         },
     ) {
         if (isNew) {
@@ -134,8 +139,7 @@ internal fun TunerEditor(draft: TunerHost, isNew: Boolean, state: LiveTvAdminSta
             for (s in TunerSwitches.filter { draft.type in it.types }) row { SwitchRow(t(s.name), t(s.help), s.get(draft)) { v -> set(s.set(draft, v)) } }
         }
         val err = error
-        if (err != null) SText(err, Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp).cssBox(12, 1.45f, up = true), size = 12.sp, lineHeight = 1.45f, color = SeedyColors.Danger)
-        else SectionFoot(t("Channels with DRM are never imported."))
+        SectionFoot(err ?: t("Channels with DRM are never imported."), if (err != null) SeedyColors.Danger else SeedyColors.Text3)
         if (!isNew) {
             PillButton(t("Remove tuner"), { removing = true }, Modifier.padding(start = 16.dp, top = 22.dp), style = PillStyle.Danger)
         }
@@ -206,7 +210,7 @@ internal fun SourceEditor(provider: ListingsProvider?, tuners: List<TunerHost>, 
         onClose,
         overlay = {
             when (sheet) {
-                "file" -> FolderSheet(t("Choose the XMLTV file"), p.path.orEmpty(), true, actions::folders, { v -> set(p.copy(path = v)) }, { sheet = null })
+                "file" -> ServerFolderSheet(t("Choose the XMLTV file"), p.path.orEmpty(), true, actions::folders, { v -> set(p.copy(path = v)) }, { sheet = null })
                 "country" -> SearchPickSheet(
                     t("Country"), null, countries.orEmpty().map { Choice(it.first, it.second) }, p.country,
                     { v -> set(p.copy(country = v)) }, { sheet = null },
@@ -216,9 +220,9 @@ internal fun SourceEditor(provider: ListingsProvider?, tuners: List<TunerHost>, 
                     { v -> set(p.copy(listingsId = v)) }, { sheet = null },
                 )
             }
-            UnsavedBar(
-                "", if (isNew) t("Add guide source") else t("Save"), onClose, save,
-                saving = busy, discardLabel = t("Cancel"), savingLabel = t("Checking…"),
+            SaveBar(
+                "", onClose, save,
+                saving = busy, saveLabel = if (isNew) t("Add guide source") else t("Save"), discardLabel = t("Cancel"), savingLabel = t("Checking…"),
             )
         },
     ) {
@@ -341,7 +345,7 @@ internal fun MapChannels(provider: ListingsProvider, actions: LiveTvAdminActions
             o == null -> LoadingCards(1, 300.dp)
             o.tunerChannels.isEmpty() -> SText(t("No channels yet. Add a tuner, then refresh the guide data."), Modifier.padding(20.dp), size = 13.sp, color = SeedyColors.Text2)
             else -> {
-                if (o.tunerChannels.size > 8) BoardInput(q, { q = it }, Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp), placeholder = t("Search channels"))
+                if (o.tunerChannels.size > 8) BoardField(q, { q = it }, Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp), placeholder = t("Search channels"))
                 val shown = o.tunerChannels.filter { q.isBlank() || it.name.contains(q.trim(), ignoreCase = true) }
                 Section(null) {
                     for (c in shown) {

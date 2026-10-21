@@ -47,6 +47,10 @@ import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
+import io.github.arkmind.seedy.mobile.admin.FieldBlock
+import io.github.arkmind.seedy.mobile.admin.FieldSection
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
+import io.github.arkmind.seedy.mobile.settings.FormSheet
 
 /** Board "Android · Server · Settings", and its Expert settings page. */
 @Composable
@@ -141,21 +145,9 @@ fun ServerSettingsScreen(
 /** The board's Server card: the name and the sign-in message, typed in place. */
 @Composable
 private fun ServerCard(state: ServerSettingsState, actions: ServerSettingsActions) {
-    MediaSectionTitle(t("Server"))
-    Column(
-        Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel).padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            SText(t("Server name"), size = 14.sp, weight = 700, color = SeedyColors.White)
-            BoardField(state.serverName, actions::setServerName, placeholder = state.serverNamePlaceholder)
-            SText(t("Shown to apps when they find this server"), size = 12.sp, color = SeedyColors.Text3)
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            SText(t("Sign-in message"), size = 14.sp, weight = 700, color = SeedyColors.White)
-            BoardField(state.signInMessage, actions::setSignInMessage, lines = 2)
-            SText(t("Shown under the sign-in form"), size = 12.sp, color = SeedyColors.Text3)
-        }
+    FieldSection(t("Server")) {
+        FieldBlock(t("Server name"), state.serverName, actions::setServerName, help = t("Shown to apps when they find this server"), placeholder = state.serverNamePlaceholder, autoCorrect = true)
+        FieldBlock(t("Sign-in message"), state.signInMessage, actions::setSignInMessage, help = t("Shown under the sign-in form"), lines = 2, autoCorrect = true)
     }
 }
 
@@ -167,7 +159,7 @@ private fun PathSheet(change: PathChange, actions: ServerSettingsActions) {
             SText(t("Save and restart the server?"), size = 17.sp, weight = 800, color = SeedyColors.White)
             MonoText(change.path, color = SeedyColors.White)
             SText(t("Everyone watching is interrupted for a minute while Jellyfin restarts. Seedy reconnects on its own when the server is back."), size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2)
-            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+            SheetButtons(Modifier.padding(top = 4.dp)) {
                 PillButton(t("Cancel"), actions::cancelPath)
                 PillButton(t("Save only"), { actions.savePath(false) })
                 PillButton(t("Save and restart"), { actions.savePath(true) }, style = PillStyle.Light)
@@ -179,7 +171,7 @@ private fun PathSheet(change: PathChange, actions: ServerSettingsActions) {
 /** The splash screen: the image apps show while they load, on or off, and a picture of your own. */
 @Composable
 private fun SplashSheet(s: SplashState, actions: ServerSettingsActions, pick: () -> Unit, onDismiss: () -> Unit) {
-    ScrollSheet(t("Splash screen"), t("Image shown while apps load"), onDismiss) {
+    FormSheet(t("Splash screen"), t("Image shown while apps load"), onDismiss, scroll = true) {
         Artwork(s.imageUrl, Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)), placeholder = SeedyColors.Surface)
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(SeedyColors.Row).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             SText(t("Show a splash screen"), Modifier.weight(1f), size = 14.sp, weight = 700, color = SeedyColors.White)

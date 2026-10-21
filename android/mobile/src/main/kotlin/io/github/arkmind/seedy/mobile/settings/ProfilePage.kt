@@ -83,7 +83,7 @@ fun ProfilePage(state: SettingsState, actions: SettingsActions, nav: SettingsNav
                 if (state.isAdmin) AdminPill()
             }
             SText(signedInOn(state), size = 12.sp, color = SeedyColors.Text3, align = TextAlign.Center)
-            SText(t("Only an admin can change your name."), size = 12.sp, color = Quiet, align = TextAlign.Center)
+            SText(t("Only an admin can change your name."), size = 12.sp, color = Faint, align = TextAlign.Center)
         }
 
         SectionTitle(t("Sign in a TV with a code"))

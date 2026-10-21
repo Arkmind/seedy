@@ -42,7 +42,6 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.mobile.admin.Card
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
-import io.github.arkmind.seedy.mobile.admin.FootNote
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
 import io.github.arkmind.seedy.mobile.admin.RowLine
@@ -57,6 +56,15 @@ import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.EmptyCard
+import io.github.arkmind.seedy.mobile.admin.SkeletonCard
+import io.github.arkmind.seedy.mobile.admin.MenuPill
+import io.github.arkmind.seedy.mobile.admin.LivePill
+import io.github.arkmind.seedy.mobile.settings.FootNote
+import io.github.arkmind.seedy.mobile.settings.SectionTitle
+import io.github.arkmind.seedy.mobile.settings.CssColumn
+import io.github.arkmind.seedy.mobile.settings.cssExcess
 
 /** The board's dots: grey for information, green when something finished well, amber for warnings, red for errors. */
 private fun levelDot(l: ActivityLevel): Color = when (l) {
@@ -68,6 +76,9 @@ private fun levelDot(l: ActivityLevel): Color = when (l) {
 
 private val ErrorTint = Color(0x12FF8A8A)
 
+/** What [lines] lines of [lineHeight] px gain when Compose rounds their box up to whole pixels. */
+private fun lineExcess(lines: Int, lineHeight: Float): Float = if (lines <= 0) 0f else kotlin.math.ceil(lines * lineHeight) - lines * lineHeight
+
 /**
  * Board "Android · Server · Activity log": today in four tiles, who and which level to show, Live, then the log by
  * day; failed sign-ins from outside offer Block address, locked-out people Re-enable.
@@ -78,7 +89,7 @@ fun ActivityScreen(state: ActivityState, actions: ActivityActions, onBack: () ->
     var confirm by remember { mutableStateOf<ActivityRow?>(null) }
     SettingsPage(
         t("Activity log"),
-        lede = null,
+        lede = state.lede,
         onBack = onBack,
         overlay = {
             SheetHost(sheet)
@@ -89,7 +100,6 @@ fun ActivityScreen(state: ActivityState, actions: ActivityActions, onBack: () ->
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter))
         },
     ) {
-        Lede(state.lede)
         Tiles(state.tiles, actions)
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             MenuPill(state.personLabel, { sheet.open(t("Person"), state.people, state.person, actions::setPerson) })
@@ -105,12 +115,12 @@ fun ActivityScreen(state: ActivityState, actions: ActivityActions, onBack: () ->
         when {
             days == null && state.error != null -> Box(Modifier.padding(top = 22.dp)) { ErrorCard(state.error!!, actions::retry) }
             days == null -> {
-                GroupTitle(" ")
+                SectionTitle(" ")
                 SkeletonCard(5)
             }
             days.isEmpty() -> Box(Modifier.padding(top = 22.dp)) { EmptyCard(state.emptyTitle.orEmpty(), state.emptyText) }
             else -> for (d in days) {
-                GroupTitle(d.label)
+                SectionTitle(d.label)
                 Card(Modifier.padding(horizontal = 16.dp)) {
                     CssColumn {
                         d.rows.forEachIndexed { i, r ->

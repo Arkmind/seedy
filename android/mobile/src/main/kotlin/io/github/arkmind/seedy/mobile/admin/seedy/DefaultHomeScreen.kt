@@ -63,7 +63,6 @@ import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SheetState
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
-import io.github.arkmind.seedy.mobile.settings.cssBox
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.ui.components.boxShadow
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -73,6 +72,21 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import kotlinx.coroutines.delay
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.LoadingCards
+import io.github.arkmind.seedy.mobile.admin.SaveBar
+import io.github.arkmind.seedy.mobile.admin.SheetFoot
+import io.github.arkmind.seedy.mobile.admin.ChipFlow
+import io.github.arkmind.seedy.mobile.admin.AddChip
+import io.github.arkmind.seedy.mobile.admin.NameTag
+import io.github.arkmind.seedy.mobile.admin.RoundButton
+import io.github.arkmind.seedy.mobile.admin.BoardField
+import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.settings.CssColumn
+import io.github.arkmind.seedy.mobile.settings.cssText
+import io.github.arkmind.seedy.mobile.settings.StackRow
+import io.github.arkmind.seedy.mobile.settings.SheetHead
+import io.github.arkmind.seedy.ui.icons.IconDef
 
 private val Dragged = Color(0xFF262626)
 
@@ -117,13 +131,13 @@ fun DefaultHomeScreen(state: HomeAdminState, actions: HomeAdminActions, onBack: 
                     actions.edit { c -> val p = c.featured.picks; c.copy(featured = c.featured.copy(picks = if (item.id in p) p - item.id else p + item.id)) }
                 }) { titleSheet = false }
             }
-            if (changes > 0) UnsavedBar(tn(changes, "{n} unsaved change", "{n} unsaved changes"), t("Save"), actions::discard, actions::save, saving = state.saving)
+            if (changes > 0) SaveBar(tn(changes, "{n} unsaved change", "{n} unsaved changes"), actions::discard, actions::save, saving = state.saving)
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter).padding(bottom = if (changes > 0) 90.dp else 0.dp))
         },
     ) {
         val h = state.home
         when {
-            h == null && state.loadError != null -> LoadFailed(t("Couldn’t load Seedy’s settings"), state.loadError.orEmpty(), actions::retry)
+            h == null && state.loadError != null -> ErrorCard(t("Couldn’t load Seedy’s settings"), actions::retry, Modifier.padding(top = 16.dp), detail = state.loadError.orEmpty())
             h == null -> LoadingCards(3, 220.dp)
             else -> HomeBody(h, state, actions, sheet, dragging, addGenre = { genreSheet = true }, addTitle = { titleSheet = true })
         }
@@ -134,10 +148,10 @@ fun DefaultHomeScreen(state: HomeAdminState, actions: HomeAdminActions, onBack: 
 @Composable
 private fun HomeBody(h: HomeConfig, state: HomeAdminState, actions: HomeAdminActions, sheet: SheetState, dragging: String?, addGenre: () -> Unit, addTitle: () -> Unit) {
     SectionTitle(t("Rows"))
-    Column(Modifier.padding(horizontal = 16.dp)) {
+    CssColumn(Modifier.padding(horizontal = 16.dp)) {
         SText(
             t("Drag to set the starting order. Switched-off rows are hidden for everyone."),
-            Modifier.padding(start = 4.dp, end = 4.dp, bottom = 10.dp).cssBox(12, 1.45f, up = true), size = 12.sp, lineHeight = 1.45f, color = SeedyColors.Text3,
+            Modifier.padding(start = 4.dp, end = 4.dp, bottom = 10.dp).cssText(12, 1.45f), size = 12.sp, lineHeight = 1.45f, color = SeedyColors.Text3,
         )
         RowsEditor(h.rows, { rows -> actions.edit { it.copy(rows = rows) } }, dragging)
     }
@@ -193,8 +207,7 @@ private fun HomeBody(h: HomeConfig, state: HomeAdminState, actions: HomeAdminAct
             }
         }
         row {
-            Column(Modifier.seedyRow(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                RowLabel(t("Starting genres"), t("For new profiles, until they have watched enough"))
+            StackRow(t("Starting genres"), t("For new profiles, until they have watched enough"), gap = 12.dp) {
                 ChipFlow(h.genres.starting, { i -> actions.edit { it.copy(genres = it.genres.copy(starting = it.genres.starting.filterIndexed { j, _ -> j != i })) } }, t("Add genre"), addGenre)
             }
         }
@@ -208,11 +221,11 @@ private fun HomeBody(h: HomeConfig, state: HomeAdminState, actions: HomeAdminAct
         }
         if (h.featured.mode != "auto") {
             row {
-                Column(Modifier.seedyRow(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    RowLabel(
-                        t("Your picks"),
-                        if (h.featured.mode == "picks") t("Shown in this order; recently added titles fill in if there are fewer than 5") else t("Shown first; recently added and in-progress titles fill the rest"),
-                    )
+                StackRow(
+                    t("Your picks"),
+                    if (h.featured.mode == "picks") t("Shown in this order; recently added titles fill in if there are fewer than 5") else t("Shown first; recently added and in-progress titles fill the rest"),
+                    gap = 12.dp,
+                ) {
                     for (id in h.featured.picks) {
                         val item = state.picks[id]
                         val loading = id !in state.picks
@@ -226,9 +239,7 @@ private fun HomeBody(h: HomeConfig, state: HomeAdminState, actions: HomeAdminAct
                                 item?.title ?: if (loading) t("Loading…") else t("Title not found"),
                                 Modifier.weight(1f), size = 14.sp, weight = 700, color = if (item != null) SeedyColors.White else SeedyColors.Text3, maxLines = 2, overflow = TextOverflow.Ellipsis,
                             )
-                            Box(Modifier.size(40.dp).clip(CircleShape).tap { actions.edit { c -> c.copy(featured = c.featured.copy(picks = c.featured.picks - id)) } }, contentAlignment = Alignment.Center) {
-                                SIcon(WebIcons.Close, size = 14.dp, color = SeedyColors.Text2)
-                            }
+                            RoundButton(WebIcons.Close, { actions.edit { c -> c.copy(featured = c.featured.copy(picks = c.featured.picks - id)) } }, iconSize = 14.dp, bare = true, tint = SeedyColors.Text2)
                         }
                     }
                     AddChip(t("Add a title"), addTitle)
@@ -333,7 +344,7 @@ private fun AdminRowItem(r: HomeRowConfig, locked: Boolean, lifted: Boolean, mod
         Column(Modifier.weight(1f).padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SText(name, Modifier.weight(1f, fill = false), size = 14.sp, weight = 700, color = if (r.enabled) SeedyColors.White else SeedyColors.Text3)
-                if (info?.seerr == true) SmallTag("Seerr")
+                if (info?.seerr == true) NameTag("Seerr", tint = 0.08f)
             }
             SText(t(info?.help ?: ""), size = 12.sp, color = SeedyColors.Text3)
             val range = info?.count
@@ -362,7 +373,7 @@ private fun GenreSheet(chosen: List<String>, actions: HomeAdminActions, onAdd: (
     val options = all.orEmpty().filter { it.lowercase() !in taken && it.contains(q.trim(), ignoreCase = true) }
     BottomSheet(onDismiss) {
         SheetHead(t("Add a starting genre"))
-        if ((all?.size ?: 0) > 8) BoardInput(q, { q = it }, Modifier.padding(start = 20.dp, end = 20.dp, bottom = 8.dp), placeholder = t("Find a genre"))
+        if ((all?.size ?: 0) > 8) BoardField(q, { q = it }, Modifier.padding(start = 20.dp, end = 20.dp, bottom = 8.dp), placeholder = t("Find a genre"))
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
             when {
                 failed -> SText(t("Couldn’t load genres"), Modifier.padding(12.dp), size = 13.sp, color = SeedyColors.Danger)
@@ -395,7 +406,7 @@ private fun TitleSheet(picks: List<String>, actions: HomeAdminActions, onToggle:
     val n = picks.size
     BottomSheet(onDismiss) {
         SheetHead(t("Add a title"), (if (n > 0) tn(n, "{n} pick so far.", "{n} picks so far.") + " " else "") + t("Picks show first in the Featured hero."))
-        BoardInput(term, { term = it }, Modifier.padding(start = 20.dp, end = 20.dp, bottom = 12.dp), placeholder = t("Search movies and shows"))
+        BoardField(term, { term = it }, Modifier.padding(start = 20.dp, end = 20.dp, bottom = 12.dp), placeholder = t("Search movies and shows"))
         SText(
             if (term.isBlank()) t("Recently added") else t("Results"),
             Modifier.padding(start = 20.dp, end = 20.dp, bottom = 6.dp), size = 12.sp, weight = 800, tracking = 0.1f, color = SeedyColors.Text3, uppercase = true,
@@ -423,6 +434,20 @@ private fun TitleSheet(picks: List<String>, actions: HomeAdminActions, onToggle:
                 }
             }
         }
-        SheetActions { PillButton(t("Done"), onDismiss, style = PillStyle.Light) }
+        SheetFoot { PillButton(t("Done"), onDismiss, style = PillStyle.Light) }
     }
 }
+
+/** "− Up to 6 +": a value with a step either way. */
+@Composable
+private fun StepperPill(label: String, onDec: () -> Unit, onInc: () -> Unit, decEnabled: Boolean = true, incEnabled: Boolean = true) {
+    Row(Modifier.height(32.dp).clip(CircleShape).background(SeedyColors.Surface).padding(2.dp), verticalAlignment = Alignment.CenterVertically) {
+        StepButton(WebIcons.Minus, decEnabled, onDec)
+        SText(label, Modifier.padding(horizontal = 6.dp), size = 12.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
+        StepButton(WebIcons.Plus, incEnabled, onInc)
+    }
+}
+
+@Composable
+private fun StepButton(icon: IconDef, enabled: Boolean, onClick: () -> Unit) =
+    RoundButton(icon, onClick, size = 28.dp, iconSize = 13.dp, background = SeedyColors.Surface2, tint = if (enabled) SeedyColors.White else SeedyColors.Text3, enabled = enabled, dim = 1f)

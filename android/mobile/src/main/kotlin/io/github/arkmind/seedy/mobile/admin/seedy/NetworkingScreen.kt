@@ -32,6 +32,27 @@ import io.github.arkmind.seedy.mobile.settings.Segmented
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.LoadingCards
+import io.github.arkmind.seedy.mobile.admin.SaveBar
+import io.github.arkmind.seedy.mobile.admin.TextSheet
+import io.github.arkmind.seedy.mobile.admin.FieldBlock
+import io.github.arkmind.seedy.mobile.admin.FieldSection
+import io.github.arkmind.seedy.mobile.admin.BoardField
+import io.github.arkmind.seedy.mobile.admin.PillButton
+import io.github.arkmind.seedy.mobile.admin.PillStyle
+import io.github.arkmind.seedy.mobile.admin.RemovableChip
+import io.github.arkmind.seedy.mobile.admin.SheetFoot
+import io.github.arkmind.seedy.mobile.settings.SheetHead
+import io.github.arkmind.seedy.mobile.browse.BottomSheet
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.unit.sp
+import io.github.arkmind.seedy.ui.theme.SText
+import io.github.arkmind.seedy.mobile.admin.LeaveGuard
 
 /** A list the page edits in a sheet. */
 private enum class NetList { Filter, Published, Home, Proxies, Listen }
@@ -70,15 +91,22 @@ fun NetworkingScreen(state: NetworkingState, actions: NetworkingActions, onBack:
             if (c != null) {
                 list?.let { which -> NetListSheet(which, c, actions) { list = null } }
                 if (certSheet) {
-                    FieldSheet(t("Certificate file"), t("A .pfx file with its private key"), c.certificatePath, { v -> actions.edit { it.copy(certificatePath = v.trim()) } }, { certSheet = false }, placeholder = "/config/ssl/server.pfx", keyboard = KeyboardType.Uri)
+                    TextSheet(
+                        t("Certificate file"), t("A .pfx file with its private key"), t("Save"), { v -> actions.edit { it.copy(certificatePath = v.trim()) } }, { certSheet = false },
+                        initial = c.certificatePath, placeholder = "/config/ssl/server.pfx", keyboard = KeyboardType.Uri, required = false,
+                    )
                 }
                 if (passwordSheet) {
-                    FieldSheet(t("Certificate password"), t("Leave empty if the file has none"), c.certificatePassword, { v -> actions.edit { it.copy(certificatePassword = v) } }, { passwordSheet = false }, placeholder = t("Password"), password = true)
+                    TextSheet(
+                        t("Certificate password"), t("Leave empty if the file has none"), t("Save"), { v -> actions.edit { it.copy(certificatePassword = v) } }, { passwordSheet = false },
+                        initial = c.certificatePassword, placeholder = t("Password"), password = true, required = false,
+                    )
                 }
             }
             if (bar) {
-                UnsavedBar(
-                    tn(changes, "{n} unsaved change", "{n} unsaved changes"), t("Save and restart"),
+                SaveBar(
+                    tn(changes, "{n} unsaved change", "{n} unsaved changes"),
+                    saveLabel = t("Save and restart"),
                     onDiscard = actions::discard,
                     onSave = { if (state.portText.isNotEmpty()) actions.say(t("Ports are numbers from 1 to 65535.")) else confirm = true },
                     saving = state.saving, busy = if (state.restarting) t("Restarting the server…") else null,
@@ -91,7 +119,7 @@ fun NetworkingScreen(state: NetworkingState, actions: NetworkingActions, onBack:
     ) {
         val c = state.value
         when {
-            c == null && state.loadError != null -> LoadFailed(t("Couldn’t load the network settings"), state.loadError.orEmpty(), actions::retry)
+            c == null && state.loadError != null -> ErrorCard(t("Couldn’t load the network settings"), actions::retry, Modifier.padding(top = 16.dp), detail = state.loadError.orEmpty())
             c == null -> LoadingCards(4)
             else -> NetworkBody(c, state, actions, open = { list = it }, cert = { certSheet = true }, password = { passwordSheet = true })
         }
@@ -187,5 +215,57 @@ private fun NetListSheet(which: NetList, c: NetworkConfig, actions: NetworkingAc
             c.localNetworkAddresses, "192.168.1.20", t("All interfaces"),
             { v -> validAddress(v) }, { v -> actions.edit { it.copy(localNetworkAddresses = v) } }, onDismiss,
         )
+    }
+}
+
+/**
+ * Edits a list of addresses (the web's chip list and its add popover): the entries with a remove cross, a field and
+ * Add; [top] goes above the list (the allow/block switch). [validate] answers null when an entry is fine.
+ */
+@Composable
+private fun ListSheet(
+    title: String,
+    help: String?,
+    items: List<String>,
+    placeholder: String,
+    emptyText: String?,
+    validate: (String) -> String?,
+    onChange: (List<String>) -> Unit,
+    onDismiss: () -> Unit,
+    top: (@Composable () -> Unit)? = null,
+) {
+    var text by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    fun add() {
+        val v = text.trim()
+        if (v.isEmpty()) return
+        val err = validate(v) ?: if (items.any { it.equals(v, ignoreCase = true) }) t("That’s already in the list.") else null
+        if (err != null) {
+            error = err
+            return
+        }
+        onChange(items + v)
+        text = ""
+        error = null
+    }
+    BottomSheet(onDismiss) {
+        SheetHead(title, help)
+        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            top?.invoke()
+            if (items.isEmpty()) {
+                if (emptyText != null) SText(emptyText, size = 13.sp, color = SeedyColors.Text3)
+            } else {
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items.forEachIndexed { i, v -> RemovableChip(v) { onChange(items.filterIndexed { j, _ -> j != i }) } }
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BoardField(text, { text = it; error = null }, Modifier.weight(1f), placeholder = placeholder, keyboard = KeyboardType.Uri, error = error != null, onDone = ::add)
+                PillButton(t("Add"), ::add, style = PillStyle.Light, enabled = text.isNotBlank(), height = 46.dp)
+            }
+            error?.let { SText(it, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Danger) }
+        }
+        SheetFoot { PillButton(t("Done"), onDismiss, style = PillStyle.Light) }
     }
 }

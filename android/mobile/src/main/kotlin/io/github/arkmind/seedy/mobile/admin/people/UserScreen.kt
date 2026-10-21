@@ -1,6 +1,5 @@
 package io.github.arkmind.seedy.mobile.admin.people
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -33,7 +32,6 @@ import io.github.arkmind.seedy.core.admin.people.withValue
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.settings.Choice
-import io.github.arkmind.seedy.mobile.admin.ActionSheet
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
@@ -52,6 +50,14 @@ import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import kotlinx.serialization.json.JsonPrimitive
+import io.github.arkmind.seedy.mobile.admin.MenuItem
+import io.github.arkmind.seedy.mobile.admin.MenuSheet
+import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.admin.TabPills
+import io.github.arkmind.seedy.mobile.settings.SettingsPage
+import io.github.arkmind.seedy.mobile.settings.Section
+import io.github.arkmind.seedy.mobile.settings.SwitchRow
+import io.github.arkmind.seedy.mobile.settings.PickRow
 
 /** Board "Android · Server · Edit user": the header, the tabs and the account tab; the other tabs in UserTabs.kt. */
 @Composable
@@ -60,11 +66,12 @@ fun UserScreen(state: UserEditState, actions: UserEditActions, onBack: () -> Uni
     var confirm by remember { mutableStateOf<String?>(null) }
     var photoMenu by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
-    var leaving by remember { mutableStateOf(false) }
     // Leaving with unsaved changes asks first.
-    BackHandler(enabled = state.changes > 0) { leaving = true }
-    val back = { if (state.changes > 0) leaving = true else onBack() }
-    PeoplePage(
+    val back = LeaveGuard(
+        state.changes > 0,
+        t("Your changes to {name}’s account haven’t been saved yet. If you leave now, they’re lost.", "name" to state.savedName),
+    ) { actions.discard(); onBack() }
+    SettingsPage(
         state.name.ifEmpty { if (state.error != null) t("User") else "…" },
         lede = if (state.loaded) state.lede else state.error?.let { t("Couldn’t load this user. {error}", "error" to it) } ?: "…",
         onBack = back,
@@ -75,12 +82,7 @@ fun UserScreen(state: UserEditState, actions: UserEditActions, onBack: () -> Uni
                 SaveBar(tn(state.changes, "{n} unsaved change", "{n} unsaved changes"), actions::discard, actions::save, saving = state.saving)
             }
             if (photoMenu) {
-                ActionSheet(
-                    t("Change photo"),
-                    listOf(t("Upload a new photo") to onPickPhoto, t("Remove photo") to actions::removePhoto),
-                    { photoMenu = false },
-                    danger = setOf(1),
-                )
+                MenuSheet(t("Change photo"), listOf(MenuItem(t("Upload a new photo"), run = onPickPhoto), MenuItem(t("Remove photo"), danger = true, run = actions::removePhoto)), { photoMenu = false })
             }
             if (renaming) {
                 TextSheet(t("Rename {name}", "name" to state.name), null, t("Rename"), actions::rename, { renaming = false }, initial = state.name, placeholder = state.savedName)
@@ -102,20 +104,13 @@ fun UserScreen(state: UserEditState, actions: UserEditActions, onBack: () -> Uni
                     t("Remove password"), actions::removePassword, { confirm = null }, danger = true,
                 )
             }
-            if (leaving) {
-                ConfirmSheet(
-                    t("Leave without saving?"),
-                    t("Your changes to {name}’s account haven’t been saved yet. If you leave now, they’re lost.", "name" to state.savedName),
-                    t("Leave without saving"), { actions.discard(); onBack() }, { leaving = false }, danger = true,
-                )
-            }
             // Over the save bar when it shows.
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter).padding(bottom = if (state.changes > 0) 72.dp else 0.dp))
         },
     ) {
         if (!state.loaded) {
             if (state.error != null) PillRow { PillButton(t("Try again"), actions::reload) }
-            return@PeoplePage
+            return@SettingsPage
         }
         Identity(state)
         Actions(state, onPhoto = { if (state.hasImage) photoMenu = true else onPickPhoto() }, onConfirm = { confirm = it })
@@ -165,14 +160,14 @@ internal fun helpFor(state: UserEditState, key: String, help: String, was: () ->
 internal fun CardRows.switch(state: UserEditState, actions: UserEditActions, key: String, name: String, help: String, default: Boolean = false, enabled: Boolean = true) {
     row {
         val on = state.policy.flag(key, default)
-        PeopleSwitchRow(name, helpFor(state, key, help) { if (state.saved.flag(key, default)) t("on") else t("off") }, on, enabled = enabled) { actions.setFlag(key, it) }
+        SwitchRow(name, helpFor(state, key, help) { if (state.saved.flag(key, default)) t("on") else t("off") }, on, enabled = enabled) { actions.setFlag(key, it) }
     }
 }
 
 internal fun <T> CardRows.pick(state: UserEditState, sheet: SheetState, key: String, name: String, help: String, options: List<Choice<T>>, value: T, was: T, onPick: (T) -> Unit) {
     row {
         val list = withValue(withValue(options, value), was)
-        PeoplePickRow(name, helpFor(state, key, help) { labelOf(list, was) }, labelOf(list, value)) { sheet.open(name, list, value, onPick) }
+        PickRow(name, helpFor(state, key, help) { labelOf(list, was) }, labelOf(list, value)) { sheet.open(name, list, value, onPick) }
     }
 }
 
@@ -181,7 +176,7 @@ private fun AccountTab(state: UserEditState, actions: UserEditActions, sheet: Sh
     val p = state.policy
     val s = state.saved
     val name = state.name
-    PeopleSection(t("Account")) {
+    Section(t("Account")) {
         switch(state, actions, "IsAdministrator", t("Administrator"), t("Full access to the server pages and every library"), enabled = !state.isMe)
         switch(state, actions, "EnableRemoteAccess", t("Allow remote access"), t("Sign in from outside the home network"), default = true)
         switch(state, actions, "IsHidden", t("Hide from the sign-in screen"), t("{name} must type the name to sign in", "name" to name))
@@ -194,7 +189,7 @@ private fun AccountTab(state: UserEditState, actions: UserEditActions, sheet: Sh
             actions.set("MaxActiveSessions", JsonPrimitive(it))
         }
     }
-    PeopleSection(t("Playback")) {
+    Section(t("Playback")) {
         switch(state, actions, "EnableMediaPlayback", t("Allow playback"), t("Turn off to allow browsing only"), default = true)
         switch(state, actions, "EnableVideoPlaybackTranscoding", t("Allow video transcoding"), t("Needed for devices that can’t play the original"), default = true)
         switch(state, actions, "EnableAudioPlaybackTranscoding", t("Allow audio transcoding"), t("Converts audio a device can’t play"), default = true)
@@ -207,7 +202,7 @@ private fun AccountTab(state: UserEditState, actions: UserEditActions, sheet: Sh
             actions.set("SyncPlayAccess", JsonPrimitive(it))
         }
     }
-    PeopleSection(t("Content and control")) {
+    Section(t("Content and control")) {
         switch(state, actions, "EnableContentDownloading", t("Download media"), t("Save files for offline viewing"), default = true)
         switch(state, actions, "EnableContentDeletion", t("Delete media"), t("Remove files from the server"))
         switch(state, actions, "EnableCollectionManagement", t("Manage collections"), t("Create and edit collections"))

@@ -25,10 +25,8 @@ import io.github.arkmind.seedy.core.admin.system.PluginsView
 import io.github.arkmind.seedy.core.admin.system.RepoRow
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
-import io.github.arkmind.seedy.mobile.admin.AdminIcons
 import io.github.arkmind.seedy.mobile.admin.Card
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
-import io.github.arkmind.seedy.mobile.admin.FootNote
 import io.github.arkmind.seedy.mobile.admin.NoticeCard
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
@@ -45,6 +43,26 @@ import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import io.github.arkmind.seedy.mobile.admin.AdminIcons
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.EmptyCard
+import io.github.arkmind.seedy.mobile.admin.SkeletonCard
+import io.github.arkmind.seedy.mobile.admin.MenuItem
+import io.github.arkmind.seedy.mobile.admin.MenuSheet
+import io.github.arkmind.seedy.mobile.admin.RoundButton
+import io.github.arkmind.seedy.mobile.admin.StatusLine
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
+import io.github.arkmind.seedy.mobile.settings.FootNote
+import io.github.arkmind.seedy.mobile.settings.SectionTitle
+import io.github.arkmind.seedy.mobile.settings.Segmented
+import io.github.arkmind.seedy.mobile.settings.Faint
+import io.github.arkmind.seedy.core.settings.Choice
+import io.github.arkmind.seedy.core.admin.system.Dot
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 
 /**
  * Plugins, built from the phone boards' kit with the web board "Server · Plugins": what's installed (update, enable,
@@ -59,7 +77,7 @@ fun PluginsScreen(state: PluginsState, actions: PluginsActions, onBack: () -> Un
     var restarting by remember { mutableStateOf(false) }
     SettingsPage(
         t("Plugins"),
-        lede = null,
+        lede = state.lede,
         onBack = onBack,
         overlay = {
             menuFor?.let { p ->
@@ -101,21 +119,24 @@ fun PluginsScreen(state: PluginsState, actions: PluginsActions, onBack: () -> Un
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter))
         },
     ) {
-        Lede(state.lede)
         when {
             state.view == PluginsView.Installed && state.updates > 0 -> PillRow {
                 PillButton(if (state.updatingAll) t("Updating…") else t("Update all"), actions::updateAll, style = PillStyle.Light, enabled = !state.updatingAll)
             }
             state.view == PluginsView.Repositories && state.repos != null -> PillRow {
-                PillButton(t("Add repository"), { adding = true }, style = PillStyle.Light, leading = { SIcon(AdminIcons.Plus, size = 15.dp, color = SeedyColors.InkInverse) })
+                PillButton(t("Add repository"), { adding = true }, style = PillStyle.Light, leading = { SIcon(WebIcons.Plus, size = 15.dp, color = SeedyColors.InkInverse) })
             }
         }
-        TabBar(
-            listOf(
-                TabItem(t("Installed"), state.rows?.size?.toString(), state.view == PluginsView.Installed) { actions.setView(PluginsView.Installed) },
-                TabItem(t("Catalog"), null, state.view == PluginsView.Catalog) { actions.setView(PluginsView.Catalog) },
-                TabItem(t("Repositories"), state.repos?.size?.toString(), state.view == PluginsView.Repositories) { actions.setView(PluginsView.Repositories) },
-            ),
+        Segmented(
+            listOf(Choice(PluginsView.Installed, t("Installed")), Choice(PluginsView.Catalog, t("Catalog")), Choice(PluginsView.Repositories, t("Repositories"))),
+            state.view, actions::setView, Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp), size = 13,
+            count = {
+                when (it) {
+                    PluginsView.Installed -> state.rows?.size?.toString()
+                    PluginsView.Catalog -> null
+                    PluginsView.Repositories -> state.repos?.size?.toString()
+                }
+            },
         )
         if (state.restart > 0) {
             NoticeCard(
@@ -184,7 +205,7 @@ private fun Catalog(state: PluginsState, actions: PluginsActions) {
     when {
         groups == null && state.catalogError != null -> Box(Modifier.padding(top = 14.dp)) { ErrorCard(state.catalogError!!, actions::retry) }
         groups == null -> {
-            GroupTitle(" ")
+            SectionTitle(" ")
             SkeletonCard(5, tile = true)
         }
         groups.isEmpty() -> Box(Modifier.padding(top = 14.dp)) {
@@ -195,7 +216,7 @@ private fun Catalog(state: PluginsState, actions: PluginsActions) {
             )
         }
         else -> for (g in groups) {
-            GroupTitle(g.label)
+            SectionTitle(g.label)
             Card(Modifier.padding(horizontal = 16.dp)) {
                 g.rows.forEachIndexed { i, p ->
                     if (i > 0) RowLine()
@@ -287,9 +308,21 @@ private fun AddRepositorySheet(saving: Boolean, actions: PluginsActions, onClose
             SeedyField(link, { link = it; error = "" }, placeholder = "https://example.com/manifest.json", keyboard = androidx.compose.ui.text.input.KeyboardType.Uri, onDone = ::submit)
         }
         if (error.isNotEmpty()) SText(error, size = 13.sp, color = SeedyColors.Danger)
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-            PillButton(t("Cancel"), onClose)
-            PillButton(if (busy || saving) t("Adding…") else t("Add repository"), ::submit, style = PillStyle.Light, enabled = !busy && !saving)
-        }
+        SheetButtons(if (busy || saving) t("Adding…") else t("Add repository"), ::submit, onClose, Modifier.padding(top = 4.dp), enabled = !busy && !saving)
     }
+}
+
+/** A plugin's or repository's 44 px tile with its letters; Seedy's is light. */
+@Composable
+private fun LetterTile(letters: String, light: Boolean = false) {
+    Box(Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(if (light) SeedyColors.Inverse else SeedyColors.Surface), contentAlignment = Alignment.Center) {
+        SText(letters, size = 15.sp, weight = 900, color = if (light) SeedyColors.InkInverse else SeedyColors.White, maxLines = 1)
+    }
+}
+
+private fun dotColor(dot: Dot): Color = when (dot) {
+    Dot.Ok -> SeedyColors.Ok
+    Dot.Pending -> SeedyColors.Pending
+    Dot.Muted -> Faint
+    Dot.Danger -> SeedyColors.Danger
 }

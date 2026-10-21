@@ -64,17 +64,17 @@ fun HomeScreenPage(state: SettingsState, actions: SettingsActions, nav: Settings
     SettingsPage(t("Home screen"), t("Which rows you see and in what order. Follows your profile to every device."), nav.back, overlay = { SheetHost(sheet) }) {
         if (state.seedy) {
             SectionTitle(t("Rows"))
-            Column(Modifier.padding(horizontal = 16.dp)) {
+            CssColumn(Modifier.padding(horizontal = 16.dp)) {
                 val mine = state.prefs.rowOrder == "mine"
                 Segmented(listOf(Choice(false, t("Order automatically")), Choice(true, t("My order"))), mine, actions::setRowOrder, height = 38.dp, size = 13)
                 SText(
                     t("Press and hold a row, then drag it. Rows you turn off stay hidden."),
-                    Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 10.dp).cssBox(12, 1.45f, up = true), size = 12.sp, lineHeight = 1.45f, color = SeedyColors.Text3,
+                    Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 10.dp).cssText(12, 1.45f), size = 12.sp, lineHeight = 1.45f, color = SeedyColors.Text3,
                 )
                 RowList(state, actions, dragging)
                 SText(
                     t("Continue watching always comes right after the featured banner when it has something."),
-                    Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp).cssBox(12, 1.45f, up = true), size = 12.sp, lineHeight = 1.45f, color = SeedyColors.Text3,
+                    Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp).cssText(12, 1.45f), size = 12.sp, lineHeight = 1.45f, color = SeedyColors.Text3,
                 )
             }
         }
@@ -206,7 +206,7 @@ private fun RowItem(r: RowView, lifted: Boolean, modifier: Modifier, grip: Modif
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(grip.size(38.dp, 44.dp), contentAlignment = Alignment.Center) {
-            SIcon(SettingsIcons.Grip, size = 20.dp, color = if (lifted) SeedyColors.White else Quiet)
+            SIcon(SettingsIcons.Grip, size = 20.dp, color = if (lifted) SeedyColors.White else Faint)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -37,8 +37,6 @@ import io.github.arkmind.seedy.core.admin.seedy.tunerName
 import io.github.arkmind.seedy.core.admin.seedy.tunerTypeLabel
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
-import io.github.arkmind.seedy.mobile.admin.ActionSheet
-import io.github.arkmind.seedy.mobile.admin.AdminIcons
 import io.github.arkmind.seedy.mobile.admin.Card
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
@@ -62,6 +60,26 @@ import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.LoadingCards
+import io.github.arkmind.seedy.mobile.admin.SaveBar
+import io.github.arkmind.seedy.mobile.admin.TextSheet
+import io.github.arkmind.seedy.mobile.admin.MenuItem
+import io.github.arkmind.seedy.mobile.admin.MenuSheet
+import io.github.arkmind.seedy.mobile.admin.SheetFoot
+import io.github.arkmind.seedy.mobile.admin.FieldBlock
+import io.github.arkmind.seedy.mobile.admin.Dot
+import io.github.arkmind.seedy.mobile.admin.NameTag
+import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.settings.SheetHead
+import io.github.arkmind.seedy.mobile.settings.RowLabel
+import io.github.arkmind.seedy.mobile.settings.settingsRow
+import io.github.arkmind.seedy.ui.icons.IconDef
+import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
 
 /** A page opened from Live TV: a tuner's editor, a guide source's, or its channel mapping. */
 internal sealed interface LiveSub {
@@ -116,10 +134,10 @@ private fun LiveTvMain(state: LiveTvAdminState, actions: LiveTvAdminActions, onB
         overlay = {
             SheetHost(sheet)
             tunerMenu?.let { r ->
-                ActionSheet(r.name, listOf(
-                    t("Edit") to { state.tuners.firstOrNull { it.id == r.id }?.let { open(LiveSub.Tuner(it, false)) }; Unit },
-                    t("Remove tuner") to { removeTuner = r },
-                ), { tunerMenu = null }, danger = setOf(1))
+                MenuSheet(r.name, listOf(
+                    MenuItem(t("Edit")) { state.tuners.firstOrNull { it.id == r.id }?.let { open(LiveSub.Tuner(it, false)) } },
+                    MenuItem(t("Remove tuner"), danger = true) { removeTuner = r },
+                ), { tunerMenu = null })
             }
             removeTuner?.let { r ->
                 ConfirmSheet(
@@ -129,11 +147,11 @@ private fun LiveTvMain(state: LiveTvAdminState, actions: LiveTvAdminActions, onB
             }
             sourceMenu?.let { r ->
                 val p = state.providers.firstOrNull { it.id == r.id }
-                ActionSheet(r.name, listOf(
-                    t("Map channels") to { p?.let { open(LiveSub.Mapping(it)) }; Unit },
-                    t("Edit") to { p?.let { open(LiveSub.Source(it)) }; Unit },
-                    t("Remove guide source") to { removeSource = r },
-                ), { sourceMenu = null }, danger = setOf(2))
+                MenuSheet(r.name, listOf(
+                    MenuItem(t("Map channels")) { p?.let { open(LiveSub.Mapping(it)) } },
+                    MenuItem(t("Edit")) { p?.let { open(LiveSub.Source(it)) } },
+                    MenuItem(t("Remove guide source"), danger = true) { removeSource = r },
+                ), { sourceMenu = null })
             }
             removeSource?.let { r ->
                 ConfirmSheet(
@@ -146,13 +164,13 @@ private fun LiveTvMain(state: LiveTvAdminState, actions: LiveTvAdminActions, onB
             browse?.let { which ->
                 val r = state.recValue
                 if (r != null) {
-                    FolderSheet(
+                    ServerFolderSheet(
                         t("Choose a folder"), recPath(r, which), false, actions::folders,
                         { v -> actions.editRec { setRecPath(it, which, v) } }, { browse = null },
                     )
                 }
             }
-            if (changes > 0) UnsavedBar(tn(changes, "{n} unsaved change", "{n} unsaved changes"), t("Save"), actions::discardRec, actions::saveRec, saving = state.saving)
+            if (changes > 0) SaveBar(tn(changes, "{n} unsaved change", "{n} unsaved changes"), actions::discardRec, actions::saveRec, saving = state.saving)
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter).padding(bottom = if (changes > 0) 90.dp else 0.dp))
         },
     ) {
@@ -168,7 +186,7 @@ private fun LiveTvMain(state: LiveTvAdminState, actions: LiveTvAdminActions, onB
             )
         }
         when {
-            !state.loaded && state.loadError != null -> LoadFailed(t("Couldn’t load the Live TV settings"), state.loadError.orEmpty(), actions::retry)
+            !state.loaded && state.loadError != null -> ErrorCard(t("Couldn’t load the Live TV settings"), actions::retry, Modifier.padding(top = 16.dp), detail = state.loadError.orEmpty())
             !state.loaded -> LoadingCards(3)
             else -> {
                 SectionTitle(t("Tuners"))
@@ -182,7 +200,7 @@ private fun LiveTvMain(state: LiveTvAdminState, actions: LiveTvAdminActions, onB
                     }
                 }
                 PillRow(top = 10.dp) {
-                    PillButton(t("Add tuner"), { open(LiveSub.Tuner(newTuner("m3u"), true)) }, style = PillStyle.Light, leading = { SIcon(AdminIcons.Plus, size = 15.dp, color = SeedyColors.InkInverse) })
+                    PillButton(t("Add tuner"), { open(LiveSub.Tuner(newTuner("m3u"), true)) }, style = PillStyle.Light, leading = { SIcon(WebIcons.Plus, size = 15.dp, color = SeedyColors.InkInverse) })
                     PillButton(t("Find tuners on my network"), { finding = true })
                 }
 
@@ -197,7 +215,7 @@ private fun LiveTvMain(state: LiveTvAdminState, actions: LiveTvAdminActions, onB
                     }
                 }
                 PillRow(top = 10.dp) {
-                    PillButton(t("Add guide source"), { open(LiveSub.Source(null)) }, leading = { SIcon(AdminIcons.Plus, size = 15.dp, color = SeedyColors.White) })
+                    PillButton(t("Add guide source"), { open(LiveSub.Source(null)) }, leading = { SIcon(WebIcons.Plus, size = 15.dp, color = SeedyColors.White) })
                 }
                 state.recValue?.let { r -> Recordings(r, actions, sheet, open = { recSheet = it }) }
             }
@@ -254,9 +272,10 @@ private fun RecSheets(which: RecSheet?, r: RecSettings, actions: LiveTvAdminActi
                 RecSheet.Series -> t("Series recordings") to t("Same as recordings folder")
                 else -> t("Recordings folder") to t("Server data folder")
             }
-            FieldSheet(
+            TextSheet(
                 title, if (which == RecSheet.Folder) t("Empty uses the server data folder") else t("Optional, overrides the folder above"),
-                recPath(r, which), { v -> actions.editRec { setRecPath(it, which, v) } }, onDismiss, placeholder = placeholder, keyboard = KeyboardType.Uri,
+                t("Save"), { v -> actions.editRec { setRecPath(it, which, v) } }, onDismiss,
+                initial = recPath(r, which), placeholder = placeholder, keyboard = KeyboardType.Uri, required = false,
                 extra = { PillButton(t("Browse"), { browse(which) }, leading = { SIcon(WebIcons.Folder, size = 15.dp, color = SeedyColors.White) }) },
             )
         }
@@ -275,7 +294,7 @@ private fun RecSheets(which: RecSheet?, r: RecSettings, actions: LiveTvAdminActi
                     FieldBlock(t("Minutes before"), before, { before = it.filter(Char::isDigit).take(3) }, Modifier.weight(1f), keyboard = KeyboardType.Number)
                     FieldBlock(t("Minutes after"), after, { after = it.filter(Char::isDigit).take(3) }, Modifier.weight(1f), keyboard = KeyboardType.Number, onDone = save)
                 }
-                SheetActions {
+                SheetFoot {
                     PillButton(t("Cancel"), onDismiss)
                     PillButton(t("Save"), save, style = PillStyle.Light)
                 }
@@ -294,7 +313,7 @@ private fun RecSheets(which: RecSheet?, r: RecSettings, actions: LiveTvAdminActi
                     FieldBlock(t("Program"), program, { program = it }, placeholder = t("Program, e.g. /usr/bin/comskip"), keyboard = KeyboardType.Uri)
                     FieldBlock(t("Arguments"), args, { args = it }, onDone = save)
                 }
-                SheetActions {
+                SheetFoot {
                     PillButton(t("Cancel"), onDismiss)
                     PillButton(t("Save"), save, style = PillStyle.Light)
                 }
@@ -305,7 +324,7 @@ private fun RecSheets(which: RecSheet?, r: RecSettings, actions: LiveTvAdminActi
 
 @Composable
 private fun EmptyLine(icon: io.github.arkmind.seedy.ui.icons.IconDef, title: String, text: String) {
-    Row(Modifier.seedyRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(Modifier.settingsRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         IconTile(icon)
         RowLabel(title, text, Modifier.weight(1f))
     }
@@ -313,12 +332,12 @@ private fun EmptyLine(icon: io.github.arkmind.seedy.ui.icons.IconDef, title: Str
 
 @Composable
 private fun TunerLine(r: TunerRow, onClick: () -> Unit) {
-    Row(Modifier.tap(onClick = onClick).seedyRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(Modifier.tap(onClick = onClick).settingsRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         IconTile(if (r.m3u) AppIcons.Playlist else WebIcons.Tv)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SText(r.name, Modifier.weight(1f, fill = false), size = 14.sp, weight = 700, color = SeedyColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                r.online?.let { on -> SmallTag(if (on) t("Online") else t("Not found"), dot = if (on) SeedyColors.Ok else SeedyColors.Danger) }
+                r.online?.let { on -> NameTag(if (on) t("Online") else t("Not found"), dot = if (on) SeedyColors.Ok else SeedyColors.Danger, tint = 0.08f) }
             }
             SText(r.sub, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
         }
@@ -328,11 +347,11 @@ private fun TunerLine(r: TunerRow, onClick: () -> Unit) {
 
 @Composable
 private fun SourceLine(r: SourceRow, onClick: () -> Unit) {
-    Row(Modifier.tap(onClick = onClick).seedyRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(Modifier.tap(onClick = onClick).settingsRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SText(r.name, Modifier.weight(1f, fill = false), size = 14.sp, weight = 700, color = SeedyColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                SmallTag(r.kind)
+                NameTag(r.kind, tint = 0.08f)
             }
             if (r.detail.isNotEmpty()) SText(r.detail, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
             Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -377,7 +396,7 @@ private fun FindTuners(configured: List<TunerHost>, actions: LiveTvAdminActions,
                 }
             }
         }
-        SheetActions {
+        SheetFoot {
             PillButton(t("Search again"), { run++ }, enabled = list != null)
             PillButton(t("Done"), onDismiss, style = PillStyle.Light)
         }
@@ -391,3 +410,11 @@ internal fun tunerSub(draft: TunerHost, isNew: Boolean, channels: Int?): String 
 
 /** The tuner's display name for a sub-page title. */
 internal fun tunerTitle(draft: TunerHost, isNew: Boolean): String = if (isNew) t("New tuner") else tunerName(draft)
+
+/** A 40 px icon tile (tuners, guide sources). */
+@Composable
+private fun IconTile(icon: IconDef, size: Dp = 40.dp) {
+    Box(Modifier.size(size).clip(RoundedCornerShape(11.dp)).background(SeedyColors.Surface), contentAlignment = Alignment.Center) {
+        SIcon(icon, size = 20.dp, color = SeedyColors.Text)
+    }
+}

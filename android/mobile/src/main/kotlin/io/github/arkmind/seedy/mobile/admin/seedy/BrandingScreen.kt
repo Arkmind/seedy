@@ -53,6 +53,11 @@ import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import io.github.arkmind.seedy.mobile.admin.ErrorCard
+import io.github.arkmind.seedy.mobile.admin.LoadingCards
+import io.github.arkmind.seedy.mobile.admin.FieldBlock
+import io.github.arkmind.seedy.mobile.admin.BoardField
+import io.github.arkmind.seedy.mobile.settings.StackRow
 
 private val PauseSeconds = listOf(5, 10, 30, 0)
 
@@ -91,7 +96,7 @@ fun BrandingScreen(state: BrandingState, actions: BrandingActions, onBack: () ->
     ) {
         val c = state.config
         when {
-            c == null && state.loadError != null -> LoadFailed(t("Couldn’t load Seedy’s settings"), state.loadError.orEmpty(), actions::retry)
+            c == null && state.loadError != null -> ErrorCard(t("Couldn’t load Seedy’s settings"), actions::retry, Modifier.padding(top = 16.dp), detail = state.loadError.orEmpty())
             c == null -> LoadingCards(3)
             else -> {
                 Section(t("Where Seedy opens"), t("Jellyfin's own web app always stays reachable for admins.")) {
@@ -126,8 +131,7 @@ private fun BrandingSection(c: AdminConfig, state: BrandingState, actions: Brand
             )
         }
         row {
-            Column(Modifier.seedyRow(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                RowLabel(t("Logo"), t("SVG or PNG, square or wide"))
+            StackRow(t("Logo"), t("SVG or PNG, square or wide")) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     LogoBox(b.name, state.logoUrl, state.logoBusy)
                     SText(
@@ -143,7 +147,7 @@ private fun BrandingSection(c: AdminConfig, state: BrandingState, actions: Brand
                 }
             }
         }
-        row { AccentRow(b.accent, actions) }
+        row { AccentColourRow(b.accent, actions) }
         row {
             SegRow(
                 t("Sign-in background"), t("Behind the profile picker"),
@@ -168,10 +172,9 @@ private fun LogoBox(name: String, url: String?, busy: Boolean) {
 }
 
 @Composable
-private fun AccentRow(accent: String, actions: BrandingActions) {
+private fun AccentColourRow(accent: String, actions: BrandingActions) {
     var hex by remember(accent) { mutableStateOf(accent) }
-    Column(Modifier.seedyRow(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        RowLabel(t("Accent colour"), t("Counts, focus ring, selection"))
+    StackRow(t("Accent colour"), t("Counts, focus ring, selection")) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(Modifier.padding(start = 2.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 for ((label, value) in AccentSwatches) {
@@ -187,7 +190,7 @@ private fun AccentRow(accent: String, actions: BrandingActions) {
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 SText("Hex", size = 12.sp, color = SeedyColors.Text3)
-                BoardInput(
+                BoardField(
                     hex,
                     { v ->
                         var x = v.trim().take(7)

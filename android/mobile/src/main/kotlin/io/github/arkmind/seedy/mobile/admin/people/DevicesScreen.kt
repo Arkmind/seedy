@@ -31,11 +31,9 @@ import io.github.arkmind.seedy.core.admin.people.filtered
 import io.github.arkmind.seedy.core.admin.people.signOutOthersText
 import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
-import io.github.arkmind.seedy.mobile.admin.ActionSheet
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.AdminIcons
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
-import io.github.arkmind.seedy.mobile.admin.FootNote
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.PillStyle
@@ -50,6 +48,16 @@ import io.github.arkmind.seedy.mobile.settings.FormSheet
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import io.github.arkmind.seedy.mobile.admin.MenuItem
+import io.github.arkmind.seedy.mobile.admin.MenuSheet
+import io.github.arkmind.seedy.mobile.admin.CardNote
+import io.github.arkmind.seedy.mobile.admin.StatusLine
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
+import io.github.arkmind.seedy.mobile.admin.TabPills
+import io.github.arkmind.seedy.mobile.settings.SettingsPage
+import io.github.arkmind.seedy.mobile.settings.FootNote
+import io.github.arkmind.seedy.ui.icons.IconDef
+import io.github.arkmind.seedy.core.admin.people.DeviceKind
 
 /* Busy servers collect hundreds of devices; show them a page at a time. */
 private const val Page = 40
@@ -64,13 +72,13 @@ fun DevicesScreen(state: DevicesState, actions: DevicesActions, onBack: () -> Un
     var renaming by remember { mutableStateOf<DeviceRow?>(null) }
     var removing by remember { mutableStateOf<DeviceRow?>(null) }
     var signingOut by remember { mutableStateOf(false) }
-    PeoplePage(
+    SettingsPage(
         t("Devices"),
         t("Every app that has signed in. Removing one signs it out; it comes back the next time someone signs in with it."),
         onBack,
         overlay = {
             menu?.let { d ->
-                ActionSheet(d.name, listOf(t("Rename") to { renaming = d }, t("Remove") to { if (d.mine) actions.remove(d.id) else removing = d }), { menu = null }, danger = setOf(1))
+                MenuSheet(d.name, listOf(MenuItem(t("Rename")) { renaming = d }, MenuItem(t("Remove"), danger = true) { if (d.mine) actions.remove(d.id) else removing = d }), { menu = null })
             }
             renaming?.let { d -> RenameSheet(d, { actions.rename(d.id, it) }) { renaming = null } }
             removing?.let { d ->
@@ -102,15 +110,9 @@ fun DevicesScreen(state: DevicesState, actions: DevicesActions, onBack: () -> Un
         val rows = state.filtered(who, query)
         Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
             when {
-                state.devices == null && state.error != null -> Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SText(t("Couldn’t load the devices") + ". " + state.error, size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2)
-                    PillButton(t("Try again"), actions::reload)
-                }
+                state.devices == null && state.error != null -> CardNote(t("Couldn’t load the devices") + ". " + state.error, action = t("Try again"), onAction = actions::reload)
                 state.devices == null -> SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3)
-                rows.isEmpty() -> SText(
-                    if (query.isNotBlank() || who != null) t("No devices match. Try another name or person.") else t("No devices have signed in yet."),
-                    Modifier.padding(16.dp), size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2,
-                )
+                rows.isEmpty() -> CardNote(if (query.isNotBlank() || who != null) t("No devices match. Try another name or person.") else t("No devices have signed in yet."))
                 else -> rows.take(shown).forEachIndexed { i, d ->
                     if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
                     DeviceLine(d) { menu = d }
@@ -137,7 +139,7 @@ private fun DeviceLine(d: DeviceRow, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Surface), contentAlignment = Alignment.Center) {
-            SIcon(PeopleIcons.of(d.kind), size = 20.dp, color = SeedyColors.TextHero)
+            SIcon(deviceIcon(d.kind), size = 20.dp, color = SeedyColors.TextHero)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp), itemVerticalAlignment = Alignment.CenterVertically) {
@@ -145,10 +147,7 @@ private fun DeviceLine(d: DeviceRow, onClick: () -> Unit) {
                 if (d.mine) DeviceTag(t("This device"))
             }
             if (d.playing != null) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Box(Modifier.size(6.dp).background(SeedyColors.Ok, CircleShape))
-                    SText(d.playing.orEmpty(), size = 12.sp, weight = 600, color = SeedyColors.Ok, maxLines = 1)
-                }
+                StatusLine(d.playing.orEmpty(), SeedyColors.Ok, color = SeedyColors.Ok, weight = 600)
             } else {
                 SText(d.last, size = 12.sp, weight = 600, color = SeedyColors.Text2, maxLines = 1)
             }
@@ -174,9 +173,16 @@ private fun RenameSheet(d: DeviceRow, onSave: (String) -> Unit, onClose: () -> U
                 size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3,
             )
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-            PillButton(t("Cancel"), onClose)
-            PillButton(t("Rename"), { onSave(name); onClose() }, style = PillStyle.Light)
-        }
+        SheetButtons(t("Rename"), { onSave(name); onClose() }, onClose)
     }
+}
+
+private val TvIcon = IconDef(1.8f, "M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z", "M8 21h8")
+private val PhoneIcon = IconDef(1.8f, "M9 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z", "M11 18h2")
+private val ComputerIcon = IconDef(1.8f, "M6 5h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z", "M2 19h20")
+
+private fun deviceIcon(kind: DeviceKind): IconDef = when (kind) {
+    DeviceKind.Tv -> TvIcon
+    DeviceKind.Phone -> PhoneIcon
+    DeviceKind.Computer -> ComputerIcon
 }
