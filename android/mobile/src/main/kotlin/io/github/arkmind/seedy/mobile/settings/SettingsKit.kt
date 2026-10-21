@@ -56,8 +56,6 @@ import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
-import io.github.arkmind.seedy.ui.theme.LocalLinearText
-import androidx.compose.runtime.CompositionLocalProvider
 import io.github.arkmind.seedy.ui.theme.NotoLineRatio
 import androidx.compose.ui.layout.layout
 import io.github.arkmind.seedy.ui.theme.SText
@@ -110,14 +108,12 @@ fun SettingsPage(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
-        CompositionLocalProvider(LocalLinearText provides true) {
-            Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
-                PageHeader(title, onBack)
-                if (lede != null) SText(lede, Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp).cssBox(13, 1.5f), size = 13.sp, lineHeight = 1.5f, color = SeedyColors.Text2)
-                content()
-            }
-            overlay()
+        Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
+            PageHeader(title, onBack)
+            if (lede != null) SText(lede, Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp).cssBox(13, 1.5f), size = 13.sp, lineHeight = 1.5f, color = SeedyColors.Text2)
+            content()
         }
+        overlay()
     }
 }
 

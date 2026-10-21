@@ -45,8 +45,6 @@ import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.SettingsIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
-import io.github.arkmind.seedy.ui.theme.LocalLinearText
-import androidx.compose.runtime.CompositionLocalProvider
 import io.github.arkmind.seedy.ui.theme.LocalCore
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.SText
@@ -89,7 +87,6 @@ fun SettingsHomeScreen(state: SettingsState, appVersion: String, actions: Settin
     val sheet = rememberSheet()
     val accent = LocalAccent.current
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
-        CompositionLocalProvider(LocalLinearText provides true) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
             PageHeader(t("Settings"), nav.back)
             ProfileCard(state) { nav.open("profile") }
@@ -135,7 +132,6 @@ fun SettingsHomeScreen(state: SettingsState, appVersion: String, actions: Settin
         }
         SheetHost(sheet)
         if (sheet.form == "code") CodeSheet(state, actions, sheet::close)
-        }
     }
 }
 

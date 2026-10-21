@@ -38,18 +38,15 @@ val NotoSans = FontFamily(
 /** The server's accent colour (Seedy admin · Branding); the Foundations pink when the server has no Seedy. */
 val LocalAccent = staticCompositionLocalOf { SeedyColors.Accent }
 
-/**
- * Text laid out with exact (fractional) glyph advances, like the boards' browser, instead of advances rounded to whole
- * pixels: long lines then wrap where the boards wrap them. The settings screens turn it on.
- */
-val LocalLinearText = staticCompositionLocalOf { false }
-
 /** Base text: line height from the font itself, like CSS `line-height: normal` on the boards. */
 val BaseText = TextStyle(
     fontFamily = NotoSans,
     color = SeedyColors.Text,
     platformStyle = PlatformTextStyle(includeFontPadding = false),
     lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
+    // Exact (fractional) glyph advances, like the boards' browser, rather than whole pixels: lines wrap where the
+    // boards wrap them.
+    textMotion = TextMotion.Animated,
 )
 
 @Composable
@@ -105,7 +102,6 @@ fun SText(
             lineHeight = if (lineHeight != null && !boxed) lineHeight.em else TextUnit.Unspecified,
             textAlign = align ?: TextAlign.Unspecified,
             textDecoration = decoration,
-            textMotion = if (LocalLinearText.current) TextMotion.Animated else null,
         ),
         onTextLayout = if (tight && maxLines != 1) { r -> if (r.lineCount > 1) wraps = true } else null,
         maxLines = maxLines,

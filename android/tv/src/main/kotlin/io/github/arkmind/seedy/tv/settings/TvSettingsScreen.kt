@@ -83,7 +83,6 @@ import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.SettingsIcons
 import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
-import io.github.arkmind.seedy.ui.theme.LocalLinearText
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.parseHexColor
@@ -130,71 +129,69 @@ fun TvSettingsScreen(
 
     BackHandler { if (inPane) categories.getValue(section).requestFocus() else onLeave() }
 
-    CompositionLocalProvider(LocalLinearText provides true) {
-        Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
-            // Left: Settings, the profile, the sections, Switch profile and Sign out.
-            Column(Modifier.padding(start = 176.bp, top = 64.bp).width(480.bp).focusGroup(), verticalArrangement = Arrangement.spacedBy(8.bp)) {
-                SText(t("Settings"), Modifier.padding(bottom = 14.bp).cssBox(44f, io.github.arkmind.seedy.ui.theme.NotoLineRatio), size = 44.bsp, weight = 900, color = SeedyColors.White)
-                Row(
-                    Modifier.padding(bottom = 14.bp).fillMaxWidth().clip(RoundedCornerShape(20.bp)).background(CardBg).padding(horizontal = 18.bp, vertical = 16.bp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.bp),
-                ) {
-                    ProfileSquare(state.name, state.imageUrl, 0, size = 60.bp, radius = 30.bp, letterSize = 26.bsp)
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.bp)) {
-                        SText(state.name, size = 22.bsp, weight = 800, color = SeedyColors.White, maxLines = 1)
-                        SText(listOfNotNull(t("Admin").takeIf { state.isAdmin }, state.serverName).joinToString(" · "), size = 16.bsp, color = SeedyColors.Text3, maxLines = 1)
-                    }
-                }
-                for (s in TvSection.entries) {
-                    Category(s, s == section, categories.getValue(s), pane) { section = s }
-                }
-                Row(Modifier.padding(top = 14.bp), horizontalArrangement = Arrangement.spacedBy(10.bp)) {
-                    LeftButton(t("Switch profile"), SeedyColors.Text, actions::switchProfile)
-                    LeftButton(t("Sign out"), SeedyColors.Danger, actions::signOut)
+    Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
+        // Left: Settings, the profile, the sections, Switch profile and Sign out.
+        Column(Modifier.padding(start = 176.bp, top = 64.bp).width(480.bp).focusGroup(), verticalArrangement = Arrangement.spacedBy(8.bp)) {
+            SText(t("Settings"), Modifier.padding(bottom = 14.bp).cssBox(44f, io.github.arkmind.seedy.ui.theme.NotoLineRatio), size = 44.bsp, weight = 900, color = SeedyColors.White)
+            Row(
+                Modifier.padding(bottom = 14.bp).fillMaxWidth().clip(RoundedCornerShape(20.bp)).background(CardBg).padding(horizontal = 18.bp, vertical = 16.bp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.bp),
+            ) {
+                ProfileSquare(state.name, state.imageUrl, 0, size = 60.bp, radius = 30.bp, letterSize = 26.bsp)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.bp)) {
+                    SText(state.name, size = 22.bsp, weight = 800, color = SeedyColors.White, maxLines = 1)
+                    SText(listOfNotNull(t("Admin").takeIf { state.isAdmin }, state.serverName).joinToString(" · "), size = 16.bsp, color = SeedyColors.Text3, maxLines = 1)
                 }
             }
-
-            // Right: the section, scrolling under a fade.
-            CompositionLocalProvider(LocalBringIntoViewSpec provides scrollSpec) {
-                Column(
-                    Modifier.padding(start = 704.bp, end = 80.bp, top = 64.bp).fillMaxSize()
-                        .focusRequester(pane)
-                        .focusProperties { left = categories.getValue(section) }
-                        .focusRestorer()
-                        .onFocusChanged { inPane = it.hasFocus }
-                        .focusGroup()
-                        .verticalScroll(rememberScrollState())
-                        .padding(start = 16.bp, end = 16.bp, bottom = 160.bp),
-                ) {
-                    key(section) {
-                        SText(t(section.label), Modifier.padding(horizontal = 24.bp).cssBox(40f, io.github.arkmind.seedy.ui.theme.NotoLineRatio), size = 40.bsp, weight = 900, color = SeedyColors.White)
-                        SText(
-                            lede(section, state), Modifier.padding(start = 24.bp, end = 24.bp, top = 8.bp, bottom = 6.bp).widthIn(max = 948.bp).cssBox(19f, 1.45f),
-                            size = 19.bsp, lineHeight = 1.45f, color = SeedyColors.Text2,
-                        )
-                        val focusKey = focusRow
-                        val f: (String) -> FocusRequester? = { k -> if (k == focusKey) rowFocus else null }
-                        when (section) {
-                            TvSection.Profile -> ProfileSection(state, actions, f)
-                            TvSection.Home -> HomeSection(state, actions, f, moving) { hint = it }
-                            TvSection.Playback -> PlaybackSection(state, actions, f)
-                            TvSection.Subtitles -> SubtitlesSection(state, actions, f)
-                            TvSection.Display -> DisplaySection(state, actions, f)
-                            TvSection.Remote -> RemoteSection(state, actions, f)
-                            TvSection.About -> AboutSection(state, appVersion, f)
-                        }
-                    }
-                }
+            for (s in TvSection.entries) {
+                Category(s, s == section, categories.getValue(s), pane) { section = s }
             }
-            Box(
-                Modifier.align(Alignment.BottomStart).padding(start = 720.bp).fillMaxWidth().height(150.bp)
-                    .background(Brush.verticalGradient(0f to Color.Transparent, 0.65f to SeedyColors.Bg, 1f to SeedyColors.Bg)),
-            )
-            SText(
-                if (section == TvSection.Home && hint != null) hint!! else t("Left and right change the value · Back returns to the list"),
-                Modifier.align(Alignment.BottomEnd).padding(end = 96.bp, bottom = 44.bp), size = 17.bsp, color = SeedyColors.Text3,
-            )
+            Row(Modifier.padding(top = 14.bp), horizontalArrangement = Arrangement.spacedBy(10.bp)) {
+                LeftButton(t("Switch profile"), SeedyColors.Text, actions::switchProfile)
+                LeftButton(t("Sign out"), SeedyColors.Danger, actions::signOut)
+            }
         }
+
+        // Right: the section, scrolling under a fade.
+        CompositionLocalProvider(LocalBringIntoViewSpec provides scrollSpec) {
+            Column(
+                Modifier.padding(start = 704.bp, end = 80.bp, top = 64.bp).fillMaxSize()
+                    .focusRequester(pane)
+                    .focusProperties { left = categories.getValue(section) }
+                    .focusRestorer()
+                    .onFocusChanged { inPane = it.hasFocus }
+                    .focusGroup()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 16.bp, end = 16.bp, bottom = 160.bp),
+            ) {
+                key(section) {
+                    SText(t(section.label), Modifier.padding(horizontal = 24.bp).cssBox(40f, io.github.arkmind.seedy.ui.theme.NotoLineRatio), size = 40.bsp, weight = 900, color = SeedyColors.White)
+                    SText(
+                        lede(section, state), Modifier.padding(start = 24.bp, end = 24.bp, top = 8.bp, bottom = 6.bp).widthIn(max = 948.bp).cssBox(19f, 1.45f),
+                        size = 19.bsp, lineHeight = 1.45f, color = SeedyColors.Text2,
+                    )
+                    val focusKey = focusRow
+                    val f: (String) -> FocusRequester? = { k -> if (k == focusKey) rowFocus else null }
+                    when (section) {
+                        TvSection.Profile -> ProfileSection(state, actions, f)
+                        TvSection.Home -> HomeSection(state, actions, f, moving) { hint = it }
+                        TvSection.Playback -> PlaybackSection(state, actions, f)
+                        TvSection.Subtitles -> SubtitlesSection(state, actions, f)
+                        TvSection.Display -> DisplaySection(state, actions, f)
+                        TvSection.Remote -> RemoteSection(state, actions, f)
+                        TvSection.About -> AboutSection(state, appVersion, f)
+                    }
+                }
+            }
+        }
+        Box(
+            Modifier.align(Alignment.BottomStart).padding(start = 720.bp).fillMaxWidth().height(150.bp)
+                .background(Brush.verticalGradient(0f to Color.Transparent, 0.65f to SeedyColors.Bg, 1f to SeedyColors.Bg)),
+        )
+        SText(
+            if (section == TvSection.Home && hint != null) hint!! else t("Left and right change the value · Back returns to the list"),
+            Modifier.align(Alignment.BottomEnd).padding(end = 96.bp, bottom = 44.bp), size = 17.bsp, color = SeedyColors.Text3,
+        )
     }
     LaunchedEffect(Unit) { if (focusRow != null) rowFocus.focusSoon() else categories.getValue(start).focusSoon() }
 }
