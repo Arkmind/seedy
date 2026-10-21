@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,7 +36,7 @@ import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.RadioRow
-import io.github.arkmind.seedy.mobile.admin.RowLine
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.admin.SaveBar
 import io.github.arkmind.seedy.mobile.admin.SaveBarRoom
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
@@ -51,6 +49,7 @@ import io.github.arkmind.seedy.ui.theme.currentSession
 import io.github.arkmind.seedy.mobile.admin.Chip
 import io.github.arkmind.seedy.mobile.admin.Dot
 import io.github.arkmind.seedy.mobile.settings.SectionTitle
+import io.github.arkmind.seedy.mobile.settings.Card
 
 /** Board "Android · Server · Playback", and its Resume, Streaming and Seek previews pages. */
 @Composable
@@ -138,7 +137,7 @@ private fun Transcoding(state: PlaybackState, actions: PlaybackActions, rows: Se
     } ?: Box(Modifier.padding(top = 12.dp).height(36.dp))
 
     SectionTitle(t("Hardware acceleration"))
-    Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+    Card(Modifier.padding(horizontal = 16.dp)) {
         state.accels.forEachIndexed { i, a ->
             if (i > 0) RowLine()
             RadioRow(a.name, a.sub, a.on, { actions.setAccel(a.id) }, subColor = if (a.detected) SeedyColors.Ok else SeedyColors.Text3)

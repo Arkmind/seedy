@@ -6,7 +6,6 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,7 +36,6 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.PillStyle
-import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
@@ -51,6 +49,7 @@ import io.github.arkmind.seedy.mobile.admin.FieldBlock
 import io.github.arkmind.seedy.mobile.admin.FieldSection
 import io.github.arkmind.seedy.mobile.admin.SheetButtons
 import io.github.arkmind.seedy.mobile.settings.FormSheet
+import io.github.arkmind.seedy.mobile.admin.MonoText
 
 /** Board "Android · Server · Settings", and its Expert settings page. */
 @Composable
@@ -154,16 +153,13 @@ private fun ServerCard(state: ServerSettingsState, actions: ServerSettingsAction
 /** A folder picked for a path: it's used after a restart, so ask whether to restart now. */
 @Composable
 private fun PathSheet(change: PathChange, actions: ServerSettingsActions) {
-    BottomSheet(onDismiss = actions::cancelPath) {
-        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SText(t("Save and restart the server?"), size = 17.sp, weight = 800, color = SeedyColors.White)
-            MonoText(change.path, color = SeedyColors.White)
-            SText(t("Everyone watching is interrupted for a minute while Jellyfin restarts. Seedy reconnects on its own when the server is back."), size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2)
-            SheetButtons(Modifier.padding(top = 4.dp)) {
-                PillButton(t("Cancel"), actions::cancelPath)
-                PillButton(t("Save only"), { actions.savePath(false) })
-                PillButton(t("Save and restart"), { actions.savePath(true) }, style = PillStyle.Light)
-            }
+    FormSheet(t("Save and restart the server?"), null, actions::cancelPath) {
+        MonoText(change.path, color = SeedyColors.White)
+        SText(t("Everyone watching is interrupted for a minute while Jellyfin restarts. Seedy reconnects on its own when the server is back."), size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2)
+        SheetButtons(Modifier.padding(top = 4.dp)) {
+            PillButton(t("Cancel"), actions::cancelPath)
+            PillButton(t("Save only"), { actions.savePath(false) })
+            PillButton(t("Save and restart"), { actions.savePath(true) }, style = PillStyle.Light)
         }
     }
 }

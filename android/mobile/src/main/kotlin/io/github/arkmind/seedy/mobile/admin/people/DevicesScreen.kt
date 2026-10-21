@@ -8,10 +8,8 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -58,6 +56,8 @@ import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.FootNote
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.core.admin.people.DeviceKind
+import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.settings.Card
 
 /* Busy servers collect hundreds of devices; show them a page at a time. */
 private const val Page = 40
@@ -108,13 +108,13 @@ fun DevicesScreen(state: DevicesState, actions: DevicesActions, onBack: () -> Un
             TabPills(listOf<Pair<String?, String>>(null to t("Everyone")) + state.people, who, { who = it; shown = Page }, top = 12.dp)
         }
         val rows = state.filtered(who, query)
-        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+        Card(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
             when {
                 state.devices == null && state.error != null -> CardNote(t("Couldn’t load the devices") + ". " + state.error, action = t("Try again"), onAction = actions::reload)
                 state.devices == null -> SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3)
                 rows.isEmpty() -> CardNote(if (query.isNotBlank() || who != null) t("No devices match. Try another name or person.") else t("No devices have signed in yet."))
                 else -> rows.take(shown).forEachIndexed { i, d ->
-                    if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+                    if (i > 0) RowLine()
                     DeviceLine(d) { menu = d }
                 }
             }

@@ -40,11 +40,11 @@ import io.github.arkmind.seedy.core.admin.system.LevelFilter
 import io.github.arkmind.seedy.core.admin.system.TypeFilter
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.settings.Choice
-import io.github.arkmind.seedy.mobile.admin.Card
+import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
-import io.github.arkmind.seedy.mobile.admin.RowLine
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.admin.StatTile
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
@@ -65,13 +65,14 @@ import io.github.arkmind.seedy.mobile.settings.FootNote
 import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.CssColumn
 import io.github.arkmind.seedy.mobile.settings.cssExcess
+import io.github.arkmind.seedy.mobile.settings.Faint
 
 /** The board's dots: grey for information, green when something finished well, amber for warnings, red for errors. */
 private fun levelDot(l: ActivityLevel): Color = when (l) {
     ActivityLevel.Error -> SeedyColors.Danger
     ActivityLevel.Warn -> SeedyColors.Pending
     ActivityLevel.Ok -> SeedyColors.Ok
-    ActivityLevel.Info -> Color(0xFF6A6A6A)
+    ActivityLevel.Info -> Faint
 }
 
 private val ErrorTint = Color(0x12FF8A8A)

@@ -39,7 +39,7 @@ import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
 import io.github.arkmind.seedy.mobile.admin.RadioRow
-import io.github.arkmind.seedy.mobile.admin.RowLine
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.admin.avatarColour
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.Toast
@@ -68,6 +68,7 @@ import io.github.arkmind.seedy.mobile.admin.FieldBlock
 import io.github.arkmind.seedy.mobile.admin.Dot
 import io.github.arkmind.seedy.mobile.settings.SheetHead
 import io.github.arkmind.seedy.mobile.settings.settingsRow
+import io.github.arkmind.seedy.mobile.settings.Card
 
 private val Shows = listOf(
     Triple("showDiscover", "Discover row", "Popular titles not in the library"),
@@ -209,7 +210,7 @@ private fun Connection(state: AdminRequestsState, actions: AdminRequestsActions,
 @Composable
 private fun Accounts(state: AdminRequestsState, actions: AdminRequestsActions, onLink: (SeerrAccount) -> Unit, onMenu: (SeerrAccount) -> Unit) {
     val list = state.accounts
-    Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+    Card(Modifier.padding(horizontal = 16.dp)) {
         when {
             list == null && state.accountsError != null -> Row(Modifier.settingsRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Dot(SeedyColors.Danger)

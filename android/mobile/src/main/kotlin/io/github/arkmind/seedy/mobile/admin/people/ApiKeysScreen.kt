@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -25,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.admin.people.ApiKeysActions
@@ -43,7 +41,6 @@ import io.github.arkmind.seedy.mobile.parts.SeedyField
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.settings.FormSheet
 import io.github.arkmind.seedy.ui.icons.SIcon
-import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
@@ -54,6 +51,9 @@ import io.github.arkmind.seedy.mobile.admin.FormError
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.FootNote
 import io.github.arkmind.seedy.ui.icons.WebIcons
+import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.admin.Mono
 
 /** Server › API keys, from the web board "Server · API keys" in the phone kit. */
 @Composable
@@ -81,13 +81,13 @@ fun ApiKeysScreen(state: ApiKeysState, actions: ApiKeysActions, onBack: () -> Un
         }
         state.created?.let { (app, key) -> Created(app, key, actions) }
         val keys = state.keys
-        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+        Card(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
             when {
                 keys == null && state.error != null -> CardNote(t("Couldn’t load the keys.") + " " + state.error, action = t("Try again"), onAction = actions::reload)
                 keys == null -> SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3)
                 keys.isEmpty() -> CardNote(t("No keys yet. Create one for each app that needs to reach the server."))
                 else -> keys.forEachIndexed { i, k ->
-                    if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+                    if (i > 0) RowLine()
                     KeyLine(k, busy = state.busy == k.token) { revoking = k }
                 }
             }
@@ -95,8 +95,6 @@ fun ApiKeysScreen(state: ApiKeysState, actions: ApiKeysActions, onBack: () -> Un
         FootNote(t("Revoking a key cuts that app off immediately. Keys unused for {n} days are flagged so you can clean them up.", "n" to StaleDays))
     }
 }
-
-private val Mono = BaseText.copy(fontFamily = FontFamily.Monospace)
 
 @Composable
 private fun KeyLine(k: KeyRow, busy: Boolean, onRevoke: () -> Unit) {

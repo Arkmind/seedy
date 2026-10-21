@@ -42,8 +42,8 @@ import io.github.arkmind.seedy.core.admin.system.TasksState
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.admin.AdminIcons
 import io.github.arkmind.seedy.mobile.admin.Bar
-import io.github.arkmind.seedy.mobile.admin.Card
-import io.github.arkmind.seedy.mobile.admin.RowLine
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.SettingsPage

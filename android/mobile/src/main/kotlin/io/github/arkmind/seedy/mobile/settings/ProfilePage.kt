@@ -51,6 +51,7 @@ import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import io.github.arkmind.seedy.mobile.settings.Card
 
 /** Board "Android · Settings · Profile and sign-in". */
 @Composable
@@ -87,7 +88,7 @@ fun ProfilePage(state: SettingsState, actions: SettingsActions, nav: SettingsNav
         }
 
         SectionTitle(t("Sign in a TV with a code"))
-        Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel).padding(16.dp)) {
+        Card(Modifier.padding(horizontal = 16.dp), padding = 16.dp) {
             CodeForm(state, actions)
         }
 

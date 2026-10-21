@@ -169,7 +169,7 @@ private fun RowList(state: SettingsState, actions: SettingsActions, preview: Str
     Column(Modifier.fillMaxWidth().background(SeedyColors.Panel, RoundedCornerShape(18.dp))) {
         shown.forEachIndexed { i, r ->
             val lifted = r.kind == (drag ?: preview)
-            if (i > 0 && !lifted) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+            if (i > 0 && !lifted) RowLine()
             RowItem(
                 r, lifted,
                 Modifier.onSizeChanged { heights[r.kind] = it.height }

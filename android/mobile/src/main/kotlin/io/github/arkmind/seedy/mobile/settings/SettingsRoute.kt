@@ -48,6 +48,8 @@ import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
+import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.settings.Card
 
 /** Settings, the list of pages (board "Android · Settings"); the shell shows it with the tab bar. */
 @Composable
@@ -186,9 +188,9 @@ private class GroupItems {
 private fun Group(title: String, build: GroupItems.() -> Unit) {
     val items = GroupItems().apply(build).items
     SectionTitle(title)
-    Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+    Card(Modifier.padding(horizontal = 16.dp)) {
         items.forEachIndexed { i, item ->
-            if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+            if (i > 0) RowLine()
             item()
         }
     }

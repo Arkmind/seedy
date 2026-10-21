@@ -4,7 +4,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -35,12 +34,9 @@ import io.github.arkmind.seedy.core.admin.people.UsersActions
 import io.github.arkmind.seedy.core.admin.people.UsersState
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
-import io.github.arkmind.seedy.mobile.admin.AdminIcons
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.FloatingPill
 import io.github.arkmind.seedy.mobile.admin.NameTag
-import io.github.arkmind.seedy.mobile.admin.PillButton
-import io.github.arkmind.seedy.mobile.admin.PillStyle
 import io.github.arkmind.seedy.mobile.admin.RadioRow
 import io.github.arkmind.seedy.mobile.admin.avatarColour
 import io.github.arkmind.seedy.mobile.parts.FieldLabel
@@ -60,6 +56,8 @@ import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.Segmented
 import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.ui.icons.WebIcons
+import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.settings.Card
 
 /** Board "Android · Server · Users". */
 @Composable
@@ -84,7 +82,7 @@ fun UsersScreen(state: UsersState, actions: UsersActions, onBack: () -> Unit, op
         val filters = listOf(Choice(UserFilter.All, t("All")), Choice(UserFilter.Admins, t("Admins")), Choice(UserFilter.Disabled, t("Disabled")))
         Segmented(filters, state.filter, actions::filter, Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp), size = 13, count = { state.count(it).toString() })
         val shown = state.shown
-        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+        Card(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
             when {
                 shown == null && state.error != null -> CardNote(t("Couldn’t load the users. {error}", "error" to state.error.orEmpty()), action = t("Try again"), onAction = actions::reload)
                 shown == null -> CardNote("…")
@@ -96,7 +94,7 @@ fun UsersScreen(state: UsersState, actions: UsersActions, onBack: () -> Unit, op
                     },
                 )
                 else -> shown.forEachIndexed { i, u ->
-                    if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+                    if (i > 0) RowLine()
                     UserLine(u, onClick = { open(u.id) }, onMenu = { menu = u })
                 }
             }

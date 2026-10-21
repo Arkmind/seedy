@@ -255,6 +255,20 @@ fun SectionFoot(text: String, color: Color = SeedyColors.Text3) {
     SText(text, Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp).cssText(12, 1.45f), size = 12.sp, lineHeight = 1.45f, color = color)
 }
 
+/** A 18 px card (#141414) for whatever it holds; [padding] inside. */
+@Composable
+fun Card(modifier: Modifier = Modifier, padding: Dp = 0.dp, gap: Dp = 0.dp, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel).padding(padding),
+        verticalArrangement = Arrangement.spacedBy(gap),
+        content = content,
+    )
+}
+
+/** The 1 px line between a card's rows. */
+@Composable
+fun RowLine() = Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+
 /** Builds a card's rows; the card draws the 1 px lines between them. */
 class CardRows {
     internal val rows = mutableListOf<@Composable () -> Unit>()
@@ -270,7 +284,7 @@ fun Section(title: String?, foot: String? = null, build: CardRows.() -> Unit) {
     val rows = CardRows().apply(build).rows
     CssColumn(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
         rows.forEachIndexed { i, row ->
-            if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+            if (i > 0) RowLine()
             row()
         }
     }

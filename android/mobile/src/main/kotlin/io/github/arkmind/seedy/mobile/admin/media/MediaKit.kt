@@ -1,28 +1,13 @@
 package io.github.arkmind.seedy.mobile.admin.media
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -31,20 +16,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.admin.media.ChoiceSetting
 import io.github.arkmind.seedy.core.admin.media.FolderPicker
@@ -59,20 +33,14 @@ import io.github.arkmind.seedy.core.admin.media.TextSetting
 import io.github.arkmind.seedy.core.admin.media.numberText
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.admin.PillButton
-import io.github.arkmind.seedy.mobile.admin.PillStyle
-import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.SeedyField
-import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.PickRow
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SheetState
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
-import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
-import io.github.arkmind.seedy.ui.theme.BaseText
-import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.mobile.admin.BoardField
@@ -138,18 +106,6 @@ fun TextRow(r: TextSetting, onChange: (String) -> Unit) {
         var text by remember(r.key) { mutableStateOf(r.text) }
         BoardField(text, { text = it; onChange(it) }, placeholder = r.placeholder, mono = r.mono, lines = r.lines, autoCorrect = !r.mono)
     }
-}
-
-/** A path in monospace ("/media/movies"). */
-@Composable
-fun MonoText(text: String, modifier: Modifier = Modifier, size: TextUnit = 13.sp, color: Color = SeedyColors.Text, maxLines: Int = Int.MAX_VALUE) {
-    androidx.compose.foundation.text.BasicText(
-        text,
-        modifier,
-        style = BaseText.copy(fontSize = size, fontFamily = FontFamily.Monospace, fontWeight = FontWeight(500), color = color),
-        maxLines = maxLines,
-        overflow = TextOverflow.Ellipsis,
-    )
 }
 
 /** Types a number between the setting's bounds. */

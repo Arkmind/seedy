@@ -60,6 +60,9 @@ import io.github.arkmind.seedy.mobile.admin.RoundButton
 import io.github.arkmind.seedy.mobile.admin.SheetButtons
 import io.github.arkmind.seedy.mobile.settings.FootNote
 import io.github.arkmind.seedy.mobile.settings.FormSheet
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.admin.MonoText
 
 /** Board "Android · Server · Libraries". */
 @Composable
@@ -121,10 +124,7 @@ fun LibrariesScreen(state: LibrariesState, actions: LibrariesActions, onBack: ()
 @Composable
 private fun LibraryCardView(c: LibraryCard, actions: LibrariesActions, open: () -> Unit, refresh: () -> Unit) {
     val accent = LocalAccent.current
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel).padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
+    Card(padding = 12.dp, gap = 10.dp) {
         Row(Modifier.fillMaxWidth().tap(onClick = open), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Thumb(c.art, 96.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -178,7 +178,7 @@ private fun AddLibrarySheet(f: NewLibraryForm, actions: LibrariesActions) {
                     MonoText(p, Modifier.weight(1f), maxLines = 2)
                     RoundButton(WebIcons.Close, { actions.removePath(p) }, size = 32.dp, iconSize = 14.dp, tint = SeedyColors.Text2, dim = 0.4f)
                 }
-                Box(Modifier.fillMaxWidth().size(1.dp).background(SeedyColors.Line))
+                RowLine()
             }
             AccentRow(t("Add folder"), actions::addPath, roomy = true)
         }

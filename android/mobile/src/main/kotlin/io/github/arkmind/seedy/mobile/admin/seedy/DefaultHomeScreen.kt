@@ -48,7 +48,7 @@ import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
-import io.github.arkmind.seedy.mobile.admin.RowLine
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.admin.Thumb
 import io.github.arkmind.seedy.mobile.admin.SaveBarRoom
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
@@ -87,6 +87,8 @@ import io.github.arkmind.seedy.mobile.settings.cssText
 import io.github.arkmind.seedy.mobile.settings.StackRow
 import io.github.arkmind.seedy.mobile.settings.SheetHead
 import io.github.arkmind.seedy.ui.icons.IconDef
+import io.github.arkmind.seedy.mobile.settings.PickOption
+import io.github.arkmind.seedy.mobile.settings.Faint
 
 private val Dragged = Color(0xFF262626)
 
@@ -339,7 +341,7 @@ private fun AdminRowItem(r: HomeRowConfig, locked: Boolean, lifted: Boolean, mod
     ) {
         Box(grip.size(38.dp, 44.dp), contentAlignment = Alignment.Center) {
             if (locked) SIcon(WebIcons.Lock, size = 17.dp, color = SeedyColors.Text3)
-            else SIcon(SettingsIcons.Grip, size = 20.dp, color = if (lifted) SeedyColors.White else Color(0xFF6A6A6A))
+            else SIcon(SettingsIcons.Grip, size = 20.dp, color = if (lifted) SeedyColors.White else Faint)
         }
         Column(Modifier.weight(1f).padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -379,12 +381,7 @@ private fun GenreSheet(chosen: List<String>, actions: HomeAdminActions, onAdd: (
                 failed -> SText(t("Couldn’t load genres"), Modifier.padding(12.dp), size = 13.sp, color = SeedyColors.Danger)
                 all == null -> SText(t("Loading genres…"), Modifier.padding(12.dp), size = 13.sp, color = SeedyColors.Text3)
                 options.isEmpty() -> SText(if (q.isNotBlank()) t("No genre matches") else t("Every genre is already added"), Modifier.padding(12.dp), size = 13.sp, color = SeedyColors.Text3)
-                else -> for (g in options) {
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(12.dp)).tap { onAdd(g); onDismiss() }.padding(horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) { SText(g, size = 15.sp, weight = 600, color = SeedyColors.Text) }
-                }
+                else -> for (g in options) PickOption(g, false) { onAdd(g); onDismiss() }
             }
         }
     }

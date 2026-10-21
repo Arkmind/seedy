@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -94,6 +93,9 @@ import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.mobile.settings.PickOption
 import io.github.arkmind.seedy.mobile.settings.cssExcess
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.RowLine
+import io.github.arkmind.seedy.mobile.settings.FormSheet
 
 /*
  * The phone server boards' parts ("Android · Server · …"), beside the settings kit they share (SettingsPage,
@@ -301,20 +303,6 @@ fun NoticeCard(title: String, help: String, action: String?, dot: Color, backgro
 fun ErrorCard(title: String, onRetry: () -> Unit, modifier: Modifier = Modifier, detail: String = "") {
     NoticeCard(title, detail, t("Try again"), SeedyColors.Danger, SeedyColors.Danger.copy(alpha = 0.08f), onRetry, modifier.padding(horizontal = 16.dp))
 }
-
-/** A 18 px card (#141414) for whatever it holds; [padding] inside. */
-@Composable
-fun Card(modifier: Modifier = Modifier, padding: Dp = 0.dp, gap: Dp = 0.dp, content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel).padding(padding),
-        verticalArrangement = Arrangement.spacedBy(gap),
-        content = content,
-    )
-}
-
-/** The 1 px line between a card's rows. */
-@Composable
-fun RowLine() = Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
 
 /** An empty list: a title and a line, in a card (16 px sides unless [modifier] says otherwise). */
 @Composable
@@ -530,6 +518,23 @@ fun AccentRow(label: String, onClick: () -> Unit, icon: IconDef? = WebIcons.Plus
         if (icon != null) SIcon(icon, size = if (roomy) 16.dp else 14.dp, color = accent)
         SText(label, size = 14.sp, weight = 700, color = accent)
     }
+}
+
+/* ── Monospace ── */
+
+/** The pages' monospace text (paths, keys, log lines). */
+val Mono = BaseText.copy(fontFamily = FontFamily.Monospace)
+
+/** A path in monospace ("/media/movies"). */
+@Composable
+fun MonoText(text: String, modifier: Modifier = Modifier, size: TextUnit = 13.sp, color: Color = SeedyColors.Text, maxLines: Int = Int.MAX_VALUE) {
+    androidx.compose.foundation.text.BasicText(
+        text,
+        modifier,
+        style = Mono.copy(fontSize = size, fontWeight = FontWeight(500), color = color),
+        maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 /* ── Chips ── */
@@ -826,12 +831,8 @@ fun SheetButtons(action: String, onAction: () -> Unit, onCancel: () -> Unit, mod
 /** A question before something that can't be taken back: Cancel, and [action] (red when [danger]). */
 @Composable
 fun ConfirmSheet(title: String, text: String?, action: String, onConfirm: () -> Unit, onDismiss: () -> Unit, danger: Boolean = false) {
-    BottomSheet(onDismiss = onDismiss) {
-        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SText(title, size = 17.sp, weight = 800, color = SeedyColors.White)
-            if (text != null) SText(text, size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2)
-            SheetButtons(action, { onConfirm(); onDismiss() }, onDismiss, Modifier.padding(top = 4.dp), danger = danger)
-        }
+    FormSheet(title, text, onDismiss) {
+        SheetButtons(action, { onConfirm(); onDismiss() }, onDismiss, Modifier.padding(top = 4.dp), danger = danger)
     }
 }
 
@@ -879,14 +880,10 @@ fun TextSheet(
     var value by remember { mutableStateOf(initial) }
     val ok = !required || value.isNotBlank()
     val submit = { if (ok) { onSubmit(value); onDismiss() } }
-    BottomSheet(onDismiss = onDismiss) {
-        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SText(title, size = 17.sp, weight = 800, color = SeedyColors.White)
-            if (text != null) SText(text, size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2)
-            SeedyField(value, { value = it }, placeholder = placeholder, password = password, keyboard = keyboard, onDone = submit)
-            extra?.invoke()
-            SheetButtons(action, submit, onDismiss, enabled = ok)
-        }
+    FormSheet(title, text, onDismiss) {
+        SeedyField(value, { value = it }, placeholder = placeholder, password = password, keyboard = keyboard, onDone = submit)
+        extra?.invoke()
+        SheetButtons(action, submit, onDismiss, enabled = ok)
     }
 }
 
@@ -940,38 +937,31 @@ fun FolderSheet(
     onDismiss: () -> Unit,
 ) {
     var typed by remember(path) { mutableStateOf(path) }
-    BottomSheet(onDismiss) {
-        Column(
-            Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 28.dp).imePadding(),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            SText(title, size = 17.sp, weight = 800, color = SeedyColors.White)
-            SText(t("Folders on the server, not on this device."), size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PillButton(t("Up"), { onBrowse(parent.orEmpty()) }, enabled = parent != null, leading = { SIcon(WebIcons.ChevronLeft, size = 16.dp, color = SeedyColors.White) })
-                BoardField(typed, { typed = it }, Modifier.weight(1f), placeholder = "/", keyboard = KeyboardType.Uri, mono = true, onDone = { onBrowse(typed.trim()) })
-                PillButton(t("Go"), { onBrowse(typed.trim()) })
-            }
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(SeedyColors.Row)) {
-                when {
-                    entries == null -> SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3)
-                    entries.isEmpty() -> SText(error ?: t("No folders in here."), Modifier.padding(16.dp), size = 13.sp, color = if (error != null) SeedyColors.Danger else SeedyColors.Text3)
-                    else -> entries.forEachIndexed { i, e ->
-                        if (i > 0) RowLine()
-                        Row(
-                            Modifier.fillMaxWidth().heightIn(min = 48.dp).tap { if (e.file) onPick(e.path) else onBrowse(e.path) }.padding(horizontal = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            SIcon(if (e.file) WebIcons.List else WebIcons.Folder, size = 18.dp, color = SeedyColors.Text2)
-                            SText(e.name.ifEmpty { e.path }, Modifier.weight(1f), size = 14.sp, weight = 600, color = SeedyColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (!e.file) SIcon(AppIcons.Chevron, size = 16.dp, color = SeedyColors.Text3)
-                        }
+    FormSheet(title, t("Folders on the server, not on this device."), onDismiss, scroll = true) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PillButton(t("Up"), { onBrowse(parent.orEmpty()) }, enabled = parent != null, leading = { SIcon(WebIcons.ChevronLeft, size = 16.dp, color = SeedyColors.White) })
+            BoardField(typed, { typed = it }, Modifier.weight(1f), placeholder = "/", keyboard = KeyboardType.Uri, mono = true, onDone = { onBrowse(typed.trim()) })
+            PillButton(t("Go"), { onBrowse(typed.trim()) })
+        }
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(SeedyColors.Row)) {
+            when {
+                entries == null -> SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3)
+                entries.isEmpty() -> SText(error ?: t("No folders in here."), Modifier.padding(16.dp), size = 13.sp, color = if (error != null) SeedyColors.Danger else SeedyColors.Text3)
+                else -> entries.forEachIndexed { i, e ->
+                    if (i > 0) RowLine()
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = 48.dp).tap { if (e.file) onPick(e.path) else onBrowse(e.path) }.padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        SIcon(if (e.file) WebIcons.List else WebIcons.Folder, size = 18.dp, color = SeedyColors.Text2)
+                        SText(e.name.ifEmpty { e.path }, Modifier.weight(1f), size = 14.sp, weight = 600, color = SeedyColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (!e.file) SIcon(AppIcons.Chevron, size = 16.dp, color = SeedyColors.Text3)
                     }
                 }
             }
-            if (!files) SheetButtons(action, { onPick(path) }, onDismiss, Modifier.padding(top = 4.dp), enabled = path.isNotEmpty())
-            else SheetButtons { PillButton(t("Cancel"), onDismiss) }
         }
+        if (!files) SheetButtons(action, { onPick(path) }, onDismiss, Modifier.padding(top = 4.dp), enabled = path.isNotEmpty())
+        else SheetButtons { PillButton(t("Cancel"), onDismiss) }
     }
 }
