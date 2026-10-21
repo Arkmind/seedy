@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.2.6.0",
+        "changelog": "## What's Changed\n* Feature/item management\n  - Details menu\n  - Edit metadata\n  - Identify\n  - Edit images\n  - Playlist\n  - Delete\n  - Library\n  - Server overview fixes\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.2.5...v0.2.6",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.2.6/seedy_0.2.6.0.zip",
+        "checksum": "0e494a1c11dce8c76c48049b32cce441",
+        "timestamp": "2026-10-21T21:49:03Z"
+      },
+      {
         "version": "0.2.5.0",
         "changelog": "## What's Changed\n* Feature/experimental\n  - Front-end player experimental\n* Docs/readme\n* Feature/android\n  - Admin page on android mobile\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.2.3...v0.2.5",
         "targetAbi": "12.0.0.0",
