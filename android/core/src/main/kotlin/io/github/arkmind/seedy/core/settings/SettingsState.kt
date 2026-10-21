@@ -72,6 +72,8 @@ data class SettingsState(
     val passwordChanged: String? = null,
     val devices: Int? = null,
     val openRequests: Int? = null,
+    /** Settings › Server, for admins: "seedy-server · 3 playing · 2 plugin updates". */
+    val serverSummary: String? = null,
     val saving: Boolean = false,
     val error: String? = null,
     val code: CodeState = CodeState(),

@@ -114,6 +114,9 @@ class SettingsViewModel(
         io { session.api.userApi.getCurrentUser().content.let(session::updateUser) }
         if ("home" in all) {
             io { lastPlayed()?.let { v -> extras.update { it.copy(lastPlayed = v) } } }
+            if (session.seedy?.isAdmin ?: (session.user.policy?.isAdministrator == true)) {
+                io { io.github.arkmind.seedy.core.admin.serverSummary(session).let { v -> extras.update { it.copy(serverSummary = v) } } }
+            }
         }
         if ("home" in all || "profile" in all) {
             val api = session.seedyApi

@@ -79,6 +79,10 @@ tries hard not to make your server convert anything it doesn't have to.
   When the server has Seedy, the app also shows its home rows and the Requests tab.
 - **Settings** for playback, subtitles and the home screen, some per device and some per profile. With the plugin,
   the profile ones are the same as on the web.
+- **Server pages for admins** on the phone, under Settings › Server: what's playing (message or stop it), running
+  tasks, users and their access, libraries and scans, transcoding, server settings, networking, Live TV, devices,
+  the activity log, plugins, scheduled tasks, backups, logs and API keys. With the plugin, Seedy's own admin pages
+  are there too.
 
 ## Screenshots
 

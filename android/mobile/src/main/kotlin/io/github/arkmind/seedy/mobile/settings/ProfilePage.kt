@@ -1,7 +1,5 @@
 package io.github.arkmind.seedy.mobile.settings
 
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,8 +21,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,10 +42,11 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.settings.SettingsActions
 import io.github.arkmind.seedy.core.settings.SettingsState
+import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.mobile.parts.PrimaryButton
 import io.github.arkmind.seedy.mobile.parts.SeedyField
-import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.ui.components.ProfileSquare
 import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
@@ -83,11 +84,11 @@ fun ProfilePage(state: SettingsState, actions: SettingsActions, nav: SettingsNav
                 if (state.isAdmin) AdminPill()
             }
             SText(signedInOn(state), size = 12.sp, color = SeedyColors.Text3, align = TextAlign.Center)
-            SText(t("Only an admin can change your name."), size = 12.sp, color = Quiet, align = TextAlign.Center)
+            SText(t("Only an admin can change your name."), size = 12.sp, color = Faint, align = TextAlign.Center)
         }
 
         SectionTitle(t("Sign in a TV with a code"))
-        Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel).padding(16.dp)) {
+        Card(Modifier.padding(horizontal = 16.dp), padding = 16.dp) {
             CodeForm(state, actions)
         }
 

@@ -32,6 +32,8 @@ import io.github.arkmind.seedy.core.settings.ResolvedStyle
 import io.github.arkmind.seedy.core.settings.SettingsActions
 import io.github.arkmind.seedy.core.settings.SettingsState
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.ui.components.PassScene
 import io.github.arkmind.seedy.ui.components.SubtitleLine
 import io.github.arkmind.seedy.ui.theme.LocalAccent
@@ -58,9 +60,9 @@ fun SubtitlesPage(state: SettingsState, actions: SettingsActions, nav: SettingsN
         if (state.config != null) {
             SectionTitle(t("When to show them"))
             val accent = LocalAccent.current
-            Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+            Card(Modifier.padding(horizontal = 16.dp)) {
                 Choices.modes().forEachIndexed { i, m ->
-                    if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+                    if (i > 0) RowLine()
                     val on = m.value == state.subtitleMode
                     Row(
                         Modifier.fillMaxWidth().heightIn(min = 58.dp).tap(role = Role.RadioButton) { actions.setSubtitleMode(m.value) }.padding(horizontal = 16.dp, vertical = 10.dp),

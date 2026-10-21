@@ -72,7 +72,7 @@ class SettingsShots {
     }
 
     @Test
-    @Config(qualifiers = "w390dp-h1390dp-mdpi")
+    @Config(qualifiers = "w390dp-h1430dp-mdpi")
     fun settings() = shot("AndroidSettings") {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f)) { SettingsHomeScreen(SettingsSamples.state, "1.0", actions, nav, requests = true) }
@@ -136,7 +136,7 @@ object SettingsSamples {
         isAdmin = true,
         serverName = "Arky's server",
         serverAddress = "http://192.168.1.20:8096",
-        serverVersion = "12.2.0",
+        serverVersion = "12.0.0",
         deviceName = "Pixel 9",
         languages = listOf(Choice("eng", "English"), Choice("fre", "French")),
         libraries = listOf(
@@ -149,6 +149,7 @@ object SettingsSamples {
         passwordChanged = "Changed 3 months ago",
         devices = 4,
         openRequests = 3,
+        serverSummary = "seedy-server · 3 playing · 2 plugin updates",
         code = CodeState("4F7Q2K"),
     )
 }

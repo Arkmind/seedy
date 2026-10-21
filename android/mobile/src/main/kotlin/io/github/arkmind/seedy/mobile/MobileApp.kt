@@ -37,6 +37,7 @@ import io.github.arkmind.seedy.core.format.Images
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.SessionState
 import io.github.arkmind.seedy.core.session.UserSession
+import io.github.arkmind.seedy.mobile.admin.AdminRoute
 import io.github.arkmind.seedy.mobile.details.DetailsRoute
 import io.github.arkmind.seedy.mobile.favorites.FavoritesTab
 import io.github.arkmind.seedy.mobile.library.LibrariesTab
@@ -264,8 +265,19 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                 entry<Route.Player> { PlayerRoute(it.id) }
                 entry<Route.SeerrTitle> { WithTabBar(tabs, tab, nav) { SeerrTitleRoute(it.mediaType, it.tmdbId) } }
                 entry<Route.SeerrTitles> { WithTabBar(tabs, tab, nav) { SeerrTitlesRoute(it.kind) } }
+                entry<Route.Admin> { WithOverlay { AdminRoute(it.page, it.id) } }
             },
         )
+    }
+}
+
+/** A page without the tab bar whose sheets still go over everything. */
+@Composable
+private fun WithOverlay(content: @Composable () -> Unit) {
+    val overlay = remember { OverlayHost() }
+    Box(Modifier.fillMaxSize()) {
+        CompositionLocalProvider(LocalOverlayHost provides overlay, content = content)
+        overlay.content?.invoke()
     }
 }
 

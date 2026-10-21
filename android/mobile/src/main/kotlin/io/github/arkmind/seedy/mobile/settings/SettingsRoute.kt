@@ -1,8 +1,5 @@
 package io.github.arkmind.seedy.mobile.settings
 
-import androidx.compose.runtime.getValue
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +37,8 @@ import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Tab
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.ui.components.ProfileSquare
 import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.IconDef
@@ -70,16 +70,13 @@ fun SettingsRoute(appVersion: String) {
     )
 }
 
-/** Where settings lead: their pages, the Requests tab, the server's Seedy admin in the browser. */
+/** Where settings lead: their pages, the Requests tab, the server pages. */
+@Suppress("UNUSED_PARAMETER")
 internal fun settingsNav(state: SettingsState, nav: io.github.arkmind.seedy.mobile.nav.MobileNav, context: android.content.Context) = SettingsNav(
     back = nav::back,
     open = { nav.go(Route.SettingsPage(it)) },
     requests = { nav.toTab(Tab.Requests) },
-    admin = {
-        runCatching {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(state.serverAddress.trimEnd('/') + "/admin")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        }
-    },
+    admin = { nav.go(Route.Admin("server")) },
 )
 
 @Composable
@@ -109,13 +106,17 @@ fun SettingsHomeScreen(state: SettingsState, appVersion: String, actions: Settin
                 item(t("Display"), state.displaySummary(), SettingsIcons.Display) { nav.open("display") }
                 item(t("Gestures"), state.gesturesSummary(), SettingsIcons.Gesture) { nav.open("gestures") }
             }
+            if (state.isAdmin) {
+                Group(t("Admin")) {
+                    item(t("Server"), state.serverSummary ?: state.serverName, SettingsIcons.Admin, ink = accent, onClick = nav.admin)
+                }
+            }
             Group(t("More")) {
                 // Viewing history has no page in the app yet.
                 item(t("Viewing history"), state.lastPlayed?.let { t("Last: {title}", "title" to it) } ?: t("See what you watched"), SettingsIcons.History) {}
                 if (requests) {
                     item(t("My requests"), state.openRequests?.let { tn(it, "{n} open", "{n} open") } ?: t("What you asked for"), SettingsIcons.Requests, onClick = nav.requests)
                 }
-                if (state.isAdmin) item(t("Admin dashboard"), t("Opens Seedy on the web"), SettingsIcons.Admin, onClick = nav.admin)
                 item(t("About Seedy"), state.aboutSummary(appVersion), SettingsIcons.Info) { nav.open("about") }
             }
 
@@ -187,9 +188,9 @@ private class GroupItems {
 private fun Group(title: String, build: GroupItems.() -> Unit) {
     val items = GroupItems().apply(build).items
     SectionTitle(title)
-    Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+    Card(Modifier.padding(horizontal = 16.dp)) {
         items.forEachIndexed { i, item ->
-            if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(SeedyColors.Line))
+            if (i > 0) RowLine()
             item()
         }
     }

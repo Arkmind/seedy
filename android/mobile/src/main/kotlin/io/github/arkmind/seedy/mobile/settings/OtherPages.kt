@@ -113,7 +113,7 @@ fun AboutPage(state: SettingsState, appVersion: String, nav: SettingsNav) {
         Section(null) {
             for ((k, v) in SettingsViewModel.aboutRows(state, appVersion)) row { InfoRow(k, v) }
         }
-        SText(state.serverAddress, Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 40.dp), size = 12.sp, color = Quiet, align = TextAlign.Center)
+        FootNote(state.serverAddress)
     }
 }
 
