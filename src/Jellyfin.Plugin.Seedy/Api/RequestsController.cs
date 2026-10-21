@@ -204,6 +204,23 @@ public class RequestsController : ControllerBase
     public Task<ActionResult<SeerrDetailsDto>> Details([FromRoute] string mediaType, [FromRoute] int tmdbId, CancellationToken ct)
         => Run((_, me) => _seerr.DetailsAsync(mediaType == "tv" ? "tv" : "movie", tmdbId, me, ct), ct);
 
+    /// <summary>Clears a title in Seerr (its requests and status), so it can be requested again. For request
+    /// managers; Seerr checks the person's permission.</summary>
+    /// <param name="mediaType">movie or tv.</param>
+    /// <param name="tmdbId">TMDB id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Nothing.</returns>
+    [HttpDelete("Media/{mediaType}/{tmdbId:int}")]
+    public async Task<ActionResult> ClearMedia([FromRoute] string mediaType, [FromRoute] int tmdbId, CancellationToken ct)
+    {
+        var result = await Run<bool>(async (_, me) =>
+        {
+            await _seerr.ClearMediaAsync(mediaType == "tv" ? "tv" : "movie", tmdbId, me ?? throw NoAccount(), ct).ConfigureAwait(false);
+            return true;
+        }, ct).ConfigureAwait(false);
+        return result.Result ?? NoContent();
+    }
+
     /// <summary>What the request dialog offers the signed-in person: quota, approval, 4K and the advanced choices Seerr allows them.</summary>
     /// <param name="mediaType">movie or tv.</param>
     /// <param name="ct">Cancellation.</param>

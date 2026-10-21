@@ -804,6 +804,96 @@ public sealed class SeerrService
         ForgetRequests(null, null);
     }
 
+    /// <summary>What deleting a title from the server means in Seerr: whether Seerr tracks it (so it can be cleared and
+    /// requested again) and whether Sonarr or Radarr still monitors it (and may download it again).</summary>
+    /// <param name="mediaType">movie or tv.</param>
+    /// <param name="tmdbId">TMDB id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Null when Seerr doesn't track the title.</returns>
+    public async Task<SeerrMediaStateDto?> MediaStateAsync(string mediaType, int tmdbId, CancellationToken ct)
+    {
+        var node = await Api(HttpMethod.Get, TitlePath(mediaType, tmdbId), ct: ct).ConfigureAwait(false);
+        var info = node?["mediaInfo"];
+        if (Int(info?["id"]) is not { } mediaId)
+        {
+            return null;
+        }
+
+        var state = new SeerrMediaStateDto { MediaType = mediaType, TmdbId = tmdbId, MediaId = mediaId };
+        var kind = mediaType == "tv" ? "sonarr" : "radarr";
+        foreach (var (service, external) in new[] { ("serviceId", "externalServiceId"), ("serviceId4k", "externalServiceId4k") })
+        {
+            if (Int(info?[service]) is not { } serverId || Int(info?[external]) is not { } arrId)
+            {
+                continue;
+            }
+
+            state.Arr = mediaType == "tv" ? "Sonarr" : "Radarr";
+            var monitored = await ArrMonitoredAsync(kind, serverId, arrId, ct).ConfigureAwait(false);
+            state.Monitored = monitored == true || state.Monitored == true ? true : monitored ?? state.Monitored;
+        }
+
+        return state;
+    }
+
+    /* Asks Sonarr or Radarr (with the address and key Seerr keeps for it) whether it still monitors a title.
+       Null when it can't tell. */
+    private async Task<bool?> ArrMonitoredAsync(string kind, int serverId, int arrId, CancellationToken ct)
+    {
+        try
+        {
+            var servers = await Cached("/settings/" + kind, ListTtl, ct).ConfigureAwait(false);
+            var server = servers?.AsArray().FirstOrDefault(x => Int(x?["id"]) == serverId);
+            var host = Str(server?["hostname"]);
+            var key = Str(server?["apiKey"]);
+            if (server is null || host is null || key is null)
+            {
+                return null;
+            }
+
+            var scheme = server["useSsl"]?.GetValue<bool>() == true ? "https" : "http";
+            var baseUrl = (Str(server["baseUrl"]) ?? string.Empty).TrimEnd('/');
+            var path = (kind == "sonarr" ? "/api/v3/series/" : "/api/v3/movie/") + arrId.ToString(CultureInfo.InvariantCulture);
+            var url = string.Create(CultureInfo.InvariantCulture, $"{scheme}://{host}:{Int(server["port"]) ?? (kind == "sonarr" ? 8989 : 7878)}{baseUrl}{path}");
+            var title = await Send(HttpMethod.Get, url, key, null, null, ct, failFast: false).ConfigureAwait(false);
+            return title?["monitored"]?.GetValue<bool>();
+        }
+        catch (SeerrException ex) when (ex.Status == HttpStatusCode.NotFound)
+        {
+            // Removed from Sonarr or Radarr since.
+            return false;
+        }
+        catch (Exception ex) when (ex is SeerrException or InvalidOperationException or FormatException)
+        {
+            _logger.LogDebug(ex, "Couldn't ask {Kind} {Server} about {Id}", kind, serverId, arrId);
+            return null;
+        }
+    }
+
+    /// <summary>Clears a title in Seerr as the person (Seerr lets request managers do it): its requests and status
+    /// go, so it can be requested again.</summary>
+    /// <param name="mediaType">movie or tv.</param>
+    /// <param name="tmdbId">TMDB id.</param>
+    /// <param name="me">The person's Seerr id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>A task.</returns>
+    public async Task ClearMediaAsync(string mediaType, int tmdbId, int me, CancellationToken ct)
+    {
+        var state = await MediaStateAsync(mediaType, tmdbId, ct).ConfigureAwait(false);
+        if (state is not null)
+        {
+            await Api(HttpMethod.Delete, "/media/" + state.MediaId.ToString(CultureInfo.InvariantCulture), asUser: me, ct: ct).ConfigureAwait(false);
+        }
+
+        ForgetRequests(mediaType, tmdbId);
+    }
+
+    /// <summary>Whether a Seerr user may manage requests (and so clear titles).</summary>
+    /// <param name="me">Seerr user id.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>True for request managers and admins.</returns>
+    public async Task<bool> CanManageRequestsAsync(int me, CancellationToken ct) => Has(await PermissionsAsync(me, ct).ConfigureAwait(false), PermManageRequests);
+
     /* After a request is made or changes: lists, searches and (when known) the title's details have a new status. */
     private void ForgetRequests(string? mediaType, int? tmdbId)
     {
