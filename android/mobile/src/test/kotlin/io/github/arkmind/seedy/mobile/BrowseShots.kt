@@ -62,7 +62,7 @@ class BrowseShots {
 
     @Test
     fun details() = shot("AndroidDetails", Tab.Home) {
-        DetailsScreen(BrowseSamples.details, DetailsActions(), canRequest = true, bottomPadding = tabBarHeight())
+        DetailsScreen(BrowseSamples.details, DetailsActions(onMore = {}), canRequest = true, bottomPadding = tabBarHeight())
     }
 
     @Test
@@ -103,7 +103,7 @@ class BrowseShots {
     /** No board: the series page without seasons. */
     @Test
     fun movieDetails() = shot("AndroidMovieDetails") {
-        DetailsScreen(BrowseSamples.movieDetails, DetailsActions(), canRequest = true, bottomPadding = 0.dp)
+        DetailsScreen(BrowseSamples.movieDetails, DetailsActions(onMore = {}), canRequest = true, bottomPadding = 0.dp)
     }
 
     /** No board: the library's Filters sheet, in Request seasons' frame. */

@@ -1,6 +1,18 @@
 package io.github.arkmind.seedy.mobile.library
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.runtime.rememberCoroutineScope
+import io.github.arkmind.seedy.core.i18n.tn
+import io.github.arkmind.seedy.core.manage.AddTarget
+import io.github.arkmind.seedy.core.manage.BulkViewModel
+import io.github.arkmind.seedy.mobile.manage.ManagePerms
+import io.github.arkmind.seedy.mobile.manage.ManageSheetHost
+import io.github.arkmind.seedy.mobile.manage.SelectionActions
+import io.github.arkmind.seedy.mobile.manage.SelectionBar
+import io.github.arkmind.seedy.mobile.manage.rememberManageSheets
+import io.github.arkmind.seedy.mobile.parts.Toast
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -75,18 +87,31 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.CollectionType
 import java.util.UUID
 
-/** Board "Android · Movies library": one library's grid. */
+/** Board "Android · Movies library": one library's grid; a long press picks titles (board LibrarySelect). */
 @Composable
 fun LibraryRoute(id: UUID) {
     val session = currentSession()
     val nav = LocalMobileNav.current
     val vm = viewModel(key = "library:$id") { LibraryViewModel(session, id) }
+    val bulk = viewModel(key = "library-bulk:$id") { BulkViewModel(session) }
     val state by vm.state.collectAsStateWithLifecycle()
+    val bulkState by bulk.state.collectAsStateWithLifecycle()
     var filtering by remember { mutableStateOf(false) }
+    val perms = remember(session) { ManagePerms.of(session) }
+    val sheets = rememberManageSheets()
+    val scope = rememberCoroutineScope()
+    // The picked titles, in the order they were picked; null while not picking.
+    var picked by remember { mutableStateOf<List<BaseItemDto>?>(null) }
+    BackHandler(enabled = picked != null) { picked = null }
+    fun toggle(item: BaseItemDto) {
+        val now = picked.orEmpty()
+        picked = if (now.any { it.id == item.id }) now.filter { it.id != item.id } else now + item
+    }
     Box(Modifier.fillMaxSize()) {
         LibraryScreen(
             state,
             LibraryActions(
+                onPick = { item -> if (picked == null) picked = listOf(item) else toggle(item) },
                 onBack = nav::back,
                 onSwitch = { view ->
                     nav.back()
@@ -98,15 +123,44 @@ fun LibraryRoute(id: UUID) {
                 onSort = vm::setSort,
                 onFilters = { vm.loadOptions(); filtering = true },
                 onClearFilters = { vm.setFilters(Filters()) },
-                onOpen = nav::open,
+                onOpen = { item -> if (picked != null) toggle(item) else nav.open(item) },
                 onGenre = vm::openGenre,
                 onMore = { vm.loadMore() },
             ),
             bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
+            selection = picked?.map { it.id }?.toSet(),
         )
         if (filtering) FilterSheet(state, count = vm::countFor, onApply = { vm.setFilters(it); filtering = false }, onDismiss = { filtering = false })
+        picked?.let { list ->
+            val ids = list.map { it.id.toString() }
+            val target = AddTarget(ids, list.singleOrNull()?.name ?: tn(list.size, "{n} title", "{n} titles"), list.singleOrNull()?.type?.serialName)
+            SelectionBar(
+                list.size, state.itemsTotal.takeIf { state.isGrid && it > 0 },
+                SelectionActions(
+                    onClose = { picked = null },
+                    onSelectAll = { scope.launch { picked = vm.allItems() } },
+                    onPlaylist = { sheets.show("playlist", target) },
+                    onWatched = { bulk.markWatched(ids) { vm.markedPlayed(list.map { it.id }.toSet()) } },
+                    onRefresh = if (perms.admin) ({ bulk.refresh(ids) }) else null,
+                    onDelete = if (list.isNotEmpty() && list.all { it.canDelete == true }) ({ sheets.show("delete", target) }) else null,
+                    onCollection = if (perms.collections) ({ sheets.show("collection", target) }) else null,
+                ),
+                Modifier.align(Alignment.TopCenter),
+                busy = bulkState.busy,
+            )
+        }
+        ManageSheetHost(sheets, say = bulk::say) { gone, message ->
+            vm.removed(gone.mapNotNull { runCatching { UUID.fromString(dashed(it)) }.getOrNull() }.toSet())
+            picked = null
+            bulk.say(message)
+        }
+        Toast(bulkState.message, bulk::messageShown, Modifier.align(Alignment.BottomCenter))
     }
 }
+
+/** Jellyfin's 32-character ids as UUIDs. */
+private fun dashed(id: String): String =
+    if (id.length == 32) "${id.substring(0, 8)}-${id.substring(8, 12)}-${id.substring(12, 16)}-${id.substring(16, 20)}-${id.substring(20)}" else id
 
 class LibraryActions(
     val onBack: () -> Unit = {},
@@ -120,11 +174,20 @@ class LibraryActions(
     val onOpen: (BaseItemDto) -> Unit = {},
     val onGenre: (String) -> Unit = {},
     val onMore: () -> Unit = {},
+    /** A long press: starts picking titles, or picks one more. */
+    val onPick: ((BaseItemDto) -> Unit)? = null,
 )
 
 /** The library page: its name (a menu of the other libraries), Search and Shuffle; the views; sort and filters; the grid. */
 @Composable
-fun LibraryScreen(state: LibraryViewModel.State, actions: LibraryActions, bottomPadding: Dp, grid: LazyGridState = rememberLazyGridState()) {
+fun LibraryScreen(
+    state: LibraryViewModel.State,
+    actions: LibraryActions,
+    bottomPadding: Dp,
+    grid: LazyGridState = rememberLazyGridState(),
+    /** The picked titles while picking (board LibrarySelect). */
+    selection: Set<UUID>? = null,
+) {
     val nearEnd by remember { derivedStateOf { (grid.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) > grid.layoutInfo.totalItemsCount - 12 } }
     LaunchedEffect(nearEnd, state.items.size) { if (nearEnd && state.isGrid) actions.onMore() }
     LazyVerticalGrid(
@@ -155,7 +218,9 @@ fun LibraryScreen(state: LibraryViewModel.State, actions: LibraryActions, bottom
             else -> {
                 if (state.items.isEmpty() && state.loading) items(8) { GridCardSkeleton() }
                 else if (state.items.isEmpty()) full("empty") { Empty(state, actions) }
-                items(state.items, key = { it.id }) { item -> GridCard(item, { actions.onOpen(item) }) }
+                items(state.items, key = { it.id }) { item ->
+                    GridCard(item, { actions.onOpen(item) }, selected = selection?.contains(item.id), onLongClick = actions.onPick?.let { pick -> { pick(item) } })
+                }
             }
         }
     }

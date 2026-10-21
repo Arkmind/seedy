@@ -1,6 +1,16 @@
 package io.github.arkmind.seedy.mobile.admin
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
+import io.github.arkmind.seedy.mobile.settings.cssText
+import io.github.arkmind.seedy.ui.icons.SIcon
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,7 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.arkmind.seedy.core.admin.Disk
+import io.github.arkmind.seedy.core.admin.DiskWarnAt
 import io.github.arkmind.seedy.core.admin.HubAlert
+import io.github.arkmind.seedy.core.admin.diskSize
 import io.github.arkmind.seedy.core.admin.HubLink
 import io.github.arkmind.seedy.core.admin.NowPlaying
 import io.github.arkmind.seedy.core.admin.PlayKind
@@ -73,10 +86,14 @@ fun ServerHubScreen(state: ServerHubState, actions: ServerHubActions, onBack: ()
     var messageTo by remember { mutableStateOf<NowPlaying?>(null) }
     var stopping by remember { mutableStateOf<NowPlaying?>(null) }
     val accent = LocalAccent.current
+    val scroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    var storageTop by remember { mutableIntStateOf(0) }
     SettingsPage(
         t("Server"),
         lede = null,
         onBack = onBack,
+        scroll = scroll,
         overlay = {
             when (confirm) {
                 "restart" -> ConfirmSheet(
@@ -122,8 +139,14 @@ fun ServerHubScreen(state: ServerHubState, actions: ServerHubActions, onBack: ()
             PillButton(t("Shut down"), { confirm = "shutdown" }, style = PillStyle.Danger, enabled = !state.restarting)
         }
         if (state.alerts.isNotEmpty()) {
-            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (a in state.alerts) Alert(a, accent) { if (a.open == "restart") confirm = "restart" else a.open?.let(open) }
+            CssColumn(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp), gap = 8.dp) {
+                for (a in state.alerts) Alert(a, accent) {
+                    when (a.open) {
+                        "restart" -> confirm = "restart"
+                        "storage" -> scope.launch { scroll.animateScrollTo(storageTop) }
+                        else -> a.open?.let(open)
+                    }
+                }
             }
         }
 
@@ -155,6 +178,9 @@ fun ServerHubScreen(state: ServerHubState, actions: ServerHubActions, onBack: ()
             else for (c in counts) StatTile(c.n, c.label, Modifier.weight(1f))
         }
 
+        SectionTitle(t("Storage"), Modifier.onPlaced { storageTop = it.positionInParent().y.roundToInt() })
+        Storage(state, actions::retryStorage)
+
         for (g in state.groups) {
             SectionTitle(g.title)
             Card(Modifier.padding(horizontal = 16.dp)) {
@@ -170,24 +196,71 @@ fun ServerHubScreen(state: ServerHubState, actions: ServerHubActions, onBack: ()
 
 @Composable
 private fun Alert(a: HubAlert, accent: Color, onAction: () -> Unit) {
+    val tone = a.tone?.let { toneColor(it) }
     NoticeCard(
         a.title, a.help, a.action,
-        dot = if (a.danger) SeedyColors.Danger else if (a.key == "updates") accent else SeedyColors.Pending,
-        background = if (a.danger) SeedyColors.Danger.copy(alpha = 0.08f) else SeedyColors.Panel,
+        dot = tone ?: if (a.danger) SeedyColors.Danger else if (a.key == "updates") accent else SeedyColors.Pending,
+        background = tone?.copy(alpha = 0.08f) ?: if (a.danger) SeedyColors.Danger.copy(alpha = 0.08f) else SeedyColors.Panel,
         onAction = onAction,
     )
 }
 
 @Composable
-private fun Link(link: HubLink, onClick: () -> Unit) {
-    val color = when (link.tone) {
-        Tone.Danger -> SeedyColors.Danger
-        Tone.Pending -> SeedyColors.Pending
-        Tone.Ok -> SeedyColors.Ok
-        Tone.Accent -> LocalAccent.current
-        Tone.Normal -> SeedyColors.Text3
+private fun toneColor(tone: Tone): Color = when (tone) {
+    Tone.Danger -> SeedyColors.Danger
+    Tone.Pending -> SeedyColors.Pending
+    Tone.Ok -> SeedyColors.Ok
+    Tone.Accent -> LocalAccent.current
+    Tone.Normal -> SeedyColors.Text3
+}
+
+/** The server's disks: what each holds, how full it is (green, amber from 85 %, red from 95 %). */
+@Composable
+private fun Storage(state: ServerHubState, onRetry: () -> Unit) {
+    val disks = state.disks
+    CssColumn(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)) {
+        when {
+            disks == null && state.storageFailed -> CardNote(t("Couldn’t read the server’s disks."), SeedyColors.Danger, t("Try again"), onRetry)
+            disks == null -> DiskLine(null)
+            disks.isEmpty() -> CardNote(t("The server didn’t report any disks."))
+            else -> disks.forEachIndexed { i, d ->
+                if (i > 0) RowLine()
+                DiskLine(d)
+            }
+        }
     }
-    LinkRow(link.name, link.sub, onClick, color, link.badge)
+}
+
+@Composable
+private fun DiskLine(d: Disk?) {
+    CssColumn(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), gap = 8.dp) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(SeedyColors.Surface), contentAlignment = Alignment.Center) {
+                if (d != null) SIcon(if (d.ram) AdminIcons.Ram else AdminIcons.Disk, size = 19.dp, color = SeedyColors.Text)
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                SText(d?.name ?: "…", size = 14.sp, weight = 700, color = SeedyColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (d != null) BasicText(d.mount, style = Mono.copy(fontSize = 12.sp, color = SeedyColors.Text3), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (d != null) {
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    val level = toneColor(d.level)
+                    SText(t("{size} free", "size" to diskSize(d.free)), size = 13.sp, weight = 800, color = if (d.pct >= DiskWarnAt) level else SeedyColors.White, maxLines = 1)
+                    SText(t("{used} of {total}", "used" to diskSize(d.used), "total" to diskSize(d.total)), size = 11.sp, color = SeedyColors.Text3, maxLines = 1)
+                }
+            }
+        }
+        Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(SeedyColors.Surface2)) {
+            if (d != null) Box(Modifier.fillMaxWidth((d.pct / 100f).coerceIn(0f, 1f)).height(6.dp).clip(RoundedCornerShape(3.dp)).background(toneColor(d.level)))
+        }
+        val holds = d?.holds.orEmpty()
+        if (holds.isNotEmpty()) SText(holds, Modifier.cssText(12, 1.4f), size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
+    }
+}
+
+@Composable
+private fun Link(link: HubLink, onClick: () -> Unit) {
+    LinkRow(link.name, link.sub, onClick, toneColor(link.tone), link.badge)
 }
 
 @Composable

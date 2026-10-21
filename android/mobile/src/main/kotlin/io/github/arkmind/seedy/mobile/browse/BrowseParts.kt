@@ -1,7 +1,14 @@
 package io.github.arkmind.seedy.mobile.browse
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -130,17 +137,44 @@ fun ToolButton(icon: IconDef, label: String, onClick: () -> Unit, modifier: Modi
 }
 
 /** Board "Android · Movies library" card: 16:9 art with the title on it, a watched mark or progress, the title and year. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun GridCard(item: BaseItemDto, onClick: () -> Unit, modifier: Modifier = Modifier, meta: String = item.libraryMeta) {
+fun GridCard(
+    item: BaseItemDto,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    meta: String = item.libraryMeta,
+    /** Picking titles (board LibrarySelect): whether this one is picked; null when not picking. */
+    selected: Boolean? = null,
+    onLongClick: (() -> Unit)? = null,
+) {
     val viewer = LocalViewer.current
-    Column(modifier.tap(onClick = onClick), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp))) {
+    val accent = LocalAccent.current
+    val press = if (onLongClick != null) Modifier.combinedClickable(interactionSource = null, indication = null, onLongClick = onLongClick, onClick = onClick) else Modifier.tap(onClick = onClick)
+    Column(modifier.then(press), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                // Picked: a 2 px accent ring 3 px outside the picture.
+                .then(if (selected == true) Modifier.drawBehind {
+                    val gap = 4.dp.toPx()
+                    drawRoundRect(accent, topLeft = Offset(-gap, -gap), size = Size(size.width + gap * 2, size.height + gap * 2), cornerRadius = CornerRadius(15.dp.toPx()), style = Stroke(2.dp.toPx()))
+                } else Modifier)
+                .clip(RoundedCornerShape(12.dp)),
+        ) {
             CardArtwork(
                 viewer.images?.cardArt(item, 480, viewer.episodeImages), item.name.orEmpty(),
                 ArtTitle(13.sp, start = 9.dp, end = 30.dp, bottom = 9.dp), Modifier.matchParentSize(),
             )
             if (item.userData?.played == true) WatchedMark(size = 22.dp, inset = 6.dp, check = 12.dp, stroke = 3.2f)
             if (item.inProgress) CardProgress(item.progress, side = 6.dp, bottom = 5.dp, height = 3.dp)
+            if (selected != null) {
+                if (!selected) Box(Modifier.matchParentSize().background(SeedyColors.Bg.copy(alpha = 0.35f)))
+                Box(
+                    Modifier.padding(6.dp).size(24.dp).clip(RoundedCornerShape(8.dp))
+                        .then(if (selected) Modifier.background(accent) else Modifier.background(SeedyColors.Bg.copy(alpha = 0.7f)).border(2.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(8.dp))),
+                    contentAlignment = Alignment.Center,
+                ) { if (selected) SIcon(WebIcons.Check, size = 14.dp, color = SeedyColors.InkInverse, stroke = 3.2f) }
+            }
         }
         Column(Modifier.padding(horizontal = 1.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
             SText(item.name.orEmpty(), size = 13.sp, weight = 700, color = SeedyColors.White, maxLines = 1)

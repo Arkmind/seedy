@@ -45,6 +45,10 @@ tries hard not to make your server convert anything it doesn't have to.
   server.
 - **Live TV**: what's on now, a guide grid, channels and recordings. Works with M3U (IPTV) and HDHomeRun tuners and
   XMLTV guides.
+- **Playlists and your library, managed from the title.** Add a title to a playlist or collection, make playlists
+  for yourself, the people you pick (who can edit or only watch) or everyone. Admins can edit metadata, fix a wrong
+  match, change posters, backdrops and logos, refresh, and delete with a clear view of what leaves the disk (and clear
+  the title in Seerr so it can be requested again). Pick several titles in a library to act on them at once.
 - **Skip intro, recap and credits** from Jellyfin's media segments (the [Intro Skipper](https://github.com/intro-skipper/intro-skipper)
   plugin makes them). Each profile picks "Show button", "Skip automatically" or "Off" for each kind.
 - **English and French.** "Auto" follows the device, and each profile can choose.
@@ -63,7 +67,8 @@ tries hard not to make your server convert anything it doesn't have to.
   language, dates, screensaver, TV layout, custom CSS) and controls.
 - **A full admin dashboard** at `/admin` that replaces Jellyfin's: branding, home screen, requests and the play log,
   plus the server itself (settings, users, libraries, playback, networking, Live TV, devices, activity, plugins,
-  scheduled tasks, backups with a weekly automatic one, logs and API keys).
+  scheduled tasks, backups with a weekly automatic one, logs and API keys), and the space left on each disk with a
+  warning when one fills up.
 
 ### On Android phones and TVs
 
@@ -80,7 +85,7 @@ tries hard not to make your server convert anything it doesn't have to.
 - **Settings** for playback, subtitles and the home screen, some per device and some per profile. With the plugin,
   the profile ones are the same as on the web.
 - **Server pages for admins** on the phone, under Settings › Server: what's playing (message or stop it), running
-  tasks, users and their access, libraries and scans, transcoding, server settings, networking, Live TV, devices,
+  tasks, disk space, users and their access, libraries and scans, transcoding, server settings, networking, Live TV, devices,
   the activity log, plugins, scheduled tasks, backups, logs and API keys. With the plugin, Seedy's own admin pages
   are there too.
 

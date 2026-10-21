@@ -100,6 +100,8 @@ class DetailsActions(
     /** Opens the request sheet: the seasons to tick first (empty: every open one). */
     val onRequest: (List<Int>) -> Unit = {},
     val onMarkSeason: () -> Unit = {},
+    /** Opens the More menu (null: no menu button). */
+    val onMore: (() -> Unit)? = null,
 )
 
 /**
@@ -174,7 +176,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.children(state: Detai
 }
 
 @Composable
-private fun TopButtons(actions: DetailsActions, menu: (@Composable (close: () -> Unit) -> Unit)?) {
+private fun TopButtons(actions: DetailsActions, onMore: (() -> Unit)?) {
     Row(
         Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = topInset()),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -182,15 +184,7 @@ private fun TopButtons(actions: DetailsActions, menu: (@Composable (close: () ->
         GlassButton(WebIcons.ArrowLeft, 22.dp, actions.onBack)
         Spacer(Modifier.weight(1f))
         GlassButton(WebIcons.Cast, 21.dp, {})
-        if (menu != null) {
-            var open by remember { mutableStateOf(false) }
-            Box {
-                GlassButton(AppIcons.MoreVertical, 22.dp, { open = true })
-                DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = SeedyColors.Row, shape = RoundedCornerShape(12.dp)) {
-                    menu { open = false }
-                }
-            }
-        }
+        if (onMore != null) GlassButton(AppIcons.MoreVertical, 22.dp, onMore)
     }
 }
 
@@ -214,7 +208,7 @@ private fun Top(state: DetailsViewModel.State, item: BaseItemDto, actions: Detai
             if (art != null && !isPerson && viewer.backdrops) AsyncImage(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = BiasAlignment(0.47f, -0.07f))
             Box(Modifier.fillMaxWidth().height(120.dp).background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.65f), Color.Transparent))))
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.7f).background(Brush.verticalGradient(listOf(Color.Transparent, SeedyColors.Bg))))
-            TopButtons(actions, menu(state, actions))
+            TopButtons(actions, actions.onMore)
         }
         Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 196.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (isPerson) Portrait(item, 96.dp, letters = 30.sp)
@@ -350,20 +344,6 @@ private fun Action(icon: IconDef, label: String, onClick: () -> Unit, modifier: 
     ) {
         SIcon(icon, size = 22.dp, color = color, stroke = stroke)
         SText(label, size = 12.sp, weight = 600, color = SeedyColors.Text, maxLines = 1)
-    }
-}
-
-@Composable
-private fun menu(state: DetailsViewModel.State, actions: DetailsActions): (@Composable (close: () -> Unit) -> Unit)? {
-    val season = state.selectedSeason ?: return null
-    val eps = state.shownEpisodes.orEmpty().filter { !it.isVirtual }
-    val all = eps.isNotEmpty() && eps.all { it.userData?.played == true }
-    return { close ->
-        DropdownMenuItem(
-            text = { SText(if (all) t("Mark {name} unwatched", "name" to season.name.orEmpty()) else t("Mark {name} watched", "name" to season.name.orEmpty()), size = 14.sp, weight = 700) },
-            leadingIcon = { SIcon(WebIcons.Check, size = 18.dp, color = SeedyColors.Text2) },
-            onClick = { close(); actions.onMarkSeason() },
-        )
     }
 }
 

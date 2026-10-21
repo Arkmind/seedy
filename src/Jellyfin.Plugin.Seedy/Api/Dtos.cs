@@ -333,6 +333,66 @@ public sealed class SeerrSeasonDto
     [JsonPropertyName("requestedByMe4k")] public bool RequestedByMe4k { get; set; }
 }
 
+public sealed class SeerrMediaStateDto
+{
+    [JsonPropertyName("mediaType")] public string MediaType { get; set; } = "movie";
+    [JsonPropertyName("tmdbId")] public int TmdbId { get; set; }
+    [JsonIgnore] public int MediaId { get; set; }
+
+    /// <summary>Gets or sets "Sonarr" or "Radarr" when the title was sent to one.</summary>
+    [JsonPropertyName("arr")] public string? Arr { get; set; }
+
+    /// <summary>Gets or sets whether that *arr still monitors it (null: couldn't ask).</summary>
+    [JsonPropertyName("monitored")] public bool? Monitored { get; set; }
+}
+
+public sealed class DeletePreviewDto
+{
+    [JsonPropertyName("items")] public List<DeletePreviewItemDto> Items { get; set; } = [];
+    [JsonPropertyName("bytes")] public long Bytes { get; set; }
+}
+
+public sealed class DeletePreviewItemDto
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("type")] public string Type { get; set; } = string.Empty;
+    [JsonPropertyName("canDelete")] public bool CanDelete { get; set; }
+    [JsonPropertyName("bytes")] public long Bytes { get; set; }
+
+    /// <summary>Gets or sets the files and folders Jellyfin removes.</summary>
+    [JsonPropertyName("paths")] public List<string> Paths { get; set; } = [];
+
+    /// <summary>Gets or sets what's in them: a group per season (series), the video files, then everything else.</summary>
+    [JsonPropertyName("groups")] public List<DeleteGroupDto> Groups { get; set; } = [];
+
+    /// <summary>Gets or sets the title in Seerr, for people who may clear it there.</summary>
+    [JsonPropertyName("seerr")] public SeerrMediaStateDto? Seerr { get; set; }
+}
+
+public sealed class DeleteGroupDto
+{
+    /// <summary>Gets or sets "season", "media" or "extras".</summary>
+    [JsonPropertyName("kind")] public string Kind { get; set; } = "media";
+    [JsonPropertyName("id")] public string? Id { get; set; }
+    [JsonPropertyName("name")] public string? Name { get; set; }
+    [JsonPropertyName("index")] public int? Index { get; set; }
+    [JsonPropertyName("episodes")] public int Episodes { get; set; }
+    [JsonPropertyName("files")] public int Files { get; set; }
+    [JsonPropertyName("bytes")] public long Bytes { get; set; }
+
+    /// <summary>Gets or sets the first video's height and codec ("2160", "hevc").</summary>
+    [JsonPropertyName("height")] public int? Height { get; set; }
+    [JsonPropertyName("codec")] public string? Codec { get; set; }
+}
+
+public sealed class SharePersonDto
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("hasImage")] public bool HasImage { get; set; }
+}
+
 public sealed class SeerrDetailsDto : SeerrItemDto
 {
     [JsonPropertyName("tagline")] public string? Tagline { get; set; }

@@ -39,8 +39,10 @@ export function Popover({
       else next.bottom = vh - r.top + 8;
       // Taller than the window: it scrolls.
       if (full > vh - 16) Object.assign(next, { maxHeight: vh - 16, overflowY: 'auto' });
-      if (align === 'end') next.right = Math.max(8, vw - r.right);
-      else next.left = Math.max(8, r.left);
+      // Kept inside the window on both sides.
+      const w = ref.current?.offsetWidth ?? 0;
+      if (align === 'end') next.right = Math.max(8, Math.min(vw - r.right, vw - 8 - w));
+      else next.left = Math.max(8, Math.min(r.left, vw - 8 - w));
       setPos(next);
     };
     place();
@@ -70,7 +72,9 @@ export function Popover({
         anchor.current?.focus();
       }
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        const items = Array.from(ref.current?.querySelectorAll<HTMLElement>('.menu-item:not([disabled])') ?? []);
+        // Within the menu that has focus (a side menu has its own).
+        const scope = (document.activeElement as HTMLElement | null)?.closest('[role="menu"]') ?? ref.current;
+        const items = Array.from(scope?.querySelectorAll<HTMLElement>('.menu-item:not([disabled])') ?? []);
         if (!items.length) return;
         e.preventDefault();
         const i = items.indexOf(document.activeElement as HTMLElement);
@@ -145,8 +149,9 @@ export function MenuButton({ button, children, align, width, placement }: {
 
 /* ── Modal sheet ── */
 
-export function Sheet({ open, onClose, children, wide, label, labelledBy, class: cls, scrimClass }: {
+export function Sheet({ open, onClose, children, wide, label, labelledBy, class: cls, scrimClass, style }: {
   open: boolean; onClose: () => void; children: ComponentChildren; wide?: boolean; label?: string;
+  style?: Record<string, string>;
   /* A heading inside the dialog to name it by, instead of `label`. */
   labelledBy?: string;
   /* Replaces the sheet's own look (the request dialog has its own). */
@@ -188,7 +193,7 @@ export function Sheet({ open, onClose, children, wide, label, labelledBy, class:
   if (!open) return null;
   return createPortal(
     <div class={'scrim' + (scrimClass ? ' ' + scrimClass : '')} onPointerDown={(e) => { if (e.target === e.currentTarget) closeRef.current(); }}>
-      <div ref={ref} class={cls ?? 'sheet' + (wide ? ' is-wide' : '')} role="dialog" aria-modal="true" aria-label={labelledBy ? undefined : label} aria-labelledby={labelledBy}>
+      <div ref={ref} class={cls ?? 'sheet' + (wide ? ' is-wide' : '')} role="dialog" aria-modal="true" aria-label={labelledBy ? undefined : label} aria-labelledby={labelledBy} style={style}>
         {children}
       </div>
     </div>,

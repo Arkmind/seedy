@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { get, post, JELLYFIN_WEB } from '../../api/client';
-import { getGenres, getItem, getItems, getSimilar, type ItemsQuery } from '../../api/jellyfin';
+import { CARD_FIELDS, getGenres, getItem, getItems, getSimilar, type ItemsQuery } from '../../api/jellyfin';
 import { backdropUrl, cardArt } from '../../api/images';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { meStore, viewsStore } from '../../lib/app-state';
@@ -15,12 +15,14 @@ import { MenuButton, MenuItem, Sheet, toast } from '../../ui/overlay';
 import { Row } from '../../ui/Row';
 import {
   CardGrid, EmptyState, ErrorState, GridSkeleton, ListRows, PageHead, RowSkeleton, Sentinel, join, playRandom, uid,
-  useInView, usePaged, yearOf
+  useInView, usePaged, yearOf, type GridSelect
 } from './parts';
 import { CUSTOM, readCustom } from '../me/prefs';
 import './library.css';
 import { headerHeight } from '../../ui/sticky';
 import { t } from '../../lib/i18n';
+import { SelectionBar, useSelection } from './library-select';
+import { manageChanged } from './manage/host';
 
 /* ───────── Tabs, sorts and filters ───────── */
 
@@ -210,6 +212,32 @@ function LibraryView({ view }: { view: BaseItem }) {
       : tab === 'artists' ? fetchArtists(view, { ...query, startIndex: start, limit }, signal)
       : getItems({ ...query, startIndex: start, limit }, signal);
   const paged = usePaged(fetchPage, [view.Id, tab, sort.id, order, filterKey, isGrid], 60);
+  const sel = useSelection(paged.items);
+  useEffect(() => { sel.stop(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [view.Id, tab]);
+  /* After the bar or a dialog changed titles: fresh cards for the picked ones, a fresh page after a delete. */
+  const managed = useStore(manageChanged);
+  useEffect(() => {
+    if (!managed.n) return;
+    if (managed.deleted.length) {
+      sel.set(sel.items.filter((i) => !managed.deleted.includes(i.Id)));
+      paged.reload();
+      libTotal.reload();
+    } else refreshPicked();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [managed.n]);
+  const refreshPicked = () => {
+    const ids = sel.items.map((i) => i.Id);
+    if (!ids.length) return;
+    getItems({ ids, fields: CARD_FIELDS }).then((r) => r.Items.forEach(paged.replace), () => paged.reload());
+  };
+  const selectAll = async () => {
+    try {
+      const r = await getItems({ ...query, startIndex: 0, limit: paged.total, enableImageTypes: [], fields: [] });
+      sel.set(r.Items);
+    } catch {
+      toast(t('Couldn’t select everything'), 'error');
+    }
+  };
 
   /* The title count is the whole library, not the filtered view. */
   const libTotal = useAsync(
@@ -247,7 +275,7 @@ function LibraryView({ view }: { view: BaseItem }) {
         <PageHead
           title={view.Name}
           count={count !== undefined ? plural(count, ct === 'music' ? 'album' : 'title') : undefined}
-          actions={
+          actions={sel.active && isGrid ? undefined :
             <>
               <button type="button" class="btn btn-primary is-md lib-shuffle" onClick={shuffle}>
                 <Icon name="shuffle" size={18} stroke={2.2} />
@@ -263,6 +291,7 @@ function LibraryView({ view }: { view: BaseItem }) {
               >
                 {(close) => (
                   <>
+                    {isGrid && <MenuItem icon="check" label={t('Select titles')} sub={t('Act on several at once')} onSelect={() => { close(); sel.start(); }} />}
                     <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); paged.reload(); libTotal.reload(); }} />
                     <MenuItem icon="link" label={t('Copy link')} onSelect={() => {
                       close();
@@ -285,6 +314,16 @@ function LibraryView({ view }: { view: BaseItem }) {
             </>
           }
         />
+
+        {sel.active && isGrid && (
+          <SelectionBar
+            sel={sel}
+            total={paged.total}
+            kindLabel={(n) => t('{n} selected', { n })}
+            onSelectAll={selectAll}
+            onChanged={refreshPicked}
+          />
+        )}
 
         <div class="lib-toolbar">
           <nav aria-label={t('Library views')} class="tab-row hscroll">
@@ -336,7 +375,7 @@ function LibraryView({ view }: { view: BaseItem }) {
 
         {tab === 'suggestions' ? <Suggestions view={view} />
           : tab === 'genres' ? <GenreTiles view={view} />
-          : <GridBody view={view} tab={tab} paged={paged} layout={layout} query={query} sort={sort.id} order={order} hasFilters={chips.length > 0} onClear={() => setFilters({ flags: [], genres: [], decades: [], ratings: [] })} />}
+          : <GridBody view={view} tab={tab} paged={paged} layout={layout} query={query} sort={sort.id} order={order} hasFilters={chips.length > 0} onClear={() => setFilters({ flags: [], genres: [], decades: [], ratings: [] })} select={tab === 'artists' ? undefined : sel.grid} />}
       </main>
 
       {sheet && (
@@ -396,9 +435,9 @@ function SortButton({ sort, order, onChange }: { sort: SortId; order: 'asc' | 'd
 
 /* ───────── Grid / list with A–Z rail and infinite scroll ───────── */
 
-function GridBody({ view, tab, paged, layout, query, sort, order, hasFilters, onClear }: {
+function GridBody({ view, tab, paged, layout, query, sort, order, hasFilters, onClear, select }: {
   view: BaseItem; tab: TabId; paged: ReturnType<typeof usePaged>; layout: 'grid' | 'list'; query: ItemsQuery; sort: SortId; order: 'asc' | 'desc';
-  hasFilters: boolean; onClear: () => void;
+  hasFilters: boolean; onClear: () => void; select?: GridSelect;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [letter, setLetter] = useState<string | null>(null);
@@ -481,7 +520,7 @@ function GridBody({ view, tab, paged, layout, query, sort, order, hasFilters, on
     <>
       <div class="lib-body">
         <div class="lib-main" ref={containerRef}>
-          {layout === 'list' ? <ListRows items={paged.items} onReplace={paged.replace} /> : <CardGrid items={paged.items} onReplace={paged.replace} />}
+          {layout === 'list' ? <ListRows items={paged.items} onReplace={paged.replace} /> : <CardGrid items={paged.items} onReplace={paged.replace} select={select} />}
           {!paged.done && <Sentinel onVisible={paged.loadMore} token={paged.items.length} disabled={paged.loading || !!paged.error} />}
           {paged.loading && paged.items.length > 0 && <div class="lib-loading"><span class="spinner" aria-label={t('Loading more')} /></div>}
           {paged.error && paged.items.length > 0 && (

@@ -1,5 +1,5 @@
 import type { ComponentChildren } from 'preact';
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import { cardArt, personImageUrl, tmdbImage, type CardArt } from '../api/images';
 import type { BaseItem } from '../api/types';
 import type { SeerrItem } from '../api/seedy';
@@ -154,25 +154,64 @@ export function ItemCard(p: ItemCardProps) {
   );
 }
 
+/* Picking titles in a library (Library · select several board): a tick box on each card; while picking, a click
+   anywhere on a card ticks it. */
+export interface CardSelect {
+  active: boolean;
+  selected: boolean;
+  /* shift: extend from the last ticked card. */
+  toggle: (shift: boolean) => void;
+}
+
+/* A long press on a touch screen starts picking (there's no hover to show the tick box). */
+function useLongPress(onLong?: () => void) {
+  const timer = useRef(0);
+  const fired = useRef(false);
+  if (!onLong) return {};
+  const cancel = () => { window.clearTimeout(timer.current); };
+  return {
+    onPointerDown: (e: PointerEvent) => {
+      fired.current = false;
+      if (e.pointerType !== 'touch') return;
+      timer.current = window.setTimeout(() => { fired.current = true; onLong(); }, 500);
+    },
+    onPointerUp: cancel, onPointerCancel: cancel, onPointerMove: (e: PointerEvent) => { if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) cancel(); },
+    onContextMenu: (e: Event) => { if (fired.current) e.preventDefault(); },
+    onClickCapture: (e: MouseEvent) => { if (fired.current) { fired.current = false; e.preventDefault(); e.stopPropagation(); } }
+  };
+}
+
 /* Library grid card: hover shows mark watched, favourite, play and runtime (Library board). */
-export function LibraryCard({ item, meta, onToggleWatched, onToggleFavorite, runtimeLabel, origin }: {
+export function LibraryCard({ item, meta, onToggleWatched, onToggleFavorite, runtimeLabel, origin, select }: {
   item: BaseItem;
   meta?: ComponentChildren;
   onToggleWatched: () => void;
   onToggleFavorite: () => void;
   runtimeLabel?: string;
   origin?: string;
+  select?: CardSelect;
 }) {
+  const press = useLongPress(select && !select.active ? () => select.toggle(false) : undefined);
   const art = cardArt(item, 520);
   const played = !!item.UserData?.Played;
   const fav = !!item.UserData?.IsFavorite;
   const progress = progressFraction(item);
   const canPlay = canPlayCard(item);
   const count = item.Type === 'Series' ? item.UserData?.UnplayedItemCount ?? 0 : 0;
+  const picking = !!select?.active;
   return (
-    <div class={'card lib-card' + (canPlay ? ' has-play' : '')}>
+    <div
+      class={'card lib-card' + (canPlay ? ' has-play' : '') + (picking ? ' is-picking' : '') + (select?.selected ? ' is-picked' : '')}
+      {...press}
+      onClickCapture={picking ? (e: MouseEvent) => {
+        if ((e.target as HTMLElement).closest('.lib-pick')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        select!.toggle(e.shiftKey);
+      } : press.onClickCapture}
+    >
       <div class="card-media">
-        <Link to={detailsPath(item)} class="lib-card-link" aria-label={item.Name}>
+        <Link to={detailsPath(item)} class="lib-card-link" aria-label={item.Name} tabIndex={picking ? -1 : undefined}>
           <Art art={art} title={item.Name} titleClass="is-17" />
         </Link>
         {played && <WatchedCheck />}
@@ -189,7 +228,14 @@ export function LibraryCard({ item, meta, onToggleWatched, onToggleFavorite, run
           </div>
           {runtimeLabel ? <span class="tag lib-runtime">{runtimeLabel}</span> : <span />}
         </div>
-        {canPlay && <CardPlay item={item} label={playLabel(item, item.Name)} origin={origin} />}
+        {canPlay && !picking && <CardPlay item={item} label={playLabel(item, item.Name)} origin={origin} />}
+        {picking && !select!.selected && <span aria-hidden="true" class="lib-pick-dim" />}
+        {select && (
+          <button type="button" role="checkbox" class="lib-pick" aria-checked={select.selected ? 'true' : 'false'} aria-label={t('Select {name}', { name: item.Name ?? '' })}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); select.toggle(e.shiftKey); }}>
+            <Icon name="check" size={17} stroke={3.2} />
+          </button>
+        )}
       </div>
       <Link to={detailsPath(item)} class="card-text" tabIndex={-1}>
         <span class="card-title is-14 is-600">{item.Name}</span>
