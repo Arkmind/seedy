@@ -110,9 +110,10 @@ fun TvButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, 
  * Moves the remote's focus here as soon as the element exists. Lazy rows lay out their items after the first
  * composition, so a plain requestFocus() on launch can miss; this waits a frame at a time (up to half a second).
  */
-suspend fun FocusRequester.focusSoon() {
+suspend fun FocusRequester.focusSoon(): Boolean {
     repeat(30) {
         withFrameNanos { }
-        if (runCatching { requestFocus() }.getOrDefault(false)) return
+        if (runCatching { requestFocus() }.getOrDefault(false)) return true
     }
+    return false
 }

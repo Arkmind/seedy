@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,17 +27,23 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -48,8 +55,10 @@ import androidx.compose.ui.text.style.TextAlign
 import io.github.arkmind.seedy.core.format.audioTrackLabel
 import io.github.arkmind.seedy.core.format.clock
 import io.github.arkmind.seedy.core.format.episodeMeta
+import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.format.progress
 import io.github.arkmind.seedy.core.format.subtitleTrackLabel
+import io.github.arkmind.seedy.core.format.timeLeft
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.player.PlayerState
@@ -245,36 +254,53 @@ fun TvEpisodesPanel(
     val viewer = LocalViewer.current
     val accent = LocalAccent.current
     val current = remember { FocusRequester() }
+    val first = remember { FocusRequester() }
+    // While the next episode loads the list can empty for a moment: keep showing the last one, so the remote stays put.
+    val last = remember { object { var list = episodes } }
+    val shown = if (episodes.isNotEmpty()) episodes.also { last.list = it } else last.list
+    var inside by remember { mutableStateOf(false) }
+    val seasons = rememberLazyListState()
     Scrim {
         Column(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 32.bp, topEnd = 32.bp)).background(PanelBg)
-                .padding(start = 96.bp, end = 0.bp, top = 40.bp, bottom = 54.bp),
-            verticalArrangement = Arrangement.spacedBy(26.bp),
+                .onFocusChanged { inside = it.hasFocus }
+                // The season row keeps RingRoom around its tabs for the focus ring: taken from the padding and the gap.
+                .padding(start = 96.bp, end = 0.bp, top = 40.bp - RingRoom, bottom = 54.bp),
+            verticalArrangement = Arrangement.spacedBy(26.bp - RingRoom),
         ) {
-            Row(Modifier.fillMaxWidth().padding(end = 96.bp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.bp)) {
-                SText(state.item?.seriesName.orEmpty(), size = 30.bsp, weight = 900, color = SeedyColors.White, maxLines = 1)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.bp)) {
-                    for (s in state.seasons) {
+            Row(Modifier.fillMaxWidth().padding(end = 96.bp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.bp - RingRoom)) {
+                SText(state.item?.seriesName.orEmpty(), Modifier.widthIn(max = 560.bp), size = 30.bsp, weight = 900, color = SeedyColors.White, maxLines = 1)
+                // A long-running show has more seasons than the bar holds: they scroll, and the hint keeps its line.
+                LazyRow(Modifier.weight(1f), state = seasons, horizontalArrangement = Arrangement.spacedBy(10.bp), contentPadding = PaddingValues(RingRoom)) {
+                    items(state.seasons, key = { it.id }) { s ->
                         val on = s.id == seasonId
                         TvPressable({ onSeason(s) }) { f ->
                             Box(
                                 Modifier.height(52.bp).focusRing(f, radius = 15.bp, gap = 4.bp, ring = 4.bp, gapColor = GapColor).clip(RoundedCornerShape(15.bp))
                                     .background(if (f) SeedyColors.Inverse else Color.White.copy(alpha = if (on) 0.18f else 0.06f)).padding(horizontal = 22.bp),
                                 contentAlignment = Alignment.Center,
-                            ) { SText(s.name.orEmpty(), size = 19.bsp, weight = if (on || f) 800 else 600, color = if (f) SeedyColors.InkInverse else SeedyColors.White) }
+                            ) { SText(s.name.orEmpty(), size = 19.bsp, weight = if (on || f) 800 else 600, color = if (f) SeedyColors.InkInverse else SeedyColors.White, maxLines = 1) }
                         }
                     }
                 }
-                Spacer(Modifier.weight(1f))
-                SText(t("Up for seasons · Back closes"), size = 17.bsp, color = SeedyColors.Text3)
+                SText(t("Up for seasons · Back closes"), Modifier.padding(start = RingRoom), size = 17.bsp, color = SeedyColors.Text3, maxLines = 1)
             }
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(28.bp), contentPadding = PaddingValues(top = 10.bp, bottom = 10.bp, end = 96.bp), verticalAlignment = Alignment.Top) {
-                items(episodes, key = { it.id }) { e ->
+            // Room on the left too, so the first card's ring isn't cut.
+            LazyRow(
+                Modifier.offset(x = -RingRoom),
+                horizontalArrangement = Arrangement.spacedBy(28.bp),
+                contentPadding = PaddingValues(start = RingRoom, top = 10.bp, bottom = 10.bp, end = 96.bp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                itemsIndexed(shown, key = { _, e -> e.id }) { i, e ->
                     val playing = e.id == state.item?.id
                     val future = e.premiereDate?.toLocalDate()?.isAfter(LocalDate.now()) == true
-                    TvPressable({ onEpisode(e) }, if (playing) Modifier.focusRequester(current) else Modifier) { f ->
+                    val requesters = (if (playing) Modifier.focusRequester(current) else Modifier).then(if (i == 0) Modifier.focusRequester(first) else Modifier)
+                    TvPressable({ onEpisode(e) }, requesters) { f ->
                         val w by animateDpAsState(if (f) 380.bp else 330.bp, label = "episode")
+                        // The playing episode shows where playback is now, not where its last report left it.
+                        val progress = if (playing && state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else e.progress
                         Column(Modifier.width(w), verticalArrangement = Arrangement.spacedBy(12.bp)) {
                             Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).focusRing(f, radius = 18.bp, gap = 4.bp, ring = 5.bp, gapColor = GapColor).clip(RoundedCornerShape(18.bp)).alpha(if (future) 0.35f else 1f)) {
                                 Artwork(viewer.images?.landscape(e, 640, viewer.episodeImages), Modifier.matchParentSize())
@@ -284,15 +310,20 @@ fun TvEpisodesPanel(
                                         size = 15.bsp, weight = 800, color = accent, uppercase = true,
                                     )
                                 }
-                                if (e.progress > 0f && e.userData?.played != true) {
+                                if (progress > 0f && (playing || e.userData?.played != true)) {
                                     Box(Modifier.align(Alignment.BottomCenter).padding(12.bp).fillMaxWidth().height(5.bp).clip(RoundedCornerShape(3.bp)).background(Color.White.copy(alpha = 0.24f))) {
-                                        Box(Modifier.fillMaxHeight().fillMaxWidth(e.progress).background(Color.White))
+                                        Box(Modifier.fillMaxHeight().fillMaxWidth(progress.coerceIn(0f, 1f)).background(Color.White))
                                     }
                                 }
                             }
                             Column(verticalArrangement = Arrangement.spacedBy(3.bp)) {
                                 SText("${e.indexNumber ?: ""} · ${e.name.orEmpty()}", size = 19.bsp, weight = 700, color = if (future) SeedyColors.Text2 else SeedyColors.White, maxLines = 1)
-                                SText(if (e.userData?.played == true) "${episodeMeta(e).substringBefore(" · ")} · ${t("Watched")}" else episodeMeta(e), size = 15.bsp, color = SeedyColors.Text3, maxLines = 1)
+                                val meta = when {
+                                    playing && state.durationMs > 0 -> join(episodeMeta(e).substringBefore(" · "), timeLeft((state.durationMs - state.positionMs).coerceAtLeast(0) / 1000.0))
+                                    e.userData?.played == true -> "${episodeMeta(e).substringBefore(" · ")} · ${t("Watched")}"
+                                    else -> episodeMeta(e)
+                                }
+                                SText(meta, size = 15.bsp, color = SeedyColors.Text3, maxLines = 1)
                                 if (f) e.overview?.let { SText(it, Modifier.padding(top = 4.bp), size = 16.bsp, lineHeight = 1.45f, color = SeedyColors.TextHero, maxLines = 3) }
                             }
                         }
@@ -301,8 +332,22 @@ fun TvEpisodesPanel(
             }
         }
     }
-    LaunchedEffect(Unit) { current.focusSoon() }
+    // The current season's tab in view.
+    LaunchedEffect(seasonId, state.seasons.size) {
+        val i = state.seasons.indexOfFirst { it.id == seasonId }
+        if (i > 0) seasons.scrollToItem(i - 1)
+    }
+    // On the playing episode when the panel opens, and back on it whenever the remote has lost its place (the next
+    // episode started and the list reloaded under it).
+    val ids = shown.map { it.id }
+    LaunchedEffect(state.item?.id, ids) {
+        withFrameNanos { }
+        if (!inside && !current.focusSoon()) first.focusSoon()
+    }
 }
+
+/** Room kept around a row of focusable tabs so the focus ring (8 px outside) isn't clipped. */
+private val RingRoom = 9.bp
 
 /** The settings panel's pages. */
 enum class SettingsPage { Main, Quality, Speed, Picture, Chapters }

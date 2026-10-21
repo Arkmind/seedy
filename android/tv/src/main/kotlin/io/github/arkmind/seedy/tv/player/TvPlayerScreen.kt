@@ -96,6 +96,8 @@ class TvPlayerFocus {
     val skip = FocusRequester()
     val play = FocusRequester()
     val scrubber = FocusRequester()
+    /** The tool buttons, so the remote goes back to the one whose panel just closed. */
+    val tools: Map<TvTool, FocusRequester> = TvTool.entries.associateWith { FocusRequester() }
 }
 
 /**
@@ -220,11 +222,14 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
                     if (state.next != null) ToolButton(actions.onNext) { ink -> SIcon(TvPlayerIcons.Next, size = 30.bp, color = ink) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.bp), verticalAlignment = Alignment.CenterVertically) {
-                    ToolButton({ actions.onTool(TvTool.Subtitles) }, dot = state.subtitleIndex >= 0) { ink -> SIcon(TvPlayerIcons.Subtitles, size = 30.bp, color = ink) }
-                    if (state.audio.size > 1) ToolButton({ actions.onTool(TvTool.Audio) }) { ink -> SIcon(TvPlayerIcons.Audio, size = 30.bp, color = ink) }
-                    if (!item?.chapters.isNullOrEmpty()) ToolButton({ actions.onTool(TvTool.Chapters) }) { ink -> SIcon(TvPlayerIcons.Chapters, size = 30.bp, color = ink) }
-                    if (item?.type == BaseItemKind.EPISODE) ToolButton({ actions.onTool(TvTool.Episodes) }) { ink -> SIcon(TvPlayerIcons.Episodes, size = 30.bp, color = ink) }
-                    ToolButton({ actions.onTool(TvTool.Settings) }) { ink -> SIcon(TvPlayerIcons.Settings, size = 30.bp, color = ink) }
+                    @Composable
+                    fun Tool(tool: TvTool, icon: IconDef, dot: Boolean = false) =
+                        ToolButton({ actions.onTool(tool) }, dot, Modifier.focusRequester(focus.tools.getValue(tool))) { ink -> SIcon(icon, size = 30.bp, color = ink) }
+                    Tool(TvTool.Subtitles, TvPlayerIcons.Subtitles, dot = state.subtitleIndex >= 0)
+                    if (state.audio.size > 1) Tool(TvTool.Audio, TvPlayerIcons.Audio)
+                    if (!item?.chapters.isNullOrEmpty()) Tool(TvTool.Chapters, TvPlayerIcons.Chapters)
+                    if (item?.type == BaseItemKind.EPISODE) Tool(TvTool.Episodes, TvPlayerIcons.Episodes)
+                    Tool(TvTool.Settings, TvPlayerIcons.Settings)
                 }
             }
         }
@@ -249,8 +254,8 @@ private fun liveLine(state: PlayerState): String {
 }
 
 @Composable
-private fun ToolButton(onClick: () -> Unit, dot: Boolean = false, icon: @Composable (Color) -> Unit) {
-    TvPressable(onClick) { focused ->
+private fun ToolButton(onClick: () -> Unit, dot: Boolean = false, modifier: Modifier = Modifier, icon: @Composable (Color) -> Unit) {
+    TvPressable(onClick, modifier) { focused ->
         Box(
             Modifier.size(64.bp).clip(RoundedCornerShape(17.bp)).background(if (focused) SeedyColors.Inverse else Color.Transparent),
             contentAlignment = Alignment.Center,
