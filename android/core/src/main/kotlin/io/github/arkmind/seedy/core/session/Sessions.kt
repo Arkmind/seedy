@@ -70,6 +70,12 @@ class UserSession internal constructor(
         _seedy.value = _seedy.value?.copy(prefs = prefs)
     }
 
+    /** Reads Seedy's view of this person again (an admin changed the branding or defaults): the app follows at once. */
+    suspend fun refreshSeedy() {
+        val api = seedyApi ?: return
+        withContext(Dispatchers.IO) { runCatching { api.me() }.getOrNull() }?.let { _seedy.value = it }
+    }
+
     /** Requests (Seerr) are shown only when Seedy is installed and connected to Seerr. */
     val hasRequests: Boolean get() = seedy?.requests?.connected == true
 }

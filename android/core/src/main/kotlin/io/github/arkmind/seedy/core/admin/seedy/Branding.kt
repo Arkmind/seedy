@@ -64,7 +64,8 @@ interface BrandingActions {
 
 class BrandingViewModel(private val session: UserSession) : ViewModel(), BrandingActions {
     private val http = AdminHttp(session.api)
-    private val store = SeedyConfigStore(http, viewModelScope)
+    // The app's own accent, logo and name follow each saved change.
+    private val store = SeedyConfigStore(http, viewModelScope, onSaved = { viewModelScope.launch { session.refreshSeedy() } })
     private val extra = MutableStateFlow(BrandingState(alongsidePath = alongside(session.server.address)))
 
     val state: StateFlow<BrandingState> = combine(store.config, store.loadError, store.save, extra) { c, err, save, x ->
@@ -112,6 +113,7 @@ class BrandingViewModel(private val session: UserSession) : ViewModel(), Brandin
                 val tail = "\r\n--$boundary--\r\n".toByteArray()
                 val res = http.raw(HttpMethod.POST, "/Seedy/Admin/Logo", body = FileInfo(head + bytes + tail, "multipart/form-data; boundary=$boundary"))
                 store.take(SeedyJson.decodeFromString(JsonObject.serializer(), res.decodeToString()))
+                session.refreshSeedy()
                 say(t("Logo updated"))
             } catch (e: CancellationException) {
                 throw e
@@ -130,6 +132,7 @@ class BrandingViewModel(private val session: UserSession) : ViewModel(), Brandin
                 runCatching { store.flush() }
                 val res = http.raw(HttpMethod.DELETE, "/Seedy/Admin/Logo")
                 store.take(SeedyJson.decodeFromString(JsonObject.serializer(), res.decodeToString()))
+                session.refreshSeedy()
                 say(t("Logo removed"))
             } catch (e: CancellationException) {
                 throw e
