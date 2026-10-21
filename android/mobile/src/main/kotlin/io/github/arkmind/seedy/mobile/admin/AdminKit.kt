@@ -633,6 +633,8 @@ fun BoardField(
     enabled: Boolean = true,
     autoCorrect: Boolean = false,
     size: Int = 15,
+    /** Room before the text (an icon drawn over the field). */
+    start: Dp = 14.dp,
     onDone: () -> Unit = {},
     onBlur: () -> Unit = {},
 ) {
@@ -658,7 +660,7 @@ fun BoardField(
         modifier.fillMaxWidth().then(if (multi) Modifier.heightIn(min = (14 * 1.4f * lines + 24).toInt().dp) else Modifier.height(46.dp))
             .clip(shape).background(SeedyColors.Surface)
             .then(if (ring != null) Modifier.border(2.dp, ring, shape) else Modifier)
-            .padding(horizontal = 14.dp, vertical = if (multi) 12.dp else 0.dp),
+            .padding(start = start, end = 14.dp, top = if (multi) 12.dp else 0.dp, bottom = if (multi) 12.dp else 0.dp),
         contentAlignment = if (multi) Alignment.TopStart else Alignment.CenterStart,
     ) {
         if (value.isEmpty() && placeholder.isNotEmpty()) {

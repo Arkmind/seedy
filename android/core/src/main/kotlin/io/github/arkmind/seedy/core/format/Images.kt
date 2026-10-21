@@ -41,6 +41,10 @@ class Images(private val api: ApiClient) {
 
     fun user(userId: UUID, tag: String?): String? = tag?.let { api.imageApi.getUserImageUrl(userId = userId, tag = it) }
 
+    /** Someone's picture by their id alone (Seedy's people list says whether they have one). */
+    fun userPicture(userId: String, maxWidth: Int): String =
+        api.baseUrl.orEmpty().trimEnd('/') + "/Users/$userId/Images/Primary?quality=90&maxWidth=$maxWidth"
+
     /** A person's portrait, a channel's logo, a library's own picture: the item's primary image. */
     fun primary(item: BaseItemDto, maxWidth: Int): String? =
         item.imageTags?.get(ImageType.PRIMARY)?.let { item(item.id, ImageType.PRIMARY, it, maxWidth) }
