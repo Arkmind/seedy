@@ -20,6 +20,8 @@ sealed interface Route {
     data class SeerrTitle(val mediaType: String, val tmdbId: Int) : Route
     /** A Discover row's "See all" (a [io.github.arkmind.seedy.core.requests.TitlesKind] key). */
     data class SeerrTitles(val kind: String) : Route
+    /** A server page for admins: "server" (the hub), "users", "user" (with [id]), "libraries", "playback"… */
+    data class Admin(val page: String, val id: String? = null) : Route
 }
 
 /** Moves between pages; every screen reaches it through [LocalMobileNav]. */
