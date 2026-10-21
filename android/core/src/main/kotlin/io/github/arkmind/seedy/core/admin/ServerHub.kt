@@ -174,21 +174,23 @@ class ServerHubViewModel(
     }
 
     private fun loadSummaries() {
-        summary { summaries = summaries.copy(libraries = http.get<List<VirtualFolder>>("/Library/VirtualFolders")) }
-        summary { summaries = summaries.copy(encoding = http.getObject("/System/Configuration/encoding")) }
-        summary { summaries = summaries.copy(network = http.getObject("/System/Configuration/network")) }
+        // Each request finishes before the copy, so summaries arriving together don't overwrite each other.
+        summary { val v = http.get<List<VirtualFolder>>("/Library/VirtualFolders"); summaries = summaries.copy(libraries = v) }
+        summary { val v = http.getObject("/System/Configuration/encoding"); summaries = summaries.copy(encoding = v) }
+        summary { val v = http.getObject("/System/Configuration/network"); summaries = summaries.copy(network = v) }
         summary {
             val live = http.getObject("/System/Configuration/livetv")
-            summaries = summaries.copy(tuners = (live["TunerHosts"] as? JsonArray)?.size ?: 0)
-            if ((summaries.tuners ?: 0) > 0) {
+            val tuners = (live["TunerHosts"] as? JsonArray)?.size ?: 0
+            summaries = summaries.copy(tuners = tuners)
+            if (tuners > 0) {
                 val channels = http.get<ItemsResult<JsonObject>>("/LiveTv/Channels", mapOf("userId" to session.userId.toString(), "limit" to 0, "enableImages" to false, "enableUserData" to false))
                 summaries = summaries.copy(channels = channels.totalRecordCount)
             }
         }
         if (session.seedyApi != null) {
-            summary { summaries = summaries.copy(pendingRequests = http.get<RequestCounts>("/Seedy/Requests/Summary", json = SeedyJson).pending) }
+            summary { val v = http.get<RequestCounts>("/Seedy/Requests/Summary", json = SeedyJson).pending; summaries = summaries.copy(pendingRequests = v) }
         }
-        summary { summaries = summaries.copy(devices = http.get<ItemsResult<AdminDevice>>("/Devices").totalRecordCount) }
+        summary { val v = http.get<ItemsResult<AdminDevice>>("/Devices").totalRecordCount; summaries = summaries.copy(devices = v) }
         summary {
             val start = java.time.LocalDate.now(clock).atStartOfDay(clock.zone).toInstant()
             val entries = http.get<ItemsResult<ActivityEntry>>("/System/ActivityLog/Entries", mapOf("minDate" to start.toString(), "type" to "AuthenticationFailed", "limit" to 0))
@@ -198,7 +200,7 @@ class ServerHubViewModel(
             val list = http.get<List<BackupManifest>>("/Backup")
             summaries = summaries.copy(backups = list.size, lastBackup = list.mapNotNull { realDate(it.dateCreated) }.maxOrNull())
         }
-        summary { summaries = summaries.copy(apiKeys = http.get<ItemsResult<JsonObject>>("/Auth/Keys").totalRecordCount) }
+        summary { val v = http.get<ItemsResult<JsonObject>>("/Auth/Keys").totalRecordCount; summaries = summaries.copy(apiKeys = v) }
     }
 
     private fun publish() {
