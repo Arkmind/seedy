@@ -3,6 +3,7 @@ import type { BaseItem, ItemsResult, User, UserConfiguration } from '../../api/t
 import { t } from '../../lib/i18n';
 import { createStore } from '../../lib/store';
 import { toast } from '../../ui/overlay';
+import type { SystemStorage } from './storage';
 
 /* Jellyfin 12 calls behind the server dashboard, in the order of its menu: Server (overview, settings, users,
    libraries, playback, networking, Live TV), Activity (devices, activity log) and Advanced (plugins, scheduled tasks,
@@ -39,6 +40,7 @@ export interface SystemInfo {
 }
 
 export const getSystemInfo = (signal?: AbortSignal) => get<SystemInfo>('/System/Info', undefined, signal);
+export const getStorage = (signal?: AbortSignal) => get<SystemStorage>('/System/Info/Storage', undefined, signal);
 export const scanAllLibraries = () => post<void>('/Library/Refresh');
 export const shutdownServer = () => post<void>('/System/Shutdown');
 

@@ -10,13 +10,14 @@ import { Art } from '../../ui/cards';
 import { Icon } from '../../ui/icons';
 import { Sheet, confirm, toast } from '../../ui/overlay';
 import { AdminLayout } from '../admin/AdminLayout';
-import { type ActivityEntry, errText, type FullUser, getActivity, getItemCounts, getPackages, getPlugins, getSessions, getSystemInfo, getTasks, getUsers, type ItemCounts, type PackageInfo, type PluginInfo, restartingStore, restartServer, sameId, scanAllLibraries, sendSessionMessage, type Session, shutdownServer, stopSession, type SystemInfo, type TaskInfo } from './api';
+import { type ActivityEntry, errText, type FullUser, getActivity, getItemCounts, getPackages, getPlugins, getSessions, getStorage, getSystemInfo, getTasks, getUsers, type ItemCounts, type PackageInfo, type PluginInfo, restartingStore, restartServer, sameId, scanAllLibraries, sendSessionMessage, type Session, shutdownServer, stopSession, type SystemInfo, type TaskInfo } from './api';
 import { InlineError, Notice, usePoll, UserAvatar } from './parts';
 import { activityWhen, dayDiff, hhmm, majorMinor, platformLabel, playDetail, playMethod, shortDate, uptime } from './format';
 import { countPluginUpdates, pluginTargetAbi } from './plugins';
 import { sentenceCase, serverStartFromTasks } from './tasks';
 import { pluginUpdatesStore } from './status';
 import { adminStatus } from '../../api/seedy';
+import { type Disk, disks, fmtDisk, fullText, level, WARN_AT } from './storage';
 
 /* Server · Overview: what the server is doing now. Sessions, tasks and activity refresh every few seconds. */
 
@@ -38,6 +39,8 @@ export function ServerOverview() {
   const counts = useLive(getItemCounts, 60_000);
   const users = useLive(getUsers, 60_000);
   const plugins = useLive(getPlugins, 60_000);
+  const storage = useLive(getStorage, 60_000);
+  const diskList = storage.data ? disks(storage.data) : undefined;
   const [packages, setPackages] = useState<PackageInfo[] | null>(null);
   const [started, setStarted] = useState<Date | undefined>();
   const [os, setOs] = useState('');
@@ -120,7 +123,7 @@ export function ServerOverview() {
         </>
       }
     >
-      <Notices info={info.data} plugins={plugins.data} packages={packages} restarting={restarting} onRestart={() => void restart()} />
+      <Notices info={info.data} plugins={plugins.data} packages={packages} disks={diskList} restarting={restarting} onRestart={() => void restart()} />
 
       <section aria-labelledby="ov-now" class="srv-ov-now">
         <div class="srv-sec-head">
@@ -148,8 +151,10 @@ export function ServerOverview() {
 
       <div class="srv-ov-pair">
         <TasksPanel tasks={tasks} />
-        <LibraryPanel info={info.data} counts={counts} />
+        <LibraryPanel counts={counts} />
       </div>
+
+      <StoragePanel list={diskList} error={!!storage.error} onRetry={storage.reload} />
 
       <ActivityPanel activity={activity} />
     </AdminLayout>
@@ -166,8 +171,8 @@ function ScanIcon() {
 
 /* ── Notices ── */
 
-function Notices({ info, plugins, packages, restarting, onRestart }: {
-  info?: SystemInfo; plugins?: PluginInfo[]; packages: PackageInfo[] | null; restarting: boolean; onRestart: () => void;
+function Notices({ info, plugins, packages, disks: diskList, restarting, onRestart }: {
+  info?: SystemInfo; plugins?: PluginInfo[]; packages: PackageInfo[] | null; disks?: Disk[]; restarting: boolean; onRestart: () => void;
 }) {
   const updates = useStore(pluginUpdatesStore);
   const broken = (plugins ?? []).filter((p) => p.Status === 'Malfunctioned' || p.Status === 'NotSupported');
@@ -183,6 +188,13 @@ function Notices({ info, plugins, packages, restarting, onRestart }: {
     items.push(
       <Notice key={p.Id} tone="warn" action={t('Open plugins')} href={href('/admin/plugins')} onAction={() => navigate('/admin/plugins')}>
         <b>{t('{name} won’t load.', { name: p.Name })}</b> {why}
+      </Notice>
+    );
+  }
+  for (const d of (diskList ?? []).filter((x) => x.pct >= WARN_AT)) {
+    items.push(
+      <Notice key={'disk' + d.mount} tone="warn" action={t('See storage')} onAction={() => document.getElementById('ov-storage')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+        <b>{t('{name} is {pct}% full.', { name: d.name, pct: d.pct })}</b> {fullText(d)}.
       </Notice>
     );
   }
@@ -364,7 +376,7 @@ const COUNT_KINDS: { key: keyof ItemCounts; label: string }[] = [
   { key: 'BookCount', label: 'Books' }
 ];
 
-function LibraryPanel({ info, counts }: { info?: SystemInfo; counts: Data<ItemCounts> & { reload: () => void } }) {
+function LibraryPanel({ counts }: { counts: Data<ItemCounts> & { reload: () => void } }) {
   const c = counts.data;
   let kinds = COUNT_KINDS.slice(0, 3);
   if (c) {
@@ -373,12 +385,6 @@ function LibraryPanel({ info, counts }: { info?: SystemInfo; counts: Data<ItemCo
     /* Keep the board's order (Movies, Shows, Episodes) whenever those are what the server has. */
     kinds.sort((a, b) => COUNT_KINDS.indexOf(a) - COUNT_KINDS.indexOf(b));
   }
-  const paths: [string, string | undefined][] = [
-    ['Metadata', info?.InternalMetadataPath],
-    ['Cache', info?.CachePath],
-    ['Transcodes', info?.TranscodingTempPath],
-    ['Logs', info?.LogPath]
-  ];
   return (
     <section aria-labelledby="ov-lib" class="srv-box">
       <div class="srv-box-head">
@@ -393,11 +399,61 @@ function LibraryPanel({ info, counts }: { info?: SystemInfo; counts: Data<ItemCo
           </div>
         ))}
       </div>
-      <div class="srv-paths">
-        {paths.map(([label, p]) => (
-          <div key={label} class="srv-path"><span>{t(label)}</span><span class="srv-path-v">{p ?? (info ? '—' : '…')}</span></div>
-        ))}
+    </section>
+  );
+}
+
+/* ── Storage ── */
+
+function DiskIcon({ ram }: { ram: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      {ram
+        ? <><path d="M7 7h10v10H7z" /><path d="M9.5 3v4M14.5 3v4M9.5 17v4M14.5 17v4" /><path d="M3 9.5h4M3 14.5h4M17 9.5h4M17 14.5h4" /></>
+        : <><path d="M4 5h16v6H4z" /><path d="M4 13h16v6H4z" /><path d="M7.5 8h.01M7.5 16h.01" /></>}
+    </svg>
+  );
+}
+
+function StoragePanel({ list, error, onRetry }: { list?: Disk[]; error: boolean; onRetry: () => void }) {
+  return (
+    <section aria-labelledby="ov-storage" class="srv-box srv-storage">
+      <div class="srv-box-head">
+        <h2 id="ov-storage" class="srv-box-title">{t('Storage')}{list && <span> · {tn(list.length, '{n} disk', '{n} disks')}</span>}</h2>
+        <Link to="/admin/settings" class="srv-box-link">{t('Change paths in Settings')}</Link>
       </div>
+      {!list && error ? (
+        <InlineError text={t('Couldn’t read the server’s disks.')} onRetry={onRetry} />
+      ) : !list ? (
+        [0, 1].map((i) => <div key={i} class="srv-disk"><span class="skel srv-disk-icon" /><span class="skel skel-line" /></div>)
+      ) : list.map((d) => {
+        const lvl = level(d.pct);
+        const free = t('{size} free', { size: fmtDisk(d.free) });
+        return (
+          <div key={d.mount} class="srv-disk">
+            <div class="srv-disk-name">
+              <span aria-hidden="true" class="srv-disk-icon"><DiskIcon ram={d.ram} /></span>
+              <span class="srv-disk-text"><span class="srv-disk-title">{d.name}</span><span class="srv-disk-mount">{t('On {mount}', { mount: d.mount })}</span></span>
+            </div>
+            <div class="srv-disk-use">
+              <div class="srv-disk-line">
+                <span>{tx('{used} of {total} used · {pct}%', { used: <b>{fmtDisk(d.used)}</b>, total: fmtDisk(d.total), pct: d.pct })}</span>
+                <span class={'srv-disk-free is-' + lvl}>{free}</span>
+              </div>
+              <span role="meter" class="srv-disk-meter" aria-label={t('{name} disk space used', { name: d.name })} aria-valuemin={0} aria-valuemax={100} aria-valuenow={d.pct} aria-valuetext={t('{pct}% used, {free}', { pct: d.pct, free })}>
+                <span class={'is-' + lvl} style={{ width: Math.min(100, d.pct) + '%' }} />
+              </span>
+            </div>
+            {(d.tag || d.folders.length > 0) && (
+              <div class="srv-disk-folders">
+                {d.tag && <span class="srv-disk-tag">{d.tag}</span>}
+                {d.folders.map((f) => <span key={f.label + f.path} class="srv-disk-folder"><b>{f.label}</b><span>{f.path}</span></span>)}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <p class="srv-storage-note">{t('Folders on the same disk share its space. A warning shows at the top of this page when a disk passes 85%.')}</p>
     </section>
   );
 }
