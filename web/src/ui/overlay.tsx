@@ -7,6 +7,14 @@ import { t } from '../lib/i18n';
 
 /* ── Popover anchored to a button ── */
 
+function inFixedBar(el: HTMLElement): boolean {
+  for (let e: HTMLElement | null = el; e && e !== document.body; e = e.parentElement) {
+    const p = getComputedStyle(e).position;
+    if (p === 'fixed' || p === 'sticky') return true;
+  }
+  return false;
+}
+
 export function Popover({
   anchor, open, onClose, children, align = 'end', placement = 'below', width
 }: {
@@ -19,15 +27,20 @@ export function Popover({
   width?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top?: number; bottom?: number; left?: number; right?: number }>({});
+  const [pos, setPos] = useState<{ position?: 'fixed' | 'absolute'; top?: number; bottom?: number; left?: number; right?: number }>({});
 
   useLayoutEffect(() => {
     if (!open || !anchor.current) return;
+    /* Below an anchor that scrolls with the page, the menu is part of the page, so one near the bottom makes the page
+       longer instead of running off the screen. Under a fixed or sticky bar (the header, the player) it stays fixed. */
+    const fixed = placement === 'above' || inFixedBar(anchor.current);
     const place = () => {
       const r = anchor.current!.getBoundingClientRect();
-      const vw = window.innerWidth;
-      const next: typeof pos = {};
-      if (placement === 'below') next.top = r.bottom + 8;
+      // The page's width without its scrollbar: what `right` counts from.
+      const vw = document.documentElement.clientWidth;
+      const dy = fixed ? 0 : window.scrollY;
+      const next: typeof pos = { position: fixed ? 'fixed' : 'absolute' };
+      if (placement === 'below') next.top = r.bottom + 8 + dy;
       else next.bottom = window.innerHeight - r.top + 8;
       if (align === 'end') next.right = Math.max(8, vw - r.right);
       else next.left = Math.max(8, r.left);
@@ -78,7 +91,7 @@ export function Popover({
 
   if (!open) return null;
   return createPortal(
-    <div ref={ref} class="popover" style={{ ...pos, width: width ? width + 'px' : undefined }}>
+    <div ref={ref} class={'popover' + (pos.position === 'absolute' ? ' is-in-page' : '')} style={{ ...pos, width: width ? width + 'px' : undefined }}>
       {children}
     </div>,
     document.body
