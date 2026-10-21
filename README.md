@@ -125,7 +125,6 @@ at `/old`) and restart Jellyfin.
 
 <p>
   <a href="https://github.com/Arkmind/seedy/releases/latest"><img height="40" alt="Download the APK from GitHub" src="https://img.shields.io/badge/GitHub-Download_the_APK-24292f?style=for-the-badge&logo=github"></a>
-  <a href="https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/Arkmind/seedy"><img height="40" alt="Add Seedy to Obtainium" src="https://img.shields.io/badge/Obtainium-Add_Seedy-6e4ab0?style=for-the-badge"></a>
 </p>
 
 Google Play is on its way. Until then, every [release](https://github.com/Arkmind/seedy/releases/latest) has a
@@ -133,7 +132,6 @@ signed `seedy-android-<version>.apk` (also there zipped). The same file installs
 Google TV. It needs Android 8.0 or newer.
 
 - **On a phone:** open the APK from your downloads and allow your browser to install apps when Android asks.
-  [Obtainium](https://github.com/ImranR98/Obtainium) can keep it up to date from the GitHub releases.
 - **On a TV:** allow the app you'll install it with to install unknown apps (on Google TV: Settings › Apps ›
   Security & restrictions › Unknown sources). Then download the APK with a browser app such as Downloader, copy it
   over with a file manager or "Send files to TV", or install it from a computer:
@@ -143,7 +141,7 @@ Google TV. It needs Android 8.0 or newer.
   ```
 
 The app finds Jellyfin servers on your network by itself; otherwise type the server's address. It doesn't update
-itself: install a newer APK over the old one, or let Obtainium do it.
+itself: install a newer APK over the old one.
 
 ### Where the web app opens
 
