@@ -19,8 +19,9 @@ import { t } from '../../lib/i18n';
 
 /* The navigation bar (Navigation bar board): brand; Home, Libraries and Favorites; a real search box in the
    middle; Requests, cast and the account menu on the right. Over the Home banner and a details hero it sits on the
-   art with glass controls; elsewhere it uses the solid controls and a hairline under it. On phones: brand, cast and
-   avatar, the search field under them, and a tab bar at the bottom. */
+   art with glass controls; elsewhere it uses the solid controls and a hairline under it. On phones (as in the Android
+   app): brand, then search, cast and avatar on one row (the Search page adds its box under them), and a tab bar at
+   the bottom. */
 
 export function BrandMark({ size = 34 }: { size?: number }) {
   const b = useStore(brandingStore);
@@ -74,11 +75,12 @@ export function Header({ variant = 'plain', active }: { variant?: 'overlay' | 'p
             <div class="nb-ptop">
               <Brand small />
               <div class="nb-pactions">
+                {!pageMode && <SearchBox phone glass={glass} />}
                 <CastButton glass={glass} />
                 <AccountButton variant="phone" highlighted={active === 'settings'} />
               </div>
             </div>
-            <SearchBox phone glass={glass} pageMode={pageMode} />
+            {pageMode && <SearchBox phone glass={glass} pageMode />}
           </>
         ) : (
           <>

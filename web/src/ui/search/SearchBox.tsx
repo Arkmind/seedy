@@ -21,7 +21,8 @@ import { t, tn } from '../../lib/i18n';
    - Results drop down while typing, from the second letter after a short pause.
    - "/" or Ctrl/Cmd K puts the cursor in it from anywhere; arrows move, Enter opens, Esc closes.
    - On the Search page it holds the page's query instead: typing updates the page and its address.
-   - On phones it's a field that opens the full-screen search. */
+   - On phones it's a button by the cast button that opens the full-screen search (as in the Android app); the
+     Search page keeps its box under the bar. */
 
 const MIN = 2;
 const PAUSE = 250;
@@ -113,9 +114,8 @@ export function SearchBox({ glass, pageMode, phone }: { glass?: boolean; pageMod
   if (phone && !pageMode) {
     return (
       <>
-        <button type="button" class={'nb-psearch-field' + (glass ? ' is-glass' : '')} aria-label={t('Search')} aria-haspopup="dialog" onClick={openPhone}>
-          <Icon name="search" size={19} stroke={2.2} />
-          <span class="nb-psearch-ph">{t('Search')}</span>
+        <button type="button" class={'btn icon-btn nb-psearch-btn' + (glass ? ' is-glass' : '')} aria-label={t('Search')} aria-haspopup="dialog" onClick={openPhone}>
+          <Icon name="search" size={20} stroke={2.2} />
         </button>
         {phoneOpen && <PhoneSearch onClose={() => setPhoneOpen(false)} />}
       </>

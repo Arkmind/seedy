@@ -43,14 +43,6 @@
 /* Phone field: 46 px, opens the full-screen search. */
 .nb-search.is-phone { height: 46px; gap: 10px; padding: 0 8px 0 14px; }
 .nb-search.is-phone.is-page { padding-right: 6px; }
-.nb-psearch-field {
-  display: flex; align-items: center; gap: 10px; width: 100%; height: 46px; padding: 0 14px; border: 0; border-radius: 14px;
-  background: #1a1a1a; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); color: var(--seedy-text-2);
-  font: inherit; font-size: 15px; text-align: left; cursor: text;
-}
-.nb-psearch-ph { padding: 1px 2px; color: #757575; }
-.nb-psearch-field.is-glass { background: rgba(20, 20, 20, 0.72); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
-
 /* ── The dropdown ── */
 
 /* The page behind is dimmed under the bar while search is open. */
