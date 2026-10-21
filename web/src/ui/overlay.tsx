@@ -145,8 +145,9 @@ export function MenuButton({ button, children, align, width, placement }: {
 
 /* ── Modal sheet ── */
 
-export function Sheet({ open, onClose, children, wide, label, labelledBy, class: cls, scrimClass }: {
+export function Sheet({ open, onClose, children, wide, label, labelledBy, class: cls, scrimClass, style }: {
   open: boolean; onClose: () => void; children: ComponentChildren; wide?: boolean; label?: string;
+  style?: Record<string, string>;
   /* A heading inside the dialog to name it by, instead of `label`. */
   labelledBy?: string;
   /* Replaces the sheet's own look (the request dialog has its own). */
@@ -188,7 +189,7 @@ export function Sheet({ open, onClose, children, wide, label, labelledBy, class:
   if (!open) return null;
   return createPortal(
     <div class={'scrim' + (scrimClass ? ' ' + scrimClass : '')} onPointerDown={(e) => { if (e.target === e.currentTarget) closeRef.current(); }}>
-      <div ref={ref} class={cls ?? 'sheet' + (wide ? ' is-wide' : '')} role="dialog" aria-modal="true" aria-label={labelledBy ? undefined : label} aria-labelledby={labelledBy}>
+      <div ref={ref} class={cls ?? 'sheet' + (wide ? ' is-wide' : '')} role="dialog" aria-modal="true" aria-label={labelledBy ? undefined : label} aria-labelledby={labelledBy} style={style}>
         {children}
       </div>
     </div>,
