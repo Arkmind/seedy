@@ -105,10 +105,11 @@ fun SeerrTitleCard(title: SeerrTitle, upcoming: Boolean, onClick: () -> Unit, mo
 }
 
 /**
- * The board's "3 requests in progress" card: two of the posters stacked, and how many wait, download and are ready.
+ * The board's "3 requests in progress" card: two of the posters stacked, and how many wait, download, are being
+ * looked for and just arrived.
  */
 @Composable
-fun InProgressCard(open: List<SeerrRequest>, waiting: Int, downloading: Int, ready: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun InProgressCard(open: List<SeerrRequest>, waiting: Int, downloading: Int, searching: Int, ready: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current
     Row(
         modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(SeedyColors.Panel).border(1.dp, Color(0xFF222222), RoundedCornerShape(14.dp))
@@ -132,6 +133,7 @@ fun InProgressCard(open: List<SeerrRequest>, waiting: Int, downloading: Int, rea
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Count(waiting, t("{n} waiting", "n" to waiting), SeedyColors.Pending)
                 Count(downloading, t("{n} downloading", "n" to downloading), accent)
+                Count(searching, t("{n} searching", "n" to searching), SeedyColors.Text3)
                 Count(ready, t("{n} ready", "n" to ready), SeedyColors.Ok)
             }
         }

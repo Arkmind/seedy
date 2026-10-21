@@ -135,9 +135,9 @@ fun RequestsScreen(state: RequestsViewModel.State, actions: RequestsActions, bot
                         }
                     }
                     Tabs(state, actions, Modifier.padding(end = 4.dp))
-                    if (state.tab == RequestsViewModel.Tab.Discover && state.open.isNotEmpty()) {
+                    if (state.tab == RequestsViewModel.Tab.Discover && state.inProgress.isNotEmpty()) {
                         InProgressCard(
-                            state.open, state.waiting, state.downloading, state.ready,
+                            state.inProgress, state.waiting, state.downloading, state.searching, state.ready,
                             onClick = { actions.onTab(RequestsViewModel.Tab.Mine) }, modifier = Modifier.padding(end = 4.dp),
                         )
                     }

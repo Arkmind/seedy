@@ -229,24 +229,30 @@ private fun Top(d: SeerrDetails, state: SeerrTitleViewModel.State, canRequest: B
             }
             Meta(d)
             d.tagline?.takeIf { it.isNotBlank() }?.let { SText(it, size = 13.sp, weight = 600, color = SeedyColors.Text, maxLines = 2) }
-            // The primary action: Play from the library, where the request is, or Request.
-            when {
-                inLibrary && !tv -> Primary(WebIcons.Play, t("Play"), actions.onPlay)
-                inLibrary -> Primary(WebIcons.Tv, t("Open in library"), actions.onLibrary)
-                requested(d.status) -> StateBox(t("Requested"))
-                canRequest && requestable(d.status) && (!tv || open.isNotEmpty() || seasons.isEmpty()) -> {
-                    val busy = state.busy == "std"
-                    Primary(
-                        WebIcons.Plus,
-                        when {
-                            busy -> t("Requesting…")
-                            tv && seasons.size > 1 -> t("Request seasons")
-                            else -> t("Request")
-                        },
-                        if (tv) actions.onSeasons else actions.onRequest,
-                        enabled = state.busy == null,
-                    )
+            // The primary action (Play from the library, where the request is, or Request), the trailer beside it.
+            Row(Modifier.padding(top = 4.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                val wide = Modifier.weight(1f)
+                when {
+                    inLibrary && !tv -> Primary(WebIcons.Play, t("Play"), actions.onPlay, wide)
+                    inLibrary -> Primary(WebIcons.Tv, t("Open in library"), actions.onLibrary, wide)
+                    requested(d.status) -> StateBox(t("Requested"), wide)
+                    canRequest && requestable(d.status) && (!tv || open.isNotEmpty() || seasons.isEmpty()) -> {
+                        val busy = state.busy == "std"
+                        Primary(
+                            WebIcons.Plus,
+                            when {
+                                busy -> t("Requesting…")
+                                tv && seasons.size > 1 -> t("Request seasons")
+                                else -> t("Request")
+                            },
+                            if (tv) actions.onSeasons else actions.onRequest,
+                            wide,
+                            enabled = state.busy == null,
+                        )
+                    }
+                    else -> Spacer(wide)
                 }
+                actions.onTrailer?.let { Square(WebIcons.Trailer, t("Trailer"), it) }
             }
             val alts = buildList<@Composable RowScope.() -> Unit> {
                 if (inLibrary && !tv) add { Alt(t("Open in library"), actions.onLibrary) }
@@ -255,7 +261,6 @@ private fun Top(d: SeerrDetails, state: SeerrTitleViewModel.State, canRequest: B
                 }
                 if (allow4k && !tv && requestable(d.status4k)) add { Alt(if (state.busy == "4k") t("Requesting…") else t("Request in 4K"), actions.onRequest4k, enabled = state.busy == null) }
                 if (allow4k && !tv && requested(d.status4k)) add { StateBox(t("4K requested"), Modifier.weight(1f), alt = true) }
-                actions.onTrailer?.let { add { Square(WebIcons.Trailer, t("Trailer"), it) } }
             }
             if (alts.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { alts.forEach { it(this) } }
             if (requested(d.status) || d.status == "declined") {
@@ -328,9 +333,9 @@ private fun Meta(d: SeerrDetails) {
 }
 
 @Composable
-private fun Primary(icon: IconDef, label: String, onClick: () -> Unit, enabled: Boolean = true) {
+private fun Primary(icon: IconDef, label: String, onClick: () -> Unit, modifier: Modifier, enabled: Boolean = true) {
     Row(
-        Modifier.padding(top = 4.dp).fillMaxWidth().height(48.dp).clip(RoundedCornerShape(13.dp))
+        modifier.height(48.dp).clip(RoundedCornerShape(13.dp))
             .background(if (enabled) SeedyColors.Inverse else SeedyColors.Surface2).tap(enabled = enabled, onClick = onClick),
         horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -342,7 +347,7 @@ private fun Primary(icon: IconDef, label: String, onClick: () -> Unit, enabled: 
 
 /** Where a request is, in place of its button (web: .seerr-state). */
 @Composable
-private fun StateBox(label: String, modifier: Modifier = Modifier.padding(top = 4.dp).fillMaxWidth(), alt: Boolean = false) {
+private fun StateBox(label: String, modifier: Modifier, alt: Boolean = false) {
     Row(
         modifier.height(48.dp).clip(RoundedCornerShape(13.dp)).background(SeedyColors.Glass).padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically,
@@ -363,7 +368,7 @@ private fun RowScope.Alt(label: String, onClick: () -> Unit, enabled: Boolean = 
 @Composable
 private fun Square(icon: IconDef, label: String, onClick: () -> Unit) {
     Box(
-        Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Surface).tap(onClick = onClick).semantics { contentDescription = label },
+        Modifier.size(48.dp).clip(RoundedCornerShape(13.dp)).background(SeedyColors.Surface).tap(onClick = onClick).semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
         SIcon(icon, size = 20.dp, color = SeedyColors.Text)

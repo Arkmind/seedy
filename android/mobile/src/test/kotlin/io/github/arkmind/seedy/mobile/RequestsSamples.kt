@@ -27,8 +27,8 @@ object RequestsSamples {
     private val mine = listOf(
         SeerrRequest(1, 501, "tv", "Low Tide", requestStatus = "pending"),
         SeerrRequest(2, 502, "movie", "Meridian Line", requestStatus = "approved", download = SeerrRequest.Download(0.4)),
-        SeerrRequest(3, 503, "movie", "Paper Moon", requestStatus = "approved", status = "available"),
-        SeerrRequest(4, 504, "tv", "Cold Front", requestStatus = "approved", status = "processing"),
+        // Arrived today (by the clock: the card only shows how many).
+        SeerrRequest(3, 503, "movie", "Paper Moon", requestStatus = "completed", status = "available", availableAt = LocalDate.now().toString()),
     )
 
     val discover = RequestsViewModel.State(

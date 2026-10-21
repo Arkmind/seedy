@@ -2,6 +2,8 @@ package io.github.arkmind.seedy.core.feature
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.arkmind.seedy.core.format.daysFromToday
+import io.github.arkmind.seedy.core.format.parseDay
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.requests.RequestSummary
 import io.github.arkmind.seedy.core.requests.RequestsApi
@@ -47,7 +49,18 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
             get() = mine.orEmpty().filter { it.status != "available" && it.requestStatus != "declined" }
         val waiting: Int get() = open.count { it.requestStatus == "pending" }
         val downloading: Int get() = open.count { it.download != null }
-        val ready: Int get() = mine.orEmpty().count { it.status == "available" }
+        /** Approved, and Seerr hasn't found a download yet. */
+        val searching: Int get() = open.count { it.requestStatus != "pending" && it.download == null }
+
+        /** On the server in the last week, so the card still shows them. */
+        val recent: List<SeerrRequest>
+            get() = mine.orEmpty().filter { r ->
+                r.status == "available" && (parseDay(r.availableAt ?: r.updatedAt)?.let { -daysFromToday(it) <= 7 } ?: false)
+            }
+        val ready: Int get() = recent.size
+
+        /** The requests the in-progress card counts: the open ones and the ones that just arrived. */
+        val inProgress: List<SeerrRequest> get() = open + recent
     }
 
     private val _state = MutableStateFlow(State())

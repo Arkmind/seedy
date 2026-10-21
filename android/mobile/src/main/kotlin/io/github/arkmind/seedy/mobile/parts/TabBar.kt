@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,5 +73,28 @@ fun TabBar(tabs: List<Tab>, current: Tab, onSelect: (Tab) -> Unit, modifier: Mod
                 SText(t(tab.label), Modifier.height(17.dp), size = 12.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.White else SeedyColors.Text2)
             }
         }
+    }
+}
+
+/** Where a page under the tab bar puts its sheets, so they cover the tab bar too (the boards' sheets reach the bottom). */
+class OverlayHost {
+    var content by androidx.compose.runtime.mutableStateOf<(@Composable () -> Unit)?>(null)
+}
+
+val LocalOverlayHost = androidx.compose.runtime.staticCompositionLocalOf<OverlayHost?> { null }
+
+/** Shows [content] over the whole page, tab bar included, while this is in the composition; in place when there's no host. */
+@Composable
+fun AboveTabBar(content: @Composable () -> Unit) {
+    val host = LocalOverlayHost.current
+    if (host == null) {
+        content()
+        return
+    }
+    val latest by androidx.compose.runtime.rememberUpdatedState(content)
+    androidx.compose.runtime.DisposableEffect(host) {
+        val slot: @Composable () -> Unit = { latest() }
+        host.content = slot
+        onDispose { if (host.content === slot) host.content = null }
     }
 }

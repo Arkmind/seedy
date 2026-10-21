@@ -59,6 +59,8 @@ import io.github.arkmind.seedy.mobile.home.HomeScreen
 import io.github.arkmind.seedy.mobile.parts.PrimaryButton
 import io.github.arkmind.seedy.mobile.parts.Tab
 import io.github.arkmind.seedy.mobile.parts.TabBar
+import io.github.arkmind.seedy.mobile.parts.LocalOverlayHost
+import io.github.arkmind.seedy.mobile.parts.OverlayHost
 import io.github.arkmind.seedy.mobile.parts.pagePadding
 import io.github.arkmind.seedy.mobile.parts.tabBarHeight
 import io.github.arkmind.seedy.mobile.parts.tap
@@ -219,7 +221,9 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
             entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
             entryProvider = entryProvider {
                 entry<TabsKey> {
+                    val overlay = remember { OverlayHost() }
                     Box(Modifier.fillMaxSize()) {
+                        CompositionLocalProvider(LocalOverlayHost provides overlay) {
                         when (tab) {
                             Tab.Home -> {
                                 val vm = viewModel { HomeViewModel(session) }
@@ -235,7 +239,9 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                             Tab.Favorites -> FavoritesTab()
                             Tab.Requests -> RequestsTab()
                         }
+                        }
                         TabBar(tabs, tab, { tab = it }, Modifier.align(Alignment.BottomCenter))
+                        overlay.content?.invoke()
                     }
                 }
                 // The boards keep the tab bar under these pages, lit on the tab they were opened from.
@@ -253,11 +259,15 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
     }
 }
 
-/** A page with the tab bar under it; a tab goes back to the tabs on that tab. */
+/** A page with the tab bar under it; a tab goes back to the tabs on that tab. The page's sheets cover the bar. */
 @Composable
 private fun WithTabBar(tabs: List<Tab>, current: Tab, nav: MobileNav, content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
-        Box(Modifier.weight(1f)) { content() }
-        TabBar(tabs, current, nav::toTab)
+    val overlay = remember { OverlayHost() }
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
+            Box(Modifier.weight(1f)) { CompositionLocalProvider(LocalOverlayHost provides overlay, content = content) }
+            TabBar(tabs, current, nav::toTab)
+        }
+        overlay.content?.invoke()
     }
 }

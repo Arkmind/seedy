@@ -107,7 +107,7 @@ fun RequestSeasonsContent(
     onRetry: () -> Unit,
     onSubmit: () -> Unit,
     onDismiss: () -> Unit,
-) {
+) = io.github.arkmind.seedy.mobile.parts.AboveTabBar {
     BackHandler(onBack = onDismiss)
     val shown = remember { MutableTransitionState(false).apply { targetState = true } }
     Box(Modifier.fillMaxSize()) {
