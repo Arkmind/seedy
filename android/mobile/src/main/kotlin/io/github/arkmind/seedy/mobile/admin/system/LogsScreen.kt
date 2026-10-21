@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.mobile.admin.system
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -151,10 +152,11 @@ fun LogViewer(v: LogViewerState, actions: LogsActions, onBack: () -> Unit, copy:
         val to = v.scrollTo
         if (v.jump > 0 && to != null && to >= 0) list.scrollToItem((to - 3).coerceAtLeast(0))
     }
-    // Scrolling back up stops following.
+    // Dragging back up stops following (the page's own scrolls to the end don't).
     val atEnd by remember { derivedStateOf { val info = list.layoutInfo; info.visibleItemsInfo.lastOrNull()?.index == info.totalItemsCount - 1 || info.totalItemsCount == 0 } }
+    val dragged by list.interactionSource.collectIsDraggedAsState()
     LaunchedEffect(list) {
-        snapshotFlow { list.isScrollInProgress to atEnd }.collect { (scrolling, end) -> if (scrolling && !end) actions.setFollowing(false) }
+        snapshotFlow { dragged && !atEnd }.collect { up -> if (up) actions.setFollowing(false) }
     }
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
         Column(Modifier.fillMaxSize().imePadding()) {

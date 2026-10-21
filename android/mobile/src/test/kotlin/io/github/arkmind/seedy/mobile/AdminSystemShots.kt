@@ -33,6 +33,11 @@ import io.github.arkmind.seedy.mobile.admin.system.BackupsScreen
 import io.github.arkmind.seedy.mobile.admin.system.LogsScreen
 import io.github.arkmind.seedy.mobile.admin.system.PluginsScreen
 import io.github.arkmind.seedy.mobile.admin.system.TasksScreen
+import io.github.arkmind.seedy.mobile.admin.system.ScheduleSheet
+import io.github.arkmind.seedy.core.admin.TaskTrigger
+import io.github.arkmind.seedy.core.admin.system.CatalogGroup
+import io.github.arkmind.seedy.core.admin.system.CatalogRow
+import io.github.arkmind.seedy.core.admin.system.PluginsView
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,13 +65,26 @@ class AdminSystemShots {
     }
 
     @Test
-    @Config(qualifiers = "w390dp-h1010dp-mdpi")
+    @Config(qualifiers = "w390dp-h880dp-mdpi")
     fun plugins() = compose.adminShot("AndroidAdminPlugins") {
         PluginsScreen(SystemSamples.plugins, object : PluginsActions {}, onBack = {}, openUrl = {}, openSeedy = {})
     }
 
     @Test
-    @Config(qualifiers = "w390dp-h1290dp-mdpi")
+    @Config(qualifiers = "w390dp-h844dp-mdpi")
+    fun schedule() = compose.adminShot("AndroidAdminTaskSchedule") {
+        TasksScreen(SystemSamples.tasks, object : TasksActions {}, onBack = {}, openLogs = { _, _ -> })
+        ScheduleSheet(SystemSamples.scheduled, saving = false, onSave = {}, onDismiss = {})
+    }
+
+    @Test
+    @Config(qualifiers = "w390dp-h900dp-mdpi")
+    fun catalog() = compose.adminShot("AndroidAdminPluginCatalog") {
+        PluginsScreen(SystemSamples.catalog, object : PluginsActions {}, onBack = {}, openUrl = {}, openSeedy = {})
+    }
+
+    @Test
+    @Config(qualifiers = "w390dp-h1160dp-mdpi")
     fun backups() = compose.adminShot("AndroidAdminBackups") {
         BackupsScreen(SystemSamples.backups, object : BackupsActions {}, onBack = {}, download = {}, copyPath = {})
     }
@@ -107,6 +125,10 @@ object SystemSamples {
                 task("Seedy: trim play log", "Deletes plays older than the retention setting", "Daily at 04:30", "Today, 1 s"),
             )),
         ),
+    )
+
+    val scheduled = tasks.groups!!.first().tasks[1].copy(
+        triggers = listOf(TaskTrigger("DailyTrigger", timeOfDayTicks = 108_000_000_000L), TaskTrigger("IntervalTrigger", intervalTicks = 864_000_000_000L, maxRuntimeTicks = 72_000_000_000L)),
     )
 
     private fun ev(time: String, level: ActivityLevel, title: String, detail: String, tag: String, action: ActivityActionKind? = null) =
@@ -154,6 +176,21 @@ object SystemSamples {
         repos = listOf(
             RepoRow(0, "Jellyfin Stable", "JS", "Jellyfin", "https://repo.jellyfin.org/files/plugin/manifest.json", true),
             RepoRow(1, "Seedy", "S", "Third party", "https://seedy.example/manifest.json", true),
+        ),
+    )
+
+    val catalog = plugins.copy(
+        view = PluginsView.Catalog,
+        catalogCount = "36 plugins from 1 repository",
+        catalog = listOf(
+            CatalogGroup("Anime", listOf(
+                CatalogRow("a", "AniDB", "AN", "10.0.0", "Anime metadata from AniDB", canInstall = true),
+                CatalogRow("b", "AniList", "AN", "12.0.0", "Anime metadata from AniList", canInstall = true, installing = true),
+            )),
+            CatalogGroup("Metadata", listOf(
+                CatalogRow("c", "TMDb Box Sets", "TB", "Built for 10.11", "Collections from TheMovieDb", note = "No version for Jellyfin 12.0 yet, so it can’t be installed."),
+                CatalogRow("d", "Fanart", "FA", "12.0.0", "Artwork from fanart.tv", status = "Installed", dot = Dot.Ok),
+            )),
         ),
     )
 

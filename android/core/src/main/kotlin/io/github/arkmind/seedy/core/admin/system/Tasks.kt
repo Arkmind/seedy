@@ -151,7 +151,7 @@ class TasksViewModel(
     } catch (e: Throwable) {
         rethrowCancel(e)
         failed = true
-        if (tasks == null) _state.update { it.copy(error = t("Couldn’t load the scheduled tasks. {error}", "error" to errorText(e))) }
+        if (tasks == null) _state.update { it.copy(error = t("Couldn’t load the scheduled tasks.") + " " + errorText(e)) }
         publish()
         false
     }

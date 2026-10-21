@@ -162,11 +162,8 @@ private fun InstalledRow(p: PluginRow, onUpdate: () -> Unit, onMenu: () -> Unit)
     ) {
         LetterTile(p.letters, light = p.self)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SText(p.name, Modifier.weight(1f, fill = false), size = 14.sp, weight = 700, color = SeedyColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                SText(p.version, size = 11.sp, color = SeedyColors.Text3, maxLines = 1)
-            }
-            Quiet(p.source)
+            SText(p.name, size = 14.sp, weight = 700, color = SeedyColors.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Quiet(listOf(p.version, p.source).filter { it.isNotEmpty() }.joinToString(" · "))
             StatusLine(p.busy ?: p.status, dotColor(p.dot), Modifier.padding(top = 2.dp))
             p.note?.let { note -> SText(note, Modifier.padding(top = 2.dp), size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Pending) }
         }
