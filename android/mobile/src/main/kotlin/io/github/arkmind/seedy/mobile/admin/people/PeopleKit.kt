@@ -28,12 +28,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.roundToInt
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
@@ -115,17 +121,35 @@ fun PeoplePage(
     }
 }
 
-/** The boards' scrolling pills (a user's tabs, the people filter): light when picked. */
+/** The boards' scrolling pills (a user's tabs, the people filter): light when picked, and scrolled into view. */
 @Composable
 fun <T> TabPills(options: List<Pair<T, String>>, value: T, onPick: (T) -> Unit, modifier: Modifier = Modifier, top: Dp = 16.dp) {
+    val scroll = rememberScrollState()
+    val spans = remember { mutableStateMapOf<Any?, Pair<Int, Int>>() }
+    val density = LocalDensity.current
+    val span = spans[value]
+    LaunchedEffect(value, span, scroll.viewportSize) {
+        val (x, w) = span ?: return@LaunchedEffect
+        val view = scroll.viewportSize
+        if (view == 0) return@LaunchedEffect
+        // The row's 16 px padding, and the same again beyond the pill.
+        val pad = with(density) { 16.dp.roundToPx() }
+        val target = when {
+            x + w + pad * 2 > scroll.value + view -> x + w + pad * 2 - view
+            x < scroll.value -> x
+            else -> return@LaunchedEffect
+        }
+        scroll.animateScrollTo(target.coerceIn(0, scroll.maxValue))
+    }
     Row(
-        modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = top),
+        modifier.fillMaxWidth().horizontalScroll(scroll).padding(start = 16.dp, end = 16.dp, top = top),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         for ((v, label) in options) {
             val on = v == value
             Box(
-                Modifier.height(36.dp).clip(CircleShape).background(if (on) SeedyColors.Inverse else SeedyColors.Surface)
+                Modifier.onPlaced { spans[v] = it.positionInParent().x.toInt() to it.size.width }
+                    .height(36.dp).clip(CircleShape).background(if (on) SeedyColors.Inverse else SeedyColors.Surface)
                     .tap(role = Role.Tab) { onPick(v) }.padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center,
             ) {
