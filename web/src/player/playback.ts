@@ -6,8 +6,13 @@ import {
 import type { BaseItem, MediaSource, MediaStream } from '../api/types';
 import { secondsToTicks, ticksToSeconds } from '../lib/format';
 import { t } from '../lib/i18n';
-import { browserSupport, buildDeviceProfile, type ProfileOptions } from './device-profile';
+import { PROFILE_DEFAULTS, browserSupport, buildDeviceProfile, type ProfileOptions } from './device-profile';
 import { liveDeviceProfile, trackClose } from './live-profile';
+import { MediaBridge } from './media';
+import type { SoftMedia } from './soft-media';
+import {
+  softAvailable, softDecodes, softDeviceProfile, softExt, softFits, softFixes, type SoftMode
+} from './soft-profile';
 
 /* PlaybackInfo → stream URL → <video>/<audio> (+ hls.js), and the Sessions/Playing reports around it. */
 
@@ -39,6 +44,8 @@ export interface StreamOptions {
   burnSubtitle?: boolean;
   /* "Always burn in while converting". */
   burnWhenConverting?: boolean;
+  /* When the experimental player may decode here instead of the server converting. */
+  soft?: SoftMode;
 }
 
 export interface ActiveStream {
@@ -55,6 +62,10 @@ export interface ActiveStream {
   subtitleIndex: number;
   burnIn: boolean;
   maxBitrate: number;
+  /* The <video> element, or the experimental player (soft-media.ts). */
+  engine: 'native' | 'soft';
+  /* The container as the experimental player names it. */
+  ext?: string;
 }
 
 export class PlaybackError extends Error {
@@ -146,30 +157,19 @@ export async function requestStream(item: BaseItem, opts: StreamOptions): Promis
     audioIndex: opts.audioIndex ?? source.DefaultAudioStreamIndex,
     subtitleIndex: opts.subtitleIndex,
     maxBitrate: opts.maxBitrate,
-    burnIn: false
+    burnIn: false,
+    engine: 'native' as const
   };
 
+  let native: ActiveStream | null = null;
   if (source.SupportsDirectPlay && !live && !opts.forceTranscode && !secondaryAudio && !forceBurn) {
-    const container = (source.Container ?? (isAudio ? 'mp3' : 'mp4')).split(',')[0];
-    const q = new URLSearchParams({
-      static: 'true', mediaSourceId: source.Id, deviceId: deviceId(), PlaySessionId: res.PlaySessionId, ApiKey: token()
-    });
-    if (source.ETag) q.set('Tag', source.ETag);
-    return {
-      ...base,
-      method: 'DirectPlay',
-      kind: 'Direct play',
-      url: `${SERVER_URL}/${isAudio ? 'Audio' : 'Videos'}/${item.Id}/stream.${container}?${q.toString()}`,
-      isHls: false,
-      timeOffset: 0
-    };
-  }
-  if (source.TranscodingUrl) {
+    native = { ...base, method: 'DirectPlay', kind: 'Direct play', url: staticUrl(item, source, res.PlaySessionId), isHls: false, timeOffset: 0 };
+  } else if (source.TranscodingUrl) {
     const url = withApiKey(source.TranscodingUrl);
     const isHls = source.TranscodingSubProtocol === 'hls' || /\.m3u8/i.test(url);
     const startTicks = Number(new URL(url).searchParams.get('StartTimeTicks') ?? 0);
     const kind = transcodeKind(url);
-    return {
+    native = {
       ...base,
       method: kind === 'Direct stream' ? 'DirectStream' : 'Transcode',
       kind,
@@ -180,7 +180,65 @@ export async function requestStream(item: BaseItem, opts: StreamOptions): Promis
       burnIn: !!sub && (sub.DeliveryMethod === 'Encode' || Number(new URL(url).searchParams.get('SubtitleStreamIndex') ?? -1) === sub.Index)
     };
   }
+
+  const mode = !live && !isAudio && opts.soft && opts.soft !== 'off' && softAvailable() ? opts.soft : 'off';
+  if (mode !== 'off') {
+    const soft = await softStream(item, opts, body, source, native, mode).catch((e) => {
+      console.warn('[seedy] experimental player: no stream', e);
+      return null;
+    });
+    if (soft) return soft;
+  }
+  if (native) return native;
   throw new PlaybackError('NoCompatibleStream');
+}
+
+/* The file itself, as the server sends it for direct play. */
+function staticUrl(item: BaseItem, source: MediaSource, playSessionId: string): string {
+  const isAudio = item.MediaType === 'Audio';
+  const container = (source.Container ?? (isAudio ? 'mp3' : 'mp4')).split(',')[0];
+  const q = new URLSearchParams({
+    static: 'true', mediaSourceId: source.Id, deviceId: deviceId(), PlaySessionId: playSessionId, ApiKey: token()
+  });
+  if (source.ETag) q.set('Tag', source.ETag);
+  return `${SERVER_URL}/${isAudio ? 'Audio' : 'Videos'}/${item.Id}/stream.${container}?${q.toString()}`;
+}
+
+/* The experimental player's stream, when it spares the server converting the video: asked for with a profile that
+   takes what libmedia decodes. The file as it is, or the server copying the video with converted audio (TrueHD). */
+async function softStream(
+  item: BaseItem, opts: StreamOptions, body: PlaybackInfoRequest, known: MediaSource, native: ActiveStream | null, mode: SoftMode
+): Promise<ActiveStream | null> {
+  const v = videoStream(known);
+  if (!softDecodes(v) || !softFits(v, mode)) return null;
+  if (mode !== 'always' && native && !(native.method === 'Transcode' && softFixes(native.url))) return null;
+  const forceBurn = !!opts.burnSubtitle && opts.subtitleIndex >= 0;
+  const res = await getPlaybackInfo(item.Id, {
+    ...body,
+    DeviceProfile: softDeviceProfile(opts.maxBitrate, opts.profile ?? PROFILE_DEFAULTS),
+    // Libmedia picks the audio track itself, so any track plays as it is.
+    EnableDirectPlay: !opts.forceTranscode && !forceBurn
+  });
+  if (res.ErrorCode) return null;
+  const source = res.MediaSources?.find((s) => s.Id === known.Id) ?? res.MediaSources?.[0];
+  if (!source) return null;
+  const audioIndex = opts.audioIndex ?? source.DefaultAudioStreamIndex;
+  const base = {
+    playSessionId: res.PlaySessionId, source, audioIndex, subtitleIndex: opts.subtitleIndex, maxBitrate: opts.maxBitrate, burnIn: false, engine: 'soft' as const
+  };
+  const audio = audioStreams(source).find((a) => a.Index === audioIndex);
+  const ext = softExt(source.Container);
+  if (source.SupportsDirectPlay && ext && !audio?.IsExternal) {
+    return { ...base, method: 'DirectPlay', kind: 'Direct play', url: staticUrl(item, source, res.PlaySessionId), isHls: false, timeOffset: 0, ext };
+  }
+  if (source.TranscodingUrl) {
+    const url = withApiKey(source.TranscodingUrl);
+    const isHls = source.TranscodingSubProtocol === 'hls' || /\.m3u8/i.test(url);
+    if (isHls && transcodeKind(url) === 'Direct stream') {
+      return { ...base, method: 'DirectStream', kind: 'Direct stream', url, isHls: true, timeOffset: 0, ext: 'm3u8' };
+    }
+  }
+  return null;
 }
 
 /* How Seedy gets a subtitle it draws itself: WebVTT text, styled ASS/SSA, or PGS pictures. */
@@ -223,9 +281,15 @@ function keepalive(method: 'POST' | 'DELETE', path: string, body?: unknown) {
 export interface SessionEvents {
   onStream(stream: ActiveStream): void;
   onFatal(code: string, stream: ActiveStream): void;
+  /* Where the experimental player draws. */
+  softHost?(): HTMLElement | null;
+  /* The experimental player decodes on several threads only in a cross-origin isolated page: reload into one at this
+     position. True when the page is reloading. */
+  isolate?(seconds: number): boolean;
 }
 
-/* One playback of one item. Owns the stream on the media element and every report about it. */
+/* One playback of one item. Owns the stream on the media element (or the experimental player) and every report
+   about it. */
 export class PlaybackSession {
   stream: ActiveStream | null = null;
   opts: StreamOptions;
@@ -233,6 +297,9 @@ export class PlaybackSession {
   subtitleIndex = -1;
   started = false;
   stopped = false;
+  /* What plays: the <video> element, or the experimental player standing in for it. */
+  readonly media: MediaBridge;
+  private soft: SoftMedia | null = null;
   private hls: Hls | null = null;
   private seq = 0;
   private progressTimer = 0;
@@ -243,24 +310,30 @@ export class PlaybackSession {
   private pendingSeek: (() => void) | null = null;
   private pendingAt = 0;
 
-  constructor(public item: BaseItem, public el: HTMLMediaElement, private events: SessionEvents, opts: StreamOptions) {
+  constructor(public item: BaseItem, media: MediaBridge | HTMLVideoElement, private events: SessionEvents, opts: StreamOptions) {
+    this.media = media instanceof MediaBridge ? media : new MediaBridge(media);
     this.opts = opts;
     this.subtitleIndex = opts.subtitleIndex;
     this.onPlaying = this.onPlaying.bind(this);
     this.onMediaError = this.onMediaError.bind(this);
-    el.addEventListener('playing', this.onPlaying);
-    el.addEventListener('error', this.onMediaError);
+    this.media.addEventListener('playing', this.onPlaying);
+    this.el.addEventListener('error', this.onMediaError);
+  }
+
+  /* The page's <video> element. */
+  private get el(): HTMLVideoElement {
+    return this.media.video;
   }
 
   get runtime(): number {
     const t = this.stream?.source.RunTimeTicks ?? this.item.RunTimeTicks;
     if (t) return ticksToSeconds(t);
-    return Number.isFinite(this.el.duration) ? this.el.duration : 0;
+    return Number.isFinite(this.media.duration) ? this.media.duration : 0;
   }
 
   position(): number {
     // Until the start seek has happened, the element's 0 isn't where playback is.
-    const t = this.pendingSeek ? this.pendingAt : this.el.currentTime || 0;
+    const t = this.pendingSeek ? this.pendingAt : this.media.currentTime || 0;
     return t + (this.stream?.timeOffset ?? 0);
   }
 
@@ -268,16 +341,24 @@ export class PlaybackSession {
     const my = ++this.seq;
     const next = { ...this.opts, ...opts };
     const stream = await requestStream(this.item, next);
-    if (my !== this.seq || this.stopped) {
+    const drop = () => {
       if (stream.method !== 'DirectPlay') this.stopEncoding(stream.playSessionId);
       if (stream.source.LiveStreamId) trackClose(keepalive('POST', `/LiveStreams/Close?liveStreamId=${encodeURIComponent(stream.source.LiveStreamId)}`));
+    };
+    if (my !== this.seq || this.stopped) {
+      drop();
+      return null;
+    }
+    if (stream.engine === 'soft' && !window.crossOriginIsolated && this.events.isolate?.(next.startSeconds)) {
+      drop();
       return null;
     }
     const old = this.stream;
     this.opts = next;
     this.stream = stream;
     if (stream.burnIn) this.subtitleIndex = stream.subtitleIndex;
-    this.attach(stream, next.startSeconds);
+    await this.attach(stream, next.startSeconds);
+    if (my !== this.seq || this.stopped) return null;
     if (old && old.method !== 'DirectPlay' && old.playSessionId !== stream.playSessionId) this.stopEncoding(old.playSessionId);
     this.events.onStream(stream);
     this.schedule();
@@ -286,7 +367,7 @@ export class PlaybackSession {
 
   /* Restart the stream at the current position with new options (audio track, quality, burn-in). */
   async change(opts: Partial<StreamOptions>, event?: string): Promise<ActiveStream | null> {
-    const wasPaused = this.el.paused;
+    const wasPaused = this.media.paused;
     const startSeconds = opts.startSeconds ?? this.position();
     const stream = await this.open({ ...opts, startSeconds });
     if (!stream) return null;
@@ -295,13 +376,18 @@ export class PlaybackSession {
     return stream;
   }
 
-  private attach(stream: ActiveStream, startSeconds: number) {
+  private async attach(stream: ActiveStream, startSeconds: number) {
     this.destroyHls();
     this.clearPendingSeek();
     this.netRetries = 0;
     this.mediaRecoveries = 0;
-    const el = this.el;
     const startAt = Math.max(0, startSeconds - stream.timeOffset);
+    if (stream.engine === 'soft') {
+      await this.attachSoft(stream, startAt);
+      return;
+    }
+    this.dropSoft();
+    const el = this.el;
     if (stream.isHls && Hls.isSupported() && !(isSafari() && browserSupport().nativeHls)) {
       const hls = new Hls({
         startPosition: startAt,
@@ -327,7 +413,7 @@ export class PlaybackSession {
         this.events.onFatal(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'network' : 'media', stream);
       });
       hls.loadSource(stream.url);
-      hls.attachMedia(el as HTMLVideoElement);
+      hls.attachMedia(el);
       return;
     }
     el.src = stream.url;
@@ -345,13 +431,51 @@ export class PlaybackSession {
     el.load();
   }
 
+  /* A new experimental player for this stream (a track or quality change gets a fresh one too). */
+  private async attachSoft(stream: ActiveStream, startAt: number) {
+    const el = this.el;
+    el.pause();
+    if (el.getAttribute('src')) {
+      el.removeAttribute('src');
+      el.load();
+    }
+    const host = this.events.softHost?.();
+    const { SoftMedia } = await import('./soft-media');
+    if (this.stopped || this.stream !== stream) return;
+    if (!host) throw new PlaybackError('media');
+    this.dropSoft();
+    const soft = new SoftMedia(host);
+    this.soft = soft;
+    soft.addEventListener('error', () => {
+      if (this.soft === soft && !this.stopped) this.events.onFatal(soft.error?.code === 'slow' ? 'soft-slow' : 'soft', stream);
+    });
+    this.media.use(soft);
+    const v = videoStream(stream.source);
+    const ownAudio = audioStreams(stream.source).filter((a) => !a.IsExternal).sort((a, b) => a.Index - b.Index);
+    const track = ownAudio.findIndex((a) => a.Index === stream.audioIndex);
+    void soft.open(stream.url, startAt, {
+      // A direct-play file carries every track; the server's copy only the one asked for.
+      audioTrack: stream.method === 'DirectPlay' && track >= 0 ? track : undefined,
+      fps: v?.RealFrameRate || v?.AverageFrameRate,
+      ext: stream.ext
+    });
+  }
+
+  private dropSoft() {
+    const soft = this.soft;
+    if (!soft) return;
+    this.soft = null;
+    this.media.use(this.el);
+    void soft.destroy();
+  }
+
   private clearPendingSeek() {
     if (this.pendingSeek) this.el.removeEventListener('loadedmetadata', this.pendingSeek);
     this.pendingSeek = null;
   }
 
   play() {
-    const p = this.el.play();
+    const p = this.media.play();
     if (p) p.catch(() => undefined);
   }
 
@@ -364,7 +488,7 @@ export class PlaybackSession {
     }
     // Before the metadata is in, move where the start seek will land instead.
     if (this.pendingSeek) { this.pendingAt = Math.max(0, target - (s?.timeOffset ?? 0)); return; }
-    try { this.el.currentTime = target; } catch { /* not seekable */ }
+    try { this.media.currentTime = target; } catch { /* not seekable */ }
   }
 
   private onPlaying() {
@@ -381,19 +505,20 @@ export class PlaybackSession {
 
   private body(event?: string): PlaybackReport {
     const s = this.stream!;
+    const m = this.media;
     return {
       ItemId: this.item.Id,
       MediaSourceId: s.source.Id,
       PlaySessionId: s.playSessionId,
       PositionTicks: secondsToTicks(this.position()),
-      IsPaused: this.el.paused,
-      IsMuted: this.el.muted,
-      VolumeLevel: Math.round(this.el.volume * 100),
+      IsPaused: m.paused,
+      IsMuted: m.muted,
+      VolumeLevel: Math.round(m.volume * 100),
       PlayMethod: s.method,
       AudioStreamIndex: s.audioIndex,
       SubtitleStreamIndex: this.subtitleIndex,
       CanSeek: true,
-      PlaybackRate: this.el.playbackRate,
+      PlaybackRate: m.playbackRate,
       EventName: event,
       ...(s.source.LiveStreamId ? { LiveStreamId: s.source.LiveStreamId, CanSeek: false } : {})
     };
@@ -435,7 +560,7 @@ export class PlaybackSession {
     this.seq++;
     window.clearInterval(this.progressTimer);
     window.clearInterval(this.pingTimer);
-    this.el.removeEventListener('playing', this.onPlaying);
+    this.media.removeEventListener('playing', this.onPlaying);
     this.el.removeEventListener('error', this.onMediaError);
     this.clearPendingSeek();
     if (s && body) {
@@ -447,11 +572,14 @@ export class PlaybackSession {
       if (s.source.LiveStreamId) trackClose(reported ?? keepalive('POST', `/LiveStreams/Close?liveStreamId=${encodeURIComponent(s.source.LiveStreamId)}`));
     }
     this.destroyHls();
+    // The experimental player stays on its last frame (the end-of-movie tile shows it) until released.
+    this.soft?.pause();
   }
 
   /* Detach from the element once nothing else will use it. */
   release() {
     this.stop();
+    this.dropSoft();
     try {
       this.el.pause();
       this.el.removeAttribute('src');

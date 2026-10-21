@@ -25,6 +25,9 @@ const fr: Record<string, string> = {
   'Seek': 'Position de lecture',
   '{time} of {total}': '{time} sur {total}',
   'Direct play': 'Lecture directe',
+  'Decoded here': 'Décodé ici',
+  'This device couldn’t keep up, so the server is converting this video': 'Cet appareil n’a pas suivi : le serveur convertit cette vidéo',
+  'The experimental player couldn’t play this, so the server is converting it': 'Le lecteur expérimental n’a pas pu lire ce titre : le serveur le convertit',
   'Direct stream': 'Flux direct',
   'Transcoding': 'Transcodage',
 

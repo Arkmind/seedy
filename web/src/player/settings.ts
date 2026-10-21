@@ -2,6 +2,7 @@ import { SERVER_URL, get, post } from '../api/client';
 import type { PlaybackPrefs, SkipMode, SubtitlePrefs } from '../api/seedy';
 import { createStore, safeLocal, saveLocal } from '../lib/store';
 import { formatNumber } from '../lib/i18n';
+import { softMode, type SoftMode } from './soft-profile';
 
 /* Settings behind Settings · Playback and Settings · Subtitles, as the player reads them.
    "This device" settings live in this browser (localStorage, `seedy.device.*`); the rest follow the profile
@@ -58,6 +59,8 @@ export interface DeviceSettings {
   dts: boolean;
   truehd: boolean;
   mkv: boolean;
+  /* The experimental player: decode here what this browser can't, instead of having the server convert it. */
+  softPlayer: SoftMode;
   /* Subtitles: how they look (unset fields follow prefs.subtitles or the defaults) and how they're drawn. */
   subtitleStyle: Partial<SubtitleStyle>;
   subtitleBurnIn: BurnIn;
@@ -93,6 +96,7 @@ export const DEVICE_DEFAULTS: DeviceSettings = {
   dts: false,
   truehd: false,
   mkv: true,
+  softPlayer: 'off',
   subtitleStyle: {},
   subtitleBurnIn: 'auto',
   pictureSubtitles: true,
@@ -122,6 +126,7 @@ export const DEVICE_KEYS: Record<keyof DeviceSettings, string> = {
   dts: 'seedy.device.advanced.dts',
   truehd: 'seedy.device.advanced.truehd',
   mkv: 'seedy.device.advanced.mkv',
+  softPlayer: 'seedy.device.advanced.softPlayer',
   subtitleStyle: 'seedy.device.subtitles.style',
   subtitleBurnIn: 'seedy.device.subtitles.burnIn',
   pictureSubtitles: 'seedy.device.subtitles.pictureHere',
@@ -143,6 +148,7 @@ function readDevice(): DeviceSettings {
     }
   }
   if (typeof out.subtitleStyle !== 'object' || out.subtitleStyle === null) out.subtitleStyle = {};
+  out.softPlayer = softMode(out.softPlayer);
   return out as unknown as DeviceSettings;
 }
 

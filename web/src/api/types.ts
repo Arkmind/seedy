@@ -45,6 +45,8 @@ export interface MediaStream {
   Width?: number;
   VideoRange?: string;
   VideoRangeType?: string;
+  RealFrameRate?: number;
+  AverageFrameRate?: number;
   AudioSpatialFormat?: string;
   Channels?: number;
   ChannelLayout?: string;

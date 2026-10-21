@@ -7,6 +7,7 @@ import { NumField, Panel, Segmented, Switch } from '../../ui/controls';
 import {
   BITRATES, CUSTOM_KEYS, RESOLUTIONS, bitrateLabel, customPlayback, deviceStore, setDevice, type DeviceSettings, type MaxResolution
 } from '../../player/settings';
+import { softAvailable, type SoftMode } from '../../player/soft-profile';
 import { DeviceTag, MeLayout } from './MeLayout';
 import { PlaybackRow, Picker, languageOptions, tOptions, useFreshUser, useLanguages, type PickOption } from './playback-parts';
 import { SaveLine } from './parts';
@@ -61,6 +62,14 @@ const ADVANCED: { key: 'preferFmp4' | 'hevc' | 'av1' | 'hdr' | 'dts' | 'truehd' 
   { key: 'dts', name: 'DTS audio', help: 'Turn on if this device or your receiver decodes DTS' },
   { key: 'truehd', name: 'Dolby TrueHD audio', help: 'Turn on if this device or your receiver decodes TrueHD' },
   { key: 'mkv', name: 'Play Matroska files directly', help: 'Off has the server repackage MKV files first' }
+];
+
+/* The experimental player (player/soft-profile.ts): when this browser decodes instead of the server converting. */
+const SOFT_PLAYER: PickOption<SoftMode>[] = [
+  { value: 'off', label: 'Off' },
+  { value: 'needed', label: 'When needed, up to 1080p' },
+  { value: 'any', label: 'When needed, any size' },
+  { value: 'always', label: 'Every video (for testing)' }
 ];
 
 const stillValue = (sw: { episodes: number; minutes: number } | null) => (sw ? `${sw.episodes}:${sw.minutes}` : 'off');
@@ -269,7 +278,7 @@ export function MePlayback() {
           <summary class="me-pb-adv-sum">
             <span class="me-pb-adv-text">
               <span class="me-pb-adv-title">{t('Advanced')}<DeviceTag /></span>
-              <span class="me-pb-adv-help">{t('Codec and streaming tweaks for when something won’t play. {n} settings.', { n: ADVANCED.length })}</span>
+              <span class="me-pb-adv-help">{t('Codec and streaming tweaks for when something won’t play. {n} settings.', { n: ADVANCED.length + 1 })}</span>
             </span>
             <span class="me-pb-adv-toggle">{advOpen ? t('Hide') : getLang() === 'en' ? 'Show' : t('Show (verb)')}</span>
           </summary>
@@ -279,6 +288,14 @@ export function MePlayback() {
                 <Switch label={t(a.name)} checked={dev[a.key]} onChange={(v) => setDevice(a.key, v)} />
               </PlaybackRow>
             ))}
+            <PlaybackRow
+              name={t('Experimental player')}
+              help={softAvailable()
+                ? t('Decodes HEVC and other formats here instead of the server converting them. Needs a fast processor')
+                : t('This browser can’t run it')}
+            >
+              <Picker<SoftMode> label={t('Experimental player')} value={dev.softPlayer} options={tOptions(SOFT_PLAYER)} onChange={(v) => setDevice('softPlayer', v)} />
+            </PlaybackRow>
           </div>
         </details>
 

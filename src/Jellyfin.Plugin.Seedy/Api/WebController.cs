@@ -131,6 +131,15 @@ public class WebController : ControllerBase
 
         Response.Headers.CacheControl = "no-cache";
         Response.Headers.XContentTypeOptions = "nosniff";
+
+        // The experimental player reloads its page with ?isolate=1 to decode on several threads, which takes a
+        // cross-origin isolated page. "credentialless" still lets cross-origin images (TMDB posters) load.
+        if (Request.Query["isolate"] == "1")
+        {
+            Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
+            Response.Headers["Cross-Origin-Embedder-Policy"] = "credentialless";
+        }
+
         return Content(html, "text/html; charset=utf-8", Encoding.UTF8);
     }
 

@@ -19,6 +19,9 @@
 .pl-video.is-tile { border-radius: var(--r-card); }
 .pl-video.is-settled { transition: none; }
 .pl-video.is-hidden { visibility: hidden; }
+/* The experimental player's canvas (soft-media.ts), one box per player. */
+.pl-soft { overflow: hidden; }
+.pl-soft-box { position: absolute; inset: 0; }
 
 .pl-hit { position: absolute; inset: 0; }
 .pl-root.is-end .pl-hit, .pl-root.is-end .pl-fade { display: none; }

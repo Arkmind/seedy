@@ -1,13 +1,14 @@
 import { defineConfig } from 'vite';
 import preact from '@preact/preset-vite';
 import { seedyMock } from './dev/mock-plugin';
+import { libmedia } from './vite/libmedia';
 
 // The plugin serves the build at {baseUrl}/seedy/ with relative asset URLs.
 // `bun run dev` serves at /seedy/ and proxies Jellyfin from dev/docker-compose.yml.
 // SEEDY_MOCK=1 answers /Seedy/* from fixtures, for working on screens before the plugin is installed.
 export default defineConfig(({ command }) => ({
   base: command === 'serve' ? '/seedy/' : './',
-  plugins: [preact(), ...(process.env.SEEDY_MOCK === '1' ? [seedyMock()] : [])],
+  plugins: [preact(), libmedia(), ...(process.env.SEEDY_MOCK === '1' ? [seedyMock()] : [])],
   build: {
     outDir: '../src/Jellyfin.Plugin.Seedy/Web',
     emptyOutDir: true,
