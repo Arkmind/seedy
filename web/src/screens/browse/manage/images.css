@@ -16,7 +16,7 @@
   position: relative; flex: none; display: block; width: 44px; aspect-ratio: 2 / 3; border-radius: var(--r-badge);
   overflow: hidden; background: #1a232e;
 }
-.ig-art.is-still, .ig-art.is-thumb { width: 60px; aspect-ratio: 16 / 9; }
+.ig-art.is-still, .ig-art.is-thumb, .ig-art.is-backdrop { width: 60px; aspect-ratio: 16 / 9; }
 .ig-art.is-cover { aspect-ratio: 1; }
 .ig-art.is-logo { width: 92px; aspect-ratio: 3 / 1; }
 .ig-art.is-banner { width: 92px; aspect-ratio: 5.4 / 1; }
@@ -56,7 +56,8 @@
 
 /* The chosen slot's art from providers. */
 .ig-panel { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
-.ig-panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+/* The filters sit under the heading whatever its length, as on the board, so switching slots doesn't move them. */
+.ig-panel-head { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 .ig-panel-title { margin: 0; font-size: 15px; font-weight: 800; color: var(--seedy-white); }
 .ig-filters { display: flex; gap: 8px; min-width: 0; }
 .ig-provider { width: 180px; }
