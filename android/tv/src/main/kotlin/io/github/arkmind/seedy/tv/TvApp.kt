@@ -47,6 +47,7 @@ import io.github.arkmind.seedy.tv.nav.TvNav
 import io.github.arkmind.seedy.tv.nav.TvRoute
 import io.github.arkmind.seedy.tv.player.TvPlayerRoute
 import io.github.arkmind.seedy.tv.requests.TvRequestsPlace
+import io.github.arkmind.seedy.tv.requests.openSeerr
 import io.github.arkmind.seedy.tv.requests.TvSeerrTitleRoute
 import io.github.arkmind.seedy.tv.search.TvSearchPlace
 import io.github.arkmind.seedy.tv.settings.TvSettingsRoute
@@ -210,7 +211,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                         when (place) {
                             TvPlace.Home -> {
                                 val state by home.state.collectAsStateWithLifecycle()
-                                TvHomeScreen(state, onOpen = nav::open, onPlay = nav::play)
+                                TvHomeScreen(state, onOpen = nav::open, onPlay = nav::play, onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) })
                             }
                             TvPlace.Search -> TvSearchPlace()
                             TvPlace.Movies -> LibraryPlace(home, CollectionType.MOVIES)

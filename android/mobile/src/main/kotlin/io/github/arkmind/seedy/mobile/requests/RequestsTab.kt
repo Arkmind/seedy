@@ -71,6 +71,8 @@ class RequestsActions(
     val onDecline: (SeerrRequest) -> Unit = {},
     val onRetry: (SeerrRequest) -> Unit = {},
     val onMessageShown: () -> Unit = {},
+    /** The next page of My requests or All requests. */
+    val onMore: (RequestsViewModel.Tab) -> Unit = {},
 )
 
 /** Board "Android · Requests" (the Requests tab). */
@@ -103,6 +105,7 @@ fun RequestsTab() {
             onDecline = vm::decline,
             onRetry = vm::retry,
             onMessageShown = vm::clearMessage,
+            onMore = vm::loadMore,
         ),
         bottomPadding = tabBarHeight(),
     )
@@ -145,8 +148,8 @@ fun RequestsScreen(state: RequestsViewModel.State, actions: RequestsActions, bot
             }
             when (state.tab) {
                 RequestsViewModel.Tab.Discover -> discover(state, actions, today)
-                RequestsViewModel.Tab.Mine -> requests(state.mine, everyone = false, canManage = summary?.canManage == true, state, actions)
-                RequestsViewModel.Tab.All -> requests(state.all, everyone = true, canManage = summary?.canManage == true, state, actions)
+                RequestsViewModel.Tab.Mine -> requests(RequestsViewModel.Tab.Mine, everyone = false, canManage = summary?.canManage == true, state, actions)
+                RequestsViewModel.Tab.All -> requests(RequestsViewModel.Tab.All, everyone = true, canManage = summary?.canManage == true, state, actions)
             }
         }
         Toast(state.message, actions.onMessageShown, Modifier.align(Alignment.BottomCenter).padding(bottom = bottomPadding))
@@ -220,12 +223,14 @@ private fun CardSkeleton() {
 }
 
 private fun LazyListScope.requests(
-    list: List<SeerrRequest>?,
+    tab: RequestsViewModel.Tab,
     everyone: Boolean,
     canManage: Boolean,
     state: RequestsViewModel.State,
     actions: RequestsActions,
 ) {
+    val page = state.page(tab)
+    val list = page.items
     if (list == null) {
         items(4) { Box(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp).fillMaxWidth().heightIn(min = 98.dp).clip(RoundedCornerShape(14.dp)).background(SeedyColors.Panel)) }
         return
@@ -252,6 +257,13 @@ private fun LazyListScope.requests(
                 onDecline = { actions.onDecline(r) },
                 onRetry = { actions.onRetry(r) },
             )
+        }
+    }
+    if (page.more) {
+        // Reaching the end of what's loaded asks for the next page.
+        item(key = "more:${list.size}") {
+            LaunchedEffect(list.size) { actions.onMore(tab) }
+            Box(Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp).fillMaxWidth().heightIn(min = 98.dp).clip(RoundedCornerShape(14.dp)).background(SeedyColors.Panel))
         }
     }
 }

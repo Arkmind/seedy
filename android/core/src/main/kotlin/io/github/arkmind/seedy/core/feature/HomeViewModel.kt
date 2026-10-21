@@ -3,6 +3,7 @@ package io.github.arkmind.seedy.core.feature
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.arkmind.seedy.core.home.Home
+import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.seedy.FeaturedEntry
 import io.github.arkmind.seedy.core.seedy.HomeRow
 import io.github.arkmind.seedy.core.session.UserSession
@@ -24,7 +25,11 @@ class HomeViewModel(session: UserSession) : ViewModel() {
         val items: List<BaseItemDto>? = null,
         /** Top 10 only: how many profiles watched each title. */
         val profiles: List<Int> = emptyList(),
-    )
+        /** Discover and Upcoming movies: Seerr's titles (null while loading). */
+        val seerr: List<SeerrTitle>? = null,
+    ) {
+        val seerrRow: Boolean get() = row.kind in Home.SeerrKinds
+    }
 
     data class State(
         val loading: Boolean = true,
@@ -34,7 +39,8 @@ class HomeViewModel(session: UserSession) : ViewModel() {
         val libraries: List<BaseItemDto> = emptyList(),
     ) {
         /** Rows with titles to show (still-loading rows included, empty ones dropped). */
-        val visibleRows: List<Row> get() = rows.filter { it.items == null || it.items.isNotEmpty() }
+        val visibleRows: List<Row>
+            get() = rows.filter { if (it.seerrRow) it.seerr == null || it.seerr.isNotEmpty() else it.items == null || it.items.isNotEmpty() }
     }
 
     private val _state = MutableStateFlow(State())
@@ -63,6 +69,8 @@ class HomeViewModel(session: UserSession) : ViewModel() {
         val filled = if (row.kind == "top10") {
             val entries = runCatching { home.top10() }.getOrDefault(emptyList())
             Row(row, Home.title(row), entries.map { it.item }, entries.map { it.profiles })
+        } else if (row.kind in Home.SeerrKinds) {
+            Row(row, Home.title(row), seerr = runCatching { home.seerr(row) }.getOrDefault(emptyList()))
         } else {
             Row(row, Home.title(row), runCatching { home.items(row, libraries) }.getOrDefault(emptyList()))
         }

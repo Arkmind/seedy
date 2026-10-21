@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -150,6 +151,9 @@ fun PhonePlayerScreen(
     }
 }
 
+/** The board's seek and pause row: its 68 px buttons start 128 px down a 390 px screen. */
+private val ControlsPlace = BiasAlignment(0f, 2f * 128f / (390f - 68f) - 1f)
+
 @Composable
 private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, actions: PlayerActions) {
     val item = state.item
@@ -175,9 +179,9 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
             RoundIcon(PlayerIcons.Pip, t("Picture in picture"), actions.onPip, size = 20.dp, color = SeedyColors.Inverse)
             RoundIcon(WebIcons.Cast, t("Cast to a device"), actions.onCast, size = 20.dp, color = SeedyColors.Inverse)
         }
-        // Seek and pause, 128 px from the top.
+        // Seek and pause: 128 px from the top of the board's 390 px, kept in that proportion on taller screens.
         Row(
-            Modifier.fillMaxWidth().padding(top = 128.dp),
+            Modifier.fillMaxWidth().align(ControlsPlace),
             horizontalArrangement = Arrangement.spacedBy(44.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {

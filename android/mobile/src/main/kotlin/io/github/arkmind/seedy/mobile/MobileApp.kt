@@ -46,7 +46,10 @@ import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.MobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.player.PlayerRoute
+import io.github.arkmind.seedy.core.requests.TitlesKind
+import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.mobile.requests.RequestsTab
+import io.github.arkmind.seedy.mobile.requests.openSeerr
 import io.github.arkmind.seedy.mobile.requests.SeerrTitlesRoute
 import io.github.arkmind.seedy.mobile.requests.SeerrTitleRoute
 import io.github.arkmind.seedy.mobile.search.SearchRoute
@@ -79,7 +82,6 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.SeedyTheme
 import io.github.arkmind.seedy.ui.theme.parseHexColor
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 /** The phone app: follows the session from "Add your server" through sign-in to the signed-in tabs. */
 @Composable
@@ -232,7 +234,14 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                                 HomeScreen(
                                     state, account,
                                     onOpen = nav::open, onPlay = nav::play, onSearch = { nav.go(Route.Search) },
-                                    onSeeAll = { row -> row.row.libraryId?.let { nav.go(Route.Library(UUID.fromString(it))) } },
+                                    onSeeAll = { row ->
+                                        when (row.row.kind) {
+                                            "discover" -> tab = Tab.Requests
+                                            "upcomingMovies" -> nav.go(Route.SeerrTitles(TitlesKind.UpcomingMovies.key))
+                                            else -> libraryUuid(row.row.libraryId)?.let { nav.go(Route.Library(it)) }
+                                        }
+                                    },
+                                    onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
                                     bottomPadding = tabBarHeight(),
                                 )
                             }

@@ -169,7 +169,7 @@ fun TvRequestsScreen(
     val list = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var activeRow by remember { mutableIntStateOf(0) }
-    val mine = state.mine.orEmpty()
+    val mine = state.latest.orEmpty()
     val rows = state.rows.filter { it.items?.isEmpty() != true }
     // List items: 0 the header, 1 the person's requests (when there are any), then the rows.
     val rowBase = if (mine.isEmpty()) 1 else 2
@@ -230,7 +230,7 @@ fun TvRequestsScreen(
                                     itemsIndexed(items, key = { _, it -> "${it.mediaType}:${it.tmdbId}" }) { j, title ->
                                         val self = remember { FocusRequester() }
                                         TitleCard(
-                                            title, row.kind.upcoming, titleAction(title, canRequest), today,
+                                            title, row.kind.upcoming, titleAction(title, canRequest), today = today,
                                             onClick = { actions.onTitle(title) },
                                             modifier = (if (i == 0 && j == 0) Modifier.focusRequester(firstCard) else Modifier).focusRequester(self)
                                                 .onFocusChanged { if (it.isFocused) { last.requester = self; activeRow = i; focusAt(index) } },
@@ -320,7 +320,14 @@ private fun RequestCard(r: SeerrRequest, onClick: () -> Unit, modifier: Modifier
  * and its year and score (an upcoming one's date), and what OK does when it's focused.
  */
 @Composable
-private fun TitleCard(title: SeerrTitle, upcoming: Boolean, action: TitleAction, today: LocalDate, onClick: () -> Unit, modifier: Modifier) {
+fun TitleCard(
+    title: SeerrTitle,
+    upcoming: Boolean,
+    action: TitleAction,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    today: LocalDate = LocalDate.now(),
+) {
     TvPressable(onClick, modifier) { focused ->
         val width by animateDpAsState(if (focused) 224.bp else 196.bp, label = "card")
         Column(Modifier.width(width), verticalArrangement = Arrangement.spacedBy(10.bp)) {

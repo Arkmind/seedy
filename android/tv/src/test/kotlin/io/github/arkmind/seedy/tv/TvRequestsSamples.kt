@@ -32,7 +32,7 @@ object TvRequestsSamples {
 
     val requests = RequestsViewModel.State(
         summary = RequestSummary(open = 2),
-        mine = listOf(
+        latest = listOf(
             SeerrRequest(1, 501, "tv", "The Harrowgate Files", requestStatus = "pending", seasons = listOf(1, 3), requestedAt = day(0)),
             SeerrRequest(
                 2, 502, "tv", "Northbound", requestStatus = "approved", status = "processing", seasons = listOf(2, 4),

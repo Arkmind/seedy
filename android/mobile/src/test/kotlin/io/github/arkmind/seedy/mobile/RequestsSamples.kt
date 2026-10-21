@@ -33,7 +33,7 @@ object RequestsSamples {
 
     val discover = RequestsViewModel.State(
         summary = RequestSummary(open = 3),
-        mine = mine,
+        latest = mine,
         rows = listOf(
             RequestsViewModel.Row(
                 TitlesKind.Trending,
