@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -212,10 +213,11 @@ fun SettingsPage(
     onBack: () -> Unit,
     onTitle: (() -> Unit)? = null,
     overlay: @Composable BoxScope.() -> Unit = {},
+    scroll: ScrollState = rememberScrollState(),
     content: @Composable () -> Unit,
 ) {
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
-        CssColumn(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
+        CssColumn(Modifier.fillMaxSize().imePadding().verticalScroll(scroll)) {
             PageHeader(title, onBack, onTitle)
             if (lede != null) Lede(lede)
             content()
@@ -245,8 +247,8 @@ fun Lede(text: String, modifier: Modifier = Modifier) {
 
 /** A section's title (12 px capitals) over its card. */
 @Composable
-fun SectionTitle(text: String) {
-    SText(text, Modifier.padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 8.dp), size = 12.sp, weight = 800, tracking = 0.1f, color = SeedyColors.Text3, uppercase = true)
+fun SectionTitle(text: String, modifier: Modifier = Modifier) {
+    SText(text, modifier.padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 8.dp), size = 12.sp, weight = 800, tracking = 0.1f, color = SeedyColors.Text3, uppercase = true)
 }
 
 /** The line under a card (12 px, 1.45 line height); red for an error. */
@@ -379,26 +381,33 @@ fun Modifier.settingsRow(): Modifier = this.fillMaxWidth().padding(start = 16.dp
 
 /** [settingsRow] for a row around a [RowLabel], telling the card its CSS height when the label is what makes it tall. */
 private fun Modifier.settingsRow(label: CssBox): Modifier =
-    this.fillMaxWidth().padding(start = 16.dp, end = 14.dp, top = 12.dp, bottom = 12.dp).then(CssRowElement(label)).heightIn(min = 44.dp)
+    this.fillMaxWidth().padding(start = 16.dp, end = 14.dp, top = 12.dp, bottom = 12.dp).then(CssRowElement(label, 44.dp)).heightIn(min = 44.dp)
 
-private class CssRowElement(val label: CssBox) : ModifierNodeElement<CssRowNode>() {
-    override fun create() = CssRowNode(label)
+/**
+ * A row as tall as CSS makes its [label] once that's past [min] (the row's other parts, a button): tells the
+ * [CssColumn] it sits in. Put it after the row's padding.
+ */
+internal fun Modifier.cssRow(label: CssBox, min: Dp): Modifier = this.then(CssRowElement(label, min))
+
+private class CssRowElement(val label: CssBox, val min: Dp) : ModifierNodeElement<CssRowNode>() {
+    override fun create() = CssRowNode(label, min)
     override fun update(node: CssRowNode) {
         node.label = label
+        node.min = min
     }
-    override fun equals(other: Any?) = other is CssRowElement && other.label === label
-    override fun hashCode() = System.identityHashCode(label)
+    override fun equals(other: Any?) = other is CssRowElement && other.label === label && other.min == min
+    override fun hashCode() = System.identityHashCode(label) * 31 + min.hashCode()
 }
 
 /** A row is at least 44 px; past that, it's as tall as CSS makes its label (and what's under it). */
-private class CssRowNode(var label: CssBox) : Modifier.Node(), LayoutModifierNode, ParentDataModifierNode, CssExcess {
+private class CssRowNode(var label: CssBox, var min: Dp) : Modifier.Node(), LayoutModifierNode, ParentDataModifierNode, CssExcess {
     override var excess = 0f
 
     override fun Density.modifyParentData(parentData: Any?): Any = this@CssRowNode
 
     override fun MeasureScope.measure(measurable: Measurable, constraints: Constraints): MeasureResult {
         val p = measurable.measure(constraints)
-        excess = p.height - maxOf(44.dp.toPx(), p.height - label.excess)
+        excess = p.height - maxOf(min.toPx(), p.height - label.excess)
         return layout(p.width, p.height) { p.place(0, 0) }
     }
 }

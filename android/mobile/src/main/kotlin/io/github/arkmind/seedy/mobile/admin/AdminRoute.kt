@@ -22,6 +22,10 @@ import io.github.arkmind.seedy.mobile.admin.system.LogsRoute
 import io.github.arkmind.seedy.mobile.admin.system.PluginsRoute
 import io.github.arkmind.seedy.mobile.admin.system.TasksRoute
 import io.github.arkmind.seedy.ui.components.NotYet
+import io.github.arkmind.seedy.mobile.manage.IdentifyRoute
+import io.github.arkmind.seedy.mobile.manage.ImagesRoute
+import io.github.arkmind.seedy.mobile.manage.MetadataRoute
+import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 
 /**
  * The server pages (boards "Android · Server · …"); [page] is the key the hub's rows use, [id] the user or library a
@@ -54,6 +58,10 @@ fun AdminRoute(page: String, id: String?) {
         "homescreen" -> DefaultHomeRoute()
         "requests" -> AdminRequestsRoute()
         "playlog" -> PlayLogRoute()
+        // A title's metadata, match and images (from its More menu).
+        "metadata" -> MetadataRoute(id.orEmpty(), LocalMobileNav.current::back)
+        "identify" -> IdentifyRoute(id.orEmpty(), LocalMobileNav.current::back)
+        "images" -> ImagesRoute(id.orEmpty(), LocalMobileNav.current::back)
         else -> NotYet(t("Server"))
     }
 }

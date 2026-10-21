@@ -37,8 +37,11 @@ import java.time.Instant
 
 enum class Tone { Normal, Ok, Pending, Danger, Accent }
 
-/** A notice over the page: a plugin that won't load, a restart that's needed, plugin updates. */
-data class HubAlert(val key: String, val title: String, val help: String, val action: String, val danger: Boolean, val open: String?)
+/**
+ * A notice over the page: a plugin that won't load, a disk filling up, a restart that's needed, plugin updates. [tone]
+ * sets the dot when it isn't [danger] (a disk is Pending, or Danger from 95 %).
+ */
+data class HubAlert(val key: String, val title: String, val help: String, val action: String, val danger: Boolean, val open: String?, val tone: Tone? = null)
 
 /** Someone watching: what, who on which device, how it plays and how far in. */
 data class NowPlaying(
@@ -78,6 +81,9 @@ data class ServerHubState(
     /** When nothing runs: when the last library scan finished ("today at 18:30"). */
     val lastScan: String? = null,
     val counts: List<HubCount>? = null,
+    /** The server's disks (Storage); null while loading. */
+    val disks: List<Disk>? = null,
+    val storageFailed: Boolean = false,
     val groups: List<HubGroup> = emptyList(),
     val signedInAs: String = "",
     val message: String? = null,
@@ -90,6 +96,7 @@ interface ServerHubActions {
     fun stopPlayback(sessionId: String) {}
     fun sendMessage(sessionId: String, text: String) {}
     fun messageShown() {}
+    fun retryStorage() {}
 }
 
 class ServerHubViewModel(
@@ -109,6 +116,8 @@ class ServerHubViewModel(
         val sessions: List<SessionInfoDto>? = null,
         val tasks: List<TaskInfo>? = null,
         val counts: ItemCounts? = null,
+        val storage: SystemStorage? = null,
+        val storageFailed: Boolean = false,
         val users: List<AdminUser>? = null,
         val plugins: List<PluginInfo>? = null,
         val packages: List<PackageInfo>? = null,
@@ -130,10 +139,21 @@ class ServerHubViewModel(
         if (session.seedyApi != null) fetch({ http.get<SeedyAdminStatus>("/Seedy/Admin/Status", json = SeedyJson) }) { v -> data.update { it.copy(status = v) } }
         loadLive()
         fetch({ http.get<ItemCounts>("/Items/Counts") }) { v -> data.update { it.copy(counts = v) } }
+        loadStorage()
         fetch({ http.get<List<AdminUser>>("/Users") }) { v -> data.update { it.copy(users = v) } }
         fetch({ http.get<List<PluginInfo>>("/Plugins") }) { v -> data.update { it.copy(plugins = v) } }
         fetch({ http.get<List<PackageInfo>>("/Packages", json = SeedyJson) }, { data.update { it.copy(packages = emptyList()) } }) { v -> data.update { it.copy(packages = v) } }
         loadSummaries()
+    }
+
+    private fun loadStorage() {
+        fetch({ http.get<SystemStorage>("/System/Info/Storage") }, { data.update { it.copy(storageFailed = true) } }) { v -> data.update { it.copy(storage = v, storageFailed = false) } }
+    }
+
+    override fun retryStorage() {
+        data.update { it.copy(storageFailed = false) }
+        publish()
+        loadStorage()
     }
 
     private fun loadLive() {
@@ -216,6 +236,8 @@ class ServerHubViewModel(
                 tasks = d.tasks?.let(::running),
                 lastScan = d.tasks?.firstOrNull { it.key == "RefreshLibrary" }?.lastExecutionResult?.endTimeUtc?.let(::realDate)?.let { atLabel(it, clock) },
                 counts = d.counts?.let(::counts),
+                disks = d.storage?.let(::disks),
+                storageFailed = d.storageFailed,
                 groups = groups(s, d),
             )
         }
@@ -232,6 +254,12 @@ class ServerHubViewModel(
         val version = d.info?.version.orEmpty()
         for (p in d.plugins.orEmpty().filter(::pluginWontLoad)) {
             out += HubAlert("plugin-${p.id}", t("{name} won’t load", "name" to p.name), wontLoadReason(p, d.packages, version), t("Open plugins"), danger = true, open = "plugins")
+        }
+        for (disk in d.storage?.let(::disks).orEmpty().filter { it.pct >= DiskWarnAt }) {
+            out += HubAlert(
+                "disk-${disk.mount}", t("{name} is {pct}% full", "name" to disk.name, "pct" to disk.pct), diskNotice(disk), t("Storage"),
+                danger = false, open = "storage", tone = disk.level,
+            )
         }
         if (_state.value.restarting) {
             out += HubAlert("restarting", t("The server is restarting"), t("Seedy reconnects when it’s back."), t("Restarting…"), danger = false, open = null)

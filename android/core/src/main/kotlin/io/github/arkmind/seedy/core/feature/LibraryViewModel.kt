@@ -27,6 +27,7 @@ import org.jellyfin.sdk.api.client.extensions.genreApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
+import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.SortOrder
@@ -84,6 +85,12 @@ class LibraryViewModel(session: UserSession, private val id: UUID) : ViewModel()
             }
             _state.update { it.copy(view = view, libraries = libraries, tab = tabsFor(view.collectionType).first().first) }
             reload()
+            // A title deleted elsewhere (its details page) leaves this grid too.
+            launch {
+                io.github.arkmind.seedy.core.manage.Removals.flow.collect { gone ->
+                    removed(_state.value.items.filter { io.github.arkmind.seedy.core.admin.normId(it.id.toString()) in gone }.map { it.id }.toSet())
+                }
+            }
             launch {
                 val n = runCatching { browse.items(ItemsQuery(parentId = view.id, includeTypes = typesFor(view.collectionType), limit = 0, images = emptyList(), fields = emptyList())).totalRecordCount }.getOrNull()
                 _state.update { it.copy(total = n) }
@@ -115,7 +122,34 @@ class LibraryViewModel(session: UserSession, private val id: UUID) : ViewModel()
 
     private fun query(s: State = _state.value): ItemsQuery? {
         val view = s.view ?: return null
-        return s.filters.applyTo(baseQuery(view, s.tab)).sorted(s.sort, s.descending)
+        val q = s.filters.applyTo(baseQuery(view, s.tab)).sorted(s.sort, s.descending)
+        // Whether each title may be deleted (the phone's selection bar offers Delete then).
+        return q.copy(fields = q.fields + ItemFields.CAN_DELETE)
+    }
+
+    /* ── Picking titles (the phone's selection bar) ── */
+
+    /** Every title of this view, loading the rest of the pages first ("Select all 248"). */
+    suspend fun allItems(): List<BaseItemDto> {
+        while (_state.value.isGrid && !_state.value.done && !_state.value.pageError) {
+            pageJob?.join()
+            if (_state.value.done) break
+            loadMore(pageSize = 200)
+            if (pageJob?.isActive != true) break
+            pageJob?.join()
+        }
+        return _state.value.items
+    }
+
+    /** Titles just marked watched show it at once. */
+    fun markedPlayed(ids: Set<UUID>) = _state.update { s ->
+        s.copy(items = s.items.map { if (it.id in ids) it.copy(userData = it.userData?.copy(played = true, playbackPositionTicks = 0, playedPercentage = 0.0)) else it })
+    }
+
+    /** Titles just deleted leave the grid. */
+    fun removed(ids: Set<UUID>) = _state.update { s ->
+        val left = s.items.filter { it.id !in ids }
+        s.copy(items = left, itemsTotal = (s.itemsTotal - (s.items.size - left.size)).coerceAtLeast(0), total = s.total?.let { (it - (s.items.size - left.size)).coerceAtLeast(0) })
     }
 
     private fun reload() {
