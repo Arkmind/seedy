@@ -37,6 +37,7 @@ import io.github.arkmind.seedy.mobile.admin.ActionSheet
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
+import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.PillStyle
 import io.github.arkmind.seedy.mobile.admin.SaveBar
 import io.github.arkmind.seedy.mobile.admin.SaveBarRoom
@@ -112,7 +113,10 @@ fun UserScreen(state: UserEditState, actions: UserEditActions, onBack: () -> Uni
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter).padding(bottom = if (state.changes > 0) 72.dp else 0.dp))
         },
     ) {
-        if (!state.loaded) return@PeoplePage
+        if (!state.loaded) {
+            if (state.error != null) PillRow { PillButton(t("Try again"), actions::reload) }
+            return@PeoplePage
+        }
         Identity(state)
         Actions(state, onPhoto = { if (state.hasImage) photoMenu = true else onPickPhoto() }, onConfirm = { confirm = it })
         TabPills(state.tabs.map { it to t(it.label) }, state.tab, actions::tab)
