@@ -1370,7 +1370,35 @@ const fr: Record<string, string> = {
   "Their plays show up in Viewing history. Details under {playlog}": "Ses lectures apparaissent dans l’Historique de visionnage. Détails dans {playlog}",
   "{n} attempt": "{n} tentative",
   "{n} attempts": "{n} tentatives",
-  "Marked {tag} below": "Marqué {tag} ci-dessous"
+  "Marked {tag} below": "Marqué {tag} ci-dessous",
+
+  // Overview · Storage
+  "Server data": "Données du serveur",
+  "Media libraries": "Bibliothèques",
+  "Web client": "Client web",
+  "Disk": "Disque",
+  "Program data": "Données du programme",
+  "Image cache": "Cache des images",
+  "Web files": "Fichiers web",
+  "RAM disk, emptied on restart": "Disque en RAM, vidé au redémarrage",
+  "Network share": "Partage réseau",
+  "{list} and {last}": "{list} et {last}",
+  "{free} left on {mount}, where metadata and the cache live": "{free} restants sur {mount}, où se trouvent les métadonnées et le cache",
+  "{free} left on {mount}, where metadata lives": "{free} restants sur {mount}, où se trouvent les métadonnées",
+  "{free} left on {mount}, where {names} live": "{free} restants sur {mount}, où se trouvent {names}",
+  "{free} left on {mount}": "{free} restants sur {mount}",
+  "See storage": "Voir le stockage",
+  "{name} is {pct}% full.": "{name} : {pct} % utilisés.",
+  "Storage": "Stockage",
+  "Change paths in Settings": "Changer les chemins dans Paramètres",
+  "Couldn’t read the server’s disks.": "Impossible de lire les disques du serveur.",
+  "On {mount}": "Sur {mount}",
+  "{used} of {total} used · {pct}%": "{used} utilisés sur {total} · {pct} %",
+  "{name} disk space used": "Espace utilisé sur {name}",
+  "{pct}% used, {free}": "{pct} % utilisés, {free}",
+  "Folders on the same disk share its space. A warning shows at the top of this page when a disk passes 85%.": "Les dossiers d’un même disque partagent son espace. Une alerte s’affiche en haut de cette page quand un disque dépasse 85 %.",
+  "{n} disk": "{n} disque",
+  "{n} disks": "{n} disques",
 };
 
 export default fr;
