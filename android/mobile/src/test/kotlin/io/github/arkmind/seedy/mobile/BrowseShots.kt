@@ -79,6 +79,12 @@ class BrowseShots {
         RequestsScreen(RequestsSamples.discover, RequestsActions(onOpenSeerr = {}), bottomPadding = tabBarHeight(), today = RequestsSamples.today)
     }
 
+    /** No board: the details hero for a Seerr title. */
+    @Test
+    fun seerrTitle() = shot("AndroidSeerrTitle", Tab.Requests) {
+        io.github.arkmind.seedy.mobile.requests.SeerrTitleScreen(RequestsSamples.title, canRequest = true, allow4k = true, actions = io.github.arkmind.seedy.mobile.requests.SeerrTitleActions(onOpenSeerr = {}))
+    }
+
     @Test
     fun libraries() = shot("AndroidLibraries", Tab.Libraries) {
         LibrariesScreen(BrowseSamples.libraries, onOpen = {}, onSearch = {}, onHistory = {}, onOrder = {}, bottomPadding = tabBarHeight())

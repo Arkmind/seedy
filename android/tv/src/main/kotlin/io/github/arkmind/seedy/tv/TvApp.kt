@@ -211,7 +211,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                             TvPlace.Shows -> LibraryPlace(home, CollectionType.TVSHOWS)
                             TvPlace.LiveTv -> TvLiveTvPlace()
                             TvPlace.Favorites -> TvFavoritesPlace()
-                            TvPlace.Requests -> TvRequestsPlace()
+                            TvPlace.Requests -> TvRequestsPlace(onSearch = { place = TvPlace.Search })
                         }
                         TvRail(
                             places = places,

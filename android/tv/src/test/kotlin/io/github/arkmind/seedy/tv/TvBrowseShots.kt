@@ -16,6 +16,8 @@ import io.github.arkmind.seedy.tv.details.TvDetailsScreen
 import io.github.arkmind.seedy.tv.favorites.TvFavoritesScreen
 import io.github.arkmind.seedy.tv.library.TvLibraryActions
 import io.github.arkmind.seedy.tv.library.TvLibraryScreen
+import io.github.arkmind.seedy.tv.requests.TvRequestsActions
+import io.github.arkmind.seedy.tv.requests.TvRequestsScreen
 import io.github.arkmind.seedy.tv.search.TvSearchActions
 import io.github.arkmind.seedy.tv.search.TvSearchScreen
 import io.github.arkmind.seedy.tv.seasons.TvAdvancedActions
@@ -93,6 +95,17 @@ class TvBrowseShots {
     @Test
     fun search() = shot("TVSearch", TvPlace.Search) {
         TvSearchScreen(TvBrowseSamples.search, TvSearchActions(), focusKey = 'h')
+    }
+
+    @Test
+    fun requests() = shot("TVRequests", TvPlace.Requests) {
+        TvRequestsScreen(TvRequestsSamples.requests, TvRequestsActions(), canRequest = true, today = TvRequestsSamples.today)
+    }
+
+    /** No board: the details hero for a Seerr title. */
+    @Test
+    fun seerrTitle() = shot("TVSeerrTitle") {
+        io.github.arkmind.seedy.tv.requests.TvSeerrTitleScreen(TvRequestsSamples.title, canRequest = true, allow4k = false, actions = io.github.arkmind.seedy.tv.requests.TvSeerrTitleActions())
     }
 
     @Test
