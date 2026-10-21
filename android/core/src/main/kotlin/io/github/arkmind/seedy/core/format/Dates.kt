@@ -32,3 +32,6 @@ fun parseDay(s: String?): LocalDate? = s?.trim()?.takeIf { it.length >= 10 }?.le
 
 /** Whole days from today to [d] (negative in the past). */
 fun daysFromToday(d: LocalDate): Long = ChronoUnit.DAYS.between(LocalDate.now(), d)
+
+/** "Nov 2026". */
+fun monthYear(d: LocalDate): String = "${month(d)} ${d.year}"

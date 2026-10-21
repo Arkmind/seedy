@@ -182,3 +182,17 @@ fun SeedyField(
 fun FieldLabel(text: String, modifier: Modifier = Modifier) {
     SText(text, modifier, size = 13.sp, weight = 700, color = SeedyColors.Text)
 }
+
+/** The web's toast: a short note over the page's foot that goes after a few seconds; [onDone] clears it. */
+@Composable
+fun Toast(message: String?, onDone: () -> Unit, modifier: Modifier = Modifier) {
+    if (message == null) return
+    androidx.compose.runtime.LaunchedEffect(message) {
+        kotlinx.coroutines.delay(3200)
+        onDone()
+    }
+    Box(
+        modifier.padding(horizontal = 20.dp, vertical = 16.dp).clip(RoundedCornerShape(14.dp)).background(SeedyColors.Surface)
+            .border(1.dp, SeedyColors.Surface2, RoundedCornerShape(14.dp)).tap(onClick = onDone).padding(horizontal = 16.dp, vertical = 12.dp),
+    ) { SText(message, size = 14.sp, weight = 600, color = SeedyColors.Text) }
+}

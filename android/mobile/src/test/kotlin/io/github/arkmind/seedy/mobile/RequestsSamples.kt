@@ -1,0 +1,46 @@
+package io.github.arkmind.seedy.mobile
+
+import io.github.arkmind.seedy.core.feature.RequestsViewModel
+import io.github.arkmind.seedy.core.requests.RequestSummary
+import io.github.arkmind.seedy.core.requests.SeerrRequest
+import io.github.arkmind.seedy.core.requests.SeerrTitle
+import io.github.arkmind.seedy.core.requests.TitlesKind
+import java.time.LocalDate
+
+/** Board "Android · Requests" sample data. */
+object RequestsSamples {
+    /** The board's day: Glass Sky (Fri 30 Oct) is nine days off, so it's lit. */
+    val today: LocalDate = LocalDate.of(2026, 10, 21)
+
+    private val mine = listOf(
+        SeerrRequest(1, 501, "tv", "Low Tide", requestStatus = "pending"),
+        SeerrRequest(2, 502, "movie", "Meridian Line", requestStatus = "approved", download = SeerrRequest.Download(0.4)),
+        SeerrRequest(3, 503, "movie", "Paper Moon", requestStatus = "approved", status = "available"),
+        SeerrRequest(4, 504, "tv", "Cold Front", requestStatus = "approved", status = "processing"),
+    )
+
+    val discover = RequestsViewModel.State(
+        summary = RequestSummary(open = 3),
+        mine = mine,
+        rows = listOf(
+            RequestsViewModel.Row(
+                TitlesKind.Trending,
+                listOf(
+                    SeerrTitle(11, "movie", "Harrowgate", "2026", 7.4),
+                    SeerrTitle(12, "tv", "The Harrowgate Files", "2021", 7.0, status = "pending"),
+                    SeerrTitle(13, "tv", "Low Tide", "2025", 8.0),
+                    SeerrTitle(14, "movie", "Meridian Line", "2026", 6.8, status = "available"),
+                ),
+            ),
+            RequestsViewModel.Row(
+                TitlesKind.UpcomingMovies,
+                listOf(
+                    SeerrTitle(21, "movie", "Glass Sky", releaseDate = "2026-10-30"),
+                    SeerrTitle(22, "movie", "The Ninth Hour", releaseDate = "2026-11-28"),
+                    SeerrTitle(23, "movie", "Paper Moon", releaseDate = "2026-12-12"),
+                    SeerrTitle(24, "movie", "Cold Front", releaseDate = "2027-04-02"),
+                ),
+            ),
+        ),
+    )
+}

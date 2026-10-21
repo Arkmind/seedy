@@ -69,11 +69,19 @@ data class SeerrDetails(
     val runtime: Int? = null,
     val releaseDate: String? = null,
     val certification: String? = null,
+    val cast: List<SeerrCast> = emptyList(),
+    val crew: List<SeerrCrew> = emptyList(),
     val seasons: List<SeerrSeason>? = null,
     val networks: List<String>? = null,
     val numberOfSeasons: Int? = null,
     val trailerUrl: String? = null,
 )
+
+@Serializable
+data class SeerrCast(val id: Int = 0, val name: String = "", val character: String? = null, val profilePath: String? = null)
+
+@Serializable
+data class SeerrCrew(val name: String = "", val job: String = "")
 
 /** What the request dialog offers the signed-in person; [advanced] when Seerr lets them pick the server or requester. */
 @Serializable
@@ -156,4 +164,11 @@ val UserSession.seerrInSearch: Boolean
 /** TMDB image addresses (Seerr's poster and backdrop paths). */
 fun tmdbImage(path: String?, size: String = "w342"): String? = path?.takeIf { it.isNotBlank() }?.let {
     if (it.startsWith("http://") || it.startsWith("https://")) it else "https://image.tmdb.org/t/p/$size$it"
+}
+
+/** Seerr's Jellyfin item id (32 hex, no dashes) as the SDK's UUID; null when it isn't on the server. */
+fun libraryUuid(id: String?): java.util.UUID? {
+    val s = id?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    val dashed = if (s.length == 32) "${s.substring(0, 8)}-${s.substring(8, 12)}-${s.substring(12, 16)}-${s.substring(16, 20)}-${s.substring(20)}" else s
+    return runCatching { java.util.UUID.fromString(dashed) }.getOrNull()
 }

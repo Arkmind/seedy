@@ -2,6 +2,10 @@ package io.github.arkmind.seedy.ui.theme
 
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -60,9 +64,9 @@ const val NotoLineRatio = 1.362f
  * Text as the boards write it: a size, a weight and a colour. Letter spacing is in em, like the boards' CSS
  * (`letter-spacing: -0.01em` → `tracking = -0.01f`); line height is a multiple of the size when given.
  *
- * Compose never makes a line shorter than the font's own height, so a heading's `line-height: 1.2` is applied the CSS
- * way here: the box loses the difference and the glyphs stay centred in it (exact for one line; longer text keeps the
- * font's spacing between lines).
+ * A one-line text tighter than the font's own height (a heading's `line-height: 1.2`) is boxed the CSS way: the box
+ * loses the difference and the glyphs stay centred in it. Text that wraps takes the line height itself, so its lines
+ * close up as on the boards.
  */
 @Composable
 fun SText(
@@ -79,19 +83,23 @@ fun SText(
     decoration: TextDecoration? = null,
     uppercase: Boolean = false,
 ) {
-    val tighter = lineHeight != null && lineHeight < NotoLineRatio
+    val tight = lineHeight != null && lineHeight < NotoLineRatio
+    // Whether the text took more than one line; it then takes the line height itself.
+    var wraps by remember(text) { mutableStateOf(false) }
+    val boxed = tight && !wraps
     BasicText(
         text = if (uppercase) text.uppercase() else text,
-        modifier = if (tighter) modifier.cssLineBox(size, lineHeight!!) else modifier,
+        modifier = if (boxed) modifier.cssLineBox(size, lineHeight!!) else modifier,
         style = BaseText.copy(
             fontSize = size,
             fontWeight = FontWeight(weight),
             color = color,
             letterSpacing = if (tracking == 0f) TextUnit.Unspecified else tracking.em,
-            lineHeight = if (lineHeight != null && !tighter) lineHeight.em else TextUnit.Unspecified,
+            lineHeight = if (lineHeight != null && !boxed) lineHeight.em else TextUnit.Unspecified,
             textAlign = align ?: TextAlign.Unspecified,
             textDecoration = decoration,
         ),
+        onTextLayout = if (tight && maxLines != 1) { r -> if (r.lineCount > 1) wraps = true } else null,
         maxLines = maxLines,
         overflow = overflow,
         softWrap = maxLines != 1,

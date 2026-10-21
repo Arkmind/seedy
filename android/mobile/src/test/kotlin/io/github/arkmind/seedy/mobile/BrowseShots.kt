@@ -18,6 +18,8 @@ import io.github.arkmind.seedy.mobile.library.FilterSheet
 import io.github.arkmind.seedy.mobile.library.LibrariesScreen
 import io.github.arkmind.seedy.mobile.library.LibraryActions
 import io.github.arkmind.seedy.mobile.library.LibraryScreen
+import io.github.arkmind.seedy.mobile.requests.RequestsActions
+import io.github.arkmind.seedy.mobile.requests.RequestsScreen
 import io.github.arkmind.seedy.mobile.search.SearchActions
 import io.github.arkmind.seedy.mobile.search.SearchScreen
 import io.github.arkmind.seedy.mobile.parts.Tab
@@ -70,6 +72,11 @@ class BrowseShots {
             BrowseSamples.harrowgate, onToggle = {}, onToggleAll = {}, on4k = {}, advanced = AdvancedActions({}, {}, {}, {}),
             onRetry = {}, onSubmit = {}, onDismiss = {},
         )
+    }
+
+    @Test
+    fun requests() = shot("AndroidRequests", Tab.Requests) {
+        RequestsScreen(RequestsSamples.discover, RequestsActions(onOpenSeerr = {}), bottomPadding = tabBarHeight(), today = RequestsSamples.today)
     }
 
     @Test

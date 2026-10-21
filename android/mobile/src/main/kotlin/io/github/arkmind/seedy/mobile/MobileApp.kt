@@ -47,6 +47,7 @@ import io.github.arkmind.seedy.mobile.nav.MobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.player.PlayerRoute
 import io.github.arkmind.seedy.mobile.requests.RequestsTab
+import io.github.arkmind.seedy.mobile.requests.SeerrTitlesRoute
 import io.github.arkmind.seedy.mobile.requests.SeerrTitleRoute
 import io.github.arkmind.seedy.mobile.search.SearchRoute
 import io.github.arkmind.seedy.mobile.settings.SettingsPageRoute
@@ -245,7 +246,8 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                 entry<Route.Settings> { WithTabBar(tabs, tab, nav) { SettingsRoute(appVersion) } }
                 entry<Route.SettingsPage> { SettingsPageRoute(it.page, appVersion) }
                 entry<Route.Player> { PlayerRoute(it.id) }
-                entry<Route.SeerrTitle> { SeerrTitleRoute(it.mediaType, it.tmdbId) }
+                entry<Route.SeerrTitle> { WithTabBar(tabs, tab, nav) { SeerrTitleRoute(it.mediaType, it.tmdbId) } }
+                entry<Route.SeerrTitles> { WithTabBar(tabs, tab, nav) { SeerrTitlesRoute(it.kind) } }
             },
         )
     }
