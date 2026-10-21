@@ -142,7 +142,7 @@ export function ImagesDialog({ item, onClose, onDone }: { item: BaseItem; onClos
       await reloadImages();
       mark(kind, { url: img.Url, provider: img.ProviderName }, kind === 'Backdrop' ? before : 0);
       setChanged(true);
-      toast(kind === 'Backdrop' ? t('Backdrop added') : t('{name} changed', { name: slotText(kind, item).name }));
+      toast(kind === 'Backdrop' ? t('Backdrop added') : t('Image saved'));
     } catch (e) {
       toast(t('Couldn’t save the image: {reason}', { reason: (e as Error).message }), 'error');
     } finally {
@@ -158,7 +158,7 @@ export function ImagesDialog({ item, onClose, onDone }: { item: BaseItem; onClos
       await reloadImages();
       mark(kind, null, index ?? 0);
       setChanged(true);
-      toast(kind === 'Backdrop' ? t('Backdrop removed') : t('{name} removed', { name: slotText(kind, item).name }));
+      toast(kind === 'Backdrop' ? t('Backdrop removed') : t('Image removed'));
     } catch (e) {
       toast(t('Couldn’t remove the image: {reason}', { reason: (e as Error).message }), 'error');
     } finally {
@@ -310,11 +310,11 @@ function SlotRow({ item, kind, on, list, loading, placed, busy, onPick, onRemove
     <li class={'ig-slot' + (on ? ' is-on' : '')} aria-current={on ? 'true' : undefined} onClick={onPick}>
       {art}
       <span class="ig-slot-text">
-        <span class="ig-slot-name">{kind === 'Backdrop' && has ? t('Backdrops · {n}', { n: list.length }) : text.name}</span>
+        <span id={'ig-s-' + kind} class="ig-slot-name">{kind === 'Backdrop' && has ? t('Backdrops · {n}', { n: list.length }) : text.name}</span>
         {sub && <span class="ig-slot-sub">{sub}</span>}
       </span>
       <span class="ig-slot-actions">
-        <button type="button" class="ig-btn" aria-controls="ig-panel" aria-label={has || kind === 'Backdrop' ? undefined : t('Find a {name}', { name: text.name.toLowerCase() })}
+        <button type="button" class="ig-btn" aria-controls="ig-panel" aria-describedby={'ig-s-' + kind}
           onClick={(e) => { e.stopPropagation(); onPick(); }}>
           {kind === 'Backdrop' ? t('Add') : has ? t('Change') : t('Find')}
         </button>

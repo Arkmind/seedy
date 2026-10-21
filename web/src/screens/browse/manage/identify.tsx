@@ -6,7 +6,7 @@ import { Icon } from '../../../ui/icons';
 import { toast } from '../../../ui/overlay';
 import {
   applyRemoteSearch, getExternalIdInfos, getFullItem, idName, idsFor, idsLine, previewUrl, providerName, remoteSearch,
-  searchKind, typeName, type ExternalIdInfo, type RemoteSearchResult
+  searchKind, type ExternalIdInfo, type RemoteSearchResult
 } from './api';
 import { ItemButton, ItemCheck, ItemDialog, ItemField } from './dialog';
 import './identify.css';
@@ -161,7 +161,7 @@ export function IdentifyDialog({ item, onClose, onDone }: { item: BaseItem; onCl
       }
     >
       {!kind ? (
-        <p class="idf-note">{t('Jellyfin can’t look up a {type} on its own. Identify the show, movie or album it belongs to instead.', { type: typeName(item.Type).toLowerCase() })}</p>
+        <p class="idf-note">{t('Jellyfin only looks up shows, movies, collections, music, people and books. Identify the show, movie or album this belongs to instead.')}</p>
       ) : (
         <>
           <form
