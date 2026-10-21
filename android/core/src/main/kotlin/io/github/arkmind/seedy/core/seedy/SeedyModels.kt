@@ -41,9 +41,31 @@ data class UserPrefs(
     val hiddenRows: List<String> = emptyList(),
     val hiddenSeeds: List<String> = emptyList(),
     val rowOrder: String = "auto",
+    /** The person's own Home rows ("My order"): shown or not, how many, pinned where they put it. */
+    val rows: List<HomeRowPref> = emptyList(),
+    val privacy: PrivacyPrefs = PrivacyPrefs(),
+    val notifyRequests: Boolean = true,
     /** Namespaced settings shared with the web app, e.g. "display.language", "home.episodeImages". */
     val custom: Map<String, JsonElement> = emptyMap(),
 )
+
+@Serializable
+data class HomeRowPref(val kind: String, val enabled: Boolean = true, val count: Int? = null, val pinned: Boolean = false)
+
+/** Settings · Profile › Privacy: what Seedy learns from this person's plays. */
+@Serializable
+data class PrivacyPrefs(val personalRecs: Boolean = true, val countInTop10: Boolean = true)
+
+/** GET /Seedy/Me/Password: when the password last changed, when the server's activity log still knows. */
+@Serializable
+data class PasswordState(val changedAt: String? = null)
+
+/** The person's own Seerr account, as their settings show it; [linkedBy] is "jellyfin" or "manual". */
+@Serializable
+data class SeerrAccountRef(val name: String = "", val linkedBy: String = "jellyfin")
+
+@Serializable
+internal data class MyRequests(val open: Int = 0)
 
 /** Settings · Playback: skips are "button", "auto" or "off"; maxQuality "auto", "4k", "1080p" or "720p". */
 @Serializable
@@ -74,6 +96,7 @@ data class RequestsFeatures(
     val canRequest: Boolean = false,
     val allow4k: Boolean = false,
     val seerrUrl: String? = null,
+    val account: SeerrAccountRef? = null,
 )
 
 @Serializable

@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
@@ -36,6 +37,12 @@ val NotoSans = FontFamily(
 
 /** The server's accent colour (Seedy admin · Branding); the Foundations pink when the server has no Seedy. */
 val LocalAccent = staticCompositionLocalOf { SeedyColors.Accent }
+
+/**
+ * Text laid out with exact (fractional) glyph advances, like the boards' browser, instead of advances rounded to whole
+ * pixels: long lines then wrap where the boards wrap them. The settings screens turn it on.
+ */
+val LocalLinearText = staticCompositionLocalOf { false }
 
 /** Base text: line height from the font itself, like CSS `line-height: normal` on the boards. */
 val BaseText = TextStyle(
@@ -98,6 +105,7 @@ fun SText(
             lineHeight = if (lineHeight != null && !boxed) lineHeight.em else TextUnit.Unspecified,
             textAlign = align ?: TextAlign.Unspecified,
             textDecoration = decoration,
+            textMotion = if (LocalLinearText.current) TextMotion.Animated else null,
         ),
         onTextLayout = if (tight && maxLines != 1) { r -> if (r.lineCount > 1) wraps = true } else null,
         maxLines = maxLines,

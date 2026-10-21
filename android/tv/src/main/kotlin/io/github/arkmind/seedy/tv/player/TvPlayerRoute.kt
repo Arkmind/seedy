@@ -104,7 +104,8 @@ fun TvPlayerRoute(id: UUID) {
             // A settings page goes back to the settings list; Chapters opened from its own button just closes.
             tool == TvTool.Settings && page != SettingsPage.Main -> page = SettingsPage.Main
             tool != null -> tool = null
-            controls -> controls = false
+            // Settings · Remote › "Back button closes the player".
+            controls && !player.settings.backClosesPlayer -> controls = false
             else -> nav.back()
         }
     }
@@ -147,6 +148,7 @@ fun TvPlayerRoute(id: UUID) {
             seekBack = player.seekBackSeconds,
             seekForward = player.seekForwardSeconds,
             subtitleSize = subtitleSize,
+            look = player.subtitleLook,
             panelOpen = tool != null,
             focus = focus,
             actions = TvPlayerActions(

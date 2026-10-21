@@ -14,7 +14,10 @@ import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import io.github.arkmind.seedy.core.data.DevicePrefs
+import io.github.arkmind.seedy.core.data.DeviceSettings
 import io.github.arkmind.seedy.core.format.TICKS_PER_SECOND
+import io.github.arkmind.seedy.core.settings.ResolvedStyle
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -84,8 +87,28 @@ data class PlayerState(
  * told (start, progress every 10 s, stop) and handles tracks, skips and the next episode.
  */
 @OptIn(UnstableApi::class)
-class PlayerController(context: Context, private val session: UserSession, private val scope: CoroutineScope) {
+class PlayerController(private val context: Context, private val session: UserSession, private val scope: CoroutineScope) {
     private val caps = CapabilitiesCache.get(context)
+    /** This device's settings (Settings · Playback and Subtitles), as they were when the player opened. */
+    private val device = DevicePrefs.get(context).current
+    private val options = ProfileOptions(
+        maxAudioChannels = device.audioChannels,
+        maxWidth = when (device.maxResolution) {
+            -1 -> null
+            0 -> screenWidth(context)
+            else -> device.maxResolution
+        },
+        pictureSubtitles = device.pictureSubtitles,
+        burnIn = device.burnIn,
+        hevc = device.hevc, av1 = device.av1, hdr = device.hdr, dts = device.dts, truehd = device.truehd, mkv = device.mkv,
+        preferFmp4 = device.preferFmp4,
+    )
+
+    /** What Auto stands for here (the quality set for home, away or mobile data); known once the player opens. */
+    private var autoBitrate = Quality.Auto.bitrate
+    private var placed = false
+
+    private fun bitrate(q: Quality) = if (q == Quality.Auto) autoBitrate else q.bitrate
     // Settings · Playback › Quality is where every playback starts.
     private val _state = MutableStateFlow(
         PlayerState(
@@ -101,16 +124,16 @@ class PlayerController(context: Context, private val session: UserSession, priva
 
     private val streams = Streams(
         session,
-        profile = { Profiles.build(caps, _state.value.quality.bitrate) },
-        liveProfile = { Profiles.buildLive(caps, _state.value.quality.bitrate) },
+        profile = { Profiles.build(caps, bitrate(_state.value.quality), options) },
+        liveProfile = { Profiles.buildLive(caps, bitrate(_state.value.quality), options) },
     )
     private val prefs = session.seedy?.prefs?.playback
 
     val exo: ExoPlayer = ExoPlayer.Builder(context)
         .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
         .setHandleAudioBecomingNoisy(true)
-        .setSeekBackIncrementMs((prefs?.seekBackSeconds ?: 10) * 1000L)
-        .setSeekForwardIncrementMs((prefs?.seekForwardSeconds ?: 30) * 1000L)
+        .setSeekBackIncrementMs(seekBackSeconds * 1000L)
+        .setSeekForwardIncrementMs(seekForwardSeconds * 1000L)
         .build()
 
     private var item: BaseItemDto? = null
@@ -121,8 +144,19 @@ class PlayerController(context: Context, private val session: UserSession, priva
     private var skipped = mutableSetOf<UUID>()
     private var jobs = mutableListOf<Job>()
 
-    val seekBackSeconds: Int get() = prefs?.seekBackSeconds ?: 10
-    val seekForwardSeconds: Int get() = prefs?.seekForwardSeconds ?: 30
+    /** Skip steps: this device's, else the profile's. */
+    val seekBackSeconds: Int get() = device.seekBack ?: prefs?.seekBackSeconds ?: 10
+    val seekForwardSeconds: Int get() = device.seekForward ?: prefs?.seekForwardSeconds ?: 30
+
+    /** Settings · Subtitles › how they look, here. */
+    val subtitleLook: ResolvedStyle get() = ResolvedStyle.of(device, session.seedy?.prefs?.subtitles)
+
+    /** Settings · Gestures and Remote. */
+    val settings: DeviceSettings get() = device
+
+    /** The audio and subtitle kind picked in the last episode, for "Keep my audio and subtitle choice". */
+    private data class Picks(val seriesId: UUID?, val audioLang: String?, val subtitleLang: String?, val subtitleOff: Boolean, val forced: Boolean)
+    private var picks: Picks? = null
 
     init {
         exo.addListener(object : Player.Listener {
@@ -154,6 +188,10 @@ class PlayerController(context: Context, private val session: UserSession, priva
     /** Starts [id] where the person left it (or from the start once watched). */
     fun open(id: UUID) {
         scope.launch {
+            if (!placed) {
+                autoBitrate = Network.autoBitrate(device, Network.place(context, session), session.user.policy?.remoteClientBitrateLimit ?: 0)
+                placed = true
+            }
             val loaded = runCatching {
                 withIo {
                     session.api.libraryApi.getItems(
@@ -176,11 +214,12 @@ class PlayerController(context: Context, private val session: UserSession, priva
         _state.update { s -> PlayerState(item = it, quality = s.quality, speed = s.speed, subtitleOffsetMs = s.subtitleOffsetMs) }
         val resumeTicks = if (it.userData?.played == true) 0L else it.userData?.playbackPositionTicks ?: 0L
         val source = it.mediaSources?.firstOrNull()
+        val (audio, subtitle) = keptPicks(it, source)
         val opts = StreamOptions(
             mediaSourceId = source?.id,
-            audioIndex = source?.defaultAudioStreamIndex,
-            subtitleIndex = source?.defaultSubtitleStreamIndex ?: -1,
-            maxBitrate = _state.value.quality.bitrate,
+            audioIndex = audio,
+            subtitleIndex = subtitle,
+            maxBitrate = bitrate(_state.value.quality),
             startTicks = resumeTicks,
         )
         openStream(opts)
@@ -281,8 +320,8 @@ class PlayerController(context: Context, private val session: UserSession, priva
         val sub = s.subtitleStreams.firstOrNull { it.index == index }
         _state.update { it.copy(subtitleIndex = index) }
         when {
-            // A picture subtitle the server would have to burn in: convert from here on.
-            sub != null && !sub.isTextSubtitleStream && s.method != PlayMethod.DIRECT_PLAY ->
+            // A subtitle the server has to burn in (a picture one while converting, or as the settings ask): convert.
+            sub != null && needsBurn(sub, s.method) ->
                 reopen(s.options.copy(subtitleIndex = index, forceTranscode = true))
             // Leaving a burnt-in subtitle: back to the plain stream.
             s.burnIn -> reopen(s.options.copy(subtitleIndex = index, forceTranscode = false))
@@ -305,7 +344,55 @@ class PlayerController(context: Context, private val session: UserSession, priva
     fun setQuality(q: Quality) {
         val s = stream ?: return
         _state.update { it.copy(quality = q) }
-        reopen(s.options.copy(maxBitrate = q.bitrate))
+        reopen(s.options.copy(maxBitrate = bitrate(q)))
+    }
+
+    /**
+     * Settings · Subtitles › Rendering: picture subtitles are burnt in when converting, when they aren't drawn here, or
+     * when "Burn subtitles in" says so; styled and plain text ones only when it says so.
+     */
+    private fun needsBurn(sub: MediaStream, method: PlayMethod): Boolean {
+        val styled = sub.codec?.lowercase() in setOf("ass", "ssa")
+        return when {
+            !sub.isTextSubtitleStream -> method != PlayMethod.DIRECT_PLAY || !device.pictureSubtitles || device.burnIn != "auto"
+            styled -> device.burnIn == "styled" || device.burnIn == "all"
+            else -> device.burnIn == "all"
+        }
+    }
+
+    /**
+     * The audio and subtitle tracks to start [item] with: the file's defaults, or with "Keep my audio and subtitle
+     * choice" (Jellyfin's remember settings), the same language as the last episode of the show.
+     */
+    private fun keptPicks(item: BaseItemDto, source: org.jellyfin.sdk.model.api.MediaSourceInfo?): Pair<Int?, Int> {
+        val audio = source?.defaultAudioStreamIndex
+        val subtitle = source?.defaultSubtitleStreamIndex ?: -1
+        val p = picks ?: return audio to subtitle
+        if (p.seriesId == null || p.seriesId != item.seriesId || source == null) return audio to subtitle
+        val config = session.user.configuration
+        val streams = source.mediaStreams.orEmpty()
+        val keptAudio = if (config?.rememberAudioSelections != false && p.audioLang != null) {
+            streams.firstOrNull { it.type == org.jellyfin.sdk.model.api.MediaStreamType.AUDIO && it.language == p.audioLang }?.index ?: audio
+        } else audio
+        val keptSubtitle = if (config?.rememberSubtitleSelections != false) {
+            if (p.subtitleOff) -1
+            else streams.firstOrNull { it.type == org.jellyfin.sdk.model.api.MediaStreamType.SUBTITLE && it.language == p.subtitleLang && it.isForced == p.forced }?.index ?: subtitle
+        } else subtitle
+        return keptAudio to keptSubtitle
+    }
+
+    /** Notes what's playing now, before moving to another episode. */
+    private fun rememberPicks() {
+        val s = stream ?: return
+        val st = _state.value
+        val sub = s.subtitleStreams.firstOrNull { it.index == st.subtitleIndex }
+        picks = Picks(
+            seriesId = item?.seriesId,
+            audioLang = s.audioStreams.firstOrNull { it.index == st.audioIndex }?.language,
+            subtitleLang = sub?.language,
+            subtitleOff = sub == null,
+            forced = sub?.isForced == true,
+        )
     }
 
     /** Jumps past the intro, recap or credits on screen. */
@@ -322,6 +409,7 @@ class PlayerController(context: Context, private val session: UserSession, priva
 
     /** Switches to another episode (the Episodes panel). */
     fun play(other: BaseItemDto) {
+        rememberPicks()
         scope.launch {
             stopReporting()
             open(other.id)
@@ -545,6 +633,13 @@ class PlayerController(context: Context, private val session: UserSession, priva
             PlaybackException.ERROR_CODE_TIMEOUT,
         )
     }
+}
+
+/** The screen's longer side in pixels: "Screen size" for the largest picture when converting. */
+private fun screenWidth(context: Context): Int? {
+    val dm = context.getSystemService(android.hardware.display.DisplayManager::class.java)?.getDisplay(android.view.Display.DEFAULT_DISPLAY) ?: return null
+    val mode = dm.mode
+    return maxOf(mode.physicalWidth, mode.physicalHeight).takeIf { it > 0 }
 }
 
 /** Device capabilities don't change while the app runs; reading the decoder list takes a moment. */

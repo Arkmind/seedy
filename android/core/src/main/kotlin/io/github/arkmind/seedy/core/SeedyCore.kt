@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.core
 
 import android.content.Context
 import io.github.arkmind.seedy.core.data.AppStore
+import io.github.arkmind.seedy.core.data.DevicePrefs
 import io.github.arkmind.seedy.core.server.Servers
 import io.github.arkmind.seedy.core.session.Sessions
 import io.github.arkmind.seedy.core.session.SignIn
@@ -15,6 +16,8 @@ class SeedyCore(context: Context, appVersion: String) {
         clientInfo = ClientInfo(name = "Seedy", version = appVersion)
     }
     val store = AppStore(context.applicationContext)
+    /** Settings marked "This phone" / "This TV". */
+    val device = DevicePrefs.get(context)
     val servers = Servers(jellyfin, store)
     val sessions = Sessions(context.applicationContext, jellyfin, store)
     val signIn = SignIn(sessions)

@@ -12,6 +12,12 @@ class SeedyApi(private val api: ApiClient) {
     /** Saves part of the person's settings (playback and subtitles go whole, custom keys merge); returns them all. */
     suspend fun savePrefs(patch: kotlinx.serialization.json.JsonObject): UserPrefs = api.post<UserPrefs>("/Seedy/Me/Prefs", requestBody = patch).content
 
+    /** When the person's password last changed (only the activity log knows; the plugin reads it for everyone). */
+    suspend fun passwordState(): PasswordState = api.get<PasswordState>("/Seedy/Me/Password").content
+
+    /** How many of the person's requests are still open (Settings › My requests). */
+    suspend fun openRequests(): Int = api.get<MyRequests>("/Seedy/Requests/Mine").content.open
+
     suspend fun homeRows(): List<HomeRow> = api.get<HomeRows>("/Seedy/Home").content.rows
 
     suspend fun featured(): List<FeaturedEntry> = api.get<List<FeaturedEntry>>("/Seedy/Home/Featured").content

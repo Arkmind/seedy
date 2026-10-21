@@ -76,11 +76,13 @@ val RailInset = 176.bp
 @Composable
 fun TvRail(
     places: List<TvPlace>,
-    current: TvPlace,
+    current: TvPlace?,
     onPlace: (TvPlace) -> Unit,
     onProfile: () -> Unit,
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Settings is the page on screen (it lights instead of a place). */
+    settingsCurrent: Boolean = false,
 ) {
     var open by remember { mutableStateOf(false) }
     val currentRequester = remember { FocusRequester() }
@@ -109,7 +111,10 @@ fun TvRail(
                     )
                 }
             }
-            RailItem(SettingsIcon, t("Settings"), open, current = false, onClick = onSettings, quiet = true)
+            RailItem(
+                SettingsIcon, t("Settings"), open, current = settingsCurrent, onClick = onSettings, quiet = true,
+                modifier = if (settingsCurrent) Modifier.focusRequester(currentRequester) else Modifier,
+            )
         }
     }
 }
