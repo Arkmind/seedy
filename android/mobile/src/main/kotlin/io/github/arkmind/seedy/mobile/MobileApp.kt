@@ -70,6 +70,8 @@ import io.github.arkmind.seedy.mobile.signin.ProfilesScreen
 import io.github.arkmind.seedy.mobile.signin.QuickConnectSheet
 import io.github.arkmind.seedy.mobile.signin.SignInFor
 import io.github.arkmind.seedy.ui.theme.LocalViewer
+import io.github.arkmind.seedy.core.seedy.logoUrl
+import io.github.arkmind.seedy.ui.components.LocalBrandLogo
 import io.github.arkmind.seedy.ui.theme.rememberAccent
 import io.github.arkmind.seedy.ui.theme.rememberViewer
 import io.github.arkmind.seedy.ui.theme.SText
@@ -89,14 +91,22 @@ fun MobileApp(core: SeedyCore, appVersion: String = "") {
         is SessionState.SignedOut -> parseHexColor(s.server.seedy?.accent)
         else -> null
     }
+    val me = signedIn?.seedyFlow?.collectAsStateWithLifecycle()?.value
+    val logo = when (val s = state) {
+        is SessionState.SignedIn -> (me?.branding ?: s.session.server.seedy)?.logoUrl(s.session.server.address)
+        is SessionState.SignedOut -> s.server.seedy?.logoUrl(s.server.address)
+        else -> null
+    }
     SeedyTheme(accent = accent ?: SeedyColors.Accent) {
-        Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
-            when (val s = state) {
-                SessionState.Starting -> Unit
-                SessionState.NoServer -> AddServerEntry(core, onBack = null)
-                is SessionState.SignedOut -> SignInFlow(core, s.server)
-                is SessionState.Unreachable -> Unreachable(core, s.server)
-                is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
+        CompositionLocalProvider(LocalBrandLogo provides logo) {
+            Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
+                when (val s = state) {
+                    SessionState.Starting -> Unit
+                    SessionState.NoServer -> AddServerEntry(core, onBack = null)
+                    is SessionState.SignedOut -> SignInFlow(core, s.server)
+                    is SessionState.Unreachable -> Unreachable(core, s.server)
+                    is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
+                }
             }
         }
     }
