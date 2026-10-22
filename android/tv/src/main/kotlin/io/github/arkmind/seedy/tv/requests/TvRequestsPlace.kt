@@ -205,7 +205,7 @@ fun TvRequestsScreen(
                                     contentPadding = PaddingValues(start = RingRoom, end = 96.bp, top = RingRoom, bottom = RingRoom),
                                 ) {
                                     items(mine, key = { "req:${it.requestId}" }) { r ->
-                                        RequestCard(r, { actions.onRequest(r) }, Modifier.onFocusChanged { if (it.isFocused) { activeRow = -1; focusAt(1) } })
+                                        RequestCard(r, today, { actions.onRequest(r) }, Modifier.onFocusChanged { if (it.isFocused) { activeRow = -1; focusAt(1) } })
                                     }
                                 }
                             }
@@ -287,7 +287,7 @@ private fun toneColour(tone: RequestState.Tone): Color = when (tone) {
 
 /** The board's 500 px request card: poster, title, what was asked and when, where it is (and its download bar). */
 @Composable
-private fun RequestCard(r: SeerrRequest, onClick: () -> Unit, modifier: Modifier) {
+private fun RequestCard(r: SeerrRequest, today: LocalDate, onClick: () -> Unit, modifier: Modifier) {
     val state = RequestFormat.state(r)
     TvPressable(onClick, modifier) { focused ->
         Row(
@@ -299,7 +299,7 @@ private fun RequestCard(r: SeerrRequest, onClick: () -> Unit, modifier: Modifier
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.bp)) {
                 SText(r.title, size = 21.bsp, weight = 800, color = SeedyColors.White, maxLines = 1)
-                SText(RequestFormat.line(r, everyone = false), size = 16.bsp, color = SeedyColors.Text3, maxLines = 1)
+                SText(RequestFormat.line(r, everyone = false, today), size = 16.bsp, color = SeedyColors.Text3, maxLines = 1)
                 val ink = toneColour(state.tone)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.bp)) {
                     Box(Modifier.size(9.bp).background(ink, CircleShape))
