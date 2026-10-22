@@ -35,6 +35,10 @@ data class StreamOptions(
     val startTicks: Long = 0,
     /** Convert even though the file would play as it is (a picture subtitle to burn in, a lower quality). */
     val forceTranscode: Boolean = false,
+    /** The server converts the picture to H.264 instead of copying it: this device failed to decode it. */
+    val convertVideo: Boolean = false,
+    /** The server converts the sound to stereo AAC instead of copying it: this device failed to play it. */
+    val convertAudio: Boolean = false,
 )
 
 /** A stream the player can open: where it is, how it's delivered, and the file it comes from. */
@@ -58,8 +62,9 @@ data class ActiveStream(
 /** PlaybackInfo → a stream URL, and the Sessions/Playing reports around it (web/src/player/playback.ts, for Android). */
 class Streams(
     private val session: UserSession,
-    private val profile: () -> DeviceProfile,
-    private val liveProfile: () -> DeviceProfile = profile,
+    /** The device profile for a file whose picture is this stream. */
+    private val profile: (MediaStream?) -> DeviceProfile,
+    private val liveProfile: () -> DeviceProfile = { profile(null) },
 ) {
     private val api get() = session.api
     private val base get() = api.baseUrl.orEmpty().trimEnd('/')
@@ -70,6 +75,8 @@ class Streams(
         val live = item.type == BaseItemKind.TV_CHANNEL
         val msId = if (live) null else opts.mediaSourceId ?: item.mediaSources?.firstOrNull()?.id ?: item.id.toString()
         val burn = opts.forceTranscode && opts.subtitleIndex >= 0
+        val convert = opts.convertVideo || opts.convertAudio
+        val directPlay = !live && !opts.forceTranscode && !convert
         val info = api.mediaInfoApi.getPostedPlaybackInfo(
             item.id,
             PlaybackInfoDto(
@@ -79,12 +86,12 @@ class Streams(
                 audioStreamIndex = opts.audioIndex,
                 subtitleStreamIndex = opts.subtitleIndex,
                 mediaSourceId = msId,
-                deviceProfile = if (live) liveProfile() else profile(),
-                enableDirectPlay = !live && !opts.forceTranscode,
-                enableDirectStream = true,
+                deviceProfile = Profiles.converting(if (live) liveProfile() else profile(video(item, msId)), opts.convertVideo, opts.convertAudio),
+                enableDirectPlay = directPlay,
+                enableDirectStream = !convert,
                 enableTranscoding = true,
-                allowVideoStreamCopy = true,
-                allowAudioStreamCopy = true,
+                allowVideoStreamCopy = !opts.convertVideo,
+                allowAudioStreamCopy = !opts.convertAudio,
                 autoOpenLiveStream = true,
                 alwaysBurnInSubtitleWhenTranscoding = burn,
             ),
@@ -93,7 +100,7 @@ class Streams(
         val source = (if (live) null else info.mediaSources.firstOrNull { it.id == msId }) ?: info.mediaSources.firstOrNull()
             ?: throw PlaybackProblem("NoCompatibleStream")
         val audioIndex = opts.audioIndex ?: source.defaultAudioStreamIndex
-        if (source.supportsDirectPlay && !live && !opts.forceTranscode) {
+        if (source.supportsDirectPlay && directPlay) {
             val container = (source.container ?: "mp4").substringBefore(',')
             val q = buildMap {
                 put("static", "true")
@@ -116,13 +123,17 @@ class Streams(
         val sub = source.mediaStreams.orEmpty().firstOrNull { it.type == MediaStreamType.SUBTITLE && it.index == opts.subtitleIndex }
         ActiveStream(
             playSessionId = info.playSessionId, source = source,
-            method = if (reasons.isNotEmpty() && !videoReasons.containsMatchIn(reasons)) PlayMethod.DIRECT_STREAM else PlayMethod.TRANSCODE,
+            method = if (!opts.convertVideo && reasons.isNotEmpty() && !videoReasons.containsMatchIn(reasons)) PlayMethod.DIRECT_STREAM else PlayMethod.TRANSCODE,
             url = url, isHls = url.contains(".m3u8", ignoreCase = true) || source.transcodingSubProtocol.serialName == "hls",
             audioIndex = audioIndex, subtitleIndex = opts.subtitleIndex,
             burnIn = sub != null && sub.deliveryMethod == SubtitleDeliveryMethod.ENCODE,
             options = opts,
         )
     }
+
+    private fun video(item: BaseItemDto, mediaSourceId: String?): MediaStream? =
+        (item.mediaSources?.firstOrNull { it.id == mediaSourceId } ?: item.mediaSources?.firstOrNull())
+            ?.mediaStreams?.firstOrNull { it.type == MediaStreamType.VIDEO }
 
     /** The WebVTT address of a text subtitle (the server converts SRT, ASS… and extracts embedded ones). */
     fun subtitleUrl(item: BaseItemDto, source: MediaSourceInfo, stream: MediaStream): String {
