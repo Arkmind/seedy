@@ -148,8 +148,8 @@ fun RequestsScreen(state: RequestsViewModel.State, actions: RequestsActions, bot
             }
             when (state.tab) {
                 RequestsViewModel.Tab.Discover -> discover(state, actions, today)
-                RequestsViewModel.Tab.Mine -> requests(RequestsViewModel.Tab.Mine, everyone = false, canManage = summary?.canManage == true, state, actions)
-                RequestsViewModel.Tab.All -> requests(RequestsViewModel.Tab.All, everyone = true, canManage = summary?.canManage == true, state, actions)
+                RequestsViewModel.Tab.Mine -> requests(RequestsViewModel.Tab.Mine, everyone = false, canManage = summary?.canManage == true, state, actions, today)
+                RequestsViewModel.Tab.All -> requests(RequestsViewModel.Tab.All, everyone = true, canManage = summary?.canManage == true, state, actions, today)
             }
         }
         Toast(state.message, actions.onMessageShown, Modifier.align(Alignment.BottomCenter).padding(bottom = bottomPadding))
@@ -228,6 +228,7 @@ private fun LazyListScope.requests(
     canManage: Boolean,
     state: RequestsViewModel.State,
     actions: RequestsActions,
+    today: LocalDate,
 ) {
     val page = state.page(tab)
     val list = page.items
@@ -251,7 +252,7 @@ private fun LazyListScope.requests(
     items(list, key = { "req:${it.requestId}" }) { r ->
         Box(Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp)) {
             RequestRow(
-                r, everyone, canManage, busy = r.requestId in state.busy,
+                r, everyone, canManage, busy = r.requestId in state.busy, today = today,
                 onOpen = { actions.onRequest(r) },
                 onApprove = { actions.onApprove(r) },
                 onDecline = { actions.onDecline(r) },

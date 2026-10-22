@@ -161,6 +161,7 @@ fun RequestRow(
     onApprove: () -> Unit,
     onDecline: () -> Unit,
     onRetry: () -> Unit,
+    today: LocalDate = LocalDate.now(),
 ) {
     val state = RequestFormat.state(r)
     Column(
@@ -173,7 +174,7 @@ fun RequestRow(
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 SText(r.title, size = 14.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
-                SText(RequestFormat.line(r, everyone), size = 12.sp, color = SeedyColors.Text3, maxLines = 2)
+                SText(RequestFormat.line(r, everyone, today), size = 12.sp, color = SeedyColors.Text3, maxLines = 2)
                 val ink = toneColour(state.tone)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Box(Modifier.size(7.dp).background(ink, CircleShape))

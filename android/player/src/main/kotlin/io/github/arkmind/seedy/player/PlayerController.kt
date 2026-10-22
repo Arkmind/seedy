@@ -13,7 +13,9 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.upstream.Loader
 import io.github.arkmind.seedy.core.data.DevicePrefs
 import io.github.arkmind.seedy.core.data.DeviceSettings
 import io.github.arkmind.seedy.core.format.TICKS_PER_SECOND
@@ -124,7 +126,7 @@ class PlayerController(private val context: Context, private val session: UserSe
 
     private val streams = Streams(
         session,
-        profile = { Profiles.build(caps, bitrate(_state.value.quality), options) },
+        profile = { source -> Profiles.build(caps, bitrate(_state.value.quality), options, source) },
         liveProfile = { Profiles.buildLive(caps, bitrate(_state.value.quality), options) },
     )
     private val prefs = session.seedy?.prefs?.playback
@@ -140,7 +142,6 @@ class PlayerController(private val context: Context, private val session: UserSe
     private var stream: ActiveStream? = null
     private var text: TextSubtitles? = null
     private var started = false
-    private var retriedAsTranscode = false
     private var skipped = mutableSetOf<UUID>()
     private var jobs = mutableListOf<Job>()
 
@@ -209,7 +210,6 @@ class PlayerController(private val context: Context, private val session: UserSe
     private suspend fun start(it: BaseItemDto) {
         item = it
         started = false
-        retriedAsTranscode = false
         skipped.clear()
         _state.update { s -> PlayerState(item = it, quality = s.quality, speed = s.speed, subtitleOffsetMs = s.subtitleOffsetMs) }
         val resumeTicks = if (it.userData?.played == true) 0L else it.userData?.playbackPositionTicks ?: 0L
@@ -426,13 +426,12 @@ class PlayerController(private val context: Context, private val session: UserSe
     }
 
     private fun onError(error: PlaybackException) {
+        // A stream this device turned out not to decode or read: the server converts it, a step further each time.
         val s = stream
-        // A file this device turned out not to decode: let the server convert it, once.
-        if (s != null && s.method == PlayMethod.DIRECT_PLAY && !retriedAsTranscode && error.errorCode !in NetworkErrors) {
-            retriedAsTranscode = true
-            reopen(s.options.copy(forceTranscode = true))
-            return
-        }
+        val mime = (error as? ExoPlaybackException)?.takeIf { it.type == ExoPlaybackException.TYPE_RENDERER }?.rendererFormat?.sampleMimeType
+        val unreadable = error.cause is Loader.UnexpectedLoaderException
+        val next = s?.takeIf { error.errorCode !in NetworkErrors }?.let { nextAttempt(it.options, it.method, failedPart(error.errorCode, mime, unreadable)) }
+        if (next != null) return reopen(next)
         // The server answered with an error: a live channel whose source is down, or a conversion that failed.
         val problem = when {
             error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> if (_state.value.live) "liveUnavailable" else "serverError"

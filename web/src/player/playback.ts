@@ -1,4 +1,4 @@
-import Hls from 'hls.js';
+import Hls, { type ErrorData } from 'hls.js';
 import { SERVER_URL, authHeader, deviceId, getSession } from '../api/client';
 import {
   getPlaybackInfo, pingPlayback, reportPlaybackProgress, reportPlaybackStart, type PlaybackInfoRequest, type PlaybackReport
@@ -6,7 +6,7 @@ import {
 import type { BaseItem, MediaSource, MediaStream } from '../api/types';
 import { secondsToTicks, ticksToSeconds } from '../lib/format';
 import { t } from '../lib/i18n';
-import { PROFILE_DEFAULTS, browserSupport, buildDeviceProfile, type ProfileOptions } from './device-profile';
+import { PROFILE_DEFAULTS, browserSupport, buildDeviceProfile, convertingProfile, type ProfileOptions } from './device-profile';
 import { liveDeviceProfile, trackClose } from './live-profile';
 import { MediaBridge } from './media';
 import type { SoftMedia } from './soft-media';
@@ -38,6 +38,10 @@ export interface StreamOptions {
   maxBitrate: number;
   startSeconds: number;
   forceTranscode?: boolean;
+  /* The server converts the picture to H.264 instead of copying it: this browser failed to decode it. */
+  convertVideo?: boolean;
+  /* The server converts the sound to stereo AAC instead of copying it: this browser failed to play it. */
+  convertAudio?: boolean;
   /* This device's settings that shape the device profile. */
   profile?: ProfileOptions;
   /* Have the server burn the chosen subtitle into the picture (styled subtitles under "Styled and picture"). */
@@ -91,6 +95,55 @@ export function errorCopy(code: string): { title: string; text: string } {
   }
 }
 
+/* The part of a stream the browser failed on: the picture, the sound, or the file around them. */
+export type FailedPart = 'video' | 'audio' | 'file';
+
+/* The part behind an error of the <video> element playing a file as it is. */
+function elementPart(e: MediaError | null): FailedPart | undefined {
+  if (e?.code === MediaError.MEDIA_ERR_DECODE) return /audio/i.test(e.message) ? 'audio' : 'video';
+  if (e?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) return 'file';
+  return undefined;
+}
+
+/* hls.js errors no recovery fixes: the browser won't take the codec. */
+const CODEC_ERRORS = new Set<string>([
+  Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR, Hls.ErrorDetails.BUFFER_INCOMPATIBLE_CODECS_ERROR, Hls.ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR
+]);
+
+/* The part behind a fatal hls.js media error: the source buffer that failed, else the segments it couldn't read. */
+function hlsPart(data: ErrorData): FailedPart | undefined {
+  if (data.sourceBufferName === 'audio') return 'audio';
+  if (data.sourceBufferName === 'audiovideo') return refusedPart(/codecs="?([^";]+)/.exec(data.mimeType ?? '')?.[1]);
+  if (data.sourceBufferName) return 'video';
+  // "…not supported: ["avc1.640033,ac-3"]"
+  if (data.details === Hls.ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR) return refusedPart(/\["([^"]+)"/.exec(data.error?.message ?? '')?.[1]) ?? 'file';
+  if (data.details === Hls.ErrorDetails.FRAG_PARSING_ERROR) return 'file';
+  return data.type === Hls.ErrorTypes.MEDIA_ERROR ? 'video' : undefined;
+}
+
+const AUDIO_CODEC = /^(mp4a|ac-3|ec-3|ac-4|opus|flac|mp3|alac|dts)/i;
+
+/* Which of [codecs] ("avc1.640033,ac-3") the browser won't take: the sound when its codec is refused (canPlayType can
+   say yes to AC-3 where MediaSource says no), else the picture. */
+function refusedPart(codecs?: string): FailedPart | undefined {
+  if (!codecs) return undefined;
+  const ms = (window as unknown as { MediaSource?: { isTypeSupported(t: string): boolean } }).MediaSource
+    ?? (window as unknown as { ManagedMediaSource?: { isTypeSupported(t: string): boolean } }).ManagedMediaSource;
+  const refused = (c: string) => !!ms && !ms.isTypeSupported(`audio/mp4;codecs="${c}"`);
+  return codecs.split(',').map((c) => c.trim()).some((c) => AUDIO_CODEC.test(c) && refused(c)) ? 'audio' : 'video';
+}
+
+/* What to ask the server for after the browser failed on a stream played with [opts] and [method], or null once it
+   has all been tried: the server converting the part it couldn't decode (the picture to H.264, the sound to AAC),
+   repackaging a file played as it is, and at last converting both. */
+export function nextAttempt(opts: StreamOptions, method: PlayMethod, part?: FailedPart): Partial<StreamOptions> | null {
+  if (part === 'video' && !opts.convertVideo) return { convertVideo: true };
+  if (part === 'audio' && !opts.convertAudio) return { convertAudio: true };
+  if (method === 'DirectPlay') return { forceTranscode: true };
+  if (part && !(opts.convertVideo && opts.convertAudio)) return { convertVideo: true, convertAudio: true };
+  return null;
+}
+
 /* Jellyfin writes transcoding paths in lower case; the dev proxy (and nothing else) cares. */
 const fixPath = (p: string) => p.replace(/^\/videos\//, '/Videos/').replace(/^\/audio\//, '/Audio/');
 
@@ -128,18 +181,22 @@ export async function requestStream(item: BaseItem, opts: StreamOptions): Promis
   const secondaryAudio = opts.audioIndex !== undefined && known !== undefined && opts.audioIndex !== fileDefaultAudio(known);
   /* Burning a subtitle in means converting, so it rules out playing the file as-is. */
   const forceBurn = !!opts.burnSubtitle && opts.subtitleIndex >= 0;
+  const convert = !!(opts.convertVideo || opts.convertAudio);
+  const directPlay = !live && !opts.forceTranscode && !secondaryAudio && !forceBurn && !convert;
   const body: PlaybackInfoRequest & { MaxAudioChannels?: number } = {
-    DeviceProfile: live ? liveDeviceProfile(opts.maxBitrate, opts.profile) : buildDeviceProfile(opts.maxBitrate, opts.profile),
+    DeviceProfile: convertingProfile(
+      live ? liveDeviceProfile(opts.maxBitrate, opts.profile) : buildDeviceProfile(opts.maxBitrate, opts.profile), opts.convertVideo, opts.convertAudio
+    ),
     MaxStreamingBitrate: opts.maxBitrate,
     StartTimeTicks: secondsToTicks(opts.startSeconds),
     AudioStreamIndex: opts.audioIndex,
     SubtitleStreamIndex: opts.subtitleIndex,
     MediaSourceId: msId,
-    EnableDirectPlay: !live && !opts.forceTranscode && !secondaryAudio && !forceBurn,
-    EnableDirectStream: true,
+    EnableDirectPlay: directPlay,
+    EnableDirectStream: !convert,
     EnableTranscoding: true,
-    AllowVideoStreamCopy: true,
-    AllowAudioStreamCopy: true,
+    AllowVideoStreamCopy: !opts.convertVideo,
+    AllowAudioStreamCopy: !opts.convertAudio,
     AutoOpenLiveStream: true,
     AlwaysBurnInSubtitleWhenTranscoding: forceBurn || !!opts.burnWhenConverting
   };
@@ -162,13 +219,13 @@ export async function requestStream(item: BaseItem, opts: StreamOptions): Promis
   };
 
   let native: ActiveStream | null = null;
-  if (source.SupportsDirectPlay && !live && !opts.forceTranscode && !secondaryAudio && !forceBurn) {
+  if (source.SupportsDirectPlay && directPlay) {
     native = { ...base, method: 'DirectPlay', kind: 'Direct play', url: staticUrl(item, source, res.PlaySessionId), isHls: false, timeOffset: 0 };
   } else if (source.TranscodingUrl) {
     const url = withApiKey(source.TranscodingUrl);
     const isHls = source.TranscodingSubProtocol === 'hls' || /\.m3u8/i.test(url);
     const startTicks = Number(new URL(url).searchParams.get('StartTimeTicks') ?? 0);
-    const kind = transcodeKind(url);
+    const kind = opts.convertVideo ? 'Transcoding' : transcodeKind(url);
     native = {
       ...base,
       method: kind === 'Direct stream' ? 'DirectStream' : 'Transcode',
@@ -181,7 +238,7 @@ export async function requestStream(item: BaseItem, opts: StreamOptions): Promis
     };
   }
 
-  const mode = !live && !isAudio && opts.soft && opts.soft !== 'off' && softAvailable() ? opts.soft : 'off';
+  const mode = !live && !isAudio && !convert && opts.soft && opts.soft !== 'off' && softAvailable() ? opts.soft : 'off';
   if (mode !== 'off') {
     const soft = await softStream(item, opts, body, source, native, mode).catch((e) => {
       console.warn('[seedy] experimental player: no stream', e);
@@ -280,7 +337,8 @@ function keepalive(method: 'POST' | 'DELETE', path: string, body?: unknown) {
 
 export interface SessionEvents {
   onStream(stream: ActiveStream): void;
-  onFatal(code: string, stream: ActiveStream): void;
+  /* [part]: what the browser failed on, when it's about the stream itself. */
+  onFatal(code: string, stream: ActiveStream, part?: FailedPart): void;
   /* Where the experimental player draws. */
   softHost?(): HTMLElement | null;
   /* The experimental player decodes on several threads only in a cross-origin isolated page: reload into one at this
@@ -407,12 +465,12 @@ export class PlaybackSession {
           window.setTimeout(() => this.hls === hls && hls.startLoad(), 1000 * this.netRetries);
           return;
         }
-        if (data.type === Hls.ErrorTypes.MEDIA_ERROR && this.mediaRecoveries < 2) {
+        if (data.type === Hls.ErrorTypes.MEDIA_ERROR && this.mediaRecoveries < 2 && !CODEC_ERRORS.has(data.details)) {
           this.mediaRecoveries++;
           hls.recoverMediaError();
           return;
         }
-        this.events.onFatal(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'network' : 'media', stream);
+        this.events.onFatal(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'network' : 'media', stream, hlsPart(data));
       });
       hls.loadSource(stream.url);
       hls.attachMedia(el);
@@ -502,7 +560,7 @@ export class PlaybackSession {
   private onMediaError() {
     if (this.stopped || !this.stream || this.hls) return;
     if (!this.el.getAttribute('src')) return;
-    this.events.onFatal('media', this.stream);
+    this.events.onFatal('media', this.stream, elementPart(this.el.error));
   }
 
   private body(event?: string): PlaybackReport {

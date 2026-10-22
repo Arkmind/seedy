@@ -6,6 +6,7 @@ import org.jellyfin.sdk.model.api.DeviceProfile
 import org.jellyfin.sdk.model.api.DirectPlayProfile
 import org.jellyfin.sdk.model.api.DlnaProfileType
 import org.jellyfin.sdk.model.api.EncodingContext
+import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamProtocol
 import org.jellyfin.sdk.model.api.ProfileCondition
 import org.jellyfin.sdk.model.api.ProfileConditionType
@@ -52,13 +53,13 @@ data class ProfileOptions(
 /**
  * The device profile sent with PlaybackInfo: what this device plays as it is (ExoPlayer reads MP4, Matroska, WebM
  * and MPEG-TS, switches audio tracks inside a file and shows picture subtitles), and what the server should convert
- * to when it can't (HLS with H.264, plus HEVC and AV1 in fMP4 segments where they decode).
+ * to when it can't (HLS with H.264, plus HEVC and AV1 where they decode).
  */
 object Profiles {
     private fun cond(type: ProfileConditionType, prop: ProfileConditionValue, value: String) =
         ProfileCondition(condition = type, property = prop, value = value, isRequired = false)
 
-    fun build(detected: Capabilities, maxBitrate: Int, opts: ProfileOptions = ProfileOptions()): DeviceProfile {
+    fun build(detected: Capabilities, maxBitrate: Int, opts: ProfileOptions = ProfileOptions(), source: MediaStream? = null): DeviceProfile {
         val caps = opts.apply(detected)
         val video = caps.videoCodecs
         val audio = caps.audioCodecs
@@ -79,10 +80,13 @@ object Profiles {
             DirectPlayProfile(container = "wav", type = DlnaProfileType.AUDIO, audioCodec = "pcm_s16le,pcm_s24le"),
         )
 
-        // HEVC and AV1 only travel in fMP4 segments; with neither, MPEG-TS segments are the safest.
-        val fmp4 = opts.preferFmp4 || "hevc" in video || "av1" in video
-        val hlsVideo = listOfNotNull("h264", "hevc".takeIf { fmp4 && it in video }, "av1".takeIf { fmp4 && it in video }).joinToString(",")
-        val hlsAudio = listOfNotNull("aac", "mp3", "ac3".takeIf { it in audio }, "eac3".takeIf { fmp4 && it in audio }).joinToString(",")
+        // MPEG-TS segments: Media3 can't read Jellyfin's fMP4 once it converts the sound (the first segment starts just
+        // before zero). fMP4 only when asked, or for a picture TS can't carry as it is (AV1, Dolby Vision without a base
+        // layer) of the [source] file.
+        val range = source?.videoRangeType?.serialName
+        val fmp4 = opts.preferFmp4 || (source?.codec == "av1" && "av1" in video) || (range == "DOVI" && range in caps.videoRanges)
+        val hlsVideo = listOfNotNull("h264", "hevc".takeIf { it in video }, "av1".takeIf { fmp4 && it in video }).joinToString(",")
+        val hlsAudio = listOfNotNull("aac", "mp3", "ac3".takeIf { it in audio }, "eac3".takeIf { it in audio }).joinToString(",")
         val channels = if (opts.maxAudioChannels > 0) opts.maxAudioChannels else if (caps.outputChannels >= 6 || "ac3" in audio) 6 else 2
         // Largest picture when converting.
         val widthLimit = opts.maxWidth?.let { listOf(cond(ProfileConditionType.LESS_THAN_EQUAL, ProfileConditionValue.WIDTH, it.toString())) }.orEmpty()
@@ -199,6 +203,25 @@ object Profiles {
         return base.copy(
             transcodingProfiles = base.transcodingProfiles.map {
                 if (it.type == DlnaProfileType.VIDEO && it.protocol == MediaStreamProtocol.HLS) it.copy(container = "ts", videoCodec = "h264", audioCodec = audio) else it
+            },
+        )
+    }
+
+    /**
+     * [profile] asking the server to convert to what every Android device plays, in MPEG-TS segments: H.264 pictures
+     * when [video], stereo AAC sound when [audio] (after this device failed on the file's own).
+     */
+    fun converting(profile: DeviceProfile, video: Boolean, audio: Boolean): DeviceProfile {
+        if (!video && !audio) return profile
+        return profile.copy(
+            transcodingProfiles = profile.transcodingProfiles.map {
+                if (it.type != DlnaProfileType.VIDEO) it
+                else it.copy(
+                    container = "ts",
+                    videoCodec = if (video) "h264" else it.videoCodec,
+                    audioCodec = if (audio) "aac" else it.audioCodec,
+                    maxAudioChannels = if (audio) "2" else it.maxAudioChannels,
+                )
             },
         )
     }

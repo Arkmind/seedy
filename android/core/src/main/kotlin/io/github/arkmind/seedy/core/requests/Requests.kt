@@ -1,7 +1,6 @@
 package io.github.arkmind.seedy.core.requests
 
 import io.github.arkmind.seedy.core.feature.seasonList
-import io.github.arkmind.seedy.core.format.daysFromToday
 import io.github.arkmind.seedy.core.format.fullDate
 import io.github.arkmind.seedy.core.format.parseDay
 import io.github.arkmind.seedy.core.format.weekdayDate
@@ -136,10 +135,10 @@ object RequestFormat {
     private fun date(iso: String?): LocalDate? = parseDay(iso)
 
     /** "asked Sat 17 Oct", "approved today", "asked by Mia yesterday". */
-    private fun act(act: String, iso: String?, name: String = ""): String {
+    private fun act(act: String, iso: String?, today: LocalDate, name: String = ""): String {
         val d = date(iso) ?: return ""
-        val ago = -daysFromToday(d)
-        val day = if (d.year == LocalDate.now().year) weekdayDate(d) else fullDate(d)
+        val ago = java.time.temporal.ChronoUnit.DAYS.between(d, today)
+        val day = if (d.year == today.year) weekdayDate(d) else fullDate(d)
         val forms = when (act) {
             "approved" -> listOf("approved today", "approved yesterday", "approved {date}")
             "declined" -> listOf("declined today", "declined yesterday", "declined {date}")
@@ -150,14 +149,14 @@ object RequestFormat {
     }
 
     /** The line under a request's title: "Seasons 2 and 4 · approved Mon 19 Oct · Season 4 downloads when it airs". */
-    fun line(r: SeerrRequest, everyone: Boolean): String {
+    fun line(r: SeerrRequest, everyone: Boolean, today: LocalDate = LocalDate.now()): String {
         val parts = mutableListOf(if (r.mediaType == "tv") (r.seasons?.takeIf { it.isNotEmpty() }?.let(::seasonList) ?: t("All seasons")) else t("Movie"))
         if (r.is4k) parts += "4K"
         parts += when {
-            everyone -> act("askedBy", r.requestedAt, if (r.requestedByMe) t("you") else r.requestedBy ?: t("someone"))
-            r.requestStatus == "declined" -> act("declined", r.updatedAt ?: r.requestedAt)
-            (r.requestStatus == "approved" || r.requestStatus == "completed") && r.status != "available" && r.updatedAt != null -> act("approved", r.updatedAt)
-            else -> act("asked", r.requestedAt)
+            everyone -> act("askedBy", r.requestedAt, today, if (r.requestedByMe) t("you") else r.requestedBy ?: t("someone"))
+            r.requestStatus == "declined" -> act("declined", r.updatedAt ?: r.requestedAt, today)
+            (r.requestStatus == "approved" || r.requestStatus == "completed") && r.status != "available" && r.updatedAt != null -> act("approved", r.updatedAt, today)
+            else -> act("asked", r.requestedAt, today)
         }
         val unaired = r.unaired.orEmpty()
         if (unaired.isNotEmpty() && unaired.size < (r.seasons?.size ?: 0)) {

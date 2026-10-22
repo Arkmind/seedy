@@ -213,5 +213,19 @@ export function buildDeviceProfile(maxBitrate: number, o: ProfileOptions = PROFI
   };
 }
 
+/* [p] asking the server to convert to what every browser plays, after this one failed on the file's own: H.264
+   pictures when [video], stereo AAC sound when [audio]. */
+export function convertingProfile(p: DeviceProfile, video?: boolean, audio?: boolean): DeviceProfile {
+  if (!video && !audio) return p;
+  return {
+    ...p,
+    TranscodingProfiles: p.TranscodingProfiles.map((tp) => tp.Type !== 'Video' ? tp : {
+      ...tp,
+      ...(video ? { VideoCodec: 'h264' } : {}),
+      ...(audio ? { AudioCodec: 'aac', MaxAudioChannels: '2' } : {})
+    })
+  };
+}
+
 /* Text subtitle formats that Seedy can render (as WebVTT); everything else is a picture format. */
 export const TEXT_SUB_CODECS = new Set(['srt', 'subrip', 'vtt', 'webvtt', 'ass', 'ssa', 'mov_text', 'tx3g', 'text', 'smi', 'sami', 'ttml', 'microdvd', 'mpl2', 'subviewer', 'jacosub']);
