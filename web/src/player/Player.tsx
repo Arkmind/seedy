@@ -32,8 +32,8 @@ import { MediaBridge } from './media';
 import { useNativeCues } from './native-cues';
 import { PausedOverlay } from './PausedOverlay';
 import {
-  PlaybackError, PlaybackSession, audioStreams, errorCopy, qualityBitrate, subtitleFormat, subtitleStreams, subtitleUrl, videoStream,
-  type ActiveStream, type QualityId, type StreamOptions
+  PlaybackError, PlaybackSession, audioStreams, errorCopy, nextAttempt, qualityBitrate, subtitleFormat, subtitleStreams, subtitleUrl,
+  videoStream, type ActiveStream, type FailedPart, type QualityId, type StreamOptions
 } from './playback';
 import { loadPgs } from './pgs';
 import { Scrubber, VolumeSlider } from './Scrubber';
@@ -404,7 +404,6 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const [stream, setStream] = useState<ActiveStream | null>(null);
   const [fatal, setFatal] = useState<{ title: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const triedFallback = useRef(false);
   /* Whether playback should be running (the element pauses by itself on errors and stream switches). */
   const wantPlay = useRef(true);
   const originSent = useRef(false);
@@ -497,11 +496,11 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     else setFatal(errorCopy('network'));
     sessRef.current?.stop({ failed: true });
   };
-  const onFatal = (code: string, st: ActiveStream) => {
+  const onFatal = (code: string, st: ActiveStream, part?: FailedPart) => {
     const s = sessRef.current;
     if (!s) return;
     const me = mediaRef.current?.error;
-    console.warn('[seedy] playback error', code, st.method, me ? `${me.code} ${me.message}` : '');
+    console.warn('[seedy] playback error', code, st.method, part ?? '', me ? `${me.code} ${me.message}` : '');
     /* The experimental player couldn't play it, or not fast enough: the server converts it, as without that player. */
     if (st.engine === 'soft') {
       toast(code === 'soft-slow'
@@ -510,10 +509,10 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
       s.change({ soft: 'off' }).then((ns) => { if (ns && wantPlay.current && !inGroup()) s.play(); }, fail);
       return;
     }
-    /* A file the browser said it could play but couldn't: let the server convert it once. */
-    if (st.method === 'DirectPlay' && !triedFallback.current) {
-      triedFallback.current = true;
-      s.change({ forceTranscode: true }).then((ns) => { if (ns && wantPlay.current && !inGroup()) s.play(); }, fail);
+    /* A stream the browser said it could play but couldn't: the server converts it, a step further each time. */
+    const fallback = code === 'media' ? nextAttempt(s.opts, st.method, part) : null;
+    if (fallback) {
+      s.change(fallback).then((ns) => { if (ns && wantPlay.current && !inGroup()) s.play(); }, fail);
       return;
     }
     if (skipBrokenPreroll()) return;
@@ -544,7 +543,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
       if (quality === 'auto') opts.maxBitrate = bitrateFor('auto', loc);
       const sess = new PlaybackSession(itemRef.current, el, {
         onStream: (st) => setStream(st),
-        onFatal: (code, st) => onFatalRef.current(code, st),
+        onFatal: (code, st, part) => onFatalRef.current(code, st, part),
         softHost: () => softRef.current,
         isolate: isolateReload
       }, opts);
