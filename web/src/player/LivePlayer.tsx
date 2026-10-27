@@ -21,6 +21,7 @@ import { PlaybackSession, audioStreams, subtitleStreams, videoStream, type Activ
 import { VolumeSlider } from './Scrubber';
 import { CastMenu } from './TopMenus';
 import { TracksPanel, type TracksTab } from './TracksPanel';
+import { useWakeLock } from './wake-lock';
 import './live.css';
 
 /* Player · Live TV (board "Player · Live TV"): a TV channel in Seedy's player. The live stream opens through
@@ -327,6 +328,8 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
     window.addEventListener('keydown', fn);
     return () => window.removeEventListener('keydown', fn);
   }, []);
+
+  useWakeLock(!!stream && !fatal && !m.paused);
 
   /* ── OS media controls ── */
   useEffect(() => {
