@@ -151,6 +151,7 @@ public sealed partial class SeedyDatabase : IDisposable
             """;
         cmd.ExecuteNonQuery();
         MigrateReading(c);
+        MigrateRequests(c);
     }
 
     private static long Ms(DateTime d) => new DateTimeOffset(DateTime.SpecifyKind(d, DateTimeKind.Utc)).ToUnixTimeMilliseconds();

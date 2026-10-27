@@ -126,6 +126,7 @@ public sealed class MeDto
     [JsonPropertyName("prefs")] public UserPrefsDto Prefs { get; set; } = new();
     [JsonPropertyName("defaults")] public PlaybackPrefsDto Defaults { get; set; } = new();
     [JsonPropertyName("requests")] public RequestsFeaturesDto Requests { get; set; } = new();
+    [JsonPropertyName("media")] public MediaFeaturesDto Media { get; set; } = new();
     [JsonPropertyName("historyEnabled")] public bool HistoryEnabled { get; set; }
 
     /// <summary>Gets or sets the admin's Home rows as this person can have them (unavailable ones switched off).</summary>
@@ -559,6 +560,9 @@ public sealed class AdminConfigDto
     [JsonPropertyName("home")] public AdminHomeDto Home { get; set; } = new();
     [JsonPropertyName("requests")] public AdminRequestsDto Requests { get; set; } = new();
     [JsonPropertyName("playLog")] public AdminPlayLogDto PlayLog { get; set; } = new();
+
+    /// <summary>Gets or sets music and book requests; null from older clients, which leaves them as they are.</summary>
+    [JsonPropertyName("media")] public AdminMediaDto? Media { get; set; }
 }
 
 public sealed class SeerrStateDto
