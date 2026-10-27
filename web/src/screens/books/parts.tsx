@@ -3,7 +3,7 @@ import { useLayoutEffect, useState } from 'preact/hooks';
 import type { BaseItem } from '../../api/types';
 import { dayOf, duration, pct, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
-import { Link, navigate } from '../../lib/router';
+import { Link } from '../../lib/router';
 import { playAudiobook } from '../../audio/engine';
 import { authorLine, isAudioBook, isComic, seriesOf, type Reading } from './api';
 import { AudioCover, BookCover } from './covers';
@@ -185,7 +185,7 @@ export function ContinueCard({ entry }: { entry: ContinueEntry }) {
         // An audiobook carries on where it was; the page is the fallback until the player can.
         if (!audio || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
-        playAudiobook(entry.item.Id, { open: true }).catch(() => navigate(`/details/${entry.item.Id}`));
+        void playAudiobook(entry.item.Id, { open: true });
       }}
     >
       <span class={'bk-cont-art' + (audio ? ' is-audio' : '')}>

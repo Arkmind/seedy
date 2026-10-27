@@ -22,7 +22,7 @@ export const getPlaylist = (id: string) => get<PlaylistInfo>(`/Playlists/${id}`)
 export const getPlaylistItems = (id: string) =>
   get<ItemsResult>(`/Playlists/${id}/Items`, { userId: uid(), Fields: 'ParentId', enableImages: false, enableUserData: false });
 export const addToPlaylist = (id: string, ids: string[]) => post<void>(`/Playlists/${id}/Items`, undefined, { ids: ids.join(','), userId: uid() });
-export const createPlaylist = (body: { Name: string; Ids: string[]; Users: { UserId: string; CanEdit: boolean }[]; IsPublic: boolean }) =>
+export const createPlaylist = (body: { Name: string; Ids: string[]; Users: { UserId: string; CanEdit: boolean }[]; IsPublic: boolean; MediaType?: 'Audio' | 'Video' }) =>
   post<{ Id: string }>('/Playlists', { ...body, UserId: uid() });
 
 /* The people a playlist can be shared with (Seedy; null without the plugin). */

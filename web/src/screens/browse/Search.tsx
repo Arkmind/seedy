@@ -11,7 +11,7 @@ import { CastCard, ItemCard, PosterCard } from '../../ui/cards';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { toast } from '../../ui/overlay';
-import { search, type Results } from '../../ui/search/engine';
+import { rowMeta, search, type Results } from '../../ui/search/engine';
 import { SearchIdle } from '../../ui/search/parts';
 import { addRecent } from '../../ui/search/recent';
 import './search.css';
@@ -85,6 +85,7 @@ function LibraryResults({ q }: { q: string }) {
   const titles = data ? data.titles.filter((h) => h.kind === 'movie' || h.kind === 'show').map((h) => h.item) : [];
   const collections = data ? data.titles.filter((h) => h.kind === 'collection').map((h) => h.item) : [];
   const episodes = data ? data.episodes.map((h) => h.item) : [];
+  const music = data ? data.titles.filter((h) => h.kind === 'music').map((h) => h.item) : [];
   const people = data ? data.people.map((h) => h.item) : [];
   const empty = !!data && !data.hits.length;
 
@@ -176,6 +177,13 @@ function LibraryResults({ q }: { q: string }) {
             {titles.map((it) => (
               <ItemCard key={it.Id} item={it} meta={titleMeta(it)} titleSize={14} titleWeight={600} artWidth={520} watched={!!it.UserData?.Played} />
             ))}
+          </div>
+        </Section>
+      )}
+      {music.length > 0 && (
+        <Section title={t('Music')} count={music.length}>
+          <div class="search-grid">
+            {music.map((it) => <ItemCard key={it.Id} item={it} meta={rowMeta(it)} titleSize={14} titleWeight={600} artWidth={520} />)}
           </div>
         </Section>
       )}

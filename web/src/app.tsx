@@ -6,6 +6,7 @@ import { match, useLocation } from './lib/router';
 import { useStore } from './lib/store';
 import { ConfirmHost, ToastHost } from './ui/overlay';
 import { ManageHost } from './screens/browse/manage/host';
+import { AudioHost } from './audio/AudioHost';
 import { Home } from './screens/browse/Home';
 import { Library } from './screens/browse/Library';
 import { Details } from './screens/browse/Details';
@@ -162,6 +163,7 @@ export function App() {
       <ToastHost />
       <PersonalHost />
       <ManageHost />
+      <AudioHost />
     </>
   );
 }

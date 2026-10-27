@@ -24,17 +24,22 @@ import { t } from '../../lib/i18n';
 import { SelectionBar, useSelection } from './library-select';
 import { manageChanged } from './manage/host';
 import { BooksLibrary } from '../books/BooksLibrary';
+import { MusicLibrary } from '../music/MusicLibrary';
 
 /* ───────── Tabs, sorts and filters ───────── */
 
-export type TabId = 'all' | 'suggestions' | 'favorites' | 'collections' | 'genres' | 'albums' | 'artists';
+export type TabId = 'all' | 'suggestions' | 'favorites' | 'collections' | 'genres' | 'albums' | 'artists' | 'overview' | 'songs' | 'playlists' | 'folders';
 interface Tab { id: TabId; label: string }
 
 export function tabsFor(ct?: string): Tab[] {
   switch (ct) {
     case 'movies': return [{ id: 'all', label: 'All movies' }, { id: 'suggestions', label: 'Suggestions' }, { id: 'favorites', label: 'Favorites' }, { id: 'collections', label: 'Collections' }, { id: 'genres', label: 'Genres' }];
     case 'tvshows': return [{ id: 'all', label: 'All shows' }, { id: 'suggestions', label: 'Suggestions' }, { id: 'favorites', label: 'Favorites' }, { id: 'genres', label: 'Genres' }];
-    case 'music': return [{ id: 'albums', label: 'Albums' }, { id: 'artists', label: 'Artists' }, { id: 'favorites', label: 'Favorites' }, { id: 'genres', label: 'Genres' }];
+    // The music library's own tabs (MusicHome board; screens/music).
+    case 'music': return [
+      { id: 'overview', label: 'Overview' }, { id: 'albums', label: 'Albums' }, { id: 'artists', label: 'Artists' }, { id: 'songs', label: 'Songs' },
+      { id: 'playlists', label: 'Playlists' }, { id: 'genres', label: 'Genres' }, { id: 'folders', label: 'Folders' }
+    ];
     default: return [{ id: 'all', label: 'All' }];
   }
 }
@@ -169,6 +174,7 @@ export function Library({ id }: { id: string }) {
   }
   if (view.Type !== 'CollectionFolder' && view.Type !== 'UserView' && view.Type !== 'Folder' && !known) return <Redirect to={`/details/${view.Id}`} />;
   if (view.CollectionType === 'books') return <BooksLibrary view={view} />;
+  if (view.CollectionType === 'music') return <MusicLibrary view={view} />;
   return <LibraryView view={view} />;
 }
 

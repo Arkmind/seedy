@@ -76,7 +76,7 @@ export const deleteReading = (id: string) => del<void>(`/Seedy/Reading/${id}`);
 
 /* ───────── What a library item is ───────── */
 
-export const isAudioBook = (item: Pick<BaseItem, 'Type'>) => (item.Type as string) === 'AudioBook';
+export const isAudioBook = (item: Pick<BaseItem, 'Type'>) => item.Type === 'AudioBook';
 
 type WithPath = BaseItem & { Path?: string; Container?: string; MediaSources?: { Path?: string; Container?: string; Size?: number }[] };
 

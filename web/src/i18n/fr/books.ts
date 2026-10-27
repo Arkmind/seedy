@@ -84,7 +84,6 @@ const fr: Record<string, string> = {
   'Marked {name} as read': '{name} marqué comme lu',
   'Marked {name} as unread': '{name} marqué comme non lu',
   'Couldn’t update {name}': 'Impossible de mettre à jour {name}',
-  'The audiobook player isn’t ready yet': 'Le lecteur de livres audio n’est pas encore prêt',
   'Download {format}': 'Télécharger {format}',
   'File': 'Fichier',
   'reads in Seedy': 'se lit dans Seedy',

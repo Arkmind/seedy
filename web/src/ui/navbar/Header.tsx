@@ -67,9 +67,7 @@ export function Header({ variant = 'plain', active }: { variant?: 'overlay' | 'p
   const phone = usePhone();
   const { ref, stuck } = useStickyHeader<HTMLElement>();
   const pageMode = active === 'search';
-  // In a books library the box says what it finds there (Books library board).
-  const scope = currentView(useStore(viewsStore), active)?.CollectionType;
-  const placeholder = scope === 'books' ? t('Search books, authors and series') : undefined;
+  const placeholder = searchPlaceholder(useStore(viewsStore), active);
   return (
     <>
       <header ref={ref} class={'site-header nb' + (glass ? ' is-overlay' : ' is-plain') + (stuck ? ' is-stuck' : '') + (phone ? ' is-phone' : '')}>
@@ -101,6 +99,15 @@ export function Header({ variant = 'plain', active }: { variant?: 'overlay' | 'p
       {phone && <TabBar active={active} />}
     </>
   );
+}
+
+/* Inside a music library the box says what it finds there. */
+function searchPlaceholder(views: Parameters<typeof currentView>[0], active: HeaderActive): string | undefined {
+  const ct = currentView(views, active)?.CollectionType;
+  // In a music or books library the box says what it finds there (Music and Books library boards).
+  if (ct === 'music') return t('Search artists, albums and songs');
+  if (ct === 'books') return t('Search books, authors and series');
+  return undefined;
 }
 
 function NavLink({ to, icon, label, current, glass }: { to: string; icon: IconName; label: string; current: boolean; glass?: boolean }) {

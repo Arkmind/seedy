@@ -124,11 +124,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
   ].filter(Boolean);
 
   const listenLabel = audioTwin?.RunTimeTicks ? t('Listen · {time}', { time: duration(ticksToSeconds(audioTwin.RunTimeTicks)) }) : t('Listen');
-  const listen = async () => {
-    if (!audioTwin) return;
-    try { await playAudiobook(audioTwin.Id, { open: true }); }
-    catch { toast(t('The audiobook player isn’t ready yet'), 'error'); }
-  };
+  const listen = () => { if (audioTwin) void playAudiobook(audioTwin.Id, { open: true }); };
   const readLabel = (rec?: Reading) => (rec && !rec.Finished && rec.Percent > 0 ? t('Continue reading') : t('Read'));
 
   /* ✓: books follow the reader's record (the server marks them played); audiobooks Jellyfin's played state. */
@@ -329,7 +325,7 @@ function FormatCard({ item, current, canDownload }: { item: BaseItem; current: b
   const cls = 'bkd-format' + (current ? ' is-current' : '');
   if (audio) {
     return (
-      <button type="button" class={cls} onClick={() => playAudiobook(item.Id, { open: true }).catch(() => (current ? undefined : navigate(`/details/${item.Id}`)))}>
+      <button type="button" class={cls} onClick={() => void playAudiobook(item.Id, { open: true })}>
         {body}
       </button>
     );
