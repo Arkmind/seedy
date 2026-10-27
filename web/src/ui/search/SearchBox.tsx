@@ -55,7 +55,7 @@ function useShortcut(run: () => void, input: { current: HTMLInputElement | null 
 
 type Opt = { id: string; open: () => void };
 
-export function SearchBox({ glass, pageMode, phone }: { glass?: boolean; pageMode?: boolean; phone?: boolean }) {
+export function SearchBox({ glass, pageMode, phone, placeholder }: { glass?: boolean; pageMode?: boolean; phone?: boolean; placeholder?: string }) {
   const loc = useLocation();
   const urlQ = pageMode ? loc.query.get('q') ?? '' : '';
   const [text, setText] = useState(urlQ);
@@ -166,11 +166,11 @@ export function SearchBox({ glass, pageMode, phone }: { glass?: boolean; pageMod
           ref={input}
           type="search"
           role={pageMode ? undefined : 'combobox'}
-          aria-label={t('Search movies, shows and people')}
+          aria-label={placeholder ?? t('Search movies, shows and people')}
           aria-expanded={pageMode ? undefined : showDrop ? 'true' : 'false'}
           aria-controls={pageMode ? undefined : 'nb-search-panel'}
           aria-autocomplete={pageMode ? undefined : 'list'}
-          placeholder={phone ? t('Search') : t('Search movies, shows and people')}
+          placeholder={phone ? t('Search') : placeholder ?? t('Search movies, shows and people')}
           value={text}
           autoComplete="off"
           autoCapitalize="off"

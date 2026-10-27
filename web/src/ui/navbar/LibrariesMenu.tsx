@@ -14,8 +14,8 @@ import { t } from '../../lib/i18n';
 /* The Libraries menu (Navigation bar board, section 2): every library in a two-column grid with its count, the
    current one raised, then "Viewing history" and "Order and hide libraries". On phones it opens as a sheet. */
 
-/* Views Seedy can browse; Live TV has its own pages (/livetv); photos, books and plain folders open in Jellyfin's own app. */
-export const BROWSABLE = new Set(['movies', 'tvshows', 'music', 'boxsets', 'homevideos', 'musicvideos', 'mixed', 'playlists', undefined, '']);
+/* Views Seedy can browse; Live TV has its own pages (/livetv); photos and plain folders open in Jellyfin's own app. */
+export const BROWSABLE = new Set(['movies', 'tvshows', 'music', 'boxsets', 'homevideos', 'musicvideos', 'mixed', 'playlists', 'books', undefined, '']);
 
 export type ActiveView = { viewId: string } | { collectionType: string } | string | null | undefined;
 
