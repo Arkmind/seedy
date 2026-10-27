@@ -177,6 +177,20 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
     return sec.first + Math.min(sec.pages - 1, Math.floor(chars / CHARS_PER_PAGE));
   };
 
+  /* After going to a page by number (the scrubber, a saved percent), that number shows until the page turns: the screen
+     holding a page's first words usually starts a little before them. */
+  const jump = useRef<{ page: number; cfi?: string; done?: boolean } | null>(null);
+  // epub.js reports the place a moment after it shows it.
+  const settleJump = () => { const j = jump.current; window.setTimeout(() => { if (j) j.done = true; }, 500); };
+  const pageAt = (cfi: string, index: number): number => {
+    const j = jump.current;
+    if (j) {
+      if (!j.done || !j.cfi || j.cfi === cfi) { j.cfi = cfi; return j.page; }
+      jump.current = null;
+    }
+    return pageFromLocation(cfi, index);
+  };
+
   const cfiForPage = async (page: number): Promise<string | null> => {
     const book = bookRef.current;
     const m = modelRef.current;
@@ -215,7 +229,7 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
     rend.hooks.content.register((contents: Contents) => styleContents(contents, settingsRef.current));
     rend.on('relocated', (l: { start: { cfi: string; index: number }; atStart?: boolean; atEnd?: boolean }) => {
       lastCfi.current = l.start.cfi;
-      setPos({ cfi: l.start.cfi, index: l.start.index, page: pageFromLocation(l.start.cfi, l.start.index), atStart: !!l.atStart, atEnd: !!l.atEnd });
+      setPos({ cfi: l.start.cfi, index: l.start.index, page: pageAt(l.start.cfi, l.start.index), atStart: !!l.atStart, atEnd: !!l.atEnd });
     });
     const keys = (e: KeyboardEvent) => onKey(e);
     rend.on('keydown', keys);
@@ -230,11 +244,13 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
         if (m) {
           const page = Math.min(m.total, Math.max(1, Math.ceil((startPercent.current / 100) * m.total)));
           target = (await cfiForPage(page)) ?? target;
+          jump.current = { page };
         }
         startPercent.current = null;
         if (askedPercent !== null) setQuery({ percent: undefined });
       }
-      try { await rend.display(target); } catch { await rend.display(); }
+      try { await show(rend, target); } catch { await rend.display(); }
+      settleJump();
     })();
     return () => {
       rend.destroy();
@@ -252,7 +268,7 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
     if (!rend) return;
     (rend.getContents() as unknown as Contents[]).forEach((c) => styleContents(c, settings));
     const cfi = lastCfi.current;
-    const tm = window.setTimeout(() => { if (cfi) void rend.display(cfi).catch(() => undefined); }, 60);
+    const tm = window.setTimeout(() => { if (cfi) void show(rend, cfi).catch(() => undefined); }, 60);
     return () => window.clearTimeout(tm);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [styleKey]);
@@ -260,7 +276,7 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
   /* The page number once pages are counted (the first page may show before). */
   useEffect(() => {
     if (!model || !pos) return;
-    const page = pageFromLocation(pos.cfi, pos.index);
+    const page = pageAt(pos.cfi, pos.index);
     if (page !== pos.page) setPos({ ...pos, page });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model]);
@@ -306,8 +322,13 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
   /* ── Turning pages ── */
   const next = () => { void rendRef.current?.next(); };
   const prev = () => { void rendRef.current?.prev(); };
-  const goTo = async (target: string | null) => { if (target) await rendRef.current?.display(target).catch(() => undefined); };
-  const goToPage = async (p: number) => goTo(await cfiForPage(p));
+  const goTo = async (target: string | null) => { if (target && rendRef.current) await show(rendRef.current, target).catch(() => undefined); };
+  const goToPage = async (p: number) => {
+    const cfi = await cfiForPage(p);
+    jump.current = { page: p };
+    await goTo(cfi);
+    settleJump();
+  };
 
   const panelRef = useRef(panel);
   panelRef.current = panel;
@@ -374,7 +395,7 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
   const status: [string, string, string] = page && total ? [
     chapter ? (leftInChapter <= 1 ? t('Chapter {n} · last page in chapter', { n: chapterIdx + 1 }) : t('Chapter {n} · {count}', { n: chapterIdx + 1, count: tn(leftInChapter, '{n} page left in chapter', '{n} pages left in chapter') })) : '',
     t('Page {n} of {total} · {percent}%', { n: page, total, percent: Math.round(fraction * 100) }),
-    info?.Minutes ? (pos?.atEnd ? t('The end of the book') : t('About {time} left in the book', { time: tenMinutes(info.Minutes * (1 - (page - 1) / total)) })) : ''
+    info?.Minutes ? (pos?.atEnd ? t('The end of the book') : leftInBook(info.Minutes * (1 - (page - 1) / total))) : ''
   ] : ['', '', ''];
   const ticks = total > 1 ? toc.filter((c) => c.page > 1).map((c) => (c.page - 1) / (total - 1)) : [];
 
@@ -450,6 +471,20 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
     </div>
   );
 }
+
+/* Shows a place and shows it again once the page's fonts are in: epub.js picks the column before the text settles, and
+   Noto Serif loading afterwards would push the place a few pages on. */
+async function show(rend: Rendition, target?: string) {
+  await rend.display(target);
+  if (!target) return;
+  const docs = (rend.getContents() as unknown as Contents[]).map((c) => c.document).filter(Boolean);
+  const pending = docs.some((d) => d.fonts && d.fonts.status !== 'loaded');
+  await Promise.all(docs.map((d) => d.fonts?.ready.catch(() => undefined)));
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  if (pending || docs.length) await rend.display(target);
+}
+
+const leftInBook = (minutes: number) => (minutes < 5 ? t('A few minutes left in the book') : t('About {time} left in the book', { time: tenMinutes(minutes) }));
 
 function waitFor<T>(get: () => T | null, ms = 30000): Promise<T | null> {
   return new Promise((resolve) => {

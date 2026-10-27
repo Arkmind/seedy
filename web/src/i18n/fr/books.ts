@@ -118,6 +118,7 @@ const fr: Record<string, string> = {
   'Chapter {n} · last page in chapter': 'Chapitre {n} · dernière page du chapitre',
   'About {time} left in the book': 'Environ {time} avant la fin du livre',
   'The end of the book': 'Fin du livre',
+  'A few minutes left in the book': 'Quelques minutes avant la fin du livre',
   'a few minutes': 'quelques minutes',
   'Opening the book': 'Ouverture du livre',
   'Counting pages…': 'Comptage des pages…',
