@@ -4,7 +4,7 @@ import { getItem, DETAIL_FIELDS } from '../../../api/jellyfin';
 import type { BaseItem } from '../../../api/types';
 import { userStore } from '../../../lib/app-state';
 import { t } from '../../../lib/i18n';
-import { back } from '../../../lib/router';
+import { back, navigate } from '../../../lib/router';
 import { useAsync, useStore } from '../../../lib/store';
 import { downloadUrl, formatOf, getBookFile, getBookInfo, getReading, isAudioBook, saveReading, type BookInfo, type Reading } from '../api';
 import { BarButton, ReaderMessage, RdIcon, TopBar, useFullscreen } from './chrome';
@@ -91,7 +91,7 @@ function Unsupported({ item, audio }: { item: BaseItem; audio?: boolean }) {
           ? t('CBR comics are RAR archives, which browsers can’t read. Download the file and open it in a comic reader app, or ask an admin for a CBZ copy.')
           : t('Download the file and open it in an app that reads it.')}
         action={
-          audio ? <button type="button" class="btn btn-primary is-sm" onClick={() => back(`/details/${item.Id}`)}>{t('Go to the audiobook')}</button>
+          audio ? <button type="button" class="btn btn-primary is-sm" onClick={() => navigate(`/details/${item.Id}`, { replace: true })}>{t('Go to the audiobook')}</button>
             : canDownload() ? <a class="btn btn-primary is-sm" href={downloadUrl(item.Id)} download><RdIcon name="download" size={18} />{t('Download {format}', { format: f === 'other' ? t('file') : f.toUpperCase() })}</a>
             : <span class="rd-message-note">{t('Downloading is turned off for this profile. An admin can turn it on.')}</span>
         }
