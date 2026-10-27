@@ -99,7 +99,7 @@ class TvBrowseShots {
 
     @Test
     fun requests() = shot("TVRequests", TvPlace.Requests) {
-        TvRequestsScreen(TvRequestsSamples.requests, TvRequestsActions(), canRequest = true, today = TvRequestsSamples.today)
+        TvRequestsScreen(TvRequestsSamples.requests, TvRequestsActions(), today = TvRequestsSamples.today)
     }
 
     /** No board: the details hero for a Seerr title. */

@@ -31,7 +31,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -46,7 +45,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.feature.RequestsViewModel
-import io.github.arkmind.seedy.core.feature.SeasonsTarget
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.requests.RequestFormat
@@ -54,7 +52,6 @@ import io.github.arkmind.seedy.core.requests.RequestState
 import io.github.arkmind.seedy.core.requests.SeerrRequest
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.requests.TitlesKind
-import io.github.arkmind.seedy.core.seedy.canRequest
 import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.core.seedy.tmdbImage
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
@@ -66,7 +63,6 @@ import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusRing
 import io.github.arkmind.seedy.tv.parts.focusScale
 import io.github.arkmind.seedy.tv.parts.focusSoon
-import io.github.arkmind.seedy.tv.seasons.TvRequestSeasonsDialog
 import io.github.arkmind.seedy.tv.shell.RailInset
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -79,13 +75,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.util.Locale
 
-/** The card the remote was last on. */
-class LastFocus {
-    var requester: FocusRequester? = null
-}
-
 /** What OK does on a Discover card. */
-enum class TitleAction { Request, Open, Details }
+enum class TitleAction { Open, Details }
 
 /** What the Requests place does; the route wires these to the view model and navigation. */
 class TvRequestsActions(
@@ -103,29 +94,15 @@ fun TvRequestsPlace(onSearch: () -> Unit) {
     val vm = viewModel { RequestsViewModel(session) }
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.refresh() }
-    val canRequest = session.canRequest
-    var seasons by remember { mutableStateOf<SeerrTitle?>(null) }
-    val last = remember { LastFocus() }
     TvRequestsScreen(
         state,
         TvRequestsActions(
             onSearch = onSearch,
-            onTitle = { title ->
-                when (titleAction(title, canRequest)) {
-                    TitleAction.Request -> if (title.mediaType == "tv") seasons = title else vm.request(title)
-                    TitleAction.Open, TitleAction.Details -> nav.openSeerr(title.mediaType, title.tmdbId, title.jellyfinItemId)
-                }
-            },
+            onTitle = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
             onRequest = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
             onMessageShown = vm::clearMessage,
         ),
-        canRequest = canRequest,
-        last = last,
     )
-    seasons?.let { title ->
-        val target = SeasonsTarget(tmdbId = title.tmdbId, title = title.title, year = title.year, posterPath = title.posterPath, backdropPath = title.backdropPath)
-        TvRequestSeasonsDialog(target, onDismiss = { seasons = null }, onDone = { vm.markRequested(title, it.status) }, returnFocus = { last.requester?.requestFocus() ?: false })
-    }
 }
 
 /** A Seerr title opens its library page when it's on the server, else its Seerr page. */
@@ -134,13 +111,9 @@ fun TvNav.openSeerr(mediaType: String, tmdbId: Int, jellyfinItemId: String?) {
     go(if (local != null) TvRoute.Details(local) else TvRoute.SeerrTitle(mediaType, tmdbId))
 }
 
-/** Requestable titles are asked for straight away (a series through its seasons); the rest open. */
-fun titleAction(title: SeerrTitle, canRequest: Boolean): TitleAction = when {
-    title.status == "available" && title.jellyfinItemId != null -> TitleAction.Open
-    // A series can always ask for more seasons; the dialog shows which are open.
-    canRequest && (title.status == "none" || title.status == "declined" || (title.mediaType == "tv" && title.status != "available" && title.status != "blocklisted")) -> TitleAction.Request
-    else -> TitleAction.Details
-}
+/** OK never requests: a title opens on the server, or on its Seerr page, where it can be requested once seen. */
+fun titleAction(title: SeerrTitle): TitleAction =
+    if (title.status == "available" && title.jellyfinItemId != null) TitleAction.Open else TitleAction.Details
 
 /** Space kept around a card row so the focused card's ring (9 px) isn't clipped. */
 private val RingRoom = 12.bp
@@ -160,11 +133,8 @@ private object NoFocusScroll : BringIntoViewSpec {
 fun TvRequestsScreen(
     state: RequestsViewModel.State,
     actions: TvRequestsActions,
-    canRequest: Boolean,
     today: LocalDate = LocalDate.now(),
     firstCard: FocusRequester = remember { FocusRequester() },
-    /** The card the remote was last on, to go back to after the seasons dialog. */
-    last: LastFocus = remember { LastFocus() },
 ) {
     val list = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -228,12 +198,11 @@ fun TvRequestsScreen(
                                     items(7) { Box(Modifier.width(196.bp).aspectRatio(2f / 3f).clip(RoundedCornerShape(16.bp)).background(SeedyColors.Surface)) }
                                 } else {
                                     itemsIndexed(items, key = { _, it -> "${it.mediaType}:${it.tmdbId}" }) { j, title ->
-                                        val self = remember { FocusRequester() }
                                         TitleCard(
-                                            title, row.kind.upcoming, titleAction(title, canRequest), today = today,
+                                            title, row.kind.upcoming, titleAction(title), today = today,
                                             onClick = { actions.onTitle(title) },
-                                            modifier = (if (i == 0 && j == 0) Modifier.focusRequester(firstCard) else Modifier).focusRequester(self)
-                                                .onFocusChanged { if (it.isFocused) { last.requester = self; activeRow = i; focusAt(index) } },
+                                            modifier = (if (i == 0 && j == 0) Modifier.focusRequester(firstCard) else Modifier)
+                                                .onFocusChanged { if (it.isFocused) { activeRow = i; focusAt(index) } },
                                         )
                                     }
                                 }
@@ -372,7 +341,6 @@ fun TitleCard(
                 SText(meta, size = 16.bsp, color = if (soon) LocalAccent.current else SeedyColors.Text3, maxLines = 1)
                 if (focused) {
                     val hint = when (action) {
-                        TitleAction.Request -> t("OK to request")
                         TitleAction.Open -> t("OK to open")
                         TitleAction.Details -> t("OK for details")
                     }

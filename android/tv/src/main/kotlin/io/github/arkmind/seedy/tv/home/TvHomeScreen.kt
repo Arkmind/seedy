@@ -58,7 +58,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.arkmind.seedy.core.feature.HomeViewModel
 import io.github.arkmind.seedy.core.requests.SeerrTitle
-import io.github.arkmind.seedy.tv.requests.TitleAction
+import io.github.arkmind.seedy.tv.requests.titleAction
 import io.github.arkmind.seedy.tv.requests.TitleCard
 import io.github.arkmind.seedy.core.format.cardTitle
 import io.github.arkmind.seedy.core.format.episodeShort
@@ -258,7 +258,7 @@ private fun TvRow(
                 itemsIndexed(row.seerr.orEmpty(), key = { _, it -> "${it.mediaType}:${it.tmdbId}" }) { i, title ->
                     TitleCard(
                         title, row.row.kind == "upcomingMovies",
-                        if (title.status == "available" && title.jellyfinItemId != null) TitleAction.Open else TitleAction.Details,
+                        titleAction(title),
                         onClick = { onSeerr(title) },
                         modifier = (if (i == 0 && firstCard != null) Modifier.focusRequester(firstCard) else Modifier)
                             .onFocusChanged { if (it.isFocused) onFocus(null) },

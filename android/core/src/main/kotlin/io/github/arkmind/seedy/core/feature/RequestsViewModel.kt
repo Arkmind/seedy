@@ -10,8 +10,6 @@ import io.github.arkmind.seedy.core.requests.RequestsApi
 import io.github.arkmind.seedy.core.requests.SeerrRequest
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.requests.TitlesKind
-import io.github.arkmind.seedy.core.seedy.RequestBody
-import io.github.arkmind.seedy.core.seedy.SeerrApi
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +18,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 
 /**
  * Requests for both screen sets (web: screens/requests): Discover's rows of Seerr titles, the person's own requests
@@ -28,7 +25,6 @@ import org.jellyfin.sdk.api.client.exception.InvalidStatusException
  */
 class RequestsViewModel(session: UserSession) : ViewModel() {
     private val api = RequestsApi(session.api)
-    private val seerr = SeerrApi(session.api)
 
     enum class Tab { Discover, Mine, All }
 
@@ -157,41 +153,6 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
             loadLatest()
             reloadPages()
             io { api.summary() }?.let { s -> _state.update { it.copy(summary = s) } }
-        }
-    }
-
-    /** A movie straight from a row (a series goes through the seasons dialog first). */
-    fun request(title: SeerrTitle) {
-        viewModelScope.launch {
-            val r = withContext(Dispatchers.IO) { runCatching { seerr.request(RequestBody(mediaType = title.mediaType, tmdbId = title.tmdbId)) } }
-            val result = r.getOrNull()
-            if (result != null) markRequested(title, result.status)
-            val message = when {
-                result != null -> t("Requested {title}", "title" to title.title)
-                (r.exceptionOrNull() as? InvalidStatusException)?.status == 403 -> t("Your profile can't request titles")
-                else -> t("Couldn't request {title}", "title" to title.title)
-            }
-            _state.update { it.copy(message = message) }
-            if (result != null) loadLatest()
-        }
-    }
-
-    /** After a request: the title's cards show it as asked for (a partly available show stays so). */
-    fun markRequested(title: SeerrTitle, status: String) {
-        val next = when (status) {
-            "available", "processing" -> status
-            else -> "pending"
-        }
-        _state.update { s ->
-            s.copy(
-                rows = s.rows.map { row ->
-                    row.copy(
-                        items = row.items?.map {
-                            if (it.tmdbId == title.tmdbId && it.mediaType == title.mediaType && it.status != "partial") it.copy(status = next, requestedByMe = true) else it
-                        },
-                    )
-                },
-            )
         }
     }
 
