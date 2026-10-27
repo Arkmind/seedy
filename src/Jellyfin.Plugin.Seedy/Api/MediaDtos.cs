@@ -135,6 +135,9 @@ public sealed class MediaFeaturesDto
     /// <summary>Gets or sets the book formats that can be requested: ebook, audiobook, comic.</summary>
     [JsonPropertyName("formats")] public List<string> Formats { get; set; } = [];
 
+    /// <summary>Gets or sets the app each book format goes to.</summary>
+    [JsonPropertyName("bookRoutes")] public Dictionary<string, string> BookRoutes { get; set; } = [];
+
     /// <summary>Gets or sets app addresses for the "Open in" buttons (admins only).</summary>
     [JsonPropertyName("lidarrUrl")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? LidarrUrl { get; set; }
     [JsonPropertyName("shelfarrUrl")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? ShelfarrUrl { get; set; }

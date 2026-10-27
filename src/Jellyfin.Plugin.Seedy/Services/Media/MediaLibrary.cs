@@ -338,22 +338,35 @@ public sealed class MediaLibrary
     public (string Id, string Name, string Location)? LibraryForFormat(string format)
     {
         var libs = Libraries();
-        bool Named(string name, string loc, params string[] words) => words.Any(w => name.Contains(w, StringComparison.OrdinalIgnoreCase) || Path.GetFileName(loc.TrimEnd('/')).Contains(w, StringComparison.OrdinalIgnoreCase));
-        IEnumerable<(string Id, string Name, string Location)> Candidates(string type) => libs.Where(l => l.Type == type).SelectMany(l => l.Locations.Take(1).Select(loc => (l.Id, l.Name, loc)));
-        var books = Candidates("books").ToList();
+        static bool Named(string name, string loc, params string[] words)
+            => words.Any(w => name.Contains(w, StringComparison.OrdinalIgnoreCase) || Path.GetFileName(loc.TrimEnd('/', '\\')).Contains(w, StringComparison.OrdinalIgnoreCase));
+
+        // Every folder of every library of a kind: one Books library often holds the books, audiobooks and comics folders.
+        List<(string Id, string Name, string Location)> Folders(string type) => libs.Where(l => l.Type == type).SelectMany(l => l.Locations.Select(loc => (l.Id, l.Name, loc))).ToList();
+        if (format == "music")
+        {
+            var music = Folders("music").Where(m => !Named(m.Name, m.Location, "audiobook")).ToList();
+            return music.Count > 0 ? music[0] : null;
+        }
+
+        var books = Folders("books");
         var pick = format switch
         {
-            "music" => Candidates("music").FirstOrDefault(),
             "audiobook" => books.FirstOrDefault(b => Named(b.Name, b.Location, "audio")),
-            "comic" => books.FirstOrDefault(b => Named(b.Name, b.Location, "comic", "manga", "bd")),
+            "comic" => books.FirstOrDefault(b => Named(b.Name, b.Location, "comic", "manga")),
             _ => books.FirstOrDefault(b => !Named(b.Name, b.Location, "audio", "comic", "manga"))
         };
         if (pick.Id is null && format == "audiobook")
         {
-            pick = Candidates("music").FirstOrDefault(m => Named(m.Name, m.Location, "audio"));
+            pick = Folders("music").FirstOrDefault(m => Named(m.Name, m.Location, "audio"));
         }
 
-        return pick.Id is null ? (format == "music" ? null : books.FirstOrDefault() is { Id: not null } any ? any : null) : pick;
+        if (pick.Id is null && books.Count > 0)
+        {
+            pick = books[0];
+        }
+
+        return pick.Id is null ? null : pick;
     }
 
     /// <summary>Scans one library for new files.</summary>

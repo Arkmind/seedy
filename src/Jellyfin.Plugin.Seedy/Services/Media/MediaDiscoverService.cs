@@ -244,6 +244,7 @@ public sealed class MediaDiscoverService
                 throw new MediaServiceException("Seedy", "Unknown row.", HttpStatusCode.NotFound);
         }
 
+        list = list.GroupBy(r => r.Mbid, StringComparer.OrdinalIgnoreCase).Select(g => g.First()).ToList();
         Mark(list, user);
         return new MusicRowDto { Results = list, Source = source };
     }
@@ -460,7 +461,7 @@ public sealed class MediaDiscoverService
     /// <returns>Books.</returns>
     public async Task<BookRowDto> BookSearchAsync(User user, string query, CancellationToken ct)
     {
-        var list = await SearchBooks(query, ct).ConfigureAwait(false);
+        var list = (await SearchBooks(query, ct).ConfigureAwait(false)).GroupBy(b => b.WorkId, StringComparer.OrdinalIgnoreCase).Select(g => g.First()).ToList();
         MarkBooks(list, user);
         return new BookRowDto { Results = list };
     }
@@ -518,6 +519,7 @@ public sealed class MediaDiscoverService
                 throw new MediaServiceException("Seedy", "Unknown row.", HttpStatusCode.NotFound);
         }
 
+        list = list.Where(b => b.WorkId.Length > 0).GroupBy(b => b.WorkId, StringComparer.OrdinalIgnoreCase).Select(g => g.First()).ToList();
         MarkBooks(list, user);
         return new BookRowDto { Results = list, Source = source };
     }

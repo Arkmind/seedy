@@ -618,6 +618,19 @@ public sealed class MediaRequestService
         var parts = PartsOf(q);
         q.Status = "approved";
         q.UpdatedAt = DateTime.UtcNow;
+        if (data.Frozen)
+        {
+            // Demo data on the dev stack: approve without sending anything anywhere.
+            foreach (var p in parts)
+            {
+                p.Status = "approved";
+            }
+
+            Store(q, data, parts, q.Kind == "music" && q.Mode == "future" ? new MediaNoteDto { Code = "future" } : null);
+            _db.SaveMediaRequest(q);
+            return;
+        }
+
         MediaNoteDto? note = null;
         try
         {
@@ -1223,12 +1236,13 @@ public sealed class MediaRequestService
     {
         if (q.Kind == "music")
         {
+            // Music requests are named for their artist; the albums are in the data.
             if (q.Mode == "albums" && data.Albums.Count == 1)
             {
-                return _library.FindAlbum(data.Albums[0].Mbid, data.Albums[0].Title, q.Subtitle)?.Id;
+                return _library.FindAlbum(data.Albums[0].Mbid, data.Albums[0].Title, q.Title)?.Id;
             }
 
-            return _library.FindArtist(q.ForeignId, q.Mode == "albums" ? q.Subtitle : q.Title)?.Id;
+            return _library.FindArtist(q.ForeignId, q.Title)?.Id;
         }
 
         var matches = _library.FindBooks(q.Title, data.Series, data.SeriesIndex);

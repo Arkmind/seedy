@@ -1,5 +1,6 @@
 import { SERVER_URL, get, post, del, request, url, type Query } from './client';
 import type { BaseItem } from './types';
+import type { AdminMedia, MediaFeatures } from './media';
 
 /* Endpoints served by the Seedy plugin (Jellyfin.Plugin.Seedy, routes under /Seedy).
    API paths must never equal an app page path: routes are case-insensitive, so GET /Seedy/History
@@ -74,6 +75,8 @@ export interface Me {
   prefs: UserPrefs;
   defaults: PlaybackPrefs;
   requests: RequestsFeatures;
+  /* Music and book requests (Lidarr, Shelfarr, Librarr); missing from older plugins. */
+  media?: MediaFeatures;
   historyEnabled: boolean;
   /** The admin's Home rows as this person can have them (rows they can't get are switched off). */
   homeRows?: HomeRowSetting[];
@@ -269,6 +272,8 @@ export interface AdminConfig {
     useRowOrder: boolean;
     useGenres: boolean;
   };
+  /* Music and book requests; absent from older plugins. */
+  media?: AdminMedia;
 }
 
 export interface AdminStatus {

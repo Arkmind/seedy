@@ -65,6 +65,11 @@ const ICONS = {
   user: { w: 2, body: <><circle cx="12" cy="8" r="3.6" />{p('M5 20a7 7 0 0 1 14 0')}</> },
   shield: { w: 2, body: p('M12 3l7 3v6c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z') },
   history: { w: 2, body: <>{p('M4.5 12a7.5 7.5 0 1 0 2.3-5.4')}{p('M4.5 4v3.5H8')}{p('M12 8v4.5l3 1.8')}</> },
+  /* Requests board: the service tabs and the book request window. */
+  screen: { w: 2.2, body: <><rect x="3" y="5" width="18" height="14" rx="2" />{p('M7 5v14M17 5v14')}</> },
+  notes: { w: 2.2, body: <>{p('M9 18V5l11-2v13')}<circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" /></> },
+  book: { w: 2.2, body: <>{p('M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z')}{p('M4 21a2 2 0 0 1 2-2h13v2')}</> },
+  headphones: { w: 2, body: <>{p('M4 15v-3a8 8 0 0 1 16 0v3')}{p('M3 15h4v5H3zM17 15h4v5h-4z')}</> },
   music: { w: 2, body: <>{p('M9 18V5l11-2v13')}<circle cx="6.5" cy="18" r="2.5" /><circle cx="17.5" cy="16" r="2.5" /></> },
   film: { w: 2, body: <><rect x="3" y="4" width="18" height="16" rx="2" />{p('M7 4v16')}{p('M17 4v16')}{p('M3 9h4')}{p('M3 15h4')}{p('M17 9h4')}{p('M17 15h4')}</> },
   tv: { w: 2, body: <><rect x="3" y="6" width="18" height="12" rx="2" />{p('M8 21h8')}{p('M9 3l3 3 3-3')}</> },
