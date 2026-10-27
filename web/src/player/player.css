@@ -219,8 +219,22 @@
 .pl-step:hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
 .pl-offset-value { min-width: 56px; text-align: center; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
-.pl-seasons { overflow-x: auto; }
-.pl-seasons .seg { flex-wrap: nowrap; }
+/* The pill stays put and its tabs slide inside it; an arrow over a fade shows there are more. */
+.pl-seasons { position: relative; border-radius: var(--r-seg); background: var(--seedy-surface); overflow: hidden; }
+.pl-seasons-track { overflow-x: auto; overscroll-behavior-x: contain; }
+.pl-seasons .seg { display: flex; flex-wrap: nowrap; width: max-content; max-width: none; background: transparent; }
+.pl-seasons-arrow {
+  position: absolute; top: 0; bottom: 0; z-index: 1; width: 56px; display: flex; align-items: center;
+  padding: 0 8px; border: 0; color: var(--seedy-white); cursor: pointer;
+}
+.pl-seasons-arrow[hidden] { display: none; }
+.pl-seasons-arrow.is-left { left: 0; justify-content: flex-start; background: linear-gradient(90deg, var(--seedy-surface) 50%, rgba(31, 31, 31, 0)); }
+.pl-seasons-arrow.is-right { right: 0; justify-content: flex-end; background: linear-gradient(270deg, var(--seedy-surface) 50%, rgba(31, 31, 31, 0)); }
+.pl-seasons-arrow > span {
+  width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: var(--seedy-surface-2); transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.pl-seasons-arrow:hover > span { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
 
 .pl-row-item { min-height: 72px; padding: 8px 12px 8px 8px; }
 .pl-row-item .lead { gap: 14px; }
