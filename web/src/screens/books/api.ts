@@ -136,7 +136,7 @@ export const normalize = (s?: string) => (s ?? '').toLowerCase().replace(/^(the|
 
 export const BOOK_FIELDS = [
   'PrimaryImageAspectRatio', 'ProductionYear', 'PremiereDate', 'Genres', 'DateCreated', 'SortName', 'People', 'Path',
-  'MediaSources', 'SeriesName', 'ProviderIds', 'Studios', 'Overview', 'Chapters'
+  'MediaSources', 'SeriesName', 'ProviderIds', 'Studios', 'Overview', 'Chapters', 'CanDownload'
 ];
 
 /* Everything in a books library, books and audiobooks, in one go: the tabs sort and group it themselves. */

@@ -38,7 +38,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
   const info = useAsync(() => (audio ? Promise.resolve(undefined) : getBookInfo(item.Id).catch(() => undefined)), [item.Id]);
   const reading = useAsync(() => (audio ? Promise.resolve(undefined) : getReading(item.Id).catch(() => undefined)), [item.Id, readingTick]);
   const me = useStore(userStore);
-  const canDownload = !!(me?.Policy as { EnableContentDownloading?: boolean } | undefined)?.EnableContentDownloading;
+  const policyDownload = !!(me?.Policy as { EnableContentDownloading?: boolean } | undefined)?.EnableContentDownloading;
 
   /* Every file of this work in the library: the EPUB, the PDF, the audiobook… */
   const work = useMemo(() => {
@@ -110,6 +110,8 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
 
   /* ── Meta line: author · 2023 · 412 pages · English ★ 4.3 ── */
   const self = lib.data?.all.find((o) => o.Id === item.Id) ?? item;
+  // Jellyfin says per title whether this profile may download it; the policy is the fallback.
+  const canDownload = (self as BaseItem & { CanDownload?: boolean }).CanDownload ?? policyDownload;
   const year = yearOfBook(item);
   // The language comes from the EPUB of this work (the PDF and the audiobook share it).
   const epubId = (formatOf(self) === 'epub' ? self : work.find((o) => formatOf(o) === 'epub'))?.Id;
