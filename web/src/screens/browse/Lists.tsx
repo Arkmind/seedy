@@ -168,7 +168,7 @@ function LatestList() {
   const state = useAsync(() => (parentId ? getLatest(parentId, 60) : Promise.resolve([] as BaseItem[])), [parentId]);
   useEffect(() => { if (state.data) setItems(state.data); }, [state.data]);
   return (
-    <ListFrame title={view ? t('Latest {library}', { library: view.Name.toLowerCase() }) : t('Recently added')} count={countOf(state.data)} active={view ? { viewId: view.Id } : 'home'}>
+    <ListFrame title={view ? t('Latest {library}', { library: view.Name.toLowerCase(), name: view.Name }) : t('Recently added')} count={countOf(state.data)} active={view ? { viewId: view.Id } : 'home'}>
       <Body state={{ ...state, data: state.data ? items : undefined }} empty={<EmptyState icon="film" title={t('Nothing new')} text={t('Titles added to this library show up here.')} />}>
         {(list) => <CardGrid items={list} onReplace={replace} origin="latest" />}
       </Body>

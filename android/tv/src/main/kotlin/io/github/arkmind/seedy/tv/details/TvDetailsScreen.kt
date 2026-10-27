@@ -108,7 +108,7 @@ class TvDetailsActions(
  * and the open season's episodes. Movies show "More like this" there; collections and people their titles.
  */
 @Composable
-fun TvDetailsScreen(state: DetailsViewModel.State, actions: TvDetailsActions, canRequest: Boolean, playFocus: FocusRequester = remember { FocusRequester() }) {
+fun TvDetailsScreen(state: DetailsViewModel.State, actions: TvDetailsActions, canRequest: Boolean, playFocus: FocusRequester = remember { FocusRequester() }, today: LocalDate = LocalDate.now()) {
     val item = state.item
     val viewer = LocalViewer.current
     val episodesFocus = remember { FocusRequester() }
@@ -145,7 +145,7 @@ fun TvDetailsScreen(state: DetailsViewModel.State, actions: TvDetailsActions, ca
         })
         Column(Modifier.padding(start = 96.bp, top = 628.bp), verticalArrangement = Arrangement.spacedBy(26.bp)) {
             when (item.type) {
-                BaseItemKind.SERIES -> Episodes(state, actions, episodesFocus, episodesList, upNext)
+                BaseItemKind.SERIES -> Episodes(state, actions, episodesFocus, episodesList, upNext, today)
                 BaseItemKind.BOX_SET, BaseItemKind.PLAYLIST, BaseItemKind.FOLDER, BaseItemKind.COLLECTION_FOLDER, BaseItemKind.PERSON ->
                     CardRow(if (item.type == BaseItemKind.PERSON) t("Filmography") else t("In this collection"), state.children.orEmpty(), actions.onOpen, episodesFocus)
                 else -> CardRow(t("More like this"), state.similar.orEmpty(), actions.onOpen, episodesFocus)
@@ -268,7 +268,7 @@ private fun Progress(state: DetailsViewModel.State, item: BaseItemDto, canReques
 }
 
 @Composable
-private fun Episodes(state: DetailsViewModel.State, actions: TvDetailsActions, focus: FocusRequester, list: LazyListState, start: Int) {
+private fun Episodes(state: DetailsViewModel.State, actions: TvDetailsActions, focus: FocusRequester, list: LazyListState, start: Int, today: LocalDate) {
     // 10 px of room around tabs and cards keeps the focus ring inside their rows (they clip). Coming down from the
     // buttons lands on the open season's tab; OK on another opens it.
     val currentTab = remember { FocusRequester() }
@@ -301,7 +301,7 @@ private fun Episodes(state: DetailsViewModel.State, actions: TvDetailsActions, f
         horizontalArrangement = Arrangement.spacedBy(32.bp),
     ) {
         itemsIndexed(eps, key = { _, it -> it.id }) { i, ep ->
-            EpisodeCard(ep, { actions.onEpisode(ep) }, if (i == start) Modifier.focusRequester(focus) else Modifier)
+            EpisodeCard(ep, today, { actions.onEpisode(ep) }, if (i == start) Modifier.focusRequester(focus) else Modifier)
         }
     }
 }
@@ -354,7 +354,7 @@ private fun Modifier.dashed(width: Dp, radius: Dp, color: Color): Modifier = thi
 
 /** An episode: its picture (Watched or New, progress), "2 · The Pass" and "52 min · 34 min left". */
 @Composable
-private fun EpisodeCard(ep: BaseItemDto, onPlay: () -> Unit, modifier: Modifier) {
+private fun EpisodeCard(ep: BaseItemDto, today: LocalDate, onPlay: () -> Unit, modifier: Modifier) {
     val viewer = LocalViewer.current
     val accent = LocalAccent.current
     val upcoming = ep.isVirtual
@@ -377,16 +377,16 @@ private fun EpisodeCard(ep: BaseItemDto, onPlay: () -> Unit, modifier: Modifier)
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.bp)) {
                 SText(join(ep.episodeNumber, ep.name), size = 20.bsp, weight = 700, color = if (upcoming) SeedyColors.Text2 else SeedyColors.White, maxLines = 1)
-                SText(tvEpisodeMeta(ep), size = 16.bsp, color = SeedyColors.Text3, maxLines = 1)
+                SText(tvEpisodeMeta(ep, today), size = 16.bsp, color = SeedyColors.Text3, maxLines = 1)
             }
         }
     }
 }
 
 /** "54 min · Watched", "52 min · 34 min left", "49 min · 9 Oct", "Airs Fri 23 Oct". */
-fun tvEpisodeMeta(ep: BaseItemDto): String {
+fun tvEpisodeMeta(ep: BaseItemDto, today: LocalDate): String {
     val day = ep.premiereDay
-    if (ep.isVirtual) return day?.let { if (it.isAfter(LocalDate.now())) t("Airs {date}", "date" to weekdayDate(it)) else dayMonth(it) }.orEmpty()
+    if (ep.isVirtual) return day?.let { if (it.isAfter(today)) t("Airs {date}", "date" to weekdayDate(it)) else dayMonth(it) }.orEmpty()
     return join(
         ep.runtime,
         when {
