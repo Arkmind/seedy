@@ -17,6 +17,7 @@ public sealed class MediaSyncService : IHostedService, IDisposable
     private readonly ILogger<MediaSyncService> _logger;
     private CancellationTokenSource? _stop;
     private Task? _loop;
+    private Task? _warm;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MediaSyncService"/> class.
@@ -50,10 +51,11 @@ public sealed class MediaSyncService : IHostedService, IDisposable
                 try
                 {
                     await _requests.SyncAsync(ct).ConfigureAwait(false);
-                    if (DateTime.UtcNow >= warmAt && MediaRequestService.MusicEnabled)
+                    if (DateTime.UtcNow >= warmAt && MediaRequestService.MusicEnabled && (_warm is null || _warm.IsCompleted))
                     {
+                        // MusicBrainz allows a call a second, so warming takes a while: it runs beside the sync.
                         warmAt = DateTime.UtcNow + WarmEvery;
-                        await _discover.WarmMusicAsync(ct).ConfigureAwait(false);
+                        _warm = Task.Run(() => _discover.WarmMusicAsync(ct), ct);
                     }
                 }
 #pragma warning disable CA1031 // The loop keeps running whatever one round hits.
