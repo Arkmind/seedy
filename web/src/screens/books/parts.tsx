@@ -5,7 +5,7 @@ import { dayOf, duration, pct, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { playAudiobook } from '../../audio/engine';
-import { authorLine, isAudioBook, isComic, type Reading } from './api';
+import { authorLine, isAudioBook, isComic, seriesOf, type Reading } from './api';
 import { AudioCover, BookCover } from './covers';
 
 /* Pieces shared by the books screens: cards, section heads, a few labels. */
@@ -40,17 +40,18 @@ export function tenMinutes(minutes: number): string {
 
 /* Under a cover in the grids: "Lantern Season — The Halden Cycle, 4", else "Author · 2026". */
 export function bookSub(item: BaseItem): string {
-  if (item.SeriesName && item.IndexNumber !== undefined && item.IndexNumber !== null) return `${item.SeriesName}, ${item.IndexNumber}`;
+  const series = seriesOf(item);
+  if (series) return `${series}, ${item.IndexNumber}`;
   const author = authorLine(item);
   const year = yearOfBook(item);
   return [author, year ? String(year) : item.Genres?.[0]?.toLowerCase()].filter(Boolean).join(' · ');
 }
 
-/* Comics: "Kestrel · new", "Kestrel · reading", "Vol. 2", "One-shot", or "Author · 2025". */
-export function comicSub(item: BaseItem, reading?: Reading): string {
+/* Comics: "Kestrel · new", "Kestrel · reading" in a running series, else "Author · 2025" (or "One-shot"). */
+export function comicSub(item: BaseItem, reading: Reading | undefined, running: boolean): string {
   const state = item.UserData?.Played || reading?.Finished ? t('read') : reading ? t('reading') : t('new');
-  if (item.SeriesName) return `${item.SeriesName} · ${state}`;
-  if (item.IndexNumber !== undefined && item.IndexNumber !== null) return t('Vol. {n}', { n: item.IndexNumber });
+  const series = seriesOf(item);
+  if (series && running) return `${series} · ${state}`;
   const author = authorLine(item);
   const year = yearOfBook(item);
   return [author, year ? String(year) : ''].filter(Boolean).join(' · ') || t('One-shot');
@@ -127,7 +128,7 @@ export function AudioCard({ item }: { item: BaseItem }) {
 }
 
 /* A series: three covers fanned out, its name, how much is read, a segment per volume. */
-export interface SeriesGroup { name: string; key: string; author: string; volumes: BaseItem[]; read: number; latest: number }
+export interface SeriesGroup { name: string; key: string; author: string; volumes: BaseItem[]; read: number; latest: number; read_at: number }
 
 export function seriesFan(volumes: BaseItem[]): BaseItem[] {
   if (volumes.length <= 3) return volumes;

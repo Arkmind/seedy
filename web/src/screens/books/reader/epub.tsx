@@ -54,7 +54,9 @@ img,svg,video{max-width:100%;height:auto}`;
 function themeCss(s: EpubSettings) {
   const th = THEMES[s.theme];
   const family = s.font === 'serif' ? "'Seedy Serif', 'Noto Serif', Georgia, serif" : s.font === 'sans' ? "'Seedy Sans', 'Noto Sans', system-ui, sans-serif" : '';
-  return `html,body{background:transparent!important;color:${th.ink}!important}
+  return `html{background:${th.bg}!important;color-scheme:${s.theme === 'sepia' || s.theme === 'light' ? 'light' : 'dark'}}
+html,body{color:${th.ink}!important}
+body{background:transparent!important}
 body{font-size:${s.size}px!important;line-height:${LINE_HEIGHT[s.spacing]}!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility${family ? `;font-family:${family}!important` : ''}}
 body *{color:inherit!important;background-color:transparent!important;border-color:currentColor}
 body p,body li,body blockquote,body dd,body dt,body div,body span{line-height:inherit!important}

@@ -90,6 +90,7 @@ html.rd-open, html.rd-open body { overflow: hidden; }
   animation: pop-in 140ms ease-out; max-height: calc(100% - 96px); overflow-y: auto; scrollbar-width: thin;
 }
 .rs-panel.is-side { width: 380px; gap: 12px; }
+.rs-panel:focus { outline: none; }
 .rs-title { margin: 0; font-size: 16px; font-weight: 800; color: #ffffff; }
 .rs-group { display: flex; flex-direction: column; gap: 10px; }
 .rs-label { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--seedy-text-3); }

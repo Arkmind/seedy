@@ -1,6 +1,5 @@
 import { Fragment, type ComponentChildren } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { request } from '../../api/client';
 import { primaryUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { playAudiobook } from '../../audio/engine';
@@ -15,10 +14,11 @@ import { MoreActions, useView } from '../browse/details-parts';
 import { toggleFavorite } from '../browse/parts';
 import { setPlayed } from '../../api/jellyfin';
 import {
-  authorLine, authorsOf, deleteReading, downloadUrl, fileSize, formatOf, getBookInfo, getReading, isAudioBook, narratorOf,
-  normalize, saveReading, type Reading
+  authorLine, authorsOf, bookFileUrl, deleteReading, downloadUrl, fileSize, formatOf, getBookInfo, getReading, isAudioBook, narratorOf,
+  normalize, saveReading, seriesOf, isComic, type Reading
 } from './api';
 import { useBooksData, VolumeCard } from './BooksLibrary';
+import { epubLanguage } from './epub-meta';
 import { AudioCover, BookCover } from './covers';
 import { BookCard, HeadphonesIcon, roughTime, yearOfBook } from './parts';
 import './books.css';
@@ -54,10 +54,11 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
   const readable = audio ? work.find((o) => formatOf(o) === 'epub') ?? work.find((o) => !isAudioBook(o)) : item;
   const twinReading = useAsync(() => (audio && readable ? getReading(readable.Id).catch(() => undefined) : Promise.resolve(undefined)), [readable?.Id, audio]);
 
+  const seriesName = seriesOf(item);
   const series = useMemo(() => {
-    if (!item.SeriesName || !lib.data) return undefined;
-    return lib.data.series.find((s) => s.key === normalize(item.SeriesName));
-  }, [lib.data, item.SeriesName]);
+    if (!seriesName || !lib.data) return undefined;
+    return lib.data.series.find((s) => s.key === normalize(seriesName));
+  }, [lib.data, seriesName]);
   const author = authorsOf(item)[0];
   const more = useMemo(() => {
     if (!author || !lib.data) return [];
@@ -105,8 +106,12 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
   }
 
   /* ── Meta line: author · 2023 · 412 pages · English ★ 4.3 ── */
+  const self = lib.data?.all.find((o) => o.Id === item.Id) ?? item;
   const year = yearOfBook(item);
-  const lang = languageOf(item);
+  // The language comes from the EPUB of this work (the PDF and the audiobook share it).
+  const epubId = (formatOf(self) === 'epub' ? self : work.find((o) => formatOf(o) === 'epub'))?.Id;
+  const fileLang = useAsync(() => (epubId ? epubLanguage(epubId) : Promise.resolve(undefined)), [epubId]);
+  const lang = languageName(fileLang.data);
   const meta = [
     year ? String(year) : '',
     audio ? (item.RunTimeTicks ? duration(ticksToSeconds(item.RunTimeTicks)) : '') : info.data?.Pages ? tn(info.data.Pages, '{n} page', '{n} pages') : '',
@@ -142,7 +147,6 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
   };
 
   const fav = !!item.UserData?.IsFavorite;
-  const self = lib.data?.all.find((o) => o.Id === item.Id) ?? item;
   const format = formatOf(self);
   const isbn = item.ProviderIds?.Isbn ?? item.ProviderIds?.ISBN ?? item.ProviderIds?.isbn;
   const added = item.DateCreated ? longDate(item.DateCreated) : undefined;
@@ -164,11 +168,9 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
             {audio ? <AudioCover item={item} size="lg" width={600} /> : <BookCover item={item} size="lg" width={600} />}
           </span>
           <div class="bkd-info">
-            {item.SeriesName && (
-              <Link to={`${libPath}?tab=series&series=${encodeURIComponent(item.SeriesName)}`} class="bkd-series">
-                {item.IndexNumber !== undefined && item.IndexNumber !== null
-                  ? t('{series} · Book {n}', { series: item.SeriesName, n: item.IndexNumber })
-                  : item.SeriesName}
+            {seriesName && (
+              <Link to={series ? `${libPath}?tab=series&series=${encodeURIComponent(seriesName)}` : libPath} class="bkd-series">
+                {isComic(self) ? t('{series} · No. {n}', { series: seriesName, n: item.IndexNumber! }) : t('{series} · Book {n}', { series: seriesName, n: item.IndexNumber! })}
               </Link>
             )}
             <h1 id="bkd-h" class="bkd-title">{item.Name}</h1>
@@ -177,10 +179,11 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
                 <Link to={`${libPath}?tab=authors&author=${encodeURIComponent(authorsOf(item)[0].Name)}`} class="bkd-author">{authorLine(item)}</Link>
               )}
               {meta.length > 0 && <span>{(authorsOf(item).length ? '· ' : '') + meta.join(' · ')}</span>}
+              {/* Book ratings are out of five stars; Jellyfin keeps them out of ten. */}
               {item.CommunityRating ? (
                 <span class="bkd-score">
                   <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" fill="var(--seedy-accent)" /></svg>
-                  {formatNumber(item.CommunityRating, { maximumFractionDigits: 1, minimumFractionDigits: 1 })}
+                  {formatNumber(item.CommunityRating / 2, { maximumFractionDigits: 1, minimumFractionDigits: 1 })}
                 </span>
               ) : null}
             </span>
@@ -257,7 +260,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
             </div>
             <div class="bk-grid">
               {series.volumes.map((v) => (
-                <div key={v.Id} class="bk-slot"><VolumeCard item={v} reading={lib.data?.reading.get(v.Id)} current={v.Id === item.Id} /></div>
+                <div key={v.Id} class="bk-slot"><VolumeCard item={v} reading={lib.data?.reading.get(v.Id)} current={normalize(v.Name) === normalize(item.Name)} /></div>
               ))}
             </div>
           </section>
@@ -332,14 +335,17 @@ function FormatCard({ item, current, canDownload }: { item: BaseItem; current: b
   return <Link to={`/read/${item.Id}`} class={cls}>{body}</Link>;
 }
 
-/* A file's size: from its media source, else from the file endpoint's headers. */
+/* A file's size: from its media source, else from the file endpoint (one byte of it, whose range header says the total). */
 function useFileSize(item: BaseItem): string {
   const known = fileSize(item);
-  const fetched = useAsync(async () => {
+  const fetched = useAsync(async (signal) => {
     if (known || isAudioBook(item)) return known;
-    const res = await request<Response>('HEAD', `/Seedy/Books/${item.Id}/File`, { raw: true }).catch(() => undefined);
-    const n = Number(res?.headers.get('content-length') ?? 0);
-    return n || undefined;
+    try {
+      const res = await fetch(bookFileUrl(item.Id), { headers: { Range: 'bytes=0-0' }, signal });
+      const total = Number(/\/(\d+)$/.exec(res.headers.get('content-range') ?? '')?.[1] ?? res.headers.get('content-length') ?? 0);
+      void res.body?.cancel();
+      return total || undefined;
+    } catch { return undefined; }
   }, [item.Id, known]);
   const bytes = fetched.data ?? known;
   if (!bytes) return '';
@@ -361,10 +367,8 @@ function longDate(s: string): string {
   try { return new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'long', year: 'numeric' }).format(d); } catch { return d.toDateString(); }
 }
 
-/* "English": the book's language, when Jellyfin knows it. */
-function languageOf(item: BaseItem): string {
-  const code = (item as BaseItem & { PreferredMetadataLanguage?: string }).PreferredMetadataLanguage
-    ?? item.MediaStreams?.find((s) => s.Language)?.Language;
+/* "English" for "en". */
+function languageName(code?: string): string {
   if (!code) return '';
   try {
     const name = new Intl.DisplayNames([locale()], { type: 'language' }).of(code);
@@ -372,7 +376,7 @@ function languageOf(item: BaseItem): string {
   } catch { return ''; }
 }
 
-/* The glow behind the hero takes the cover's colour (the board's violet when there's no art to read it from). */
+/* The glow behind the hero takes the cover's hue, at the board's strength (its violet when there's no art to read). */
 function useCoverGlow(item: BaseItem): string {
   const src = primaryUrl(item, 48);
   const [glow, setGlow] = useState('rgba(122, 63, 209, 0.38)');
@@ -390,18 +394,21 @@ function useCoverGlow(item: BaseItem): string {
         if (!g) return;
         g.drawImage(img, 0, 0, 24, 36);
         const px = g.getImageData(0, 0, 24, 36).data;
-        // The most colourful pixels say more about a cover than its average.
-        let best = { s: -1, r: 122, g: 63, b: 209 };
-        let sr = 0, sg = 0, sb = 0, n = 0;
+        // Average hue, weighted by how colourful each pixel is.
+        let x = 0, y = 0, w = 0;
         for (let i = 0; i < px.length; i += 4) {
-          const [r, gg, b] = [px[i], px[i + 1], px[i + 2]];
-          const max = Math.max(r, gg, b), min = Math.min(r, gg, b);
-          const s = max ? (max - min) / max : 0;
-          if (s > 0.25 && max > 60) { sr += r; sg += gg; sb += b; n++; }
-          if (s * max > best.s) best = { s: s * max, r, g: gg, b };
+          const r = px[i] / 255, gg = px[i + 1] / 255, b = px[i + 2] / 255;
+          const max = Math.max(r, gg, b), min = Math.min(r, gg, b), d = max - min;
+          if (d < 0.04) continue;
+          const h = max === r ? ((gg - b) / d) % 6 : max === gg ? (b - r) / d + 2 : (r - gg) / d + 4;
+          const weight = d * max;
+          x += Math.cos((h * Math.PI) / 3) * weight;
+          y += Math.sin((h * Math.PI) / 3) * weight;
+          w += weight;
         }
-        const [r, gg, b] = n > 20 ? [sr / n, sg / n, sb / n] : [best.r, best.g, best.b];
-        setGlow(`rgba(${Math.round(r)}, ${Math.round(gg)}, ${Math.round(b)}, 0.38)`);
+        if (w < 1.5) return;
+        const hue = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+        setGlow(`hsla(${Math.round(hue)}, 60%, 53%, 0.38)`);
       } catch { /* a cover from elsewhere can't be read: keep the default */ }
     };
     img.src = src;

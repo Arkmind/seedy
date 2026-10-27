@@ -12,7 +12,7 @@ import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { EmptyState, ErrorState } from '../browse/parts';
-import { authorLine, authorsOf, getBookInfo, isAudioBook, isComic, listReading, loadLibraryItems, normalize, type Reading } from './api';
+import { authorLine, authorsOf, formatOf, getBookInfo, isAudioBook, isComic, listReading, loadLibraryItems, normalize, seriesOf, workKey, type Reading } from './api';
 import {
   AudioCard, BookCard, ContinueCard, SectionHead, SeriesCard, bookSub, comicSub, roughTime, tc, useColumns,
   type ContinueEntry, type SeriesGroup
@@ -38,6 +38,7 @@ const SORTS = [
 ] as const;
 type SortId = (typeof SORTS)[number]['id'];
 
+const PREFERRED = ['epub', 'cbz', 'pdf', 'cbr', 'other'];
 const time = (s?: string) => (s ? new Date(s).getTime() || 0 : 0);
 const sortKey = (it: BaseItem) => (it.SortName ?? it.Name ?? '').toLowerCase();
 
@@ -71,11 +72,13 @@ export interface BooksData {
   series: SeriesGroup[];
 }
 
+/* Series with at least two volumes here. */
 function groupSeries(items: BaseItem[]): SeriesGroup[] {
   const map = new Map<string, BaseItem[]>();
   for (const it of items) {
-    if (!it.SeriesName || isAudioBook(it)) continue;
-    const key = normalize(it.SeriesName);
+    const name = seriesOf(it);
+    if (!name || isAudioBook(it)) continue;
+    const key = normalize(name);
     const list = map.get(key) ?? [];
     list.push(it);
     map.set(key, list);
@@ -84,18 +87,32 @@ function groupSeries(items: BaseItem[]): SeriesGroup[] {
     // One cover per volume: the EPUB and the PDF of one book count once.
     const seen = new Set<string>();
     const volumes = vols
-      .sort((a, b) => (a.IndexNumber ?? 9999) - (b.IndexNumber ?? 9999) || sortKey(a).localeCompare(sortKey(b)))
+      .sort((a, b) => (a.IndexNumber ?? 9999) - (b.IndexNumber ?? 9999) || sortKey(a).localeCompare(sortKey(b))
+        || PREFERRED.indexOf(formatOf(a)) - PREFERRED.indexOf(formatOf(b)))
       .filter((v) => { const k = `${v.IndexNumber ?? ''}|${normalize(v.Name)}`; if (seen.has(k)) return false; seen.add(k); return true; });
     const authors = Array.from(new Set(volumes.map(authorLine).filter(Boolean)));
     return {
-      name: volumes[0].SeriesName!,
+      name: seriesOf(volumes[0])!,
       key,
       author: authors.length === 1 ? authors[0] : authors.length > 1 ? t('Various authors') : '',
       volumes,
       read: volumes.filter((v) => v.UserData?.Played).length,
-      latest: Math.max(...volumes.map((v) => Math.max(time(v.DateCreated), time(v.UserData?.LastPlayedDate))))
+      read_at: Math.max(0, ...volumes.map((v) => time(v.UserData?.LastPlayedDate))),
+      latest: Math.max(...volumes.map((v) => time(v.DateCreated)))
     };
-  });
+  }).filter((g) => g.volumes.length > 1);
+}
+
+/* One card per work: the EPUB and the PDF of a book show as the book (its page lists both), the reader's format first. */
+function oneEach(items: BaseItem[]): BaseItem[] {
+  const best = new Map<string, BaseItem>();
+  for (const it of items) {
+    const key = workKey(it) + '|' + (it.IndexNumber ?? '');
+    const cur = best.get(key);
+    if (!cur || PREFERRED.indexOf(formatOf(it)) < PREFERRED.indexOf(formatOf(cur))) best.set(key, it);
+  }
+  const keep = new Set(Array.from(best.values()).map((i) => i.Id));
+  return items.filter((i) => keep.has(i.Id));
 }
 
 export function useBooksData(viewId: string) {
@@ -108,8 +125,8 @@ export function useBooksData(viewId: string) {
     const map = new Map((reading.data ?? []).map((r) => [r.ItemId, r]));
     return {
       all,
-      books: all.filter((i) => !isAudioBook(i) && !isComic(i)),
-      comics: all.filter((i) => !isAudioBook(i) && isComic(i)),
+      books: oneEach(all.filter((i) => !isAudioBook(i) && !isComic(i))),
+      comics: oneEach(all.filter((i) => !isAudioBook(i) && isComic(i))),
       audio: all.filter(isAudioBook),
       reading: map,
       series: groupSeries(all)
@@ -129,6 +146,9 @@ function libraryItems(viewId: string, force: boolean, signal: AbortSignal): Prom
   void signal;
   return items;
 }
+
+/* Whether a book belongs to a series with more than one volume here. */
+const running = (data: BooksData, it: BaseItem) => { const s = seriesOf(it); return !!s && data.series.some((g) => g.key === normalize(s)); };
 
 /* ───────── Screen ───────── */
 
@@ -216,7 +236,7 @@ export function BooksLibrary({ view }: { view: BaseItem }) {
           : !data.all.length ? <EmptyState icon="folder" title={t('{name} is empty', { name: view.Name })} text={t('Once the server finds books in this library they will show up here.')} />
           : tab === 'overview' ? <Overview view={view} data={data} tabTo={tabTo} />
           : tab === 'books' ? <Grid items={sortItems(data.books, sort, data.reading)} empty={t('No books yet')} render={(it) => <BookCard item={it} sub={bookSub(it)} />} />
-          : tab === 'comics' ? <Grid items={sortItems(data.comics, sort, data.reading)} empty={t('No comics yet')} render={(it) => <BookCard item={it} sub={comicSub(it, data.reading.get(it.Id))} />} />
+          : tab === 'comics' ? <Grid items={sortItems(data.comics, sort, data.reading)} empty={t('No comics yet')} render={(it) => <BookCard item={it} sub={comicSub(it, data.reading.get(it.Id), running(data, it))} />} />
           : tab === 'audiobooks' ? <Grid audio items={sortItems(data.audio, sort, data.reading)} empty={t('No audiobooks yet')} render={(it) => <AudioCard item={it} />} />
           : tab === 'authors' ? <Authors data={data} sort={sort} focus={authorParam} tabTo={tabTo} />
           : <SeriesView data={data} sort={sort} open={seriesParam} tabTo={tabTo} />}
@@ -274,7 +294,8 @@ function BooksSkeleton() {
 
 function Overview({ view, data, tabTo }: { view: BaseItem; data: BooksData; tabTo: (id: TabId, extra?: Record<string, string>) => string }) {
   const recent = useMemo(() => sortItems(data.books, 'added', data.reading), [data]);
-  const series = useMemo(() => data.series.slice().sort((a, b) => b.latest - a.latest), [data]);
+  // Series being read first, then the newest.
+  const series = useMemo(() => data.series.slice().sort((a, b) => (b.read_at - a.read_at) || (b.latest - a.latest)), [data]);
   const audio = useMemo(() => sortItems(data.audio, 'added', data.reading), [data]);
   const comics = useMemo(() => sortItems(data.comics, 'added', data.reading), [data]);
   return (
@@ -298,7 +319,7 @@ function Overview({ view, data, tabTo }: { view: BaseItem; data: BooksData; tabT
       )}
       {comics.length > 0 && (
         <OverviewRow id="bk-co" title={t('Comics')} link={tabTo('comics')} linkLabel={t('All comics')} min={140} gap={22}>
-          {(n) => comics.slice(0, n).map((it) => <BookCard key={it.Id} item={it} sub={comicSub(it, data.reading.get(it.Id))} />)}
+          {(n) => comics.slice(0, n).map((it) => <BookCard key={it.Id} item={it} sub={comicSub(it, data.reading.get(it.Id), running(data, it))} />)}
         </OverviewRow>
       )}
     </div>
@@ -470,7 +491,7 @@ function Authors({ data, sort, focus, tabTo }: { data: BooksData; sort: SortId; 
             </div>
             <div class="bk-grid">
               {sortItems(books, sort === 'added' ? 'released' : sort, data.reading).map((it) => (
-                <div key={it.Id} class="bk-slot"><BookCard item={it} sub={isComic(it) ? comicSub(it, data.reading.get(it.Id)) : bookSub(it)} /></div>
+                <div key={it.Id} class="bk-slot"><BookCard item={it} sub={isComic(it) ? comicSub(it, data.reading.get(it.Id), running(data, it)) : bookSub(it)} /></div>
               ))}
               {audio.map((it) => <div key={it.Id} class="bk-slot is-audio-slot"><AudioCard item={it} /></div>)}
             </div>
@@ -489,6 +510,7 @@ function SeriesView({ data, sort, open, tabTo }: { data: BooksData; sort: SortId
   const groups = useMemo(() => {
     const list = data.series.slice();
     if (sort === 'title' || sort === 'author') return list.sort((a, b) => (sort === 'author' ? a.author.localeCompare(b.author) : 0) || a.name.localeCompare(b.name));
+    if (sort === 'read') return list.sort((a, b) => (b.read_at - a.read_at) || (b.latest - a.latest));
     return list.sort((a, b) => b.latest - a.latest);
   }, [data, sort]);
   const current = open ? groups.find((g) => g.key === normalize(open)) : undefined;

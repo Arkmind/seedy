@@ -97,7 +97,7 @@ export function Scrubber({ page, total, ticks, onCommit, valueText, status, rtl 
 }) {
   const [drag, setDrag] = useState<number | null>(null);
   const shown = drag ?? page;
-  const fraction = total > 1 ? (shown - 1) / (total - 1) : total === 1 ? 1 : 0;
+  const fraction = total > 0 ? Math.min(1, shown / total) : 0;
   const commit = (v: number) => { setDrag(null); if (v !== page) onCommit(v); };
   return (
     <footer class="rd-foot">
@@ -182,14 +182,14 @@ export function usePanelDismiss(open: boolean, close: () => void, ref: { current
 export function EpubSettingsPanel({ value, onChange, onClose }: { value: EpubSettings; onChange: (next: Partial<EpubSettings>) => void; onClose: () => void }) {
   const ref = useRef<HTMLElement>(null);
   usePanelDismiss(true, onClose, ref, 'rd-settings-btn');
-  useEffect(() => { ref.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus({ preventScroll: true }); }, []);
+  useEffect(() => { ref.current?.focus({ preventScroll: true }); }, []);
   const fonts: { value: FontChoice; label: string; style: JSX.CSSProperties }[] = [
     { value: 'serif', label: 'Noto Serif', style: { fontFamily: "'Noto Serif Variable', 'Noto Serif', Georgia, serif" } },
     { value: 'sans', label: 'Noto Sans', style: { fontFamily: 'var(--font)' } },
     { value: 'book', label: t('Book’s own'), style: {} }
   ];
   return (
-    <section ref={ref} role="dialog" aria-labelledby="rs-h" class="rs-panel">
+    <section ref={ref} role="dialog" aria-labelledby="rs-h" class="rs-panel" tabIndex={-1}>
       <h2 id="rs-h" class="rs-title">{t('Reading settings')}</h2>
       <ThemePicker value={value.theme} onChange={(theme) => onChange({ theme })} />
       <div class="rs-group">
@@ -222,9 +222,9 @@ export function EpubSettingsPanel({ value, onChange, onClose }: { value: EpubSet
 export function ComicSettingsPanel({ value, onChange, onClose }: { value: ComicSettings; onChange: (next: Partial<ComicSettings>) => void; onClose: () => void }) {
   const ref = useRef<HTMLElement>(null);
   usePanelDismiss(true, onClose, ref, 'rd-settings-btn');
-  useEffect(() => { ref.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus({ preventScroll: true }); }, []);
+  useEffect(() => { ref.current?.focus({ preventScroll: true }); }, []);
   return (
-    <section ref={ref} role="dialog" aria-labelledby="rs-h" class="rs-panel">
+    <section ref={ref} role="dialog" aria-labelledby="rs-h" class="rs-panel" tabIndex={-1}>
       <h2 id="rs-h" class="rs-title">{t('Reading settings')}</h2>
       <ThemePicker value={value.theme} onChange={(theme) => onChange({ theme })} />
       <Seg<Layout> label={t('Layout')} value={value.layout} onChange={(layout) => onChange({ layout })}

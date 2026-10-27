@@ -115,8 +115,19 @@ export function authorLine(item: BaseItem): string {
   return names.slice(0, -1).join(', ') + ' & ' + names[names.length - 1];
 }
 
+/* Audiobooks keep their narrator as the composer (or a Narrator person when a plugin set one). */
 export const narratorOf = (item: BaseItem) => (item.People ?? []).find((p) => p.Type === 'Narrator' || p.Role === 'Narrator')?.Name
+  ?? (item.People ?? []).find((p) => p.Type === 'Composer')?.Name
   ?? (item as BaseItem & { Composers?: { Name: string }[] }).Composers?.[0]?.Name;
+
+/* The series a book is part of. Jellyfin also names a "series" after the folder a book sits in (the author's), with no
+   number: that isn't one. */
+export function seriesOf(item: BaseItem): string | undefined {
+  const name = item.SeriesName?.trim();
+  if (!name || item.IndexNumber === undefined || item.IndexNumber === null) return undefined;
+  if (authorsOf(item).some((a) => normalize(a.Name) === normalize(name))) return undefined;
+  return name;
+}
 
 export const workKey = (item: BaseItem) => `${normalize(item.Name)}|${normalize(authorLine(item))}`;
 export const normalize = (s?: string) => (s ?? '').toLowerCase().replace(/^(the|a|an)\s+/, '').replace(/[^\p{L}\p{N}]+/gu, '');
