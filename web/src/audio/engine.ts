@@ -136,6 +136,9 @@ let sleepTimer = 0;
 let lastSave = 0;
 /* Between two songs: the old one's pause isn't the person pausing. */
 let switching = false;
+/* Queue entries in the order they were first played, so turning shuffle on keeps them behind the current song
+   (Previous goes back through what actually played). */
+const played: string[] = [];
 
 function media(): HTMLAudioElement {
   if (el) return el;
@@ -192,6 +195,10 @@ function onTime() {
 
 async function load(entry: Entry, start: number, autoplay: boolean, convert = false) {
   const seq = ++loadSeq;
+  if (!played.includes(entry.key)) {
+    played.push(entry.key);
+    if (played.length > 1000) played.shift();
+  }
   switching = autoplay;
   end(false, false);
   converted = convert;
@@ -428,9 +435,12 @@ export function toggleShuffle() {
   const s = state();
   if (s.mode !== 'music') return;
   if (!s.shuffle) {
+    // What already played stays behind the current song, in the order it played; the rest is shuffled after it.
     const here = s.context[s.pos];
-    const others = s.context.filter((e) => e !== here);
-    set({ shuffle: true, original: s.context, context: here ? [here, ...shuffled(others)] : shuffled(others), pos: 0 });
+    const before = played.map((k) => s.context.find((e) => e.key === k)).filter((e): e is Entry => !!e && e !== here);
+    const rest = s.context.filter((e) => e !== here && !before.includes(e));
+    const context = here ? [...before, here, ...shuffled(rest)] : [...before, ...shuffled(rest)];
+    set({ shuffle: true, original: s.context, context, pos: here ? before.length : Math.max(0, before.length - 1) });
   } else {
     const here = s.context[s.pos];
     const original = s.original ?? s.context;

@@ -6,7 +6,7 @@ import { formatNumber, t } from '../lib/i18n';
 import { navigate } from '../lib/router';
 import { useAsync, useStore } from '../lib/store';
 import { Cover, useCoverTint } from './cover';
-import { audioStore, chapterAt, nextChapter, openPlayer, previousChapter, seek, seekChapter, skip, timeStore, type BookInfo } from './engine';
+import { audioStore, chapterAt, nextChapter, openPlayer, pause, previousChapter, seek, seekChapter, skip, timeStore, type BookInfo } from './engine';
 import { AIcon, Skip30 } from './icons';
 import { PlayButton } from './MiniBar';
 import { SeekBar, clock, remaining } from './parts';
@@ -92,6 +92,8 @@ export function AudiobookPlayer() {
               {ebook.data && (
                 <button type="button" class="apb-chip" onClick={() => {
                   const percent = total ? Math.round((pos / total) * 1000) / 10 : 0;
+                  // Reading takes over from listening: the place is kept for when they come back to it.
+                  pause();
                   openPlayer(false);
                   navigate(`/read/${ebook.data!.Id}?percent=${percent}`);
                 }}>
