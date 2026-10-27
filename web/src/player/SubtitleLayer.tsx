@@ -233,7 +233,19 @@ function AssCues({ track, time, rect }: { track: AssTrack; time: number; rect: {
 
 /* ── PGS pictures ── */
 
-const decoded = new WeakMap<PgsPicture, ImageData | null>();
+/* The last few decoded pictures (seeking back shows them again). Keeping every one a film shows grew by hundreds
+   of MB. */
+const decoded = new Map<PgsPicture, ImageData | null>();
+const KEEP_DECODED = 8;
+
+function decodedPicture(p: PgsPicture): ImageData | null {
+  let img = decoded.get(p);
+  if (img === undefined) img = decodePicture(p);
+  decoded.delete(p);
+  decoded.set(p, img);
+  if (decoded.size > KEEP_DECODED) decoded.delete(decoded.keys().next().value!);
+  return img;
+}
 
 function PgsCanvas({ cue, box, fit }: { cue: PgsCue | null; box: Box; fit: PictureFit }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -247,11 +259,7 @@ function PgsCanvas({ cue, box, fit }: { cue: PgsCue | null; box: Box; fit: Pictu
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (!cue) return;
       for (const p of cue.pictures) {
-        let img = decoded.get(p);
-        if (img === undefined) {
-          img = decodePicture(p);
-          decoded.set(p, img);
-        }
+        const img = decodedPicture(p);
         if (img) ctx.putImageData(img, p.x, p.y);
       }
     } catch { /* leave the frame empty */ }
