@@ -45,7 +45,7 @@ export function releaseMeta(r: MusicRelease, row?: MusicRow): { text: string; ac
   return { text: [artist, when.text].filter(Boolean).join(' · '), accent: r.upcoming && when.soon };
 }
 
-export interface MusicTarget { mbid: string; name?: string; preselect?: string }
+export interface MusicTarget { mbid: string; name?: string; preselect?: string; imageUrl?: string }
 
 export function useMusicDialog() {
   const [target, setTarget] = useState<MusicTarget | null>(null);
@@ -189,7 +189,7 @@ function MusicResults({ query }: { query: string }) {
           <section class="reqs-results-part" aria-label={t('Artists')}>
             <h3 class="reqs-results-h">{t('Artists')}</h3>
             <div class="reqs-grid is-albums">
-              {state.data.artists.map((a) => <ArtistCard key={a.mbid} a={a} onOpen={() => dialog.open({ mbid: a.mbid, name: a.name })} />)}
+              {state.data.artists.map((a) => <ArtistCard key={a.mbid} a={a} onOpen={() => dialog.open({ mbid: a.mbid, name: a.name, imageUrl: a.imageUrl })} />)}
             </div>
           </section>
         )}

@@ -135,6 +135,9 @@ public sealed class MediaFeaturesDto
     /// <summary>Gets or sets the book formats that can be requested: ebook, audiobook, comic.</summary>
     [JsonPropertyName("formats")] public List<string> Formats { get; set; } = [];
 
+    /// <summary>Gets or sets a value indicating whether Home tells people when their requests are ready.</summary>
+    [JsonPropertyName("notifyOnReady")] public bool NotifyOnReady { get; set; }
+
     /// <summary>Gets or sets the app each book format goes to.</summary>
     [JsonPropertyName("bookRoutes")] public Dictionary<string, string> BookRoutes { get; set; } = [];
 
@@ -332,6 +335,9 @@ public sealed class MusicReleaseDto
     [JsonPropertyName("of")] public int? Of { get; set; }
     [JsonPropertyName("tracks")] public int? Tracks { get; set; }
     [JsonPropertyName("lengthMs")] public long? LengthMs { get; set; }
+
+    /// <summary>Gets or sets MusicBrainz's secondary types (live, soundtrack…), lowercase.</summary>
+    [JsonPropertyName("secondary")] public List<string> Secondary { get; set; } = [];
 }
 
 public sealed class MusicRowDto

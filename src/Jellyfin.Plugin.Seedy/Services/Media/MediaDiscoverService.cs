@@ -59,6 +59,9 @@ public sealed class MediaDiscoverService
 
     private static bool Kept(ReleaseGroup g) => !g.Secondary.Any(s => SkippedSecondary.Contains(s));
 
+    /* Rows leave out live recordings too: for many artists they're mostly concert bootlegs. */
+    private static bool Studio(ReleaseGroup g) => Kept(g) && !g.Secondary.Contains("live");
+
     private static DateTime? Day(string? date)
     {
         if (date is null)
@@ -160,7 +163,7 @@ public sealed class MediaDiscoverService
             {
                 foreach (var (artist, groups) in await GroupsFor(ArtistsFor(user, 12), TimeSpan.FromSeconds(8), ct).ConfigureAwait(false))
                 {
-                    foreach (var g in groups.Where(Kept))
+                    foreach (var g in groups.Where(Studio))
                     {
                         if (Day(g.Date) is not { } d || d > today || d < today.AddDays(-400))
                         {
@@ -179,7 +182,7 @@ public sealed class MediaDiscoverService
             {
                 foreach (var (artist, groups) in await GroupsFor(ArtistsFor(user, 16), TimeSpan.FromSeconds(8), ct).ConfigureAwait(false))
                 {
-                    var albums = groups.Where(g => Kept(g) && g.Type is "album" or "ep" && Day(g.Date) is { } d && d <= today).ToList();
+                    var albums = groups.Where(g => Studio(g) && g.Type is "album" or "ep" && Day(g.Date) is { } d && d <= today).ToList();
                     var mine = _library.AlbumsBy(artist.Mbid, artist.Name);
                     var have = albums.Count(g => _library.FindAlbum(g.Mbid, g.Title, artist.Name) is not null);
                     if (have == 0 && mine.Count == 0)
@@ -265,7 +268,8 @@ public sealed class MediaDiscoverService
         Type = g.Type,
         Date = g.Date,
         CoverUrl = MusicBrainzClient.Cover(g.Mbid),
-        Upcoming = Day(g.Date) is { } d && d > DateTime.UtcNow.Date
+        Upcoming = Day(g.Date) is { } d && d > DateTime.UtcNow.Date,
+        Secondary = g.Secondary.ToList()
     };
 
     /* On the server, asked for, waiting for approval or downloading. */

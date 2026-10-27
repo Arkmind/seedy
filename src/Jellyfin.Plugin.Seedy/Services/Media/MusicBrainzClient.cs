@@ -137,9 +137,16 @@ public sealed class MusicBrainzClient
     /// <returns>By release group id.</returns>
     public async Task<Dictionary<string, ReleaseLength>> LengthsAsync(string artistMbid, CancellationToken ct)
     {
-        var node = await Mb("/release?artist=" + artistMbid + "&status=official&inc=release-groups+media+recordings&limit=100", ct).ConfigureAwait(false);
+        var node = await Mb("/release?artist=" + artistMbid + "&status=official&type=album|ep|single&inc=release-groups+media+recordings&limit=100", ct).ConfigureAwait(false);
+        var releases = J.Arr(node?["releases"]).ToList();
+        if ((J.Int(node?["release-count"]) ?? 0) > 100)
+        {
+            var more = await Mb("/release?artist=" + artistMbid + "&status=official&type=album|ep|single&inc=release-groups+media+recordings&limit=100&offset=100", ct).ConfigureAwait(false);
+            releases.AddRange(J.Arr(more?["releases"]));
+        }
+
         var map = new Dictionary<string, ReleaseLength>(StringComparer.OrdinalIgnoreCase);
-        foreach (var r in J.Arr(node?["releases"]))
+        foreach (var r in releases)
         {
             var rg = J.Str(r?["release-group"]?["id"]);
             if (rg is null)

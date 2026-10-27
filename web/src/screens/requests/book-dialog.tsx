@@ -207,7 +207,7 @@ function Body({ book, opts, row, loading, error, retry, onClose, onDone }: {
         </span>
         <span class="reqs-dlg-buttons">
           <button type="button" class="reqs-dlg-cancel" onClick={onClose}>{t('Cancel')}</button>
-          <button type="button" class="btn btn-primary reqs-dlg-send" disabled={busy || blocked || over || !units || !opts} onClick={() => void submit()}>
+          <button type="button" data-autofocus class="btn btn-primary reqs-dlg-send" disabled={busy || blocked || over || !units || !opts} onClick={() => void submit()}>
             <Icon name="request" size={18} stroke={2.2} />
             {busy ? t('Requesting…') : label}
           </button>

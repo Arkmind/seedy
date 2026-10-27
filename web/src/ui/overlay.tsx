@@ -180,7 +180,7 @@ export function Sheet({ open, onClose, children, wide, label, labelledBy, class:
     document.addEventListener('keydown', onKey, true);
     // First focus: a field, else the primary action, else any control (in that order of preference).
     requestAnimationFrame(() => {
-      for (const sel of ['input:not([type=hidden]), textarea, select', 'button.btn-primary', 'button']) {
+      for (const sel of ['[data-autofocus]', 'input:not([type=hidden]), textarea, select', 'button.btn-primary', 'button']) {
         const el = ref.current?.querySelector<HTMLElement>(sel);
         if (el) { el.focus(); break; }
       }

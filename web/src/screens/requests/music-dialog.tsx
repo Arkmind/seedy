@@ -29,6 +29,8 @@ function releaseSub(r: MusicRelease): string {
     return d && r.date!.length >= 10 ? t('Out {date}', { date: fmtDate(d) }) : t('Announced');
   }
   const parts = [r.date?.slice(0, 4) ?? ''];
+  if (r.secondary?.includes('live')) parts.push(t('Live'));
+  else if (r.secondary?.includes('soundtrack')) parts.push(t('Soundtrack'));
   if (r.tracks) parts.push(tn(r.tracks, '{n} song', '{n} songs'));
   if (r.lengthMs) parts.push(t('{n} min', { n: Math.round(r.lengthMs / 60000) }));
   return parts.filter(Boolean).join(' · ');
@@ -46,7 +48,7 @@ export function RequestMusicArtist({ target, onClose }: { target: MusicTarget; o
       {!data || !opts ? (
         <Loading name={target.name} error={state.error} onRetry={state.reload} onClose={onClose} />
       ) : (
-        <Body key={data.artist.mbid} data={data} opts={opts} preselect={pre} onClose={onClose} />
+        <Body key={data.artist.mbid} data={data} opts={opts} preselect={pre} imageUrl={target.imageUrl} onClose={onClose} />
       )}
     </Sheet>
   );
@@ -92,8 +94,8 @@ function Loading({ name, error, onRetry, onClose }: { name?: string; error?: Err
   );
 }
 
-function Body({ data, opts, preselect, onClose }: { data: MusicArtist; opts: MediaOptions; preselect?: MusicRelease; onClose: () => void }) {
-  const a = data.artist;
+function Body({ data, opts, preselect, imageUrl, onClose }: { data: MusicArtist; opts: MediaOptions; preselect?: MusicRelease; imageUrl?: string; onClose: () => void }) {
+  const a = { ...data.artist, imageUrl: data.artist.imageUrl ?? imageUrl };
   const counts = useMemo(() => {
     const c: Record<Type, number> = { album: 0, ep: 0, single: 0 };
     for (const r of data.releases) c[r.type] = (c[r.type] ?? 0) + 1;
@@ -105,10 +107,12 @@ function Body({ data, opts, preselect, onClose }: { data: MusicArtist; opts: Med
   const [keepNew, setKeepNew] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  const rows = data.releases.filter((r) => r.type === type);
+  // Studio releases first, newest first; live recordings and soundtracks after them.
+  const extra = (r: MusicRelease) => (r.secondary?.length ? 1 : 0);
+  const rows = data.releases.filter((r) => r.type === type).sort((x, y) => extra(x) - extra(y));
   const open = rows.filter((r) => !locked(r));
   const allOn = open.length > 0 && open.every((r) => picked.has(r.mbid));
-  const wholeCount = data.releases.filter((r) => !locked(r) && !r.upcoming && (r.type === 'album' || r.type === 'ep')).length;
+  const wholeCount = data.releases.filter((r) => !locked(r) && !r.upcoming && !r.secondary?.length && (r.type === 'album' || r.type === 'ep')).length;
   const units = mode === 'albums' ? picked.size : mode === 'artist' ? Math.max(1, wholeCount) : 0;
 
   const toggle = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -198,7 +202,7 @@ function Body({ data, opts, preselect, onClose }: { data: MusicArtist; opts: Med
             <div role="group" aria-label={t(TYPES.find((x) => x.id === type)!.many.split(' ·')[0]!)} class="reqs-dlg-rows">
               {rows.map((r) => {
                 const isLocked = locked(r);
-                const on = !isLocked && (mode === 'artist' ? (r.type === 'album' || r.type === 'ep') && !r.upcoming : picked.has(r.mbid));
+                const on = !isLocked && (mode === 'artist' ? (r.type === 'album' || r.type === 'ep') && !r.upcoming && !r.secondary?.length : picked.has(r.mbid));
                 const status = cardStatus(r.status, r.requestedBy) ?? { text: r.upcoming ? t('Not out yet') : t('Not on the server'), dot: '#c8c8c8' };
                 const tone = r.status === 'server' ? 'is-server' : r.status === 'none' ? '' : 'is-pending';
                 return (
@@ -253,7 +257,7 @@ function Body({ data, opts, preselect, onClose }: { data: MusicArtist; opts: Med
         </span>
         <span class="reqs-dlg-buttons">
           <button type="button" class="reqs-dlg-cancel" onClick={onClose}>{t('Cancel')}</button>
-          <button type="button" class="btn btn-primary reqs-dlg-send" disabled={busy || blocked || over || (mode === 'albums' && !units)} onClick={() => void submit()}>
+          <button type="button" data-autofocus class="btn btn-primary reqs-dlg-send" disabled={busy || blocked || over || (mode === 'albums' && !units)} onClick={() => void submit()}>
             <Icon name="request" size={18} stroke={2.2} />
             {busy ? t('Requesting…') : label}
           </button>

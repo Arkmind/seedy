@@ -260,6 +260,7 @@ public class SeedyController : ControllerBase
                 Music = Services.Media.MediaRequestService.MusicEnabled,
                 Books = Services.Media.MediaRequestService.BooksEnabled,
                 Formats = ConfigMapper.BookFormats(c),
+                NotifyOnReady = c.MediaNotifyOnReady,
                 BookRoutes = ConfigMapper.BookFormats(c).ToDictionary(f => f, f => ConfigMapper.BookRoute(c, f)!),
                 LidarrUrl = user.IsAdmin() && Services.Media.MediaRequestService.MusicEnabled ? c.LidarrUrl : null,
                 ShelfarrUrl = user.IsAdmin() && ConfigMapper.BookAppReady(c, "shelfarr") ? c.ShelfarrUrl : null,

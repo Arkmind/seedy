@@ -16,6 +16,8 @@ export interface MediaFeatures {
   music: boolean;
   books: boolean;
   formats: BookFormat[];
+  /* Whether Home tells people when their music and book requests are ready. */
+  notifyOnReady?: boolean;
   /* Which app each book format goes to. */
   bookRoutes?: Partial<Record<BookFormat, MediaService>>;
   /* "Open in …" addresses, for admins. */
@@ -109,6 +111,8 @@ export interface MusicRelease {
   of?: number;
   tracks?: number;
   lengthMs?: number;
+  /* MusicBrainz secondary types: live, soundtrack… */
+  secondary?: string[];
 }
 
 export interface MusicArtistRef { mbid: string; name: string; disambiguation?: string; type?: string; area?: string; imageUrl?: string; itemId?: string }

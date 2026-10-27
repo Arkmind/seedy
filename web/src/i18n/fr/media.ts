@@ -338,6 +338,8 @@ const fr: Record<string, string> = {
   'Show requests to everyone': 'Montrer les demandes à tous',
   'Others see “Requested by Sam” on the cover': 'Les autres voient « Demandé par Sam » sur la couverture',
   'Show {what}': 'Afficher {what}',
+  'Live': 'En concert',
+  'Soundtrack': 'Bande originale',
 };
 
 export default fr;
