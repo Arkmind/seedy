@@ -9,6 +9,7 @@ import { useAsync, useStore } from '../../lib/store';
 import { Header } from '../../ui/navbar/Header';
 import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { useInView } from '../browse/parts';
+import { CUSTOM, readCustom } from '../me/prefs';
 import { manageChanged } from '../browse/manage/host';
 import { genreMix, instantMix, orderByIds, playlistTracks, type Track } from '../../audio/api';
 import { audioStore, playContainer, playLoaded, playedStore, recentSources } from '../../audio/engine';
@@ -36,7 +37,10 @@ export function MusicLibrary({ view }: { view: BaseItem }) {
   const loc = useLocation();
   const me = useStore(meStore);
   const asked = loc.query.get('tab') as MusicTab | null;
-  const tab: MusicTab = TABS.some((x) => x.id === asked) ? asked! : 'overview';
+  // The tab it opens on is the person's choice (Settings · Home screen › Libraries › Opens on).
+  const opensOn = readCustom(CUSTOM.opensOn, me.prefs)[view.Id] as MusicTab | undefined;
+  const first: MusicTab = TABS.some((x) => x.id === opensOn) ? opensOn! : 'overview';
+  const tab: MusicTab = TABS.some((x) => x.id === asked) ? asked! : first;
   const [reload, setReload] = useState(0);
   const counts = useAsync(
     () => Promise.all([countOf(view.Id, 'MusicAlbum'), albumArtistsCount(view.Id), countOf(view.Id, 'Audio')]),
@@ -111,7 +115,7 @@ export function MusicLibrary({ view }: { view: BaseItem }) {
           </div>
           <nav aria-label={t('Music views')} class="mu-tabs hscroll">
             {TABS.map((x) => (
-              <Link key={x.id} to={`/library/${view.Id}${x.id === 'overview' ? '' : '?tab=' + x.id}`} replace class="mu-tab" aria-current={x.id === tab ? 'page' : undefined}>
+              <Link key={x.id} to={`/library/${view.Id}${x.id === first ? '' : '?tab=' + x.id}`} replace class="mu-tab" aria-current={x.id === tab ? 'page' : undefined}>
                 {t(x.label)}
               </Link>
             ))}

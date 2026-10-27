@@ -98,7 +98,7 @@ export function MiniBar() {
       </div>
       <div class="ap-bar-right">
         <button type="button" class="ap-bar-btn is-soft" aria-label={t('Lyrics')} onClick={() => openPlayer(true)}><AIcon name="lyrics" size={18} /></button>
-        <button type="button" class="ap-bar-btn is-soft" aria-label={t('Queue')} onClick={() => openPlayer(true)}><AIcon name="queue" size={18} /></button>
+        <button type="button" class="ap-bar-btn is-soft" aria-label={t('Queue')} onClick={() => openPlayer(true, 'queue')}><AIcon name="queue" size={18} /></button>
         <CastMenu class="ap-bar-btn is-soft" />
         <span class="ap-bar-volume">
           <button type="button" class="ap-bar-mute" aria-label={s.muted ? t('Unmute') : t('Mute')} onClick={toggleMute}>

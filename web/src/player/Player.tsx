@@ -4,7 +4,7 @@ import { ApiError, get } from '../api/client';
 import { PLAYER_FIELDS, getEpisodes, getItem, getMediaSegments, getSimilar, sendPlayCommand } from '../api/jellyfin';
 import { castTarget } from '../lib/cast';
 import { isAudioItem } from '../audio/api';
-import { playItem } from '../audio/engine';
+import { playItem, playTracks } from '../audio/engine';
 import { resolvePlayable } from '../screens/browse/parts';
 import { chapterImageUrl, primaryUrl } from '../api/images';
 import type { PlaybackPrefs, SubtitlePrefs } from '../api/seedy';
@@ -97,7 +97,9 @@ export function Player({ id }: { id: string }) {
         if (!alive) return;
         // Songs, albums, artists, music playlists and audiobooks play in the audio player, over the page they came from.
         if (isAudioItem(item) && !castTarget.get()) {
-          void playItem(item, { startTicks: params.t ? Number(params.t) || 0 : undefined });
+          // Another app may hand over a whole queue (remote Play with several songs).
+          if (item.Type === 'Audio' && params.queue.length) void playTracks([item.Id, ...params.queue], 0, { startTicks: params.t ? Number(params.t) || 0 : undefined });
+          else void playItem(item, { startTicks: params.t ? Number(params.t) || 0 : undefined });
           back('/');
           return;
         }

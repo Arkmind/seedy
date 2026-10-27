@@ -64,8 +64,9 @@ export interface AudioState {
   sleep: Sleep;
   book: BookInfo | null;
   stream: StreamInfo | null;
-  /* The full-screen player is open. */
+  /* The full-screen player is open, and what it opened for (the bar's Queue button opens on Up next). */
   open: boolean;
+  panel: 'lyrics' | 'queue';
 }
 
 const VOLUME_KEY = 'seedy.audio.volume';
@@ -94,7 +95,7 @@ const initial = (): AudioState => {
     mode: null, current: null, fromAdded: false, context: [], original: null, pos: 0, added: [], source: null,
     shuffle: false, repeat: 'off', playing: false, loading: false,
     volume: typeof vol.volume === 'number' ? Math.max(0, Math.min(1, vol.volume)) : 1, muted: !!vol.muted,
-    speed: readLocal<number>(SPEED_KEY, 1) || 1, sleep: null, book: null, stream: null, open: false
+    speed: readLocal<number>(SPEED_KEY, 1) || 1, sleep: null, book: null, stream: null, open: false, panel: 'lyrics'
   };
 };
 
@@ -508,8 +509,8 @@ export function setSpeed(v: number) {
   report('ratechange');
 }
 
-export function openPlayer(open = true) {
-  set({ open });
+export function openPlayer(open = true, panel: AudioState['panel'] = 'lyrics') {
+  set({ open, panel });
 }
 
 /* Stops and forgets everything (signing out, or the person closing the player). */

@@ -38,7 +38,7 @@ export function NowPlaying() {
   const time = useStore(timeStore);
   const tk = s.current?.track;
   const tint = useCoverTint(tk);
-  const [tab, setTab] = useState<Tab>('lyrics');
+  const [tab, setTab] = useState<Tab>(() => (audioStore.get().panel === 'queue' ? 'queue' : 'lyrics'));
   if (!tk) return null;
   const fav = !!tk.UserData?.IsFavorite;
   const pos = time.position;
