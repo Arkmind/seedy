@@ -1,4 +1,4 @@
-import Hls, { type ErrorData } from 'hls.js';
+import Hls, { type ErrorData, type Fragment } from 'hls.js';
 import { SERVER_URL, authHeader, deviceId, getSession } from '../api/client';
 import {
   getPlaybackInfo, pingPlayback, reportPlaybackProgress, reportPlaybackStart, type PlaybackInfoRequest, type PlaybackReport
@@ -321,6 +321,14 @@ export function subtitleUrl(item: BaseItem, source: MediaSource, s: MediaStream,
 
 const isSafari = () => /Safari\//.test(navigator.userAgent) && !/Chrome\/|Chromium\/|Edg\//.test(navigator.userAgent);
 
+/* Seconds a playing stream may stand still, with no more data coming in, before it is opened again where it stopped
+   (what reloading the page did). Starting or seeking a conversion takes a few of them. */
+const STALL_SECONDS = 20;
+
+function bufferedEnd(r: TimeRanges): number {
+  try { return r.length ? r.end(r.length - 1) : 0; } catch { return 0; }
+}
+
 /* Sessions/Playing/Stopped and the encoder cleanup must survive the tab closing. */
 function keepalive(method: 'POST' | 'DELETE', path: string, body?: unknown) {
   try {
@@ -366,9 +374,18 @@ export class PlaybackSession {
   private pingTimer = 0;
   private netRetries = 0;
   private mediaRecoveries = 0;
+  private stallTimer = 0;
+  private opening = 0;
+  /* The watchdog's last look: the clock and the data coming in, seconds without either moving, seconds of steady
+     playback, and the reopenings since it last played. Armed once the stream has played. */
+  private stall = { armed: false, time: -1, data: '', still: 0, flowing: 0, reopens: 0 };
+  /* The segment hls.js is downloading (on a slow line one can take longer than the watchdog waits). */
+  private fragment: Fragment | null = null;
   /* The start-position seek waiting for the current stream's metadata. */
   private pendingSeek: (() => void) | null = null;
   private pendingAt = 0;
+  /* Where the stream hls.js is loading starts: the element reads 0 until it plays. */
+  private hlsStartAt = 0;
 
   constructor(public item: BaseItem, media: MediaBridge | HTMLVideoElement, private events: SessionEvents, opts: StreamOptions) {
     this.media = media instanceof MediaBridge ? media : new MediaBridge(media);
@@ -393,11 +410,20 @@ export class PlaybackSession {
 
   position(): number {
     // Until the start seek has happened, the element's 0 isn't where playback is.
-    const t = this.pendingSeek ? this.pendingAt : this.media.currentTime || 0;
+    const t = this.pendingSeek ? this.pendingAt : this.media.currentTime || this.hlsStartAt;
     return t + (this.stream?.timeOffset ?? 0);
   }
 
   async open(opts: Partial<StreamOptions> = {}): Promise<ActiveStream | null> {
+    this.opening++;
+    try {
+      return await this.openStream(opts);
+    } finally {
+      this.opening--;
+    }
+  }
+
+  private async openStream(opts: Partial<StreamOptions>): Promise<ActiveStream | null> {
     const my = ++this.seq;
     const next = { ...this.opts, ...opts };
     const stream = await requestStream(this.item, next);
@@ -441,6 +467,9 @@ export class PlaybackSession {
     this.clearPendingSeek();
     this.netRetries = 0;
     this.mediaRecoveries = 0;
+    this.stall = { ...this.stall, armed: false, time: -1, still: 0, flowing: 0 };
+    this.fragment = null;
+    this.hlsStartAt = 0;
     const startAt = Math.max(0, startSeconds - stream.timeOffset);
     if (stream.engine === 'soft') {
       await this.attachSoft(stream, startAt);
@@ -472,6 +501,8 @@ export class PlaybackSession {
         }
         this.events.onFatal(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'network' : 'media', stream, hlsPart(data));
       });
+      hls.on(Hls.Events.FRAG_LOADING, (_e, data) => { this.fragment = data.frag; });
+      this.hlsStartAt = startAt;
       hls.loadSource(stream.url);
       hls.attachMedia(el);
       return;
@@ -552,6 +583,8 @@ export class PlaybackSession {
   }
 
   private onPlaying() {
+    this.stall.armed = true;
+    this.hlsStartAt = 0;
     if (this.started || this.stopped || !this.stream || this.silent) return;
     this.started = true;
     reportPlaybackStart(this.body()).catch(() => undefined);
@@ -592,12 +625,61 @@ export class PlaybackSession {
   private schedule() {
     window.clearInterval(this.progressTimer);
     window.clearInterval(this.pingTimer);
+    window.clearInterval(this.stallTimer);
     this.progressTimer = window.setInterval(() => this.report('progress', 'timeupdate'), 10_000);
+    // Live TV has its own watchdog (LivePlayer); a copy played alongside follows the main player.
+    if (!this.silent && this.item.Type !== 'TvChannel') this.stallTimer = window.setInterval(() => this.checkStall(), 1000);
     if (this.stream && this.stream.method !== 'DirectPlay') {
       this.pingTimer = window.setInterval(() => {
         if (this.stream && !this.stopped) pingPlayback(this.stream.playSessionId).catch(() => undefined);
       }, 30_000);
     }
+  }
+
+  /* A stream can stop without an error: a conversion the server dropped, a request that never answers (the
+     experimental player waits on its downloads forever), a computer back from sleep. Once a second, while it should
+     play: nothing moved for STALL_SECONDS → open it again where it stood; a fresh stream that doesn't play either
+     (watched from its start) is an error. Steady playback refills the reopening and hls.js retry budgets. */
+  private checkStall() {
+    const m = this.media;
+    const w = this.stall;
+    const nearEnd = this.runtime > 0 && this.position() >= this.runtime - 5;
+    if (this.stopped || !this.stream || this.opening || !(w.armed || w.reopens) || m.paused || m.ended || nearEnd || document.hidden) {
+      w.time = -1;
+      w.still = 0;
+      w.flowing = 0;
+      return;
+    }
+    const time = m.currentTime;
+    const data = `${bufferedEnd(m.buffered)}:${this.fragment?.sn ?? ''}:${this.fragment?.stats.loaded ?? ''}`;
+    const first = w.time < 0;
+    const moved = !first && time !== w.time;
+    const loading = !first && data !== w.data;
+    w.time = time;
+    w.data = data;
+    w.flowing = moved ? w.flowing + 1 : 0;
+    // Seeks and stream switches jump the clock once; only playback moves it every second.
+    if (w.flowing === 10) w.reopens = 0;
+    if (w.flowing === 60) {
+      this.netRetries = 0;
+      this.mediaRecoveries = 0;
+    }
+    if (first || moved || loading) {
+      w.still = 0;
+      return;
+    }
+    if (++w.still < STALL_SECONDS) return;
+    w.still = 0;
+    const s = this.stream;
+    if (w.reopens >= 1) {
+      this.events.onFatal(s.engine === 'soft' ? 'soft' : 'network', s);
+      return;
+    }
+    w.reopens++;
+    console.warn('[seedy] playback stalled, opening the stream again at', this.position());
+    this.change({}).catch(() => {
+      if (!this.stopped && this.stream === s) this.events.onFatal('network', s);
+    });
   }
 
   private stopEncoding(playSessionId: string) {
@@ -620,6 +702,7 @@ export class PlaybackSession {
     this.seq++;
     window.clearInterval(this.progressTimer);
     window.clearInterval(this.pingTimer);
+    window.clearInterval(this.stallTimer);
     this.media.removeEventListener('playing', this.onPlaying);
     this.el.removeEventListener('error', this.onMediaError);
     this.clearPendingSeek();
