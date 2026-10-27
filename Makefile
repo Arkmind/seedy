@@ -1,15 +1,16 @@
 # Shortcuts for building Seedy and running the local test server. `make` lists them.
-# The scripts behind them work on their own too: build.sh, dev/make-media.sh, dev/setup-seerr.py, dev/setup-arr.py.
+# The scripts behind them work on their own too: build.sh, dev/make-media.sh, dev/make-music-books.py, dev/setup-*.py.
 
 SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 
 JELLYFIN_IMAGE := $(shell sed -n 's/^ *image: \(jellyfin\/jellyfin:.*\)/\1/p' dev/docker-compose.yml)
+PYTHON_IMAGE := python:3.12-slim
 
-.PHONY: help build typecheck clean web web-mock android android-shared android-test android-shots dev-up dev-down dev-logs dev-install dev-media dev-seerr dev-arr
+.PHONY: help build typecheck clean web web-mock android android-shared android-test android-shots dev-up dev-down dev-logs dev-install dev-media dev-libraries dev-seerr dev-arr
 
 help:
-	@awk 'BEGIN { FS = ":.*## " } /^## / { printf "\n%s\n", substr($$0, 4) } /^[a-z-]+:.*## / { printf "  \033[1m%-12s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+	@awk 'BEGIN { FS = ":.*## " } /^## / { printf "\n%s\n", substr($$0, 4) } /^[a-z-]+:.*## / { printf "  \033[1m%-18s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
 ## Build
 
@@ -58,9 +59,16 @@ dev-logs: ## Follow the test Jellyfin's log
 dev-install: ## Build, install into the test server and restart it
 	./build.sh --install-dev
 
-dev-media: ## Fill the test library with open-licensed titles (dev/make-media.sh)
+dev-media: ## Fill the test library: open-licensed films and shows, made-up music, books, audiobooks and comics
 	docker run --rm -v "$(CURDIR)/dev/make-media.sh:/make-media.sh:ro" -v "$(CURDIR)/dev/data/media:/media" \
 		--entrypoint /bin/sh $(JELLYFIN_IMAGE) /make-media.sh
+	docker run --rm -v "$(CURDIR)/dev/make-music-books.py:/gen.py:ro" -v "$(CURDIR)/dev/data/media:/media" \
+		-v "$(CURDIR)/android/ui/src/main/res/font/noto_sans.ttf:/font.ttf:ro" $(PYTHON_IMAGE) \
+		sh -c 'pip install -q --disable-pip-version-check --root-user-action=ignore pillow numpy && python /gen.py'
+	docker run --rm -v "$(CURDIR)/dev/data/media:/media" --entrypoint /bin/sh $(JELLYFIN_IMAGE) /media/.seedy-audio/encode.sh
+
+dev-libraries: ## Add the Music and Books libraries, with plays, playlists and reading positions for Alex
+	cd dev && python3 setup-libraries.py
 
 dev-seerr: ## Connect the test Seerr to the test Jellyfin
 	cd dev && python3 setup-seerr.py
