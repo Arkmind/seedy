@@ -297,6 +297,8 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
   const target = seerrTarget(item);
   const requestable = canRequest && (item.status === 'none' || item.status === 'declined');
   const style = width ? { flex: `0 0 ${width}px`, width: width + 'px' } : undefined;
+  // TV remotes move from card to card and OK opens the title, so Request waits on its page rather than over the poster.
+  const tv = useStore(tvActive);
   return (
     <div class="card poster-card" style={style}>
       <div class="card-media is-poster" tabIndex={-1}>
@@ -305,7 +307,7 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
         </Link>
         <TypePill type={upcoming ? 'upcoming' : item.mediaType} />
         {!upcoming && <SeerrStatusPill status={item.status} />}
-        {!showRequestButton && (
+        {!showRequestButton && !tv && (
           <div class="poster-hover">
             {requestable && (
               <button type="button" class="btn btn-primary is-sm is-block" aria-haspopup={item.mediaType === 'tv' ? 'dialog' : undefined} disabled={requesting} onClick={() => onRequest(item)}>

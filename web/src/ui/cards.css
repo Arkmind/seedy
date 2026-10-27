@@ -67,7 +67,9 @@
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.35) 100%);
   opacity: 0; pointer-events: none; transition: opacity var(--t-fast) var(--ease);
 }
-.poster-card:hover .poster-hover, .poster-card .card-media:focus-within .poster-hover { opacity: 1; pointer-events: auto; }
+.poster-card:hover .poster-hover, .poster-card .card-media:focus-within .poster-hover { opacity: 1; }
+/* Only the buttons take clicks; the scrim around them still opens the title. */
+.poster-card:hover .poster-hover > *, .poster-card .card-media:focus-within .poster-hover > * { pointer-events: auto; }
 .poster-card .card-media:focus-within { outline-color: var(--seedy-accent); }
 .poster-more {
   height: 36px; border-radius: var(--r-btn-sm); background: rgba(31, 31, 31, 0.9); color: var(--seedy-text);
