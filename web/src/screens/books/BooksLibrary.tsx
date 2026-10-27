@@ -359,7 +359,15 @@ function ContinueSection({ view, data }: { view: BaseItem; data: BooksData }) {
   const entries = useAsync(async () => {
     const reading = Array.from(data.reading.values()).filter((r) => !r.Finished);
     const byId = new Map(data.all.map((i) => [i.Id, i]));
-    const books = reading.map((r) => ({ r, item: byId.get(r.ItemId) })).filter((x): x is { r: Reading; item: BaseItem } => !!x.item && !isAudioBook(x.item));
+    const opened = reading.map((r) => ({ r, item: byId.get(r.ItemId) })).filter((x): x is { r: Reading; item: BaseItem } => !!x.item && !isAudioBook(x.item));
+    // One card per work: the format read furthest (the EPUB at 46% over a PDF only opened), then the latest.
+    const best = new Map<string, { r: Reading; item: BaseItem }>();
+    for (const x of opened) {
+      const k = workKey(x.item);
+      const cur = best.get(k);
+      if (!cur || x.r.Percent > cur.r.Percent || (x.r.Percent === cur.r.Percent && time(x.r.UpdatedAt) > time(cur.r.UpdatedAt))) best.set(k, x);
+    }
+    const books = Array.from(best.values());
     const listening = data.audio.filter((a) => !a.UserData?.Played && (a.UserData?.PlaybackPositionTicks ?? 0) > 0);
     const playing = await nowPlayingHere();
     type Cand = { at: number; make: () => Promise<ContinueEntry> };
@@ -368,14 +376,16 @@ function ContinueSection({ view, data }: { view: BaseItem; data: BooksData }) {
       ...listening.map((item) => ({ at: item.Id === playing ? Date.now() : time(item.UserData?.LastPlayedDate), make: async () => audioEntry(item, item.Id === playing) }))
     ];
     cands.sort((a, b) => b.at - a.at);
-    return Promise.all(cands.slice(0, 3).map((c) => c.make()));
+    return Promise.all(cands.slice(0, 6).map((c) => c.make()));
   }, [data, view.Id]);
-  if (!entries.data?.length) return null;
+  const [ref, cols] = useColumns<HTMLDivElement>(380, 20);
+  const list = entries.data ?? [];
+  if (!list.length) return null;
   return (
     <section class="bk-sec" aria-labelledby="bk-cont">
       <SectionHead id="bk-cont" title={t('Continue')} />
-      <div class="bk-cont-grid">
-        {entries.data.map((e) => <ContinueCard key={e.item.Id} entry={e} />)}
+      <div ref={ref} class="bk-cont-grid" style={{ gridTemplateColumns: `repeat(${cols || 1}, minmax(0, 1fr))` }}>
+        {cols > 0 && list.slice(0, cols).map((e) => <ContinueCard key={e.item.Id} entry={e} />)}
       </div>
     </section>
   );

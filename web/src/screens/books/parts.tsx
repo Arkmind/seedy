@@ -1,5 +1,5 @@
-import type { ComponentChildren, RefObject } from 'preact';
-import { useLayoutEffect, useRef, useState } from 'preact/hooks';
+import type { ComponentChildren } from 'preact';
+import { useLayoutEffect, useState } from 'preact/hooks';
 import type { BaseItem } from '../../api/types';
 import { dayOf, duration, pct, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
@@ -61,19 +61,18 @@ export const audioLength = (item: BaseItem) => (item.RunTimeTicks ? duration(tic
 
 /* ───────── Columns that fit: overview rows show one row of whatever fits ───────── */
 
-export function useColumns<T extends HTMLElement>(min: number, gap: number): [RefObject<T>, number] {
-  const ref = useRef<T>(null);
+export function useColumns<T extends HTMLElement>(min: number, gap: number): [(el: T | null) => void, number] {
+  const [el, setEl] = useState<T | null>(null);
   const [cols, setCols] = useState(0);
   useLayoutEffect(() => {
-    const el = ref.current;
     if (!el) return;
     const measure = () => setCols(Math.max(1, Math.floor((el.clientWidth + gap) / (min + gap))));
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [min, gap]);
-  return [ref, cols];
+  }, [el, min, gap]);
+  return [setEl, cols];
 }
 
 /* ───────── Section head: "Recently added ……… See all" ───────── */
