@@ -20,7 +20,7 @@ import {
 import { useBooksData, VolumeCard } from './BooksLibrary';
 import { epubLanguage } from './epub-meta';
 import { AudioCover, BookCover } from './covers';
-import { BookCard, HeadphonesIcon, roughTime, yearOfBook } from './parts';
+import { BookCard, HeadphonesIcon, plainText, roughTime, yearOfBook } from './parts';
 import './books.css';
 import './details.css';
 
@@ -353,13 +353,6 @@ function useFileSize(item: BaseItem): string {
   return bytes >= 1024 * 1024
     ? `${formatNumber(bytes / (1024 * 1024), { maximumFractionDigits: 1, minimumFractionDigits: 1 })} MB`
     : `${formatNumber(Math.max(1, Math.round(bytes / 1024)))} KB`;
-}
-
-/* Jellyfin hands back the description as it was in the file, sometimes as HTML. */
-function plainText(s: string): string {
-  if (!/<[a-z][\s\S]*>/i.test(s)) return s;
-  const doc = new DOMParser().parseFromString(s, 'text/html');
-  return (doc.body.textContent ?? '').replace(/\s+\n/g, '\n').trim();
 }
 
 function longDate(s: string): string {

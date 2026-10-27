@@ -103,6 +103,44 @@
 .bk-card:focus-visible { outline: none; }
 .bk-card:focus-visible .bk-card-art { outline-color: var(--seedy-accent); }
 .bk-card-text { display: flex; flex-direction: column; gap: 2px; padding: 0 2px; min-width: 0; }
+
+/* Opening a book: after a moment's hover (or on keyboard focus) the cover swings open on its spine, onto a first page
+   in the reader's sepia, where the synopsis is printed. */
+.bk-card-art { perspective: 1100px; }
+.bk-leaf {
+  position: relative; z-index: 1; display: block; transform-origin: 0 50%; transform-style: preserve-3d;
+  transition: transform 560ms cubic-bezier(0.3, 0.75, 0.25, 1);
+}
+.bk-leaf > .bk-cover { backface-visibility: hidden; }
+/* The inside of the cover: endpaper. */
+.bk-leaf-back {
+  position: absolute; inset: 0; border-radius: 10px 4px 4px 10px; transform: rotateY(180deg); backface-visibility: hidden;
+  background: linear-gradient(270deg, #cbbd9f 0%, #e3d6bd 18%, #e9ddc6 100%);
+}
+.bk-firstpage {
+  position: absolute; inset: 0; box-sizing: border-box; container-type: inline-size; display: flex; flex-direction: column;
+  padding: 11% 9% 0 11%; border-radius: 3px 9px 9px 3px; overflow: hidden;
+  background: #f1e6d0; color: #2e2416; font-family: 'Noto Serif Variable', 'Noto Serif', Georgia, serif;
+  box-shadow: inset 7px 0 10px -7px rgba(46, 36, 22, 0.55);
+}
+.bk-fp-title { font-size: 11.5cqw; line-height: 1.12; font-weight: 800; }
+.bk-fp-by { margin-top: 3.5cqw; font-family: var(--font); font-size: 6.6cqw; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8a7454; }
+.bk-fp-text {
+  flex: 1; min-height: 0; margin-top: 5cqw; font-size: 9.2cqw; line-height: 1.4; overflow: hidden; overflow-wrap: break-word;
+  -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 96%); mask-image: linear-gradient(180deg, #000 72%, transparent 96%);
+}
+.bk-card.can-open:hover, .bk-card.can-open:focus-visible { z-index: 2; }
+.bk-card.can-open:focus-visible .bk-leaf { transform: rotateY(-104deg); }
+.bk-card.can-open:focus-visible .bk-read-badge { opacity: 0; }
+@media (hover: hover) {
+  .bk-card.can-open:hover .bk-leaf { transform: rotateY(-104deg); transition-delay: 260ms; }
+  .bk-card.can-open:hover .bk-read-badge { opacity: 0; transition-delay: 260ms; }
+}
+.bk-read-badge { transition: opacity 160ms ease; }
+@media (prefers-reduced-motion: reduce) {
+  .bk-leaf { transition: opacity 200ms ease; }
+  .bk-card.can-open:focus-visible .bk-leaf, .bk-card.can-open:hover .bk-leaf { transform: none; opacity: 0; }
+}
 .bk-card-title { font-size: 14px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bk-card-title.is-dim { color: var(--seedy-text-2); }
 .bk-card-sub { font-size: 13px; color: var(--seedy-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

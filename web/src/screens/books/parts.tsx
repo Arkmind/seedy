@@ -7,6 +7,7 @@ import { Link } from '../../lib/router';
 import { playAudiobook } from '../../audio/engine';
 import { authorLine, isAudioBook, isComic, seriesOf, type Reading } from './api';
 import { AudioCover, BookCover } from './covers';
+import '@fontsource-variable/noto-serif/wght.css';
 
 /* Pieces shared by the books screens: cards, section heads, a few labels. */
 
@@ -86,15 +87,36 @@ export function SectionHead({ id, title, link, linkLabel, onLink }: { id: string
   );
 }
 
+/* Jellyfin hands back the description as it was in the file, sometimes as HTML. */
+export function plainText(s: string): string {
+  if (!/<[a-z][\s\S]*>/i.test(s)) return s;
+  const doc = new DOMParser().parseFromString(s, 'text/html');
+  return (doc.body.textContent ?? '').replace(/\s+\n/g, '\n').trim();
+}
+
 /* ───────── Cards ───────── */
 
+/* A book or comic. With a synopsis, hovering it (or focusing it) opens the cover on its first page, where the
+   synopsis is printed. */
 export function BookCard({ item, sub, subClass, titleClass, badge, size = 'md' }: {
   item: BaseItem; sub?: ComponentChildren; subClass?: string; titleClass?: string; badge?: ComponentChildren; size?: 'md' | 'sm';
 }) {
+  const blurb = item.Overview ? plainText(item.Overview) : '';
+  const by = blurb ? authorLine(item) : '';
   return (
-    <Link to={`/details/${item.Id}`} class="bk-card" aria-label={item.Name}>
+    <Link to={`/details/${item.Id}`} class={'bk-card' + (blurb ? ' can-open' : '')} aria-label={item.Name}>
       <span class="bk-card-art">
-        <BookCover item={item} size={size} />
+        {blurb && (
+          <span aria-hidden="true" class="bk-firstpage">
+            <span class="bk-fp-title">{item.Name}</span>
+            {by && <span class="bk-fp-by">{by}</span>}
+            <span class="bk-fp-text">{blurb}</span>
+          </span>
+        )}
+        <span class="bk-leaf">
+          <BookCover item={item} size={size} />
+          {blurb && <span aria-hidden="true" class="bk-leaf-back" />}
+        </span>
         {badge}
       </span>
       <span class="bk-card-text">
