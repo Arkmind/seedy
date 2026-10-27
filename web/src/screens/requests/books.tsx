@@ -11,7 +11,7 @@ import { ListFrame } from '../browse/Lists';
 import { EmptyState, ErrorState, Lazy } from '../browse/parts';
 import { RequestBook } from './book-dialog';
 import { Frame, NotSetUp, useServices } from './frame';
-import { BookArt, cardStatus, MediaTopLists } from './media-parts';
+import { BookArt, cardStatus, MediaTopLists, useAsked } from './media-parts';
 
 /* Requests · Books (RequestsBooks board): Shelfarr and Librarr inside Seedy. Your book requests and approvals, then
    the next volumes of series the person reads in Seedy, audiobooks of books they finished, and what's trending.
@@ -64,7 +64,8 @@ export function useBookDialog(onDone?: () => void) {
 }
 
 /* A 160 px book: cover, Request · More info on hover, then its type and state, title and line. */
-export function BookCardView({ b, meta, onOpen, width }: { b: Book; meta: { text: string; accent: boolean }; onOpen: (request: boolean) => void; width?: number }) {
+export function BookCardView({ b: card, meta, onOpen, width }: { b: Book; meta: { text: string; accent: boolean }; onOpen: (request: boolean) => void; width?: number }) {
+  const b = useAsked(card, card.workId);
   const type = bookType(b);
   const status = cardStatus(b.status, b.requestedBy, true);
   const onServer = b.status === 'server' && b.itemId;

@@ -7,7 +7,7 @@ import { useAsync } from '../../lib/store';
 import { Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { Sheet, toast } from '../../ui/overlay';
-import { AlbumArt, cardStatus, initials, refreshMediaSummary } from './media-parts';
+import { AlbumArt, cardStatus, initials, noteRequest, refreshMediaSummary } from './media-parts';
 import type { MusicTarget } from './music';
 
 /* Request an artist (RequestMusicArtist board): the whole discography, picked albums, or only what comes out from
@@ -143,6 +143,7 @@ function Body({ data, opts, preselect, imageUrl, onClose }: { data: MusicArtist;
         albumCount: units
       });
       toast(res.status === 'pending' ? t('Requested. An admin approves it first.') : t('Requested. Lidarr is on it.'));
+      noteRequest(res);
       void refreshMediaSummary();
       onClose();
     } catch (e) {
