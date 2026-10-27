@@ -974,6 +974,32 @@ public sealed class MediaRequestService
 
         var albums = await _lidarr.AlbumsAsync(artistId, ct).ConfigureAwait(false);
         var now = DateTime.UtcNow;
+
+        // Lidarr's refresh after adding an artist can leave it, or the albums asked for, unwatched: watch them again
+        // (and search, when the admin wants searches on approval).
+        if (q.Mode != "future" && !J.Bool(artist!["monitored"]))
+        {
+            artist["monitored"] = true;
+            await _lidarr.UpdateArtistAsync(artist, ct).ConfigureAwait(false);
+        }
+
+        if (q.Mode == "albums")
+        {
+            var unwatched = albums.Where(a => data.LidarrAlbums.ContainsValue(J.Int(a?["id"]) ?? -1) && !J.Bool(a?["monitored"]) && (J.Int(a?["statistics"]?["trackFileCount"]) ?? 0) == 0)
+                .Select(a => J.Int(a?["id"]) ?? 0).Where(i => i > 0).ToList();
+            if (unwatched.Count > 0)
+            {
+                await _lidarr.MonitorAlbumsAsync(unwatched, true, ct).ConfigureAwait(false);
+                if (ConfigMapper.Current.LidarrSearchOnApprove)
+                {
+                    await _lidarr.SearchAlbumsNowAsync(unwatched, ct).ConfigureAwait(false);
+                    q.SearchedAt = now;
+                }
+
+                albums = await _lidarr.AlbumsAsync(artistId, ct, fresh: true).ConfigureAwait(false);
+            }
+        }
+
         var targets = q.Mode switch
         {
             "albums" => albums.Where(a => data.LidarrAlbums.ContainsValue(J.Int(a?["id"]) ?? -1)).ToList(),

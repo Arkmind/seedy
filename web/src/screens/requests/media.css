@@ -136,6 +136,7 @@
 }
 .reqs-show:hover, .reqs-show[aria-expanded='true'] { background: var(--seedy-surface-2); }
 .reqs-show-label { color: var(--seedy-text-3); }
+.reqs-show-value { color: var(--seedy-text); }
 
 .reqs-mine-list { display: flex; flex-direction: column; gap: 10px; }
 .reqs-mine-row {

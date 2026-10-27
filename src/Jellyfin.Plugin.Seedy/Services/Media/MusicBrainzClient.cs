@@ -69,8 +69,19 @@ public sealed class MusicBrainzClient
                 await Task.Delay(wait, ct).ConfigureAwait(false);
             }
 
-            _last = DateTime.UtcNow;
-            return await _http.SendAsync(Name, HttpMethod.Get, url, null, null, ct, Day, TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+            // MusicBrainz answers 503 "busy" when it throttles; wait a little longer and try again.
+            for (var attempt = 0; ; attempt++)
+            {
+                _last = DateTime.UtcNow;
+                try
+                {
+                    return await _http.SendAsync(Name, HttpMethod.Get, url, null, null, ct, Day, TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+                }
+                catch (MediaServiceException ex) when (attempt < 2 && !ex.Unreachable && ex.Status == System.Net.HttpStatusCode.BadGateway)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2 + (attempt * 2)), ct).ConfigureAwait(false);
+                }
+            }
         }
         finally
         {

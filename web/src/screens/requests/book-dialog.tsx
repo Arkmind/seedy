@@ -55,7 +55,7 @@ function Body({ book, opts, row, loading, error, retry, onClose, onDone }: {
 }) {
   const available = (opts?.formats ?? []).filter((f) => f.format !== 'music') as { format: BookFormat; service: string; library?: string | null }[];
   const offered = (book.content === 'comic' ? ['comic'] : ['ebook', 'audiobook'] as BookFormat[])
-    .filter((f) => available.some((a) => a.format === f) && (book.formats.length === 0 || book.formats.includes(f as BookFormat))) as BookFormat[];
+    .filter((f) => available.some((a) => a.format === f)) as BookFormat[];
   const [picked, setPicked] = useState<Set<BookFormat>>(new Set());
   const [lang, setLang] = useState('');
   const [busy, setBusy] = useState(false);

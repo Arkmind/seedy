@@ -4,7 +4,7 @@ import { mediaList, type MediaRequest } from '../../api/media';
 import { tmdbImage } from '../../api/images';
 import { requestList, type SeerrRequest } from '../../api/seedy';
 import { dayOf, daysFromToday, fmtMonthYear, fmtWeekdayDate } from '../../lib/format';
-import { t } from '../../lib/i18n';
+import { t, tx } from '../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { seerrTarget } from '../../ui/cards';
 import { Icon } from '../../ui/icons';
@@ -210,7 +210,7 @@ export function RequestsMine({ scope }: { scope: 'mine' | 'all' }) {
           align="end"
           button={({ ref, open, toggle }) => (
             <button ref={ref} type="button" class="reqs-show" aria-haspopup="menu" aria-expanded={open ? 'true' : 'false'} onClick={toggle}>
-              <span class="reqs-show-label">{t('Show')}</span> {t(showLabel)}
+              <span class="reqs-show-label">{tx('Show {what}', { what: <span class="reqs-show-value">{t(showLabel)}</span> })}</span>
               <Icon name="chevronDown" size={16} stroke={2.4} />
             </button>
           )}
