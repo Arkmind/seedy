@@ -108,7 +108,9 @@ export function ComicReader({ item, info, reading }: { item: BaseItem; info: Boo
   const left = pages - lastShown - 1;
   const status: [string, string, string] = [
     left > 0 ? tn(left, '{n} page left', '{n} pages left') : t('Last page'),
-    t('Page {n} of {total} · {percent}%', { n: lastShown + 1, total: pages, percent: Math.round(((lastShown + 1) / pages) * 100) }),
+    spread.length > 1
+      ? t('Pages {a}–{b} of {total} · {percent}%', { a: spread[0] + 1, b: lastShown + 1, total: pages, percent: Math.round(((lastShown + 1) / pages) * 100) })
+      : t('Page {n} of {total} · {percent}%', { n: lastShown + 1, total: pages, percent: Math.round(((lastShown + 1) / pages) * 100) }),
     ''
   ];
 

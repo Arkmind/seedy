@@ -47,7 +47,7 @@ html.rd-open, html.rd-open body { overflow: hidden; }
 /* ───────── Pages ───────── */
 /* The text column sits 96 px from the bars (the page's own 20 px padding included). */
 .rd-pages { position: absolute; top: 76px; bottom: 76px; left: 50%; transform: translateX(-50%); width: min(var(--rd-w, 740px), calc(100vw - 192px)); }
-.rd-pages.is-scroll { top: 77px; bottom: 76px; }
+.rd-pages.is-scroll { top: 77px; bottom: 92px; }
 .rd-pages iframe { color-scheme: normal; }
 .rd-turn {
   position: absolute; top: 50%; margin-top: -28px; z-index: 2; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;

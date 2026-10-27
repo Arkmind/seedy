@@ -332,11 +332,13 @@ function Overview({ view, data, tabTo }: { view: BaseItem; data: BooksData; tabT
 function OverviewRow({ id, title, link, linkLabel, min, gap, audio, children }: {
   id: string; title: string; link: string; linkLabel: string; min: number; gap: number; audio?: boolean; children: (n: number) => ComponentChildren;
 }) {
-  const [ref, cols] = useColumns<HTMLDivElement>(min, gap);
+  // Phones fit three covers a row.
+  const phone = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 720px)').matches;
+  const [ref, cols] = useColumns<HTMLDivElement>(phone ? Math.round(min * 0.68) : min, phone ? 14 : gap);
   return (
     <section class="bk-sec" aria-labelledby={id}>
       <SectionHead id={id} title={title} link={link} linkLabel={linkLabel} />
-      <div ref={ref} class={'bk-row' + (audio ? ' is-audio' : '')} style={{ gridTemplateColumns: `repeat(${cols || 1}, minmax(0, 1fr))` }}>
+      <div ref={ref} class={'bk-row' + (audio ? ' is-audio' : '')} style={{ gridTemplateColumns: `repeat(${cols || 1}, minmax(0, 1fr))`, gap: phone ? '14px' : undefined }}>
         {cols > 0 && children(cols)}
       </div>
     </section>

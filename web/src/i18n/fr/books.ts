@@ -109,6 +109,8 @@ const fr: Record<string, string> = {
   'Position in the book': 'Position dans le livre',
   'Page {n} of {total}, {percent} percent': 'Page {n} sur {total}, {percent} pour cent',
   'Page {n} of {total} · {percent}%': 'Page {n} sur {total} · {percent} %',
+  'Pages {a}–{b} of {total} · {percent}%': 'Pages {a}–{b} sur {total} · {percent} %',
+  '{series} · No. {n}': '{series} · N° {n}',
   'Chapter {n}, {title}': 'Chapitre {n}, {title}',
   'Chapter {n} · {count}': 'Chapitre {n} · {count}',
   '{n} page left in chapter': '{n} page restante dans le chapitre',
