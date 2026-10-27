@@ -11,7 +11,7 @@ import { t, tn } from '../../lib/i18n';
 import './admin.css';
 
 export type AdminPage =
-  | 'general' | 'home' | 'requests' | 'playlog'
+  | 'general' | 'home' | 'requests' | 'mediaRequests' | 'playlog'
   | 'overview' | 'settings' | 'users' | 'libraries' | 'playback' | 'networking' | 'livetv'
   | 'devices' | 'activity'
   | 'plugins' | 'tasks' | 'backups' | 'logs' | 'apikeys';
@@ -26,6 +26,7 @@ export const ADMIN_NAV: { label: string; items: NavItem[] }[] = [
       { id: 'general', path: '/admin', label: 'Branding & playback' },
       { id: 'home', path: '/admin/home', label: 'Home screen' },
       { id: 'requests', path: '/admin/requests', label: 'Requests' },
+      { id: 'mediaRequests', path: '/admin/media-requests', label: 'Music and book requests' },
       { id: 'playlog', path: '/admin/playlog', label: 'Play log' }
     ]
   },

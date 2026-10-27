@@ -27,10 +27,10 @@ export function refreshSummary(): Promise<void> {
   return requestSummary().then((s) => summaryStore.set(s), () => { /* the tabs keep their last counts */ });
 }
 /* The pieces of one page share a single call. */
-export function useSummary(): RequestSummary | null {
+export function useSummary(enabled = true): RequestSummary | null {
   const s = useStore(summaryStore);
-  useEffect(() => { if (Date.now() - summaryAt > 3000) void refreshSummary(); }, []);
-  return s;
+  useEffect(() => { if (enabled && Date.now() - summaryAt > 3000) void refreshSummary(); }, [enabled]);
+  return enabled ? s : null;
 }
 
 /* ── Wording ── */

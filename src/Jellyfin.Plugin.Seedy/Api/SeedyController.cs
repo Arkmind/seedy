@@ -255,6 +255,18 @@ public class SeedyController : ControllerBase
                     ? new SeerrAccountRefDto { Name = account.DisplayName, LinkedBy = matchedBy ?? "jellyfin" }
                     : null
             },
+            Media = new MediaFeaturesDto
+            {
+                Music = Services.Media.MediaRequestService.MusicEnabled,
+                Books = Services.Media.MediaRequestService.BooksEnabled,
+                Formats = ConfigMapper.BookFormats(c),
+                NotifyOnReady = c.MediaNotifyOnReady,
+                BookRoutes = ConfigMapper.BookFormats(c).ToDictionary(f => f, f => ConfigMapper.BookRoute(c, f)!),
+                LidarrUrl = user.IsAdmin() && Services.Media.MediaRequestService.MusicEnabled ? c.LidarrUrl : null,
+                ShelfarrUrl = user.IsAdmin() && ConfigMapper.BookAppReady(c, "shelfarr") ? c.ShelfarrUrl : null,
+                LibrarrUrl = user.IsAdmin() && ConfigMapper.BookAppReady(c, "librarr") ? c.LibrarrUrl : null,
+                ReadarrUrl = user.IsAdmin() && ConfigMapper.BookAppReady(c, "readarr") ? c.ReadarrUrl : null
+            },
             HistoryEnabled = c.PlayLogEnabled && c.UseForHistory && profile.History,
             HomeRows = ConfigMapper.HomeRows(c).Select(r => new HomeRowSettingDto
             {

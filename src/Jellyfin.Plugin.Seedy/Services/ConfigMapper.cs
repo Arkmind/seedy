@@ -163,7 +163,8 @@ public static partial class ConfigMapper
             UseHistory = c.UseForHistory,
             UseRowOrder = c.UseForRowOrder,
             UseGenres = c.UseForGenres
-        }
+        },
+        Media = ToAdminMedia(c)
     };
 
     /// <summary>Applies an admin API update onto the stored configuration. Keys, logos and profile tables are untouched.</summary>
@@ -220,6 +221,11 @@ public static partial class ConfigMapper
         c.UseForHistory = a.PlayLog.UseHistory;
         c.UseForRowOrder = a.PlayLog.UseRowOrder;
         c.UseForGenres = a.PlayLog.UseGenres;
+
+        if (a.Media is not null)
+        {
+            ApplyMedia(c, a.Media);
+        }
     }
 
     /// <summary>Gets (or creates) a profile's play log switches.</summary>

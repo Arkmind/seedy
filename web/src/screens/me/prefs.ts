@@ -24,7 +24,8 @@ export const CUSTOM = {
   nextUpDays: 'home.nextUpDays',
   rewatching: 'home.rewatching',
   episodeImages: 'home.episodeImages',
-  dismissedArrivals: 'home.dismissedArrivals'
+  dismissedArrivals: 'home.dismissedArrivals',
+  dismissedMediaArrivals: 'home.dismissedMediaArrivals'
 } as const;
 
 export const CUSTOM_DEFAULTS = {
@@ -38,7 +39,8 @@ export const CUSTOM_DEFAULTS = {
   [CUSTOM.nextUpDays]: 365,
   [CUSTOM.rewatching]: false,
   [CUSTOM.episodeImages]: true,
-  [CUSTOM.dismissedArrivals]: [] as number[]
+  [CUSTOM.dismissedArrivals]: [] as number[],
+  [CUSTOM.dismissedMediaArrivals]: [] as string[]
 };
 
 type CustomKey = keyof typeof CUSTOM_DEFAULTS;

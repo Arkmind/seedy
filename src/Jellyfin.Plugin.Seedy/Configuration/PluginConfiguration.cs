@@ -101,6 +101,77 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Gets or sets per-profile Seerr links and request switches.</summary>
     public SeerrProfile[] SeerrProfiles { get; set; } = [];
 
+    // Music and book requests (Lidarr, Shelfarr, Librarr, a Readarr-API app)
+
+    /// <summary>Gets or sets the Lidarr address as this server reaches it.</summary>
+    public string LidarrUrl { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the Lidarr API key. Never sent to browsers.</summary>
+    public string LidarrApiKey { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the Lidarr quality profile used for every request (0 = Lidarr's first).</summary>
+    public int LidarrQualityProfileId { get; set; }
+
+    /// <summary>Gets or sets the Lidarr metadata profile, which decides the release types (0 = Lidarr's first).</summary>
+    public int LidarrMetadataProfileId { get; set; }
+
+    /// <summary>Gets or sets the Lidarr root folder new artists go to (empty = Lidarr's first).</summary>
+    public string LidarrRootFolder { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets what a whole-artist request monitors: "all" (existing and future albums) or "future".</summary>
+    public string LidarrWholeArtist { get; set; } = "all";
+
+    /// <summary>Gets or sets a value indicating whether Lidarr searches as soon as a request is approved.</summary>
+    public bool LidarrSearchOnApprove { get; set; } = true;
+
+    /// <summary>Gets or sets a value indicating whether Shelfarr is used.</summary>
+    public bool ShelfarrEnabled { get; set; }
+
+    /// <summary>Gets or sets the Shelfarr address.</summary>
+    public string ShelfarrUrl { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the Shelfarr API token. Never sent to browsers.</summary>
+    public string ShelfarrToken { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a value indicating whether Librarr is used.</summary>
+    public bool LibrarrEnabled { get; set; }
+
+    /// <summary>Gets or sets the Librarr address.</summary>
+    public string LibrarrUrl { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the Librarr API key. Never sent to browsers.</summary>
+    public string LibrarrApiKey { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a value indicating whether a Readarr-API app (Bookshelf, Chaptarr…) is used.</summary>
+    public bool ReadarrEnabled { get; set; }
+
+    /// <summary>Gets or sets the Readarr-API app's address.</summary>
+    public string ReadarrUrl { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the Readarr-API app's key. Never sent to browsers.</summary>
+    public string ReadarrApiKey { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets where ebook requests go: "shelfarr", "librarr", "readarr" or "off".</summary>
+    public string RouteEbooks { get; set; } = "shelfarr";
+
+    /// <summary>Gets or sets where audiobook requests go.</summary>
+    public string RouteAudiobooks { get; set; } = "shelfarr";
+
+    /// <summary>Gets or sets where comic and manga requests go.</summary>
+    public string RouteComics { get; set; } = "librarr";
+
+    /// <summary>Gets or sets per-profile limits and auto-approval for music and book requests.</summary>
+    public MediaRequestProfile[] MediaRequestProfiles { get; set; } = [];
+
+    /// <summary>Gets or sets a value indicating whether the matching Jellyfin library is scanned when a download finishes.</summary>
+    public bool MediaScanOnReady { get; set; } = true;
+
+    /// <summary>Gets or sets a value indicating whether the person who asked is told when it's ready.</summary>
+    public bool MediaNotifyOnReady { get; set; } = true;
+
+    /// <summary>Gets or sets a value indicating whether everyone sees who requested a title.</summary>
+    public bool MediaShowRequesters { get; set; }
+
     // Play log
 
     /// <summary>Gets or sets a value indicating whether plays are recorded.</summary>
@@ -250,4 +321,20 @@ public class PlayLogProfile
 
     /// <summary>Gets or sets a value indicating whether the profile has a history page.</summary>
     public bool History { get; set; } = true;
+}
+
+/// <summary>A profile's music and book request limits.</summary>
+public class MediaRequestProfile
+{
+    /// <summary>Gets or sets the Jellyfin user id ("N" format).</summary>
+    public string UserId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets albums per week: -1 = no limit, 0 = can't request.</summary>
+    public int MusicPerWeek { get; set; } = 5;
+
+    /// <summary>Gets or sets books per month: -1 = no limit, 0 = can't request. An ebook and its audiobook count as two.</summary>
+    public int BooksPerMonth { get; set; } = 8;
+
+    /// <summary>Gets or sets a value indicating whether the profile's requests are approved without an admin.</summary>
+    public bool AutoApprove { get; set; }
 }

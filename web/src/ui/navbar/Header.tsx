@@ -1,6 +1,6 @@
 import { createPortal } from 'preact/compat';
 import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
-import { logoUrl as seedyLogoUrl } from '../../api/seedy';
+import { logoUrl as seedyLogoUrl, type Me } from '../../api/seedy';
 import { userImageUrl } from '../../api/images';
 import { JELLYFIN_WEB } from '../../api/client';
 import type { SessionInfo } from '../../api/types';
@@ -119,14 +119,22 @@ function NavLink({ to, icon, label, current, glass }: { to: string; icon: IconNa
   );
 }
 
-/* Requests (when Seerr is connected), cast, and the account button. */
+/* Where Requests opens: movies and shows when Seerr is connected, else music, else books; null when none is set up. */
+function requestsPath(me: Me): string | null {
+  if (me.requests.connected) return '/requests';
+  if (me.media?.music) return '/requests/music';
+  return me.media?.books ? '/requests/books' : null;
+}
+
+/* Requests (when Seerr, Lidarr or a book app is connected), cast, and the account button. */
 export function HeaderActions({ glass, active }: { glass?: boolean; active?: HeaderActive; hideSearch?: boolean }) {
   const me = useStore(meStore);
   const current = active === 'requests';
+  const to = requestsPath(me);
   return (
     <div class="nb-actions header-actions">
-      {me.requests.connected && (
-        <Link to="/requests" class={'nb-req' + (glass ? ' is-glass' : '') + (current ? ' is-current' : '')} aria-current={current ? 'page' : undefined}>
+      {to && (
+        <Link to={to} class={'nb-req' + (glass ? ' is-glass' : '') + (current ? ' is-current' : '')} aria-current={current ? 'page' : undefined}>
           <NbIcon name="request" size={18} />
           {t('Requests')}
         </Link>
@@ -141,7 +149,7 @@ export function HeaderActions({ glass, active }: { glass?: boolean; active?: Hea
 
 function TabBar({ active }: { active: HeaderActive }) {
   const me = useStore(meStore);
-  const requests = me.requests.connected;
+  const requests = requestsPath(me);
   const [libs, setLibs] = useState(false);
   // Pages leave room for the bar at the bottom while it's there.
   useLayoutEffect(() => {
@@ -164,7 +172,7 @@ function TabBar({ active }: { active: HeaderActive }) {
           {tab('grid', 'Libraries')}
         </button>
         <Link to="/favorites" class="nb-tab" aria-current={active === 'favorites' ? 'page' : undefined}>{tab('heart', 'Favorites')}</Link>
-        {requests && <Link to="/requests" class="nb-tab" aria-current={active === 'requests' ? 'page' : undefined}>{tab('request', 'Requests')}</Link>}
+        {requests && <Link to={requests} class="nb-tab" aria-current={active === 'requests' ? 'page' : undefined}>{tab('request', 'Requests')}</Link>}
       </nav>
       <LibrariesSheet open={libs} onClose={() => setLibs(false)} active={active} />
     </>,
