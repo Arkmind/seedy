@@ -14,7 +14,7 @@ import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { EmptyState, ErrorState } from '../browse/parts';
 import { authorLine, authorsOf, getBookInfo, isAudioBook, isComic, listReading, loadLibraryItems, normalize, type Reading } from './api';
 import {
-  AudioCard, BookCard, ContinueCard, SectionHead, SeriesCard, bookSub, comicSub, roughTime, useColumns,
+  AudioCard, BookCard, ContinueCard, SectionHead, SeriesCard, bookSub, comicSub, roughTime, tc, useColumns,
   type ContinueEntry, type SeriesGroup
 } from './parts';
 import './books.css';
@@ -206,7 +206,7 @@ export function BooksLibrary({ view }: { view: BaseItem }) {
           </div>
           <nav aria-label={t('Book views')} class="bk-tabs hscroll">
             {TABS.map((tb) => (
-              <Link key={tb.id} to={tabTo(tb.id)} replace class="bk-tab" aria-current={tb.id === tab ? 'page' : undefined}>{t(tb.label)}</Link>
+              <Link key={tb.id} to={tabTo(tb.id)} replace class="bk-tab" aria-current={tb.id === tab ? 'page' : undefined}>{tc(tb.label, 'tab')}</Link>
             ))}
           </nav>
         </div>
@@ -532,7 +532,7 @@ export function VolumeCard({ item, reading, current }: { item: BaseItem; reading
       sub={sub}
       subClass={read ? 'is-dimmer' : inProgress ? 'is-accent' : undefined}
       titleClass={read ? 'is-dim' : current ? 'is-current' : undefined}
-      badge={read ? <span class="bk-read-badge" aria-label={t('Read')}><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span> : undefined}
+      badge={read ? <span class="bk-read-badge" aria-label={tc('Read', 'done')}><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span> : undefined}
     />
   );
 }

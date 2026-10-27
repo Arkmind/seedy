@@ -2,6 +2,7 @@ import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { pct } from '../../../lib/format';
 import { t } from '../../../lib/i18n';
+import { tc } from '../parts';
 import {
   COLUMN, SIZE_MAX, SIZE_MIN, THEMES, type ComicSettings, type EpubSettings, type Fit, type FontChoice, type Layout, type Margins,
   type PageTheme, type Spacing, type Direction
@@ -208,9 +209,9 @@ export function EpubSettingsPanel({ value, onChange, onClose }: { value: EpubSet
         </div>
       </div>
       <Seg<Spacing> label={t('Line spacing')} value={value.spacing} onChange={(spacing) => onChange({ spacing })}
-        options={[{ value: 'tight', label: t('Tight') }, { value: 'normal', label: t('Normal') }, { value: 'airy', label: t('Airy') }]} />
+        options={[{ value: 'tight', label: t('Tight') }, { value: 'normal', label: tc('Normal', 'spacing') }, { value: 'airy', label: t('Airy') }]} />
       <Seg<Margins> label={t('Margins')} value={value.margins} onChange={(margins) => onChange({ margins })}
-        options={[{ value: 'narrow', label: t('Narrow') }, { value: 'normal', label: t('Normal') }, { value: 'wide', label: t('Wide') }]} />
+        options={[{ value: 'narrow', label: t('Narrow') }, { value: 'normal', label: tc('Normal', 'margins') }, { value: 'wide', label: t('Wide') }]} />
       <Seg<Layout> label={t('Layout')} value={value.layout} onChange={(layout) => onChange({ layout })}
         options={[{ value: 'one', label: t('One page') }, { value: 'two', label: t('Two pages') }, { value: 'scroll', label: t('Scroll') }]} />
       <span class="rs-note">{t('Saved for this book on every device. Your place syncs through the server.')}</span>

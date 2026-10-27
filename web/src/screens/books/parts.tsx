@@ -3,11 +3,20 @@ import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { BaseItem } from '../../api/types';
 import { dayOf, duration, pct, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
-import { Link } from '../../lib/router';
+import { Link, navigate } from '../../lib/router';
+import { playAudiobook } from '../../audio/engine';
 import { authorLine, isAudioBook, isComic, type Reading } from './api';
 import { AudioCover, BookCover } from './covers';
 
 /* Pieces shared by the books screens: cards, section heads, a few labels. */
+
+/* A word whose translation depends on where it stands ("Series" the tab is plural in French, "Normal" agrees with
+   what it describes): the dictionary key is "Series|tab", English shows the word itself. */
+export function tc(text: string, context: string): string {
+  const key = `${text}|${context}`;
+  const out = t(key);
+  return out === key ? text : out;
+}
 
 export const yearOfBook = (item: BaseItem) => item.ProductionYear ?? (item.PremiereDate ? dayOf(item.PremiereDate)?.getFullYear() : undefined);
 
@@ -168,7 +177,17 @@ export interface ContinueEntry {
 export function ContinueCard({ entry }: { entry: ContinueEntry }) {
   const audio = isAudioBook(entry.item);
   return (
-    <Link to={audio ? `/details/${entry.item.Id}` : `/read/${entry.item.Id}`} class="bk-cont" aria-label={entry.item.Name}>
+    <Link
+      to={audio ? `/details/${entry.item.Id}` : `/read/${entry.item.Id}`}
+      class="bk-cont"
+      aria-label={entry.item.Name}
+      onClick={(e) => {
+        // An audiobook carries on where it was; the page is the fallback until the player can.
+        if (!audio || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        playAudiobook(entry.item.Id, { open: true }).catch(() => navigate(`/details/${entry.item.Id}`));
+      }}
+    >
       <span class={'bk-cont-art' + (audio ? ' is-audio' : '')}>
         {audio ? <AudioCover item={entry.item} size="sm" titleTop noTitle={false} /> : <BookCover item={entry.item} size="sm" />}
       </span>
