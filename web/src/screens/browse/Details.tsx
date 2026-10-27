@@ -25,6 +25,7 @@ import { RequestSeasonsDialog, markRequested, seasonList } from './request-seaso
 import { techBadges, techLines } from './media-info';
 import './details.css';
 import { t, tn } from '../../lib/i18n';
+import { BookDetails } from '../books/BookDetails';
 
 export function Details({ id }: { id: string }) {
   const [version, setVersion] = useState(0);
@@ -61,6 +62,7 @@ export function Details({ id }: { id: string }) {
   }
 
   const changed = () => setVersion((v) => v + 1);
+  if (item.Type === 'Book' || (item.Type as string) === 'AudioBook') return <BookDetails item={item} onChanged={changed} />;
   switch (item.Type) {
     case 'Series': return <SeriesPage item={item} onChanged={changed} />;
     case 'Season': return <Shell><DetailsSkeleton /></Shell>;

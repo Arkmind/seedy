@@ -23,6 +23,7 @@ import { headerHeight } from '../../ui/sticky';
 import { t } from '../../lib/i18n';
 import { SelectionBar, useSelection } from './library-select';
 import { manageChanged } from './manage/host';
+import { BooksLibrary } from '../books/BooksLibrary';
 
 /* ───────── Tabs, sorts and filters ───────── */
 
@@ -167,6 +168,7 @@ export function Library({ id }: { id: string }) {
     );
   }
   if (view.Type !== 'CollectionFolder' && view.Type !== 'UserView' && view.Type !== 'Folder' && !known) return <Redirect to={`/details/${view.Id}`} />;
+  if (view.CollectionType === 'books') return <BooksLibrary view={view} />;
   return <LibraryView view={view} />;
 }
 
