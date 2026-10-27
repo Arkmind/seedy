@@ -394,11 +394,17 @@ export function Top10Card({ rank, item, meta, onOpen }: { rank: number; item: Ba
 }
 
 /* My media: one tile per library. */
-export function LibraryTile({ view, width = 300, artSrc }: { view: BaseItem; width?: number; artSrc?: string }) {
+export function LibraryTile({ view, width = 300, artSrc }: { view: BaseItem & { Covers?: string[] }; width?: number; artSrc?: string }) {
   const art = artSrc ? { src: artSrc, titleOnArt: false } : cardArt(view, 640);
+  const covers = !art.src && view.Covers?.length ? view.Covers : null;
   return (
-    <Link to={`/library/${view.Id}`} class="lib-tile" style={{ flex: `0 0 ${width}px`, width: width + 'px' }}>
+    <Link to={`/library/${view.Id}`} class={'lib-tile' + (covers ? ' has-covers' + (view.CollectionType === 'books' ? ' is-books' : '') : '')} style={{ flex: `0 0 ${width}px`, width: width + 'px' }}>
       {art.src && <Img src={art.src} class="art" />}
+      {covers && (
+        <span aria-hidden="true" class="lib-tile-covers">
+          {covers.map((src, i) => <Img key={src} src={src} class={'lib-tile-cover is-' + i} />)}
+        </span>
+      )}
       <div aria-hidden="true" class="lib-tile-shade" />
       <span class="lib-tile-name">{view.Name}</span>
     </Link>

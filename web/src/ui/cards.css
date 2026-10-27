@@ -106,6 +106,21 @@
 .lib-tile:hover .art { transform: scale(1.03); }
 .lib-tile-shade { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 65%); }
 .lib-tile-name { position: absolute; left: 18px; bottom: 14px; right: 18px; font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; }
+/* Music and books: a fan of covers on the right, like the Music board's mix and genre tiles. */
+.lib-tile.has-covers { background: linear-gradient(135deg, #2a2a2a, #161616); }
+.lib-tile-covers { position: absolute; inset: 0; transition: transform 400ms ease; }
+.lib-tile:hover .lib-tile-covers { transform: scale(1.03); }
+.lib-tile-cover {
+  position: absolute; top: 9%; width: 36%; aspect-ratio: 1; object-fit: cover; border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+}
+.lib-tile-cover.is-0 { right: 34%; top: 13%; transform: rotate(-8deg); }
+.lib-tile-cover.is-1 { right: 19%; transform: rotate(-1deg); }
+.lib-tile-cover.is-2 { right: 4%; top: 14%; transform: rotate(7deg); }
+.lib-tile.is-books .lib-tile-cover { width: 25%; aspect-ratio: 2 / 3; border-radius: 4px 7px 7px 4px; }
+.lib-tile.is-books .lib-tile-cover.is-0 { right: 36%; }
+.lib-tile.is-books .lib-tile-cover.is-1 { right: 21%; top: 6%; }
+.lib-tile.is-books .lib-tile-cover.is-2 { right: 6%; }
 
 /* Cast & crew. */
 .cast-card { flex: 0 0 140px; width: 140px; display: flex; flex-direction: column; gap: 10px; color: var(--seedy-text); }

@@ -14,7 +14,7 @@ import {
   runtime, timeLeft, whenLabel, yearRange, dayOf } from '../../lib/format';
 import { Link, navigate } from '../../lib/router';
 import { ItemCard, LibraryCard, SkeletonCards, WatchedCheck, Progress, Art, detailsPath, playPath } from '../../ui/cards';
-import { cardArt } from '../../api/images';
+import { cardArt, primaryUrl } from '../../api/images';
 import { Icon, type IconName } from '../../ui/icons';
 import { toast } from '../../ui/overlay';
 import { withEpisodeArt } from '../me/prefs';
@@ -160,17 +160,22 @@ export async function findView(itemId: string, views: BaseItem[]): Promise<BaseI
 
 export const getPersonsList = (q: Query) => get<ItemsResult>('/Persons', { userId: uid(), enableImageTypes: 'Primary', imageTypeLimit: 1, ...q });
 
-/* Library tiles use a backdrop from inside the library (Jellyfin's generated view art already carries the name). */
-const tileArt = new Map<string, Promise<BaseItem>>();
-export function tileView(view: BaseItem): Promise<BaseItem> {
+/* Library tiles use a backdrop from inside the library (Jellyfin's generated view art already carries the name).
+   Music and books rarely have backdrops, so their tiles fan out a few covers instead. */
+export type TileView = BaseItem & { Covers?: string[] };
+const tileArt = new Map<string, Promise<TileView>>();
+export function tileView(view: BaseItem): Promise<TileView> {
   let p = tileArt.get(view.Id);
   if (!p) {
-    const types = view.CollectionType === 'tvshows' ? ['Series'] : view.CollectionType === 'movies' ? ['Movie'] : view.CollectionType === 'music' ? ['MusicAlbum', 'MusicArtist'] : undefined;
-    p = getItems({ parentId: view.Id, includeItemTypes: types, sortBy: ['Random'], limit: 12, enableTotalRecordCount: false, enableImageTypes: ['Backdrop'], fields: ['PrimaryImageAspectRatio'] })
-      .then((r) => {
+    const ct = view.CollectionType;
+    const types = ct === 'tvshows' ? ['Series'] : ct === 'movies' ? ['Movie'] : ct === 'music' ? ['MusicAlbum', 'MusicArtist'] : ct === 'books' ? ['Book', 'AudioBook'] : undefined;
+    const covers = ct === 'music' || ct === 'books';
+    p = getItems({ parentId: view.Id, includeItemTypes: types, recursive: true, sortBy: ['Random'], limit: 12, enableTotalRecordCount: false, enableImageTypes: covers ? ['Backdrop', 'Primary'] : ['Backdrop'], fields: ['PrimaryImageAspectRatio'] })
+      .then((r): TileView => {
         const pick = r.Items.find((i) => i.BackdropImageTags?.length);
-        if (!pick) return view;
-        return { ...view, ImageTags: {}, BackdropImageTags: [], ParentBackdropItemId: pick.Id, ParentBackdropImageTags: pick.BackdropImageTags };
+        if (pick) return { ...view, ImageTags: {}, BackdropImageTags: [], ParentBackdropItemId: pick.Id, ParentBackdropImageTags: pick.BackdropImageTags };
+        const art = covers ? r.Items.filter((i) => i.Type !== 'MusicArtist').map((i) => primaryUrl(i, 240)).filter((u): u is string => !!u).slice(0, 3) : [];
+        return art.length ? { ...view, ImageTags: {}, Covers: art } : view;
       })
       .catch(() => view);
     tileArt.set(view.Id, p);

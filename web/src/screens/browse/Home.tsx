@@ -28,7 +28,7 @@ import { CUSTOM, getNextUpForMe, savePrefsPatch as queuePrefs, readCustom, userC
 import './home.css';
 import { t } from '../../lib/i18n';
 
-const BROWSABLE = new Set(['movies', 'tvshows', 'music', 'boxsets', 'homevideos', 'musicvideos', 'mixed', 'playlists', undefined, '']);
+const BROWSABLE = new Set(['movies', 'tvshows', 'music', 'books', 'boxsets', 'homevideos', 'musicvideos', 'mixed', 'playlists', undefined, '']);
 const LATEST_TYPES = new Set(['movies', 'tvshows', 'music', 'homevideos', 'musicvideos', 'mixed', undefined, '']);
 const EAGER_ROWS = 3;
 
