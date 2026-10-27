@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'preact/hooks';
 import { SERVER_URL, del, getSession } from '../../api/client';
-import { getItems } from '../../api/jellyfin';
+import { getItem, getItems } from '../../api/jellyfin';
 import { imageUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
-import { userStore } from '../../lib/app-state';
+import { userStore, viewsStore } from '../../lib/app-state';
 import { dayOf } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
@@ -59,7 +59,10 @@ const titleSize = (name: string) => (name.length > 34 ? ' is-xlong' : name.lengt
 export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; playlist?: boolean }) {
   const [item, setItem] = useState(initial);
   useEffect(() => setItem(initial), [initial]);
-  const view = useView(item);
+  const found = useView(item);
+  const views = useStore(viewsStore);
+  // A music playlist belongs with the music library (its pill and search box).
+  const view = playlist ? views.find((v) => v.CollectionType === 'music') ?? found : found;
   const s = useStore(audioStore);
   const user = useStore(userStore);
   const managed = useStore(manageChanged);
@@ -129,7 +132,7 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
               )}
               {!playlist && !artist && artistName && <span class="mu-al-artist">{artistName}</span>}
               <span>{(!playlist && artistName ? '· ' : '') + dot(playlist ? '' : yearOf(item), list.length ? songsLabel(list.length) : '', total ? lengthLabel(total) : '')}</span>
-              {quality && <span class="mu-quality">{quality}</span>}
+              {quality && !playlist && <span class="mu-quality">{quality}</span>}
             </span>
             <div class="mu-al-actions">
               <button type="button" class="mu-play-big" disabled={!list.length && !here} aria-label={playing ? t('Pause {name}', { name: item.Name }) : t('Play {name}', { name: item.Name })} onClick={play}>
@@ -169,7 +172,7 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
           {tracks.loading && !tracks.data ? <TracksSkeleton rows={10} />
             : !list.length ? <EmptyState icon="music" title={playlist ? t('This playlist is empty') : t('No songs')} text={playlist ? t('Add songs from their ⋯ menu, or drag them onto the playlist in the library.') : t('This album has no playable songs on the server.')} />
             : (
-              <TrackTable tracks={list} cols={playlist ? 'list' : 'album'} source={source} discs={!playlist} numbers={playlist ? 'position' : 'index'}
+              <TrackTable tracks={list} cols={playlist ? 'list' : 'album'} source={source} discs={!playlist} numbers={playlist ? 'position' : 'index'} pageId={item.Id}
                 extra={playlist ? (tk) => (close) => (
                   <button type="button" role="menuitem" class="menu-item" onClick={() => { close(); void remove(tk); }}>
                     <span class="lead"><AIcon name="trash" size={18} /><span>{t('Remove from this playlist')}</span></span>
@@ -190,11 +193,12 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
 }
 
 function ArtistAvatar({ id, name }: { id: string; name: string }) {
-  const [failed, setFailed] = useState(false);
+  const artist = useAsync(() => getItem(id, []).catch(() => null), [id]);
+  const tag = artist.data?.ImageTags?.Primary;
   const pal = paletteOf(id);
   return (
     <span aria-hidden="true" class="mu-al-avatar" style={{ background: pal[1], color: pal[3] }}>
-      {!failed ? <img src={imageUrl(id, 'Primary', { maxWidth: 56 })} alt="" onError={() => setFailed(true)} /> : initialsOf(name)}
+      {tag ? <img src={imageUrl(id, 'Primary', { tag, maxWidth: 56 })} alt="" /> : initialsOf(name)}
     </span>
   );
 }

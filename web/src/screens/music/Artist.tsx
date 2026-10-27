@@ -11,7 +11,7 @@ import { toast } from '../../ui/overlay';
 import { toggleFavorite } from '../browse/parts';
 import { MoreActions, useView } from '../browse/details-parts';
 import { TRACK_FIELDS, artistTracks, instantMix, type Track } from '../../audio/api';
-import { Cover, PALETTES, seedOf } from '../../audio/cover';
+import { Cover, useNearestPalette } from '../../audio/cover';
 import { audioStore, playLoaded, playedStore, togglePlay } from '../../audio/engine';
 import { AIcon, EqIcon } from '../../audio/icons';
 import { clock } from '../../audio/parts';
@@ -95,7 +95,7 @@ export function MusicArtistPage({ item: initial }: { item: BaseItem }) {
     <div class="page mu-page">
       <Header active={view ? { viewId: view.Id } : null} />
       <section aria-labelledby="mu-ar-h" class="mu-ar-hero">
-        <ArtistArt artist={item} />
+        <ArtistArt artist={item} latest={d ? d.albums[0] ?? d.singles[0] : undefined} />
         <div aria-hidden="true" class="mu-ar-shade" />
         <div class="mu-ar-text">
           <span class="mu-over">{t('Artist')}</span>
@@ -183,11 +183,11 @@ export function MusicArtistPage({ item: initial }: { item: BaseItem }) {
 }
 
 /* The artist's backdrop when the server has one; otherwise the board's sun over a hill, with their photo in it. */
-function ArtistArt({ artist }: { artist: BaseItem }) {
+function ArtistArt({ artist, latest }: { artist: BaseItem; latest?: BaseItem }) {
   const bd = backdropUrl(artist, 1920);
   const [failed, setFailed] = useState(false);
+  const pal = useNearestPalette(latest, artist.Id);
   if (bd && !failed) return <img class="mu-ar-backdrop" src={bd} alt="" onError={() => setFailed(true)} />;
-  const pal = PALETTES[seedOf(artist.Id) % PALETTES.length];
   const photo = artist.ImageTags?.Primary ? imageUrl(artist.Id, 'Primary', { tag: artist.ImageTags.Primary, maxWidth: 520 }) : undefined;
   const clip = 'mu-ar-clip-' + artist.Id;
   return (
@@ -199,7 +199,7 @@ function ArtistArt({ artist }: { artist: BaseItem }) {
         ? <image href={photo} x="874" y="-36" width="372" height="372" preserveAspectRatio="xMidYMid slice" clip-path={`url(#${clip})`} />
         : <circle cx="1060" cy="150" r="120" fill={pal[2]} opacity="0.9" />}
       <circle cx="1060" cy="150" r="190" fill="none" stroke={pal[3]} stroke-width="3" opacity="0.35" />
-      <path d="M0 300 Q360 240 720 300 T1440 290 V420 H0Z" fill={pal[0]} opacity="0.85" />
+      <path d="M0 300 Q360 240 720 300 T1440 290 V420 H0Z" style={{ fill: `color-mix(in srgb, ${pal[0]} 72%, #000)` }} />
     </svg>
   );
 }

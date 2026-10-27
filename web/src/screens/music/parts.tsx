@@ -8,7 +8,7 @@ import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { Popover, toast } from '../../ui/overlay';
 import { TRACK_FIELDS, instantMix, type Track } from '../../audio/api';
-import { Cover, initialsOf, paletteOf } from '../../audio/cover';
+import { Cover, initialsOf, useNearestPalette } from '../../audio/cover';
 import {
   addToQueue, audioStore, favoriteStore, playItem, playLoaded, toggleTrackFavorite, togglePlay, type PlayOptions
 } from '../../audio/engine';
@@ -54,6 +54,12 @@ export function longDate(d: Date): string {
 }
 
 export const dot = (...parts: (string | number | undefined | null | false)[]) => parts.filter((p) => p !== undefined && p !== null && p !== false && p !== '').join(' · ');
+
+/* A word that means something else elsewhere ("Time" of day): its dictionary key says which, English shows [en]. */
+export function inContext(key: string, en: string): string {
+  const v = t(key);
+  return v === key ? en : v;
+}
 
 /* ───────── Section heads ───────── */
 
@@ -265,7 +271,8 @@ export interface Mix { key: string; title: string; sub: string; covers: Track[];
 
 export function MixCard({ mix }: { mix: Mix }) {
   const [a, b] = mix.covers;
-  const pal = paletteOf(mix.seed ?? a?.AlbumId ?? a?.Id ?? mix.key);
+  // The card takes the colours of its first cover, as on the board.
+  const pal = useNearestPalette(a, mix.seed ?? mix.key);
   const [busy, setBusy] = useState(false);
   const play = async () => {
     if (busy) return;
@@ -298,13 +305,17 @@ export function MixCard({ mix }: { mix: Mix }) {
 /* ───────── Song lists ───────── */
 
 /* What a song's ⋯ menu offers: queueing, playlists, going to its album or artist, its radio. */
-export function TrackMenu({ track, anchor, open, onClose, extra }: {
+export function TrackMenu({ track, anchor, open, onClose, extra, pageId }: {
   track: Track; anchor: RefObject<HTMLElement>; open: boolean; onClose: () => void;
   extra?: (close: () => void) => ComponentChildren;
+  /* The page the menu opens on: no link back to it. */
+  pageId?: string;
 }) {
   const [sub, setSub] = useState(false);
   const close = () => { setSub(false); onClose(); };
-  const artist = track.ArtistItems?.[0] ?? track.AlbumArtists?.[0];
+  const artist0 = track.ArtistItems?.[0] ?? track.AlbumArtists?.[0];
+  const artist = artist0?.Id !== pageId ? artist0 : undefined;
+  const album = track.AlbumId !== pageId ? track.AlbumId : undefined;
   const item = (icon: Parameters<typeof AIcon>[0]['name'], label: string, run: () => void) => (
     <button type="button" role="menuitem" class="menu-item" onClick={() => { close(); run(); }}>
       <span class="lead"><AIcon name={icon} size={18} /><span>{label}</span></span>
@@ -324,8 +335,8 @@ export function TrackMenu({ track, anchor, open, onClose, extra }: {
             <AIcon name="chevronDown" size={15} style={{ transform: 'rotate(-90deg)' }} />
           </button>
           {extra?.(close)}
-          {(track.AlbumId || artist) && <div class="menu-sep" />}
-          {track.AlbumId && item('album', t('Go to album'), () => navigate(`/details/${track.AlbumId}`))}
+          {(album || artist) && <div class="menu-sep" />}
+          {album && item('album', t('Go to album'), () => navigate(`/details/${album}`))}
           {artist && item('artist', t('Go to artist'), () => navigate(`/details/${artist.Id}`))}
         </div>
       )}
@@ -333,7 +344,7 @@ export function TrackMenu({ track, anchor, open, onClose, extra }: {
   );
 }
 
-function MoreButton({ track, extra }: { track: Track; extra?: (close: () => void) => ComponentChildren }) {
+function MoreButton({ track, extra, pageId }: { track: Track; extra?: (close: () => void) => ComponentChildren; pageId?: string }) {
   const ref = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   return (
@@ -342,7 +353,7 @@ function MoreButton({ track, extra }: { track: Track; extra?: (close: () => void
         aria-expanded={open ? 'true' : 'false'} onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}>
         <AIcon name="more" size={18} />
       </button>
-      <TrackMenu track={track} anchor={ref as RefObject<HTMLElement>} open={open} onClose={() => setOpen(false)} extra={extra} />
+      <TrackMenu track={track} anchor={ref as RefObject<HTMLElement>} open={open} onClose={() => setOpen(false)} extra={extra} pageId={pageId} />
     </>
   );
 }
@@ -359,8 +370,8 @@ export type TrackCols = 'album' | 'list';
 
 /* The songs table (MusicAlbum board): number (the playing bars on the current song, a play button on hover), title
    and artists, plays, time, favourite. The list variant (songs, playlists) adds the cover and the album. */
-export function TrackTable({ tracks, cols = 'album', source, numbers, extra, label, discs }: {
-  tracks: Track[]; cols?: TrackCols; source: PlayOptions['source']; numbers?: 'index' | 'position';
+export function TrackTable({ tracks, cols = 'album', source, numbers, extra, label, discs, pageId }: {
+  tracks: Track[]; cols?: TrackCols; source: PlayOptions['source']; numbers?: 'index' | 'position'; pageId?: string;
   extra?: (track: Track, index: number) => ((close: () => void) => ComponentChildren) | undefined;
   label?: string; discs?: boolean;
 }) {
@@ -406,7 +417,7 @@ export function TrackTable({ tracks, cols = 'album', source, numbers, extra, lab
           <span role="cell" class="mu-tr-album">{tk.AlbumId ? <Link to={`/details/${tk.AlbumId}`}>{tk.Album}</Link> : tk.Album}</span>
         )}
         <span role="cell" class="mu-tr-plays">{playsLabel(tk.UserData?.PlayCount)}</span>
-        <span role="cell" class="mu-tr-time"><MoreButton track={tk} extra={extra?.(tk, i)} /><span>{time}</span></span>
+        <span role="cell" class="mu-tr-time"><MoreButton track={tk} extra={extra?.(tk, i)} pageId={pageId} /><span>{time}</span></span>
         <span role="cell" class="mu-tr-favcell">
           <button type="button" class={'mu-tr-fav' + (fav ? ' is-on' : '')} aria-pressed={fav ? 'true' : 'false'}
             aria-label={fav ? t('Remove {name} from favorites', { name: tk.Name }) : t('Add {name} to favorites', { name: tk.Name })}
@@ -424,7 +435,7 @@ export function TrackTable({ tracks, cols = 'album', source, numbers, extra, lab
         <span role="columnheader">{t('Title')}</span>
         {cols === 'list' && <span role="columnheader">{t('Album')}</span>}
         <span role="columnheader">{t('Plays')}</span>
-        <span role="columnheader" class="is-right">{t('Time')}</span>
+        <span role="columnheader" class="is-right">{inContext('Time (song length)', 'Time')}</span>
         <span role="columnheader"><span class="sr-only">{t('Favorite')}</span></span>
       </div>
       {rows}

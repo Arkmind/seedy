@@ -4,7 +4,8 @@ import { getItem, getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { t, tn } from '../../lib/i18n';
 import { Link, setQuery, useLocation } from '../../lib/router';
-import { useAsync } from '../../lib/store';
+import { useAsync, useStore } from '../../lib/store';
+import { manageChanged } from '../browse/manage/host';
 import { MenuButton, MenuItem } from '../../ui/overlay';
 import { Icon } from '../../ui/icons';
 import { EmptyState, ErrorState, Sentinel, usePaged, useInView } from '../browse/parts';
@@ -139,13 +140,14 @@ export function ArtistsTab({ view }: { view: BaseItem }) {
 
 /* ───────── Songs ───────── */
 
+/* Songs' sort names start with their track number: titles sort by name. */
 const SONG_SORTS: SortOpt[] = [
-  { id: 'SortName', label: 'Title', by: ['SortName'], order: 'Ascending' },
+  { id: 'SortName', label: 'Title', by: ['Name'], order: 'Ascending' },
   { id: 'Artist', label: 'Artist', by: ['AlbumArtist', 'Album', 'ParentIndexNumber', 'IndexNumber'], order: 'Ascending' },
   { id: 'Album', label: 'Album', by: ['Album', 'ParentIndexNumber', 'IndexNumber'], order: 'Ascending' },
-  { id: 'DateCreated', label: 'Date added', by: ['DateCreated', 'SortName'], order: 'Descending' },
-  { id: 'PlayCount', label: 'Most played', by: ['PlayCount', 'SortName'], order: 'Descending' },
-  { id: 'DatePlayed', label: 'Recently played', by: ['DatePlayed', 'SortName'], order: 'Descending' },
+  { id: 'DateCreated', label: 'Date added', by: ['DateCreated', 'Name'], order: 'Descending' },
+  { id: 'PlayCount', label: 'Most played', by: ['PlayCount', 'Name'], order: 'Descending' },
+  { id: 'DatePlayed', label: 'Recently played', by: ['DatePlayed', 'Name'], order: 'Descending' },
   { id: 'Random', label: 'Random', by: ['Random'], order: 'Ascending' }
 ];
 
@@ -172,10 +174,11 @@ export function SongsTab({ view }: { view: BaseItem }) {
 /* ───────── Playlists ───────── */
 
 export function PlaylistsTab() {
+  const managed = useStore(manageChanged);
   const data = useAsync(async () => {
     const r = await audioPlaylists();
     return Promise.all(r.Items.map(playlistPreview));
-  }, []);
+  }, [managed.n]);
   return (
     <section class="mu-sec" aria-label={t('Playlists')}>
       <Toolbar count={data.data ? tn(data.data.length, '{n} playlist', '{n} playlists') : undefined} />

@@ -85,28 +85,23 @@ export function Cover({ item, width = 300, title, initials, class: cls, style, s
   );
 }
 
-/* Two colours for a player's backdrop: the cover's own (averaged from the picture) or the drawn palette's. */
-export function useCoverTint(item: Pic | null | undefined): [string, string] {
-  const seed = seedOf(item?.AlbumId ?? item?.Id);
-  const pal = PALETTES[seed % PALETTES.length];
-  const src = coverUrl(item, 64);
-  const [tint, setTint] = useState<[string, string] | null>(null);
-  useEffect(() => {
-    setTint(null);
-    if (!src) return;
-    let alive = true;
+/* The main colour of a picture: its most common colourful shade (greys, black and white count little). */
+const dominantCache = new Map<string, Promise<number[] | null>>();
+function dominant(src: string): Promise<number[] | null> {
+  let p = dominantCache.get(src);
+  if (p) return p;
+  p = new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
+    img.onerror = () => resolve(null);
     img.onload = () => {
-      if (!alive) return;
       try {
         const c = document.createElement('canvas');
         c.width = 16; c.height = 16;
         const g = c.getContext('2d');
-        if (!g) return;
+        if (!g) { resolve(null); return; }
         g.drawImage(img, 0, 0, 16, 16);
         const d = g.getImageData(0, 0, 16, 16).data;
-        // The cover's main colour: the most common colourful shade (greys, black and white count little).
         const buckets = new Map<number, { n: number; r: number; g: number; b: number }>();
         for (let i = 0; i < d.length; i += 4) {
           const [r, gr, b] = [d[i], d[i + 1], d[i + 2]];
@@ -121,18 +116,62 @@ export function useCoverTint(item: Pic | null | undefined): [string, string] {
         }
         let best: { n: number; r: number; g: number; b: number } | null = null;
         for (const x of buckets.values()) if (!best || x.n > best.n) best = x;
-        if (!best) return;
-        const rgb = [best.r / best.n, best.g / best.n, best.b / best.n];
-        // Brought to the boards' brightness: the glow like #2f4a66, the edge like #1c2a3a.
-        const at = (top: number) => {
-          const k = top / Math.max(1, ...rgb);
-          return `rgb(${rgb.map((v) => Math.round(v * k)).join(', ')})`;
-        };
-        setTint([at(104), at(58)]);
-      } catch { /* a tainted canvas: keep the palette */ }
+        resolve(best ? [best.r / best.n, best.g / best.n, best.b / best.n] : null);
+      } catch {
+        resolve(null);
+      }
     };
     img.src = src;
+  });
+  dominantCache.set(src, p);
+  return p;
+}
+
+const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const scaled = (rgb: number[], top: number) => {
+  const k = top / Math.max(1, ...rgb);
+  return rgb.map((v) => v * k);
+};
+
+/* Two colours for a player's backdrop: the cover's own, brought to the boards' brightness (the glow like #2f4a66,
+   the edge like #1c2a3a), or the drawn palette's. */
+export function useCoverTint(item: Pic | null | undefined): [string, string] {
+  const pal = PALETTES[seedOf(item?.AlbumId ?? item?.Id) % PALETTES.length];
+  const src = coverUrl(item, 64);
+  const [rgb, setRgb] = useState<number[] | null>(null);
+  useEffect(() => {
+    setRgb(null);
+    if (!src) return;
+    let alive = true;
+    dominant(src).then((c) => { if (alive) setRgb(c); });
     return () => { alive = false; };
   }, [src]);
-  return tint ?? [pal[1], pal[0]];
+  if (!rgb) return [pal[1], pal[0]];
+  const at = (top: number) => `rgb(${scaled(rgb, top).map(Math.round).join(', ')})`;
+  return [at(104), at(58)];
+}
+
+/* The drawn palette closest to a picture's colours (the artist page draws its hero in their latest cover's). */
+export function useNearestPalette(item: Pic | null | undefined, fallbackId: string): string[] {
+  const src = coverUrl(item, 64);
+  const [pal, setPal] = useState<string[] | null>(null);
+  useEffect(() => {
+    setPal(null);
+    if (!src) return;
+    let alive = true;
+    dominant(src).then((c) => {
+      if (!alive || !c) return;
+      const want = scaled(c, 100);
+      let best = PALETTES[0];
+      let bestD = Infinity;
+      for (const p of PALETTES) {
+        const have = scaled(hex(p[1]), 100);
+        const d = have.reduce((sum, v, i) => sum + (v - want[i]) ** 2, 0);
+        if (d < bestD) { bestD = d; best = p; }
+      }
+      setPal(best);
+    });
+    return () => { alive = false; };
+  }, [src]);
+  return pal ?? PALETTES[seedOf(fallbackId) % PALETTES.length];
 }

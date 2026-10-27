@@ -9,6 +9,7 @@ import { useAsync, useStore } from '../../lib/store';
 import { Header } from '../../ui/navbar/Header';
 import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { useInView } from '../browse/parts';
+import { manageChanged } from '../browse/manage/host';
 import { genreMix, instantMix, orderByIds, playlistTracks, type Track } from '../../audio/api';
 import { audioStore, playContainer, playLoaded, playedStore, recentSources } from '../../audio/engine';
 import { AIcon } from '../../audio/icons';
@@ -188,19 +189,34 @@ function JumpBackIn({ view }: { view: BaseItem }) {
       : it.Type === 'Playlist' ? dot(t('Playlist'), songsLabel(it.ChildCount ?? 0))
       : it.Type === 'MusicArtist' ? t('Artist') : '';
   const curId = s.current ? s.source?.id ?? s.current.track.AlbumId : undefined;
+  // What's playing now comes first.
+  const at = list.findIndex((x) => x.Id === curId);
+  const shown = at > 0 ? [list[at], ...list.slice(0, at), ...list.slice(at + 1)] : list;
   return (
     <section aria-labelledby="mu-jump-h" class="mu-sec">
       <SectionHead id="mu-jump-h" title={t('Jump back in')} />
       <div class="mu-jump-grid">
         {data.loading && !data.data
           ? Array.from({ length: 8 }, (_, i) => <span key={i} class="mu-jump skel" />)
-          : list.map((it) => <JumpCard key={it.Id} item={it} sub={sub(it)} current={curId === it.Id || s.current?.track.AlbumId === it.Id && !s.source?.id ? { playing: s.playing } : undefined} />)}
+          : shown.map((it) => <JumpCard key={it.Id} item={it} sub={sub(it)} current={curId === it.Id ? { playing: s.playing } : undefined} />)}
       </div>
     </section>
   );
 }
 
 const distinctCovers = (tracks: Track[], n = 2) => playlistCovers(tracks).slice(0, n);
+
+/* Every mix card shows two covers: a mix from a single album borrows another album's. */
+async function padCovers(mixes: Mix[], viewId: string): Promise<Mix[]> {
+  if (mixes.every((m) => m.covers.length >= 2)) return mixes;
+  const spare = (await getItems({ parentId: viewId, includeItemTypes: ['MusicAlbum'], sortBy: ['Random'], limit: 8, fields: [] }).catch(() => null))?.Items as Track[] ?? [];
+  return mixes.map((m, i) => {
+    if (m.covers.length >= 2) return m;
+    const have = new Set(m.covers.map((c) => c.AlbumId ?? c.Id));
+    const extra = spare.filter((a) => !have.has(a.Id)).slice(i % 3);
+    return { ...m, covers: [...m.covers, ...extra].slice(0, 2) };
+  });
+}
 
 async function artistMix(a: BaseItem): Promise<Mix> {
   const tracks = await instantMix(a.Id, 120).catch(() => [] as Track[]);
@@ -250,7 +266,7 @@ function Mixes({ view, top }: { view: BaseItem; top?: TopArtist[] }) {
     }
     const fresh = await songsOf({ parentId: view.Id, filters: ['IsUnplayed'], sortBy: ['Random'], limit: 120 });
     if (fresh.length) out.push({ key: 'new', seed: 'new-' + view.Id, title: t('Something new'), sub: t('Albums on the server you’ve never played'), covers: distinctCovers(fresh), tracks: async () => fresh });
-    return out;
+    return padCovers(out, view.Id);
   }, [view.Id, !!top]);
   const extra = useAsync(async () => {
     if (!more || !top) return [] as Mix[];
@@ -261,7 +277,7 @@ function Mixes({ view, top }: { view: BaseItem; top?: TopArtist[] }) {
       if (list.length >= 6) break;
       list.push(await genreMixOf(g));
     }
-    return list;
+    return padCovers(list, view.Id);
   }, [more, view.Id, !!top]);
   const list = [...(mixes.data ?? []), ...(more ? extra.data ?? [] : [])];
   if (mixes.data && !mixes.data.length) return null;
@@ -311,11 +327,12 @@ export const audioPlaylists = (limit?: number) =>
 
 function YourPlaylists({ view }: { view: BaseItem }) {
   const [ref, seen] = useInView<HTMLElement>('600px');
+  const managed = useStore(manageChanged);
   const data = useAsync(async () => {
     if (!seen) return null;
     const r = await audioPlaylists(5);
     return Promise.all(r.Items.map(playlistPreview));
-  }, [seen]);
+  }, [seen, managed.n]);
   return (
     <section ref={ref} aria-labelledby="mu-pl-h" class="mu-sec">
       <SectionHead id="mu-pl-h" title={t('Your playlists')} link={{ to: `/library/${view.Id}?tab=playlists`, label: t('All playlists') }} />
