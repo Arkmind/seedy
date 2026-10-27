@@ -103,6 +103,11 @@ export function Player({ id }: { id: string }) {
           back('/');
           return;
         }
+        // Books open in the reader.
+        if (item.Type === 'Book') {
+          navigate(`/read/${item.Id}`, { replace: true, force: true });
+          return;
+        }
         // A show, season, collection, album or playlist: play what it leads to (resume point, next up, first track).
         if (!isPlayable(item)) {
           const target = await resolvePlayable(item).catch(() => undefined);

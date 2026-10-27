@@ -91,6 +91,8 @@ const fr: Record<string, string> = {
   'Season': 'Saison',
   'People': 'Personnes',
   'Collections': 'Collections',
+  'Music': 'Musique',
+  'Books': 'Livres',
   'Play': 'Lire',
   'Resume': 'Reprendre',
   'Save': 'Enregistrer',

@@ -19,9 +19,9 @@ const LIMITS: Record<Size, { titles: number; episodes: number; people: number }>
   page: { titles: 60, episodes: 30, people: 30 }
 };
 
-const FIELDS = ['PrimaryImageAspectRatio', 'ProductionYear', 'Genres', 'ChildCount', 'RecursiveItemCount', 'OriginalTitle', 'DateCreated'];
-/* Music too: artists, albums and songs (the music library's box says so). */
-const TITLE_TYPES = ['Movie', 'Series', 'BoxSet', 'MusicArtist', 'MusicAlbum', 'Audio'];
+const FIELDS = ['PrimaryImageAspectRatio', 'ProductionYear', 'Genres', 'ChildCount', 'RecursiveItemCount', 'OriginalTitle', 'DateCreated', 'People'];
+/* Music too: artists, albums and songs; and books and audiobooks (the music and books libraries' boxes say so). */
+const TITLE_TYPES = ['Movie', 'Series', 'BoxSet', 'MusicArtist', 'MusicAlbum', 'Audio', 'Book', 'AudioBook'];
 const uid = () => getSession()?.userId ?? '';
 
 /* ── Text ── */
@@ -221,7 +221,7 @@ export function parse(text: string, genres: GenreInfo[]): Parsed {
 
 /* ── Ranking ── */
 
-export type Kind = 'movie' | 'show' | 'collection' | 'episode' | 'person' | 'music';
+export type Kind = 'movie' | 'show' | 'collection' | 'episode' | 'person' | 'music' | 'book';
 
 export interface Hit {
   kind: Kind;
@@ -238,6 +238,7 @@ export function kindOf(item: BaseItem): Kind {
     case 'Episode': return 'episode';
     case 'Person': return 'person';
     case 'MusicArtist': case 'MusicAlbum': case 'Audio': return 'music';
+    case 'Book': case 'AudioBook': return 'book';
     default: return 'movie';
   }
 }
@@ -276,7 +277,7 @@ function watchBoost(item: BaseItem): number {
   return b;
 }
 
-const KIND_WEIGHT: Record<Kind, number> = { movie: 0, show: 0, collection: -4, episode: -8, person: -2, music: -1 };
+const KIND_WEIGHT: Record<Kind, number> = { movie: 0, show: 0, collection: -4, episode: -8, person: -2, music: -1, book: -1 };
 
 function hit(item: BaseItem, base: number, match: string): Hit {
   const kind = kindOf(item);
@@ -432,6 +433,7 @@ export const GROUPS: { kind: Kind; label: string }[] = [
   { kind: 'collection', label: 'Collections' },
   { kind: 'episode', label: 'Episodes' },
   { kind: 'music', label: 'Music' },
+  { kind: 'book', label: 'Books' },
   { kind: 'person', label: 'People' }
 ];
 
@@ -472,6 +474,8 @@ export function rowMeta(item: BaseItem): string {
     case 'MusicArtist': return t('Artist');
     case 'MusicAlbum': return join(t('Album'), item.AlbumArtist, item.ProductionYear ? String(item.ProductionYear) : '');
     case 'Audio': return join(t('Song'), item.Artists?.join(', ') || item.AlbumArtist, item.Album);
+    case 'Book': return join(t('Book'), authorOf(item), item.ProductionYear ? String(item.ProductionYear) : '');
+    case 'AudioBook': return join(t('Audiobook'), authorOf(item), run);
     default:
       return join(
         item.ProductionYear ? String(item.ProductionYear) : '',
@@ -480,6 +484,9 @@ export function rowMeta(item: BaseItem): string {
       );
   }
 }
+
+/* Books keep their writers as Author people (from the EPUB, or ComicInfo for comics). */
+const authorOf = (item: BaseItem) => (item.People ?? []).filter((p) => p.Type === 'Author' || p.Type === 'Writer').map((p) => p.Name).slice(0, 2).join(' & ');
 
 export const join = (...parts: (string | undefined | null | false)[]) => parts.filter(Boolean).join(' · ');
 
@@ -523,7 +530,7 @@ export function bestMeta(item: BaseItem, play?: BestPlay): string {
     case 'Series': return join(t('Show'), rowMeta(item), play?.where);
     case 'BoxSet': return rowMeta(item);
     case 'Episode': return join(t('Episode'), rowMeta(item));
-    case 'MusicArtist': case 'MusicAlbum': case 'Audio': return rowMeta(item);
+    case 'MusicArtist': case 'MusicAlbum': case 'Audio': case 'Book': case 'AudioBook': return rowMeta(item);
     default: {
       const ud = item.UserData;
       const inProgress = (ud?.PlaybackPositionTicks ?? 0) > 0 && !!item.RunTimeTicks && !ud?.Played;
@@ -541,6 +548,7 @@ export function phoneMeta(h: Hit, resumeTag?: string): string {
     case 'collection': return join(t('Collection'), it.ChildCount ? plural(it.ChildCount, 'title') : '');
     case 'episode': return join(t('Episode'), episodeTag(it));
     case 'person': return t('Person');
+    case 'music': case 'book': return rowMeta(it);
     default: return join(t('Movie'), it.ProductionYear ? String(it.ProductionYear) : '');
   }
 }
@@ -549,7 +557,7 @@ export function phoneMeta(h: Hit, resumeTag?: string): string {
    person shown, two for guest stars. */
 export interface PersonInfo { role: string; count: number; unit: 'title' | 'episode' }
 const personInfo = new Map<string, Promise<PersonInfo>>();
-const ROLES: Record<string, string> = { Actor: 'Actor', GuestStar: 'Actor', Director: 'Director', Writer: 'Writer', Producer: 'Producer', Composer: 'Composer', Creator: 'Creator' };
+const ROLES: Record<string, string> = { Actor: 'Actor', GuestStar: 'Actor', Director: 'Director', Writer: 'Writer', Producer: 'Producer', Composer: 'Composer', Creator: 'Creator', Author: 'Author' };
 
 export function personMeta(person: BaseItem): Promise<PersonInfo> {
   let p = personInfo.get(person.Id);
@@ -560,7 +568,9 @@ export function personMeta(person: BaseItem): Promise<PersonInfo> {
       .then(async (r): Promise<PersonInfo> => {
         if (r.TotalRecordCount > 0) return { role: role(r), count: r.TotalRecordCount, unit: 'title' };
         const e = await look(['Episode']);
-        return { role: role(e), count: e.TotalRecordCount, unit: 'episode' };
+        if (e.TotalRecordCount > 0) return { role: role(e), count: e.TotalRecordCount, unit: 'episode' };
+        const b = await look(['Book', 'AudioBook']);
+        return { role: role(b), count: b.TotalRecordCount, unit: 'title' };
       })
       .catch((): PersonInfo => { personInfo.delete(person.Id); return { role: 'Person', count: 0, unit: 'title' }; });
     personInfo.set(person.Id, p);
