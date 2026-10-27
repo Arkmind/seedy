@@ -67,8 +67,9 @@ export function Cover({ item, width = 300, title, initials, class: cls, style, s
   seedId?: string;
 }) {
   const src = coverUrl(item, width);
-  const [state, setState] = useState<'loading' | 'ok' | 'failed'>('loading');
-  useEffect(() => setState('loading'), [src]);
+  // Tied to the picture it's about: a cached picture can load before an effect would reset the state.
+  const [seen, setSeen] = useState<{ src?: string; state: 'ok' | 'failed' } | null>(null);
+  const state = seen && seen.src === src ? seen.state : 'loading';
   const seed = seedOf(seedId ?? item?.AlbumId ?? item?.Id);
   const ink = PALETTES[seed % PALETTES.length][3];
   const drawn = !src || state === 'failed';
@@ -79,7 +80,7 @@ export function Cover({ item, width = 300, title, initials, class: cls, style, s
       {drawn && initials && <span aria-hidden="true" class="ap-cover-initials" style={{ color: ink }}>{initials}</span>}
       {src && state !== 'failed' && (
         <img src={src} alt="" loading="lazy" decoding="async" class={state === 'ok' ? 'is-loaded' : ''}
-          onLoad={() => setState('ok')} onError={() => setState('failed')} />
+          onLoad={() => setSeen({ src, state: 'ok' })} onError={() => setSeen({ src, state: 'failed' })} />
       )}
     </span>
   );
