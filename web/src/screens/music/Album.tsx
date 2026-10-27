@@ -212,7 +212,10 @@ function MoreBy({ album, artist }: { album: BaseItem; artist: { Id: string; Name
       getItems({ artistIds: [artist.Id], includeItemTypes: ['MusicAlbum'], sortBy: ['ProductionYear', 'PremiereDate', 'SortName'], sortOrder: 'Descending', limit: 30, fields })
     ]);
     const mine = new Set(own.Items.map((x) => x.Id));
-    const releases = own.Items.filter((x) => x.Id !== album.Id).map((a) => ({ a: a as Track, sub: dot(releaseLabel(releaseOf(a)), yearOf(a)) }));
+    // Albums first, then singles and EPs (each newest first), then albums they appear on.
+    const releases = own.Items.filter((x) => x.Id !== album.Id).map((a) => ({ a: a as Track, r: releaseOf(a) }))
+      .sort((x, y) => Number(x.r !== 'album') - Number(y.r !== 'album'))
+      .map(({ a, r }) => ({ a, sub: dot(releaseLabel(r), yearOf(a)) }));
     const appears = all.Items.filter((x) => !mine.has(x.Id) && x.Id !== album.Id).map((a) => ({ a: a as Track, sub: dot(releaseLabel('appears'), yearOf(a)) }));
     return [...releases, ...appears].slice(0, 6);
   }, [album.Id, artist.Id]);
