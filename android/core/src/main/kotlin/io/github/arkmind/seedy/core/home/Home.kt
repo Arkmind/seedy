@@ -177,7 +177,7 @@ class Home(private val session: UserSession) {
         /** A row's heading, as on the web. */
         fun title(row: HomeRow): String = row.title ?: when (row.kind) {
             "because" -> t("Because you watched {title}", "title" to (row.seedName ?: ""))
-            "latest" -> t("Latest {library}", "library" to (row.libraryName ?: "").lowercase())
+            "latest" -> t("Latest {library}", "library" to (row.libraryName ?: "").lowercase(), "name" to row.libraryName.orEmpty())
             "genres" -> row.genre.orEmpty()
             "continue" -> t("Continue watching")
             "nextup" -> t("Next up")

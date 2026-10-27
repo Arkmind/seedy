@@ -111,7 +111,7 @@ export function Home() {
 function placeholderTitle(row: HomeRow): ComponentChildren {
   switch (row.kind) {
     case 'because': return <><span class="lead">{t('Because you watched')}</span> {row.seedName}</>;
-    case 'latest': return row.title ?? t('Latest {library}', { library: (row.libraryName ?? '').toLowerCase() });
+    case 'latest': return row.title ?? t('Latest {library}', { library: (row.libraryName ?? '').toLowerCase(), name: row.libraryName ?? '' });
     case 'genres': return row.title ?? row.genre;
     default: return row.title ?? t(DEFAULT_TITLES[row.kind] ?? '');
   }
@@ -469,7 +469,7 @@ function LatestRow({ row }: { row: HomeRow }) {
   const view = views.find((v) => v.Id === row.libraryId);
   const name = row.libraryName ?? view?.Name ?? '';
   const ct = row.collectionType ?? view?.CollectionType;
-  const title = row.title ?? t('Latest {library}', { library: name.toLowerCase() });
+  const title = row.title ?? t('Latest {library}', { library: name.toLowerCase(), name });
   const { items, pending } = useRowData(() => (row.libraryId ? getLatest(row.libraryId, 16) : Promise.resolve([])), [row.libraryId]);
   if (pending) return <RowSkeleton title={title} />;
   if (!items.length) return null;
