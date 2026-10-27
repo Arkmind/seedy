@@ -51,6 +51,7 @@ import {
 import { CastMenu, WatchTogether } from './TopMenus';
 import { TracksPanel, channelsLabel, subtitleTitle, type TracksTab } from './TracksPanel';
 import { EdgeProgress, UpNext } from './UpNext';
+import { useWakeLock } from './wake-lock';
 import { LivePlayer } from './LivePlayer';
 
 /* ───────────────────────── Route entry ───────────────────────── */
@@ -949,6 +950,9 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [m.paused, m.ended, wake, !!stream, !!fatal, panel, upNext, endFlow, scrubbing, prefs.pauseScreenSeconds, !!ask]);
+
+  /* The screen stays on while a video plays; paused, the computer may sleep as usual. */
+  useWakeLock(!isAudio && !!stream && !fatal && !m.paused && !m.ended);
 
   /* ── Media segments: skip buttons, auto-skip, credits → Up next / end of movie ── */
   const t = m.time;
