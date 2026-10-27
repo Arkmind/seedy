@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { JELLYFIN_WEB } from '../../api/client';
 import { getEpisodes, getItem, getItems, getNextUp, getResume, getSeasons } from '../../api/jellyfin';
-import { backdropUrl, cardArt, personImageUrl, primaryUrl } from '../../api/images';
+import { backdropUrl, personImageUrl, primaryUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { seerrDetails, type SeerrDetails } from '../../api/seedy';
 import { meStore } from '../../lib/app-state';
-import { duration, episodeTag, fmtDate, plural, progressFraction, remainingSeconds, runtime, ticksToSeconds, timeLeft, timecode, yearRange, dayOf } from '../../lib/format';
+import { episodeTag, fmtDate, plural, progressFraction, remainingSeconds, runtime, timeLeft, yearRange, dayOf } from '../../lib/format';
 import { Link, back, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { manageChanged } from './manage/host';
@@ -24,7 +24,10 @@ import {
 import { RequestSeasonsDialog, markRequested, seasonList } from './request-seasons';
 import { techBadges, techLines } from './media-info';
 import './details.css';
+import { MusicAlbumPage } from '../music/Album';
+import { MusicArtistPage } from '../music/Artist';
 import { t, tn } from '../../lib/i18n';
+import { BookDetails } from '../books/BookDetails';
 
 export function Details({ id }: { id: string }) {
   const [version, setVersion] = useState(0);
@@ -61,14 +64,16 @@ export function Details({ id }: { id: string }) {
   }
 
   const changed = () => setVersion((v) => v + 1);
+  if (item.Type === 'Book' || item.Type === 'AudioBook') return <BookDetails item={item} onChanged={changed} />;
   switch (item.Type) {
     case 'Series': return <SeriesPage item={item} onChanged={changed} />;
     case 'Season': return <Shell><DetailsSkeleton /></Shell>;
     case 'Episode': return <EpisodePage item={item} onChanged={changed} />;
     case 'Person': return <PersonPage item={item} />;
-    case 'BoxSet': case 'Playlist': case 'Folder': case 'PhotoAlbum': return <CollectionPage item={item} />;
-    case 'MusicAlbum': return <AlbumPage item={item} />;
-    case 'MusicArtist': return <ArtistPage item={item} />;
+    case 'Playlist': return item.MediaType === 'Audio' ? <MusicAlbumPage item={item} playlist /> : <CollectionPage item={item} />;
+    case 'BoxSet': case 'Folder': case 'PhotoAlbum': return <CollectionPage item={item} />;
+    case 'MusicAlbum': return <MusicAlbumPage item={item} />;
+    case 'MusicArtist': return <MusicArtistPage item={item} />;
     default: return <MoviePage item={item} />;
   }
 }
@@ -553,104 +558,3 @@ function CollectionPage({ item: initial }: { item: BaseItem }) {
     </Shell>
   );
 }
-
-/* ───────── Music ───────── */
-
-function AlbumPage({ item: initial }: { item: BaseItem }) {
-  const [item, setItem] = useLocal(initial);
-  const view = useView(item);
-  const tracks = useAsync(
-    () => getItems({ parentId: item.Id, includeItemTypes: ['Audio'], sortBy: ['ParentIndexNumber', 'IndexNumber', 'SortName'], limit: 500, fields: ['PrimaryImageAspectRatio'] }).then((r) => r.Items),
-    [item.Id]
-  );
-  const list = tracks.data ?? [];
-  const total = list.reduce((s, x) => s + ticksToSeconds(x.RunTimeTicks), 0);
-  const cover = primaryUrl(item, 520);
-  const artist = item.ArtistItems?.[0] ?? (item as BaseItem & { AlbumArtists?: { Id: string; Name: string }[] }).AlbumArtists?.[0];
-  const discs = new Set(list.map((x) => x.ParentIndexNumber ?? 1)).size > 1;
-  return (
-    <Shell viewId={view?.Id}>
-      <DetailsHero
-        art={backdropUrl(item, 1920) ?? cover}
-        overline={artist?.Name ?? item.AlbumArtist ?? backTo(item, view).label}
-        overlineTo={artist ? `/details/${artist.Id}` : backTo(item, view).to}
-        title={item.Name}
-        poster={cover ? <img class="dhero-cover" src={cover} alt="" /> : undefined}
-        meta={<MetaLine parts={[yearOf(item), list.length ? plural(list.length, 'track') : undefined, total ? duration(total) : undefined]} genres={item.Genres?.slice(0, 2)} />}
-        overview={item.Overview}
-        actions={
-          <>
-            <button type="button" class="btn btn-primary" disabled={!list.length} onClick={() => list[0] && navigate(playPath(list[0]))}><Icon name="play" size={20} />{t('Play')}</button>
-            <button type="button" class="btn btn-square" aria-label={t('Shuffle')} disabled={!list.length} onClick={() => list.length && navigate(playPath(list[Math.floor(Math.random() * list.length)]))}><Icon name="shuffle" size={22} /></button>
-            <SquareToggle icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
-            <MoreActions item={item} />
-          </>
-        }
-      />
-      <main class="details-main">
-        <section class="browse-section details-pad" aria-label={t('Tracks')}>
-          {tracks.loading && !tracks.data ? <div class="tracks skel" style={{ height: '240px' }} />
-            : !list.length ? <EmptyState icon="music" title={t('No tracks')} text={t('This album has no playable tracks on the server.')} />
-            : (
-              <ol class="tracks">
-                {list.map((tk) => (
-                  <li key={tk.Id}>
-                    <Link to={playPath(tk)} class="track" aria-label={t('Play {name}', { name: tk.Name })}>
-                      <span class="track-no">{discs && tk.ParentIndexNumber ? `${tk.ParentIndexNumber}.` : ''}{tk.IndexNumber ?? ''}</span>
-                      <span class="track-name">
-                        <span class="track-title">{tk.Name}</span>
-                        {tk.Artists?.length && tk.Artists.join(', ') !== item.AlbumArtist ? <span class="track-artist">{tk.Artists.join(', ')}</span> : null}
-                      </span>
-                      <span class="track-time tnum">{tk.RunTimeTicks ? timecode(ticksToSeconds(tk.RunTimeTicks)).replace(/^0(\d:)/, '$1') : ''}</span>
-                      <span class="track-play" aria-hidden="true"><Icon name="playRound" size={16} /></span>
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            )}
-        </section>
-      </main>
-    </Shell>
-  );
-}
-
-function ArtistPage({ item: initial }: { item: BaseItem }) {
-  const [item, setItem] = useLocal(initial);
-  const view = useView(item);
-  const { items, setItems, replace } = useItemList();
-  const albums = useAsync(
-    () => getItems({ albumArtistIds: [item.Id], includeItemTypes: ['MusicAlbum'], sortBy: ['PremiereDate', 'ProductionYear', 'SortName'], sortOrder: 'Descending', limit: 200 }),
-    [item.Id]
-  );
-  useEffect(() => { if (albums.data) setItems(albums.data.Items); }, [albums.data]);
-  const back = backTo(item, view);
-  const art = cardArt(item, 1920);
-  return (
-    <Shell viewId={view?.Id}>
-      <DetailsHero
-        art={backdropUrl(item, 1920) ?? (items[0] ? backdropUrl(items[0], 1920) : undefined) ?? art.src}
-        overline={back.label}
-        overlineTo={back.to}
-        title={item.Name}
-        meta={<MetaLine parts={[albums.data ? plural(albums.data.TotalRecordCount, 'album') : undefined]} genres={item.Genres?.slice(0, 3)} />}
-        overview={item.Overview}
-        actions={
-          <>
-            <button type="button" class="btn btn-primary" onClick={async () => { const t = await resolvePlayable(item); if (t) navigate(playPath(t)); }}><Icon name="shuffle" size={20} />{t('Shuffle')}</button>
-            <SquareToggle icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
-            <MoreActions item={item} />
-          </>
-        }
-      />
-      <main class="details-main">
-        <section class="browse-section details-pad" aria-label={t('Albums')}>
-          <div class="browse-section-head"><div class="row-head-main"><h2 class="row-title">{t('Albums')}</h2></div></div>
-          {albums.loading && !albums.data ? <GridSkeleton count={8} />
-            : items.length ? <CardGrid items={items} onReplace={replace} />
-            : <EmptyState icon="music" title={t('No albums')} text={`Albums by ${item.Name} will show up here.`} />}
-        </section>
-      </main>
-    </Shell>
-  );
-}
-

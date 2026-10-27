@@ -5,7 +5,9 @@ Issues and pull requests are welcome. For anything larger than a fix, open an is
 ## Getting started
 
 See **Develop** in the [README](README.md): a local Jellyfin 12 and Seerr in Docker (`make dev-up`), `make dev-install`,
-and the Vite dev server at `http://127.0.0.1:5173/seedy/` (`make web`). Before sending a change:
+and the Vite dev server at `http://127.0.0.1:5173/seedy/` (`make web`). The test library only holds openly licensed or
+generated media (`make dev-media`, then `make dev-libraries` for the Music and Books libraries), so screenshots never
+show anyone else's work; keep it that way. Before sending a change:
 
 ```bash
 make typecheck   # the web app

@@ -39,6 +39,7 @@ public class AdminController : ControllerBase
     private readonly ILocalizationManager _localization;
     private readonly SeedyDatabase _db;
     private readonly SeerrService _seerr;
+    private readonly Services.Media.ServiceHttp _media;
     private readonly ILogger<AdminController> _logger;
 
     /// <summary>
@@ -50,9 +51,11 @@ public class AdminController : ControllerBase
     /// <param name="localization">Localization manager.</param>
     /// <param name="db">Database.</param>
     /// <param name="seerr">Seerr service.</param>
+    /// <param name="media">HTTP helper of the music and book apps.</param>
     /// <param name="logger">Logger.</param>
-    public AdminController(IUserManager users, IServerApplicationHost host, IInstallationManager installs, ILocalizationManager localization, SeedyDatabase db, SeerrService seerr, ILogger<AdminController> logger)
+    public AdminController(IUserManager users, IServerApplicationHost host, IInstallationManager installs, ILocalizationManager localization, SeedyDatabase db, SeerrService seerr, Services.Media.ServiceHttp media, ILogger<AdminController> logger)
     {
+        _media = media;
         _users = users;
         _host = host;
         _installs = installs;
@@ -79,11 +82,20 @@ public class AdminController : ControllerBase
     {
         var c = PluginInstance.Configuration;
         var oldUrl = c.SeerrUrl;
+        var oldApps = (c.LidarrUrl, c.ShelfarrUrl, c.LibrarrUrl, c.ReadarrUrl);
         ConfigMapper.Apply(c, body);
         PluginInstance.Save(c);
         if (!string.Equals(oldUrl, c.SeerrUrl, StringComparison.Ordinal))
         {
             _seerr.Reset();
+        }
+
+        foreach (var (name, was, now) in new[] { ("Lidarr", oldApps.LidarrUrl, c.LidarrUrl), ("Shelfarr", oldApps.ShelfarrUrl, c.ShelfarrUrl), ("Librarr", oldApps.LibrarrUrl, c.LibrarrUrl), ("Readarr", oldApps.ReadarrUrl, c.ReadarrUrl) })
+        {
+            if (!string.Equals(was, now, StringComparison.Ordinal))
+            {
+                _media.Reset(name);
+            }
         }
 
         return ConfigMapper.ToAdmin(c);
@@ -346,7 +358,11 @@ public class AdminController : ControllerBase
         return list;
     }
 
-    private static string? RatingName(User user, IReadOnlyList<MediaBrowser.Model.Entities.ParentalRating> ratings)
+    /// <summary>A profile's maturity limit as a rating name ("TV-PG").</summary>
+    /// <param name="user">Profile.</param>
+    /// <param name="ratings">The server's ratings.</param>
+    /// <returns>Name, or null without a limit.</returns>
+    internal static string? RatingName(User user, IReadOnlyList<MediaBrowser.Model.Entities.ParentalRating> ratings)
     {
         if (user.MaxParentalRatingScore is not { } score)
         {

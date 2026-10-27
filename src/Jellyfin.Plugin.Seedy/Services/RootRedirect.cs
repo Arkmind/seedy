@@ -27,7 +27,7 @@ public sealed class RootRedirectStartupFilter : IStartupFilter
     /// </summary>
     private static readonly HashSet<string> Pages = new(StringComparer.Ordinal)
     {
-        "admin", "details", "favorites", "history", "library", "list", "livetv", "play", "request", "requests", "search", "settings"
+        "admin", "details", "favorites", "history", "library", "list", "livetv", "play", "read", "request", "requests", "search", "settings"
     };
 
     /// <inheritdoc />

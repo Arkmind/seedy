@@ -6,6 +6,7 @@ import { match, useLocation } from './lib/router';
 import { useStore } from './lib/store';
 import { ConfirmHost, ToastHost } from './ui/overlay';
 import { ManageHost } from './screens/browse/manage/host';
+import { AudioHost } from './audio/AudioHost';
 import { Home } from './screens/browse/Home';
 import { Library } from './screens/browse/Library';
 import { Details } from './screens/browse/Details';
@@ -19,6 +20,7 @@ import { NotFound } from './screens/NotFound';
 import { AdminGeneral } from './screens/admin/General';
 import { AdminHome } from './screens/admin/HomeScreen';
 import { AdminRequests } from './screens/admin/Requests';
+import { AdminMediaRequests } from './screens/admin/MediaRequests';
 import { AdminPlayLog } from './screens/admin/PlayLog';
 import { MeProfile } from './screens/me/Profile';
 import { MeHome } from './screens/me/HomeScreen';
@@ -42,7 +44,10 @@ import { ServerTasks } from './screens/server/Tasks';
 import { ServerBackups } from './screens/server/Backups';
 import { ServerLogs } from './screens/server/Logs';
 import { ServerApiKeys } from './screens/server/ApiKeys';
-import { RequestsBrowse, RequestsDiscover, RequestsList } from './screens/requests/Requests';
+import { RequestsBrowse, RequestsDiscover } from './screens/requests/Requests';
+import { RequestsMine } from './screens/requests/mine';
+import { MusicBrowse, MusicDiscover } from './screens/requests/music';
+import { BooksBrowse, BooksDiscover } from './screens/requests/books';
 import { LiveOnNow } from './screens/livetv/OnNow';
 import { LiveGuide } from './screens/livetv/Guide';
 import { LiveChannels } from './screens/livetv/Channels';
@@ -70,6 +75,16 @@ function LazyPlayer(props: { id: string }) {
   return <Comp {...props} />;
 }
 
+/* The book reader pulls in epub.js, so it loads on first use too. */
+function LazyReader(props: { id: string }) {
+  const [Comp, setComp] = useState<ComponentType<{ id: string }> | null>(null);
+  useEffect(() => {
+    import('./screens/books/reader/Reader').then((m) => setComp(() => m.Reader), () => window.location.reload());
+  }, []);
+  if (!Comp) return <div class="boot" style={{ background: '#111111' }}><div class="spinner" /></div>;
+  return <Comp {...props} />;
+}
+
 type Route = { pattern: string; render: (p: Record<string, string>) => preact.JSX.Element; admin?: boolean };
 
 const ROUTES: Route[] = [
@@ -82,6 +97,7 @@ const ROUTES: Route[] = [
   { pattern: '/request/:type/:tmdbId', render: (p) => <SeerrDetails mediaType={p.type as 'movie' | 'tv'} tmdbId={Number(p.tmdbId)} /> },
   { pattern: '/list/:kind', render: (p) => <ListScreen kind={p.kind} /> },
   { pattern: '/play/:id', render: (p) => <LazyPlayer id={p.id} /> },
+  { pattern: '/read/:id', render: (p) => <LazyReader id={p.id} /> },
   { pattern: '/livetv', render: () => <LiveOnNow /> },
   { pattern: '/livetv/guide', render: () => <LiveGuide /> },
   { pattern: '/livetv/channels', render: () => <LiveChannels /> },
@@ -93,12 +109,17 @@ const ROUTES: Route[] = [
   { pattern: '/settings/display', render: () => <MeDisplay /> },
   { pattern: '/settings/controls', render: () => <MeControls /> },
   { pattern: '/requests', render: () => <RequestsDiscover /> },
-  { pattern: '/requests/my', render: () => <RequestsList scope="mine" /> },
-  { pattern: '/requests/all', render: () => <RequestsList scope="all" /> },
+  { pattern: '/requests/my', render: () => <RequestsMine scope="mine" /> },
+  { pattern: '/requests/all', render: () => <RequestsMine scope="all" /> },
   { pattern: '/requests/discover/:kind', render: (p) => <RequestsBrowse kind={p.kind} /> },
+  { pattern: '/requests/music', render: () => <MusicDiscover /> },
+  { pattern: '/requests/music/discover/:row', render: (p) => <MusicBrowse row={p.row} /> },
+  { pattern: '/requests/books', render: () => <BooksDiscover /> },
+  { pattern: '/requests/books/discover/:row', render: (p) => <BooksBrowse row={p.row} /> },
   { pattern: '/admin', render: () => <AdminGeneral />, admin: true },
   { pattern: '/admin/home', render: () => <AdminHome />, admin: true },
   { pattern: '/admin/requests', render: () => <AdminRequests />, admin: true },
+  { pattern: '/admin/media-requests', render: () => <AdminMediaRequests />, admin: true },
   { pattern: '/admin/playlog', render: () => <AdminPlayLog />, admin: true },
   { pattern: '/admin/server', render: () => <ServerOverview />, admin: true },
   { pattern: '/admin/settings', render: () => <ServerSettings />, admin: true },
@@ -151,6 +172,7 @@ export function App() {
       <ToastHost />
       <PersonalHost />
       <ManageHost />
+      <AudioHost />
     </>
   );
 }

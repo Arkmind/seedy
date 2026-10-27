@@ -23,6 +23,8 @@ function useStartsWith(items: BaseItem[]): string | undefined {
   useEffect(() => {
     if (items.length > 1) { setLine(items.map((i) => i.Name).filter(Boolean).slice(0, 3).join(', ') + (items.length > 3 ? '…' : '')); return; }
     const [it] = items;
+    // A new empty playlist (Music · New playlist) starts with nothing.
+    if (!it) { setLine(undefined); return; }
     if (it.Type === 'Series' || it.Type === 'Season') {
       get<ItemsResult>(`/Users/${currentUserId()}/Items`, { ParentId: it.Id, IncludeItemTypes: 'Episode', Recursive: true, IsMissing: false, Limit: 0 })
         .then((r) => setLine(tn(r.TotalRecordCount, '{n} episode on the server, in order', '{n} episodes on the server, in order')), () => setLine(undefined));
@@ -56,7 +58,9 @@ export function NewPlaylistDialog({ items, name: initial, onClose, onDone }: { i
         Name: name.trim(),
         Ids: items.map((i) => i.Id),
         Users: who === 'people' ? shares.map((s) => ({ UserId: s.person.id, CanEdit: s.canEdit })) : [],
-        IsPublic: who === 'all'
+        IsPublic: who === 'all',
+        // An empty one comes from the music library: it's a music playlist.
+        MediaType: items.length ? undefined : 'Audio'
       });
       toast(t('Created {name}', { name: name.trim() }));
       onDone();

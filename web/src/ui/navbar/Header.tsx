@@ -1,17 +1,17 @@
 import { createPortal } from 'preact/compat';
 import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
-import { logoUrl as seedyLogoUrl } from '../../api/seedy';
+import { logoUrl as seedyLogoUrl, type Me } from '../../api/seedy';
 import { userImageUrl } from '../../api/images';
 import { JELLYFIN_WEB } from '../../api/client';
 import type { SessionInfo } from '../../api/types';
-import { brandingStore, meStore, signOut, userStore } from '../../lib/app-state';
+import { brandingStore, meStore, signOut, userStore, viewsStore } from '../../lib/app-state';
 import { castTarget, listCastTargets } from '../../lib/cast';
 import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { Icon, type IconName } from '../icons';
 import { useStickyHeader } from '../sticky';
 import { MenuButton, MenuItem, toast } from '../overlay';
-import { LibrariesButton, LibrariesSheet } from './LibrariesMenu';
+import { LibrariesButton, LibrariesSheet, currentView } from './LibrariesMenu';
 import { NbIcon, type NbIconName } from './icons';
 import { SearchBox } from '../search/SearchBox';
 import './navbar.css';
@@ -67,6 +67,7 @@ export function Header({ variant = 'plain', active }: { variant?: 'overlay' | 'p
   const phone = usePhone();
   const { ref, stuck } = useStickyHeader<HTMLElement>();
   const pageMode = active === 'search';
+  const placeholder = searchPlaceholder(useStore(viewsStore), active);
   return (
     <>
       <header ref={ref} class={'site-header nb' + (glass ? ' is-overlay' : ' is-plain') + (stuck ? ' is-stuck' : '') + (phone ? ' is-phone' : '')}>
@@ -90,7 +91,7 @@ export function Header({ variant = 'plain', active }: { variant?: 'overlay' | 'p
               <LibrariesButton active={active} glass={glass} />
               <NavLink to="/favorites" icon="heart" label={t('Favorites')} current={active === 'favorites'} glass={glass} />
             </nav>
-            <SearchBox glass={glass} pageMode={pageMode} />
+            <SearchBox glass={glass} pageMode={pageMode} placeholder={placeholder} />
             <HeaderActions glass={glass} active={active} />
           </>
         )}
@@ -98,6 +99,15 @@ export function Header({ variant = 'plain', active }: { variant?: 'overlay' | 'p
       {phone && <TabBar active={active} />}
     </>
   );
+}
+
+/* Inside a music library the box says what it finds there. */
+function searchPlaceholder(views: Parameters<typeof currentView>[0], active: HeaderActive): string | undefined {
+  const ct = currentView(views, active)?.CollectionType;
+  // In a music or books library the box says what it finds there (Music and Books library boards).
+  if (ct === 'music') return t('Search artists, albums and songs');
+  if (ct === 'books') return t('Search books, authors and series');
+  return undefined;
 }
 
 function NavLink({ to, icon, label, current, glass }: { to: string; icon: IconName; label: string; current: boolean; glass?: boolean }) {
@@ -109,14 +119,22 @@ function NavLink({ to, icon, label, current, glass }: { to: string; icon: IconNa
   );
 }
 
-/* Requests (when Seerr is connected), cast, and the account button. */
+/* Where Requests opens: movies and shows when Seerr is connected, else music, else books; null when none is set up. */
+function requestsPath(me: Me): string | null {
+  if (me.requests.connected) return '/requests';
+  if (me.media?.music) return '/requests/music';
+  return me.media?.books ? '/requests/books' : null;
+}
+
+/* Requests (when Seerr, Lidarr or a book app is connected), cast, and the account button. */
 export function HeaderActions({ glass, active }: { glass?: boolean; active?: HeaderActive; hideSearch?: boolean }) {
   const me = useStore(meStore);
   const current = active === 'requests';
+  const to = requestsPath(me);
   return (
     <div class="nb-actions header-actions">
-      {me.requests.connected && (
-        <Link to="/requests" class={'nb-req' + (glass ? ' is-glass' : '') + (current ? ' is-current' : '')} aria-current={current ? 'page' : undefined}>
+      {to && (
+        <Link to={to} class={'nb-req' + (glass ? ' is-glass' : '') + (current ? ' is-current' : '')} aria-current={current ? 'page' : undefined}>
           <NbIcon name="request" size={18} />
           {t('Requests')}
         </Link>
@@ -131,7 +149,7 @@ export function HeaderActions({ glass, active }: { glass?: boolean; active?: Hea
 
 function TabBar({ active }: { active: HeaderActive }) {
   const me = useStore(meStore);
-  const requests = me.requests.connected;
+  const requests = requestsPath(me);
   const [libs, setLibs] = useState(false);
   // Pages leave room for the bar at the bottom while it's there.
   useLayoutEffect(() => {
@@ -154,7 +172,7 @@ function TabBar({ active }: { active: HeaderActive }) {
           {tab('grid', 'Libraries')}
         </button>
         <Link to="/favorites" class="nb-tab" aria-current={active === 'favorites' ? 'page' : undefined}>{tab('heart', 'Favorites')}</Link>
-        {requests && <Link to="/requests" class="nb-tab" aria-current={active === 'requests' ? 'page' : undefined}>{tab('request', 'Requests')}</Link>}
+        {requests && <Link to={requests} class="nb-tab" aria-current={active === 'requests' ? 'page' : undefined}>{tab('request', 'Requests')}</Link>}
       </nav>
       <LibrariesSheet open={libs} onClose={() => setLibs(false)} active={active} />
     </>,

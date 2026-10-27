@@ -70,7 +70,7 @@ public sealed record TitleCount(string TitleId, int Profiles, int Plays);
 /// The play log, hidden titles, per-profile preferences and learned row order, in one SQLite file.
 /// Jellyfin itself only keeps the last play of each title, so Seedy keeps its own log.
 /// </summary>
-public sealed class SeedyDatabase : IDisposable
+public sealed partial class SeedyDatabase : IDisposable
 {
     private readonly string _connectionString;
     private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -150,6 +150,8 @@ public sealed class SeedyDatabase : IDisposable
             );
             """;
         cmd.ExecuteNonQuery();
+        MigrateReading(c);
+        MigrateRequests(c);
     }
 
     private static long Ms(DateTime d) => new DateTimeOffset(DateTime.SpecifyKind(d, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
