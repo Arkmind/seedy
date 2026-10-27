@@ -76,8 +76,8 @@ dev-seerr: ## Connect the test Seerr to the test Jellyfin
 dev-arr: ## Connect the test Sonarr, Sonarr 4K and Radarr to the test Seerr (after dev-seerr)
 	cd dev && python3 setup-arr.py
 
-dev-media-requests: ## Set up the test Lidarr, Shelfarr and Librarr; their keys go in dev/data
-	cd dev && python3 setup-media-requests.py
+dev-media-requests: ## Set up the test Lidarr, Shelfarr and Librarr, connect Seedy to them, add sample requests (after dev-install)
+	cd dev && python3 setup-media-requests.py && python3 setup-seedy-requests.py
 
 # Personal targets (a deploy to your own server, say) can go in local.mk, which git ignores.
 -include local.mk

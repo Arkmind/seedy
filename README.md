@@ -43,6 +43,11 @@ tries hard not to make your server convert anything it doesn't have to.
   requests with their download progress, and everyone's requests for the people allowed to approve them. Requests
   are made as the signed-in person, so their Seerr limits and auto-approval apply. The API key never leaves the
   server.
+- **Music and book requests**, straight to [Lidarr](https://lidarr.audio) for artists and albums, and to
+  [Shelfarr](https://github.com/Pedro-Revez-Silva/shelfarr) or [Librarr](https://github.com/JeremiahM37/librarr) (or
+  an app speaking Readarr's API) for ebooks, audiobooks and comics. New releases from artists you play, trending
+  albums and books, the next book in a series you're reading. Seedy handles approvals and per-profile limits itself,
+  and My requests follows everything you asked for, from every app, from asked to ready.
 - **Live TV**: what's on now, a guide grid, channels and recordings. Works with M3U (IPTV) and HDHomeRun tuners and
   XMLTV guides.
 - **Playlists and your library, managed from the title.** Add a title to a playlist or collection, make playlists
@@ -55,6 +60,13 @@ tries hard not to make your server convert anything it doesn't have to.
 
 ### In the browser
 
+- **Music**: a library home with Jump back in, instant mixes, playlists and the artists you play most; album and
+  artist pages; a player bar that stays at the bottom while you browse; and Now playing with synced lyrics and a queue
+  you can reorder. Lossless files play as they are when the browser can.
+- **Books**: books, audiobooks and comics in one library, series kept together, and a reader for EPUB (themes, fonts,
+  text size, spacing, one or two pages or scrolling, contents, search, bookmarks), comics (CBZ) and PDF. Your place
+  is saved on the server, so it follows you from device to device. Audiobooks have chapters, speed, a sleep timer, and
+  open the matching EPUB at the same point.
 - **The player**: chapters and seek previews on the scrubber, audio and subtitle tracks (styled ASS/SSA and PGS are
   drawn in the browser), Up next, a pause screen, picks at the end of a movie, Watch together (SyncPlay) and casting
   to other Jellyfin apps.
@@ -173,6 +185,15 @@ Seerr uses Jellyfin sign-in; admins can link the others by hand and switch reque
 
 The Android app goes through the plugin for requests, so there's nothing to set up on the phone or the TV.
 
+### Music and book requests
+
+**Admin › Music and book requests.** Enter Lidarr's address *as the Jellyfin server reaches it* and its API key
+(Lidarr › Settings › General), then pick the quality profile, the release types and the root folder requests use.
+For books, turn on the apps you run and choose one per format: Shelfarr takes a user API token with the requests
+scopes (Shelfarr › Profile › API tokens), Librarr and Readarr-style apps an API key. Then set limits and
+auto-approval per profile; profiles without auto-approval wait for an admin on the Requests page. Movie and show
+requests stay in Seerr, and the Requests page shows a tab for each kind that's set up.
+
 ### Skip intro and credits
 
 Seedy reads Jellyfin's media segments (`Intro`, `Recap`, `Outro`…). A segment provider such as the
@@ -190,6 +211,7 @@ data**. Live TV then appears in the Libraries menu, and in the Android app.
   when a server is too old for it.
 - **Seerr:** tested with current Seerr releases. Jellyseerr and Overseerr speak the same API. Seerr works best
   when it signs people in with Jellyfin, so their accounts match up on their own.
+- **Lidarr, Shelfarr, Librarr:** built against Lidarr 3.1, Shelfarr's `/api/v1` and Librarr 1.4.
 - **Browsers:** any current browser. The experimental player decodes 4K only when the page can use WebAssembly
   threads; without them it stops at 1080p.
 - **Android:** 8.0 and newer, phones, tablets and Android TV / Google TV.
@@ -230,7 +252,7 @@ make dev-media     # fill the library with open-licensed titles: Blender open mo
 make dev-libraries # add the Music and Books libraries, with plays, playlists and reading positions for Alex
 make dev-seerr     # connect the test Seerr to the test Jellyfin
 make dev-arr       # give Seerr its Sonarr, 4K Sonarr and Radarr (quality profiles, folders, 4K requests)
-make dev-media-requests  # set up Lidarr, Shelfarr and Librarr for music, book and comic requests
+make dev-media-requests  # set up Lidarr, Shelfarr and Librarr, connect Seedy to them and add sample requests
 make dev-install   # build, install into the test server and restart it
 make web           # Vite on http://127.0.0.1:5173/seedy/, proxied to the test server
 make web-mock      # …or answer /Seedy/* from fixtures (web/dev/mock-plugin.ts)
@@ -256,9 +278,13 @@ src/Jellyfin.Plugin.Seedy/
   Api/AdminController     /Seedy/Admin: config, status, logo, Seerr connection and accounts, play log
   Api/BackupsController   /Seedy/Admin/BackupFiles and /Seedy/Admin/BackupSchedule
   Api/TrailerController   /Seedy/Items/{id}/Trailer: local, TMDB (Jellyfin metadata) or Seerr trailers
-  Services/               home rows and learned order, Seerr, play recorder, preferences, trailers,
+  Api/BooksController     /Seedy/Books and /Seedy/Reading: book files, length and chapters, comic pages, reading places
+  Api/MediaRequests…      /Seedy/MediaRequests and /Seedy/Admin/MediaRequests: music and book requests, their admin
+  Services/               home rows and learned order, Seerr, play recorder, preferences, trailers, book files,
+                          Media/ (Lidarr, Shelfarr, Librarr, MusicBrainz, Open Library, the request queue and its sync),
                           RootRedirect (Seedy's pages at the server address, Jellyfin's app at /old)
-  Data/SeedyDatabase      SQLite (play log, hidden titles, preferences, learned row order) in <data>/seedy/seedy.db
+  Data/SeedyDatabase      SQLite (play log, hidden titles, preferences, learned row order, reading places, music and
+                          book requests) in <data>/seedy/seedy.db
   Tasks/                  play log retention, weekly automatic backup
 web/                      Preact + TypeScript + Vite
   src/api                 Jellyfin client, Seedy API contract (seedy.ts), Live TV, image helpers
@@ -266,11 +292,14 @@ web/                      Preact + TypeScript + Vite
   src/ui                  design tokens and shared components; the navbar and its search
   src/screens/browse      Home, Details, Library, lists, Favorites, History, Search, Seerr titles
   src/screens/livetv      Live TV: On now, Guide, Channels, Recordings
-  src/screens/requests    Requests: Discover, My requests, All requests (Seerr)
+  src/screens/music       the music library, album and artist pages
+  src/screens/books       the books library, book details and the reader (EPUB, comics, PDF)
+  src/screens/requests    Requests: Discover, My requests, All requests (Seerr, Lidarr, Shelfarr, Librarr)
   src/screens/me          personal settings (/settings)
   src/screens/admin       Seedy's admin pages and the dashboard shell
   src/screens/server      the server dashboard; its Jellyfin API calls are in api.ts
   src/player              the player (on demand and live), and the experimental player (soft-*.ts)
+  src/audio               the audio player: queue, player bar, Now playing, audiobooks
   vite/libmedia.ts        serves libmedia and its decoders for the experimental player
   src/i18n/fr             French translations
 android/                  Kotlin + Jetpack Compose
@@ -282,7 +311,7 @@ android/                  Kotlin + Jetpack Compose
   app                     the single APK (TV screens on devices with Leanback)
 Makefile                  shortcuts for the build and the test server (`make` lists them)
 scripts/                  release helper (plugin repository manifest), Android shared files
-dev/                      local test server, media generator, Seerr setup
+dev/                      local test server, media generators, Seerr and request apps setup
 ```
 
 ## Contributing
