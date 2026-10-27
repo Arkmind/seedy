@@ -7,6 +7,7 @@ const fr: Record<string, string> = {
   'Shuffle all': 'Tout en aléatoire',
   'Instant mix': 'Mix instantané',
   'Songs': 'Morceaux',
+  'Song': 'Morceau',
   "Couldn't start the scan": 'Impossible de lancer l’analyse',
   'Jump back in': 'Reprendre l’écoute',
   'Instant mixes for you': 'Mix instantanés pour vous',

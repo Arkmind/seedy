@@ -2,7 +2,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
 import { Link } from '../lib/router';
 import { t } from '../lib/i18n';
-import { openPlayer } from './engine';
+import { audioStore, openPlayer, skip, togglePlay } from './engine';
 import { AIcon } from './icons';
 import { CastMenu } from './parts';
 
@@ -22,11 +22,17 @@ export function PlayerShell({ label, tint, at = '20% 30%', stops = [38, 80], ove
     const prev = document.activeElement as HTMLElement | null;
     ref.current?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented) return;
-      // A menu open inside the player closes first.
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+      // A menu open inside the player handles its own keys.
       if (document.querySelector('.popover')) return;
-      e.preventDefault();
-      openPlayer(false);
+      if (e.key === 'Escape') { e.preventDefault(); openPlayer(false); return; }
+      // Space plays and pauses, the arrows seek, unless a control has the keys.
+      const el = e.target as HTMLElement | null;
+      if (el && el.closest('button, a, input, select, textarea, [role="button"]')) return;
+      const book = audioStore.get().mode === 'audiobook';
+      if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); skip(book ? -30 : -10); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); skip(book ? 30 : 10); }
     };
     document.addEventListener('keydown', onKey);
     return () => {

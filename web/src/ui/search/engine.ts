@@ -20,7 +20,8 @@ const LIMITS: Record<Size, { titles: number; episodes: number; people: number }>
 };
 
 const FIELDS = ['PrimaryImageAspectRatio', 'ProductionYear', 'Genres', 'ChildCount', 'RecursiveItemCount', 'OriginalTitle', 'DateCreated'];
-const TITLE_TYPES = ['Movie', 'Series', 'BoxSet'];
+/* Music too: artists, albums and songs (the music library's box says so). */
+const TITLE_TYPES = ['Movie', 'Series', 'BoxSet', 'MusicArtist', 'MusicAlbum', 'Audio'];
 const uid = () => getSession()?.userId ?? '';
 
 /* ── Text ── */
@@ -220,7 +221,7 @@ export function parse(text: string, genres: GenreInfo[]): Parsed {
 
 /* ── Ranking ── */
 
-export type Kind = 'movie' | 'show' | 'collection' | 'episode' | 'person';
+export type Kind = 'movie' | 'show' | 'collection' | 'episode' | 'person' | 'music';
 
 export interface Hit {
   kind: Kind;
@@ -236,6 +237,7 @@ export function kindOf(item: BaseItem): Kind {
     case 'BoxSet': return 'collection';
     case 'Episode': return 'episode';
     case 'Person': return 'person';
+    case 'MusicArtist': case 'MusicAlbum': case 'Audio': return 'music';
     default: return 'movie';
   }
 }
@@ -274,7 +276,7 @@ function watchBoost(item: BaseItem): number {
   return b;
 }
 
-const KIND_WEIGHT: Record<Kind, number> = { movie: 0, show: 0, collection: -4, episode: -8, person: -2 };
+const KIND_WEIGHT: Record<Kind, number> = { movie: 0, show: 0, collection: -4, episode: -8, person: -2, music: -1 };
 
 function hit(item: BaseItem, base: number, match: string): Hit {
   const kind = kindOf(item);
@@ -429,6 +431,7 @@ export const GROUPS: { kind: Kind; label: string }[] = [
   { kind: 'show', label: 'Shows' },
   { kind: 'collection', label: 'Collections' },
   { kind: 'episode', label: 'Episodes' },
+  { kind: 'music', label: 'Music' },
   { kind: 'person', label: 'People' }
 ];
 
@@ -466,6 +469,9 @@ export function rowMeta(item: BaseItem): string {
     case 'BoxSet': return join('Collection', item.ChildCount ? plural(item.ChildCount, 'title') : '');
     case 'Episode': return join(episodeTag(item), inProgress ? timeLeft(remainingSeconds(item)) : run);
     case 'Person': return '';
+    case 'MusicArtist': return t('Artist');
+    case 'MusicAlbum': return join(t('Album'), item.AlbumArtist, item.ProductionYear ? String(item.ProductionYear) : '');
+    case 'Audio': return join(t('Song'), item.Artists?.join(', ') || item.AlbumArtist, item.Album);
     default:
       return join(
         item.ProductionYear ? String(item.ProductionYear) : '',
@@ -517,6 +523,7 @@ export function bestMeta(item: BaseItem, play?: BestPlay): string {
     case 'Series': return join(t('Show'), rowMeta(item), play?.where);
     case 'BoxSet': return rowMeta(item);
     case 'Episode': return join(t('Episode'), rowMeta(item));
+    case 'MusicArtist': case 'MusicAlbum': case 'Audio': return rowMeta(item);
     default: {
       const ud = item.UserData;
       const inProgress = (ud?.PlaybackPositionTicks ?? 0) > 0 && !!item.RunTimeTicks && !ud?.Played;
