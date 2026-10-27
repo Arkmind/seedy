@@ -1,6 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
-import { bookRow, bookSearch, type BookCard as Book, type BookRow } from '../../api/media';
+import { bookCover, bookRow, bookSearch, type BookCard as Book, type BookRow } from '../../api/media';
 import { dayOf, daysFromToday, fmtDayMonth, fmtMonthYear } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link } from '../../lib/router';
@@ -72,7 +72,7 @@ export function BookCardView({ b, meta, onOpen, width }: { b: Book; meta: { text
   return (
     <div class="card reqs-book-card" style={width ? { flex: `0 0 ${width}px`, width: width + 'px' } : undefined}>
       <div class="reqs-book-cover" tabIndex={-1}>
-        <BookArt seed={b.workId} src={b.coverUrl} title={b.title} author={b.author} />
+        <BookArt seed={b.workId} src={bookCover(b)} title={b.title} author={b.author} />
         <div class="reqs-cover-hover">
           {canAsk && (
             <button type="button" class="btn btn-primary is-sm is-block" aria-haspopup="dialog" onClick={() => onOpen(true)}>

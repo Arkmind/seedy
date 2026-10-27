@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { bookDetails, mediaCreate, mediaOptions, type BookCard, type BookFormat, type MediaOptions } from '../../api/media';
+import { bookCover, bookDetails, mediaCreate, mediaOptions, type BookCard, type BookFormat, type MediaOptions } from '../../api/media';
 import { getLang, t, tn, tx } from '../../lib/i18n';
 import { useAsync } from '../../lib/store';
 import { Icon, type IconName } from '../../ui/icons';
@@ -125,7 +125,7 @@ function Body({ book, opts, row, loading, error, retry, onClose, onDone }: {
   return (
     <>
       <div class="reqs-dlg-head is-book">
-        <span class="reqs-dlg-cover"><BookArt seed={book.workId} src={book.coverUrl} title={book.title} author={book.author} size="dialog" /></span>
+        <span class="reqs-dlg-cover"><BookArt seed={book.workId} src={bookCover(book)} title={book.title} author={book.author} size="dialog" /></span>
         <div class="reqs-dlg-head-text is-book">
           <span class="reqs-dlg-eyebrow">{book.content === 'comic' ? t('Request a comic') : t('Request a book')}</span>
           <h2 id="reqs-dlg-h" class="reqs-dlg-title">{book.title}</h2>

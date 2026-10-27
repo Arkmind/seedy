@@ -1,5 +1,6 @@
 import { get, post, del } from './client';
 import type { AdminConfig } from './seedy';
+import { imageUrl } from './images';
 
 /* Music and book requests (Jellyfin.Plugin.Seedy · MediaRequestsController, AdminMediaController). Seedy keeps its own
    queue for these: people ask, admins approve, and Seedy sends approved requests to Lidarr (music), Shelfarr, Librarr
@@ -125,6 +126,8 @@ export interface BookCard {
   year?: number;
   releaseDate?: string;
   coverUrl?: string;
+  /* A library item whose cover stands in when there is no cover URL. */
+  coverItemId?: string;
   series?: string;
   seriesIndex?: number;
   content: 'book' | 'comic';
@@ -219,3 +222,7 @@ export const adminMediaKey = (service: MediaService, apiKey: string) => post<Adm
 export const adminMediaProfiles = () => get<AdminMediaProfile[]>(`${A}/Profiles`);
 export const adminMediaProfile = (userId: string, body: { musicPerWeek?: number; booksPerMonth?: number; autoApprove?: boolean }) =>
   post<AdminMediaProfile[]>(`${A}/Profiles/${userId}`, body);
+
+/* A book card's cover: its own, else the cover of the edition on the server. */
+export const bookCover = (b: Pick<BookCard, 'coverUrl' | 'coverItemId'>) =>
+  b.coverUrl ?? (b.coverItemId ? imageUrl(b.coverItemId, 'Primary', { maxWidth: 400 }) : undefined);

@@ -646,6 +646,12 @@ public sealed class MediaDiscoverService
             }
 
             pick ??= new BookCardDto { WorkId = "seedy:" + item.Id.ToString("N"), Title = item.Name, Author = author, Year = item.ProductionYear };
+            if (string.IsNullOrEmpty(pick.CoverUrl))
+            {
+                // The ebook they read is on the server: its cover is the book's cover.
+                pick.CoverItemId = item.Id.ToString("N");
+            }
+
             pick.Formats = ["audiobook"];
             list.Add(pick);
         }

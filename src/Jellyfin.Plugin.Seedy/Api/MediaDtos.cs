@@ -383,6 +383,9 @@ public sealed class BookCardDto
     [JsonPropertyName("year")] public int? Year { get; set; }
     [JsonPropertyName("releaseDate")] public string? ReleaseDate { get; set; }
     [JsonPropertyName("coverUrl")] public string? CoverUrl { get; set; }
+
+    /// <summary>Gets or sets a library item whose cover stands in when there's no cover URL (the edition on the server).</summary>
+    [JsonPropertyName("coverItemId")] public string? CoverItemId { get; set; }
     [JsonPropertyName("series")] public string? Series { get; set; }
     [JsonPropertyName("seriesIndex")] public double? SeriesIndex { get; set; }
 
