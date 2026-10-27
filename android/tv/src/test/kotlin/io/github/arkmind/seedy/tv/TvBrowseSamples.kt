@@ -23,6 +23,7 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.CollectionType
 import org.jellyfin.sdk.model.api.LocationType
 import org.jellyfin.sdk.model.api.UserItemDataDto
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -46,6 +47,9 @@ object TvBrowseSamples {
     private fun season(n: Int, name: String = "Season $n") = BaseItemDto(id = id("Northbound S$n"), type = BaseItemKind.SEASON, name = name, indexNumber = n, seriesId = northbound.id)
 
     private val seasons = listOf(season(1), season(3), season(0, "Specials"))
+
+    /** The shots' today: "False Summit" (23 Oct) hasn't aired yet. */
+    val today: LocalDate = LocalDate.of(2026, 10, 21)
 
     private val recent = LocalDateTime.now().minusDays(2)
 

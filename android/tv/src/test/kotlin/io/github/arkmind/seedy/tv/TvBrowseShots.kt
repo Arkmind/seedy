@@ -62,7 +62,7 @@ class TvBrowseShots {
 
     @Test
     fun details() = shot("TVDetails") {
-        TvDetailsScreen(TvBrowseSamples.details, TvDetailsActions(), canRequest = true)
+        TvDetailsScreen(TvBrowseSamples.details, TvDetailsActions(), canRequest = true, today = TvBrowseSamples.today)
     }
 
     /** No board: the series page without seasons, "More like this" in their place. */
@@ -80,7 +80,7 @@ class TvBrowseShots {
 
     @Test
     fun requestSeasons() = shot("TVRequestSeasons") {
-        TvDetailsScreen(TvBrowseSamples.details, TvDetailsActions(), canRequest = true)
+        TvDetailsScreen(TvBrowseSamples.details, TvDetailsActions(), canRequest = true, today = TvBrowseSamples.today)
         TvRequestSeasonsContent(
             TvBrowseSamples.harrowgate, onToggle = {}, onToggleAll = {}, on4k = {}, advanced = TvAdvancedActions({}, {}, {}, {}),
             onRetry = {}, onSubmit = {}, onDismiss = {}, focusSeason = 3,
