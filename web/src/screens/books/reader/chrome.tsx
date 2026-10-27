@@ -98,7 +98,18 @@ export function Scrubber({ page, total, ticks, onCommit, valueText, status, rtl 
   const [drag, setDrag] = useState<number | null>(null);
   const shown = drag ?? page;
   const fraction = total > 0 ? Math.min(1, shown / total) : 0;
-  const commit = (v: number) => { setDrag(null); if (v !== page) onCommit(v); };
+  // The jump happens on the native "change" (release, or a key); preact/compat turns an onChange prop on inputs
+  // into "input", so it's listened to directly.
+  const ref = useRef<HTMLInputElement>(null);
+  const commitRef = useRef((v: number) => { void v; });
+  commitRef.current = (v: number) => { setDrag(null); if (v !== page) onCommit(v); };
+  useEffect(() => {
+    const input = ref.current;
+    if (!input) return;
+    const commit = () => commitRef.current(Number(input.value));
+    input.addEventListener('change', commit);
+    return () => input.removeEventListener('change', commit);
+  }, []);
   return (
     <footer class="rd-foot">
       <div class={'rd-scrub' + (rtl ? ' is-rtl' : '')}>
@@ -115,8 +126,8 @@ export function Scrubber({ page, total, ticks, onCommit, valueText, status, rtl 
           value={shown}
           aria-label={t('Position in the book')}
           aria-valuetext={valueText(shown)}
+          ref={ref}
           onInput={(e) => setDrag(Number(e.currentTarget.value))}
-          onChange={(e) => commit(Number(e.currentTarget.value))}
           onKeyDown={(e) => e.stopPropagation()}
         />
         {drag !== null && <span class="rd-scrub-tip" style={{ left: pct(fraction) }}>{valueText(drag)}</span>}

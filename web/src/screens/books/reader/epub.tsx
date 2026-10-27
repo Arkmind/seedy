@@ -226,7 +226,11 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
       gap: GAP
     } as Parameters<Book['renderTo']>[1] & { gap: number });
     rendRef.current = rend;
-    rend.hooks.content.register((contents: Contents) => styleContents(contents, settingsRef.current));
+    rend.hooks.content.register((contents: Contents) => {
+      styleContents(contents, settingsRef.current);
+      // The wheel over the page happens inside the book's frame.
+      contents.document?.addEventListener('wheel', (e) => wheelRef.current(e), { passive: true });
+    });
     rend.on('relocated', (l: { start: { cfi: string; index: number }; atStart?: boolean; atEnd?: boolean }) => {
       lastCfi.current = l.start.cfi;
       setPos({ cfi: l.start.cfi, index: l.start.index, page: pageAt(l.start.cfi, l.start.index), atStart: !!l.atStart, atEnd: !!l.atEnd });
@@ -348,6 +352,19 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
     return () => window.removeEventListener('keydown', fn);
   });
 
+  /* The wheel and trackpads turn the page in the page layouts: one turn per gesture (a pause starts the next one). */
+  const wheelAt = useRef(0);
+  const wheelRef = useRef((e: WheelEvent) => { void e; });
+  wheelRef.current = (e: WheelEvent) => {
+    if (settingsRef.current.layout === 'scroll' || panelRef.current || e.ctrlKey) return;
+    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (Math.abs(d) < 2) return;
+    const now = Date.now();
+    const fresh = now - wheelAt.current > 300;
+    wheelAt.current = now;
+    if (fresh) { if (d > 0) next(); else prev(); }
+  };
+
   /* Tapping the left or right third of the page turns it (not while selecting text or on a link). */
   const onPageClick = (e: MouseEvent) => {
     if (settingsRef.current.layout === 'scroll' || panelRef.current) return;
@@ -403,7 +420,7 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
   const width = s.layout === 'two' ? 2 * (TWO_COLUMN[s.margins] + GAP) : COLUMN[s.margins] + GAP;
 
   return (
-    <div class={'rd rd-theme-' + s.theme}>
+    <div class={'rd rd-theme-' + s.theme} onWheel={(e) => { if (!(e.target as Element).closest('.rs-panel, .rd-scrub')) wheelRef.current(e as unknown as WheelEvent); }}>
       <TopBar title={item.Name} sub={sub} onBack={() => back(`/details/${item.Id}`)}>
         <BarButton id="rd-toc-btn" icon="toc" label={t('Contents')} expanded={panel === 'toc'} onClick={() => setPanel(panel === 'toc' ? null : 'toc')} />
         <BarButton id="rd-search-btn" icon="search" label={t('Search in book')} expanded={panel === 'search'} onClick={() => setPanel(panel === 'search' ? null : 'search')} />

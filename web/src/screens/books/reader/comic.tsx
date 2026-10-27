@@ -96,6 +96,19 @@ export function ComicReader({ item, info, reading }: { item: BaseItem; info: Boo
     return () => window.removeEventListener('keydown', onKey);
   });
 
+  /* The wheel and trackpads turn the page when the page fits the screen: one turn per gesture. */
+  const wheelAt = useRef(0);
+  const onWheel = (e: WheelEvent) => {
+    if (scroll || panel || settings.fit === 'width' || e.ctrlKey) return;
+    if ((e.target as Element).closest('.rs-panel, .rd-scrub')) return;
+    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (Math.abs(d) < 2) return;
+    const now = Date.now();
+    const fresh = now - wheelAt.current > 300;
+    wheelAt.current = now;
+    if (fresh) { if ((d > 0) !== (rtl && Math.abs(e.deltaX) > Math.abs(e.deltaY))) next(); else prev(); }
+  };
+
   const touch = useRef<{ x: number; y: number } | null>(null);
   const onClick = (e: MouseEvent) => {
     const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -115,7 +128,7 @@ export function ComicReader({ item, info, reading }: { item: BaseItem; info: Boo
   ];
 
   return (
-    <div class={'rd rd-comic rd-theme-' + settings.theme + (settings.fit === 'width' ? ' is-fit-width' : '')}>
+    <div class={'rd rd-comic rd-theme-' + settings.theme + (settings.fit === 'width' ? ' is-fit-width' : '')} onWheel={(e) => onWheel(e as unknown as WheelEvent)}>
       <TopBar title={item.Name} sub={sub} onBack={() => back(`/details/${item.Id}`)}>
         <BarButton id="rd-settings-btn" icon="type" label={t('Reading settings')} expanded={panel} onClick={() => setPanel(!panel)} />
         <BarButton icon={full ? 'unfull' : 'full'} label={full ? t('Exit full screen') : t('Full screen')} onClick={toggleFull} />
