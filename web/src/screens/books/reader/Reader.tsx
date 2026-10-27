@@ -60,7 +60,7 @@ function PdfReader({ item, reading }: { item: BaseItem; info?: BookInfo; reading
       () => { if (!ctrl.signal.aborted) setFailed(true); }
     );
     // Opening it counts as reading it (it shows under Continue); the browser's viewer doesn't say which page is open.
-    void saveReading(item.Id, { Locator: reading?.Locator ?? '0', Percent: reading?.Percent ?? 0, Finished: !!reading?.Finished }).catch(() => undefined);
+    if (!reading) void saveReading(item.Id, { Locator: '0', Percent: 0, Finished: false }).catch(() => undefined);
     return () => { ctrl.abort(); if (made) URL.revokeObjectURL(made); };
   }, [item.Id]);
   return (

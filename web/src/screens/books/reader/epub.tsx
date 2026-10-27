@@ -15,7 +15,7 @@ import sansItalicExt from '@fontsource-variable/noto-sans/files/noto-sans-latin-
 import type { BaseItem } from '../../../api/types';
 import { t, tn } from '../../../lib/i18n';
 import { back, setQuery, useLocation } from '../../../lib/router';
-import { getBookFile, authorLine, type BookInfo, type Reading } from '../api';
+import { getBookFile, authorLine, type BookInfo, type Reading, type ReadingPatch } from '../api';
 import { tenMinutes } from '../parts';
 import {
   BarButton, EpubSettingsPanel, ReaderMessage, Scrubber, SidePanel, TopBar, TurnButtons, useFullscreen
@@ -98,7 +98,10 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
   const bookRef = useRef<Book | null>(null);
   const rendRef = useRef<Rendition | null>(null);
   const lastCfi = useRef<string | null>(reading?.Locator?.startsWith('epubcfi(') ? reading.Locator : null);
-  const startPercent = useRef<number | null>(loc.query.get('percent') !== null ? Number(loc.query.get('percent')) : null);
+  /* Where to open: ?percent= (from the audiobook), else the saved CFI, else the saved percent (a place saved by another
+     app, or by hand, has no CFI), else the start. */
+  const askedPercent = loc.query.get('percent') !== null ? Number(loc.query.get('percent')) : null;
+  const startPercent = useRef<number | null>(askedPercent ?? (!lastCfi.current && reading && !reading.Finished && reading.Percent > 0 ? reading.Percent : null));
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
   const [settings, setSettings] = useState<EpubSettings>(() => readEpubSettings(reading?.Settings));
@@ -229,7 +232,7 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
           target = (await cfiForPage(page)) ?? target;
         }
         startPercent.current = null;
-        setQuery({ percent: undefined });
+        if (askedPercent !== null) setQuery({ percent: undefined });
       }
       try { await rend.display(target); } catch { await rend.display(); }
     })();
@@ -275,17 +278,28 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
   const fraction = total ? Math.min(1, page / total) : 0;
   const percent = pos?.atEnd ? 100 : Math.round(fraction * 1000) / 10;
 
-  /* Save the place a moment after it stops moving. */
+  /* Save the place a moment after it stops moving. Reopening a book where it was saves nothing until the page turns
+     (a first opening does save, so the book shows under Continue). */
+  const placeRef = useRef<ReadingPatch | null>(null);
+  const openedAt = useRef<string | null>(null);
+  const moved = useRef(!reading || askedPercent !== null);
   useEffect(() => {
     if (!pos || !page) return;
-    saver.place({
+    const place: ReadingPatch = {
       Locator: pos.cfi,
       Percent: percent,
       Chapter: chapter?.title,
       ChapterIndex: chapterIdx >= 0 ? chapterIdx + 1 : undefined,
       ChapterCount: toc.length || undefined,
       Finished: !!pos.atEnd
-    });
+    };
+    placeRef.current = place;
+    if (!moved.current) {
+      if (openedAt.current === null) openedAt.current = pos.cfi;
+      if (pos.cfi === openedAt.current) return;
+      moved.current = true;
+    }
+    saver.place(place);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pos?.cfi, page, chapterIdx]);
 
@@ -340,7 +354,7 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
     setSettings((cur) => {
       const nextS = { ...cur, ...patch };
       rememberEpubSettings(nextS);
-      saver.settings(nextS as unknown as Record<string, unknown>);
+      saver.settings(nextS as unknown as Record<string, unknown>, placeRef.current);
       return nextS;
     });
   };

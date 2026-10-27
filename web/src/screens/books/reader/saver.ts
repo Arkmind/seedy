@@ -45,9 +45,10 @@ export function useReadingSaver(id: string) {
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(() => flush(), delay);
     },
-    /* The settings changed (saved with the next place). */
-    settings(s: ReadingSettings) {
+    /* The settings changed: saved with the place they were changed at (the server needs both). */
+    settings(s: ReadingSettings, place: ReadingPatch | null) {
       settings.current = s;
+      if (!pending.current && place) pending.current = { ...place, Settings: undefined };
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(() => flush(), 800);
     },

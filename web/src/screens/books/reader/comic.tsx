@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { BaseItem } from '../../../api/types';
 import { t, tn } from '../../../lib/i18n';
 import { back, setQuery, useLocation } from '../../../lib/router';
-import { authorLine, comicPageUrl, type BookInfo, type Reading } from '../api';
+import { authorLine, comicPageUrl, type BookInfo, type Reading, type ReadingPatch } from '../api';
 import { BarButton, ComicSettingsPanel, ReaderMessage, Scrubber, TopBar, TurnButtons, useFullscreen } from './chrome';
 import { useReadingSaver } from './saver';
 import { readComicSettings, rememberComicSettings, type ComicSettings } from './settings';
@@ -47,16 +47,21 @@ export function ComicReader({ item, info, reading }: { item: BaseItem; info: Boo
   const next = () => step(1);
   const prev = () => step(-1);
 
-  /* Save the page (and the settings when they changed). */
+  /* Save the page (and the settings when they changed); reopening where it was saves nothing until a page turns. */
+  const place = (): ReadingPatch => ({ Locator: String(index), Percent: Math.round(((lastShown + 1) / pages) * 1000) / 10, Finished: lastShown >= pages - 1 });
+  const moved = useRef(!reading || loc.query.get('percent') !== null);
+  const openedAt = useRef(index);
   useEffect(() => {
-    saver.place({ Locator: String(index), Percent: Math.round(((lastShown + 1) / pages) * 1000) / 10, Finished: lastShown >= pages - 1 }, 1200);
+    if (!moved.current && index === openedAt.current) return;
+    moved.current = true;
+    saver.place(place(), 1200);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, lastShown]);
   const change = (patch: Partial<ComicSettings>) => {
     setSettings((cur) => {
       const n = { ...cur, ...patch };
       rememberComicSettings(n);
-      saver.settings(n as unknown as Record<string, unknown>);
+      saver.settings(n as unknown as Record<string, unknown>, place());
       return n;
     });
   };

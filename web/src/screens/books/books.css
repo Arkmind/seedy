@@ -159,6 +159,20 @@
 .bk-dots > i { flex: 1; height: 4px; border-radius: 2px; background: var(--seedy-surface-2); }
 .bk-dots > i.is-read { background: var(--seedy-accent); }
 
+/* Authors */
+.bk-authors { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.bk-author {
+  display: flex; flex-direction: column; gap: 14px; padding: 20px 20px 18px; border-radius: 22px; background: var(--seedy-panel);
+  color: var(--seedy-text); min-width: 0; outline: 2px solid transparent; outline-offset: 3px;
+  transition: background-color var(--t-fast) var(--ease), outline-color var(--t-fast) var(--ease);
+}
+.bk-author:hover { background: var(--seedy-row); color: var(--seedy-text); }
+.bk-author:focus-visible { outline-color: var(--seedy-accent); }
+.bk-author-covers { display: grid; grid-template-columns: repeat(4, minmax(0, 72px)); align-items: end; gap: 10px; }
+.bk-author-cover { min-width: 0; }
+.bk-author-cover .bk-cover { box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4); }
+.bk-author-cover.is-audio { grid-column: span 2; width: 108px; }
+
 @media (max-width: 720px) {
   .bk-main { gap: 32px; }
   .bk-title h1 { font-size: 36px; }
@@ -167,5 +181,5 @@
   .bk-cont-grid { grid-template-columns: minmax(0, 1fr); }
   .bk-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 22px 14px; }
   .bk-grid.is-audio { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 22px 14px; }
-  .bk-series-grid.is-all { grid-template-columns: minmax(0, 1fr); }
+  .bk-series-grid.is-all, .bk-authors { grid-template-columns: minmax(0, 1fr); }
 }

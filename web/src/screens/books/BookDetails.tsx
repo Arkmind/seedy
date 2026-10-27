@@ -54,7 +54,10 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
   const readable = audio ? work.find((o) => formatOf(o) === 'epub') ?? work.find((o) => !isAudioBook(o)) : item;
   const twinReading = useAsync(() => (audio && readable ? getReading(readable.Id).catch(() => undefined) : Promise.resolve(undefined)), [readable?.Id, audio]);
 
-  const seriesName = seriesOf(item);
+  // An audiobook takes its series (and publisher) from the book it reads out.
+  const source = audio && readable ? readable : item;
+  const seriesName = seriesOf(source);
+  const volume = source.IndexNumber;
   const series = useMemo(() => {
     if (!seriesName || !lib.data) return undefined;
     return lib.data.series.find((s) => s.key === normalize(seriesName));
@@ -151,7 +154,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
   const isbn = item.ProviderIds?.Isbn ?? item.ProviderIds?.ISBN ?? item.ProviderIds?.isbn;
   const added = item.DateCreated ? longDate(item.DateCreated) : undefined;
   const rows: { label: string; value?: ComponentChildren }[] = [
-    { label: t('Publisher'), value: item.Studios?.map((s) => s.Name).join(', ') },
+    { label: t('Publisher'), value: (item.Studios?.length ? item : source).Studios?.map((s) => s.Name).join(', ') },
     { label: t('Narrator'), value: audio ? narratorOf(item) : undefined },
     { label: t('Genres'), value: item.Genres?.join(' · ') },
     { label: 'ISBN', value: isbn },
@@ -170,7 +173,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
           <div class="bkd-info">
             {seriesName && (
               <Link to={series ? `${libPath}?tab=series&series=${encodeURIComponent(seriesName)}` : libPath} class="bkd-series">
-                {isComic(self) ? t('{series} · No. {n}', { series: seriesName, n: item.IndexNumber! }) : t('{series} · Book {n}', { series: seriesName, n: item.IndexNumber! })}
+                {isComic(self) ? t('{series} · No. {n}', { series: seriesName, n: volume! }) : t('{series} · Book {n}', { series: seriesName, n: volume! })}
               </Link>
             )}
             <h1 id="bkd-h" class="bkd-title">{item.Name}</h1>

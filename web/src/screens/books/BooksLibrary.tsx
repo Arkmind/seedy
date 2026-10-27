@@ -12,6 +12,7 @@ import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { EmptyState, ErrorState } from '../browse/parts';
+import { AudioCover, BookCover } from './covers';
 import { authorLine, authorsOf, formatOf, getBookInfo, isAudioBook, isComic, listReading, loadLibraryItems, normalize, seriesOf, workKey, type Reading } from './api';
 import {
   AudioCard, BookCard, ContinueCard, SectionHead, SeriesCard, bookSub, comicSub, roughTime, tc, useColumns,
@@ -158,7 +159,8 @@ export function BooksLibrary({ view }: { view: BaseItem }) {
   const tabParam = loc.query.get('tab') as TabId | null;
   const tab: TabId = TABS.some((x) => x.id === tabParam) ? tabParam! : 'overview';
   const sortParam = loc.query.get('sort') as SortId | null;
-  const sort: SortId = SORTS.some((s) => s.id === sortParam) ? sortParam! : 'added';
+  // Authors list by name unless asked otherwise; everything else newest first.
+  const sort: SortId = SORTS.some((s) => s.id === sortParam) ? sortParam! : tab === 'authors' ? 'author' : 'added';
   const seriesParam = loc.query.get('series');
   const authorParam = loc.query.get('author');
   const lib = useBooksData(view.Id);
@@ -191,7 +193,7 @@ export function BooksLibrary({ view }: { view: BaseItem }) {
               <SortMenu sort={sort} onChange={(s) => {
                 // On the overview a sort opens the full Books grid in that order.
                 if (tab === 'overview') navigate(`${base}?tab=books&sort=${s}`, { replace: true });
-                else setQuery({ sort: s === 'added' ? undefined : s });
+                else setQuery({ sort: s === (tab === 'authors' ? 'author' : 'added') ? undefined : s });
               }} />
               <MenuButton
                 width={260}
@@ -456,50 +458,83 @@ function More({ onVisible }: { onVisible: () => void }) {
   return <div ref={setEl} class="bk-more"><span class="spinner" aria-label={t('Loading more')} /></div>;
 }
 
-/* ───────── Authors: each author with their books ───────── */
+/* ───────── Authors: a card per author, or one author's books ───────── */
+
+interface AuthorGroup { key: string; name: string; books: BaseItem[]; audio: BaseItem[]; added: number; readAt: number; released: number }
 
 function Authors({ data, sort, focus, tabTo }: { data: BooksData; sort: SortId; focus: string | null; tabTo: (id: TabId, extra?: Record<string, string>) => string }) {
   const groups = useMemo(() => {
-    const map = new Map<string, { name: string; items: BaseItem[] }>();
+    const map = new Map<string, AuthorGroup>();
+    // One card per work for books (the EPUB and PDF of a title count once).
+    const shown = new Set([...data.books, ...data.comics].map((i) => i.Id));
     for (const it of data.all) {
+      if (!isAudioBook(it) && !shown.has(it.Id)) continue;
       const authors = authorsOf(it);
       for (const a of authors.length ? authors : [{ Name: '' }]) {
         const key = normalize(a.Name) || '~';
-        const g = map.get(key) ?? { name: a.Name, items: [] };
-        g.items.push(it);
+        const g = map.get(key) ?? { key, name: a.Name, books: [], audio: [], added: 0, readAt: 0, released: 0 };
+        (isAudioBook(it) ? g.audio : g.books).push(it);
+        g.added = Math.max(g.added, time(it.DateCreated));
+        g.readAt = Math.max(g.readAt, lastRead(it, data.reading));
+        g.released = Math.max(g.released, released(it));
         map.set(key, g);
       }
     }
     const surname = (n: string) => { const p = n.trim().split(/\s+/); return (p.length > 1 ? p[p.length - 1] + ' ' + p.slice(0, -1).join(' ') : n).toLowerCase(); };
-    return Array.from(map.values()).sort((a, b) => (!a.name ? 1 : !b.name ? -1 : surname(a.name).localeCompare(surname(b.name))));
-  }, [data]);
-  useEffect(() => {
-    if (!focus) return;
-    requestAnimationFrame(() => document.getElementById('bk-a-' + normalize(focus))?.scrollIntoView({ block: 'start' }));
-  }, [focus]);
-  return (
-    <div class="bk-sections">
-      {groups.map((g) => {
-        const books = g.items.filter((i) => !isAudioBook(i));
-        const audio = g.items.filter(isAudioBook);
-        const id = 'bk-a-' + (normalize(g.name) || 'none');
-        const counts = [books.length ? plural(books.length, 'book') : '', audio.length ? plural(audio.length, 'audiobook') : ''].filter(Boolean).join(' · ');
-        return (
-          <section key={id} class="bk-sec bk-author" aria-labelledby={id}>
-            <div class="bk-sec-head">
-              <h2 id={id} class="bk-sec-title">{g.name || t('Unknown author')}<span class="bk-sec-count">{counts}</span></h2>
-            </div>
+    const byName = (a: AuthorGroup, b: AuthorGroup) => (!a.name ? 1 : !b.name ? -1 : surname(a.name).localeCompare(surname(b.name)));
+    const list = Array.from(map.values());
+    if (sort === 'added') return list.sort((a, b) => (b.added - a.added) || byName(a, b));
+    if (sort === 'read') return list.sort((a, b) => (b.readAt - a.readAt) || byName(a, b));
+    if (sort === 'released') return list.sort((a, b) => (b.released - a.released) || byName(a, b));
+    return list.sort(byName);
+  }, [data, sort]);
+  const counts = (g: AuthorGroup) => [g.books.length ? plural(g.books.length, 'book') : '', g.audio.length ? plural(g.audio.length, 'audiobook') : ''].filter(Boolean).join(' · ');
+  const one = focus ? groups.find((g) => g.key === (normalize(focus) || '~')) : undefined;
+  if (one) {
+    return (
+      <div class="bk-sections">
+        <section class="bk-sec" aria-labelledby="bk-one">
+          <div class="bk-sec-head">
+            <h2 id="bk-one" class="bk-sec-title">{one.name || t('Unknown author')}<span class="bk-sec-count">{counts(one)}</span></h2>
+            <Link to={tabTo('authors')} replace class="bk-sec-link">{t('All authors')}</Link>
+          </div>
+          {one.books.length > 0 && (
             <div class="bk-grid">
-              {sortItems(books, sort === 'added' ? 'released' : sort, data.reading).map((it) => (
+              {sortItems(one.books, sort === 'added' ? 'released' : sort, data.reading).map((it) => (
                 <div key={it.Id} class="bk-slot"><BookCard item={it} sub={isComic(it) ? comicSub(it, data.reading.get(it.Id), running(data, it)) : bookSub(it)} /></div>
               ))}
-              {audio.map((it) => <div key={it.Id} class="bk-slot is-audio-slot"><AudioCard item={it} /></div>)}
+            </div>
+          )}
+        </section>
+        {one.audio.length > 0 && (
+          <section class="bk-sec" aria-labelledby="bk-one-au">
+            <SectionHead id="bk-one-au" title={t('Audiobooks')} />
+            <div class="bk-grid is-audio">
+              {one.audio.map((it) => <div key={it.Id} class="bk-slot"><AudioCard item={it} /></div>)}
             </div>
           </section>
+        )}
+      </div>
+    );
+  }
+  if (!groups.length) return <EmptyState icon="person" title={t('No authors yet')} text={t('Authors come from each book\'s metadata.')} />;
+  return (
+    <div class="bk-authors">
+      {groups.map((g) => {
+        const covers = sortItems(g.books, 'released', data.reading).slice(0, 4);
+        return (
+          <Link key={g.key} to={tabTo('authors', { author: g.name })} class="bk-author" aria-label={g.name || t('Unknown author')}>
+            <span class="bk-author-covers" aria-hidden="true">
+              {covers.map((c) => <span key={c.Id} class="bk-author-cover"><BookCover item={c} size="xs" width={160} /></span>)}
+              {!covers.length && g.audio[0] && <span class="bk-author-cover is-audio"><AudioCover item={g.audio[0]} size="xs" width={200} noTitle /></span>}
+            </span>
+            <span class="bk-series-text">
+              <span class="bk-series-name">{g.name || t('Unknown author')}</span>
+              <span class="bk-series-sub">{counts(g)}</span>
+            </span>
+          </Link>
         );
       })}
-      {!groups.length && <EmptyState icon="person" title={t('No authors yet')} text={t('Authors come from each book\'s metadata.')} />}
-      {focus && <Link to={tabTo('authors')} replace class="bk-sec-link">{t('All authors')}</Link>}
     </div>
   );
 }
