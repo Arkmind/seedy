@@ -192,6 +192,10 @@
 }
 .reqs-more:hover, .reqs-more[aria-expanded='true'] { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
 
+@media (max-width: 720px) {
+  .reqs-row.is-music > .reqs-chip, .reqs-row.is-music.is-approval > .reqs-decide { margin-left: 72px; }
+}
+
 @media (max-width: 1280px) {
   .reqs-mine-row { grid-template-columns: minmax(0, 1fr) minmax(300px, 400px); }
   .reqs-mine-acts { grid-column: 1 / -1; justify-content: flex-start; padding-left: 76px; }

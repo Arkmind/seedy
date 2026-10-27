@@ -2,7 +2,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { meStore } from '../../lib/app-state';
 import { t } from '../../lib/i18n';
-import { Link, setQuery, useLocation } from '../../lib/router';
+import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { Icon, type IconName } from '../../ui/icons';
 import { Header } from '../../ui/navbar/Header';
@@ -170,6 +170,9 @@ export function Frame({ service, tab, placeholder, label, results, children }: {
     return () => window.clearTimeout(id);
   }, [text]);
   useEffect(() => { if (!query) setText((v) => (v.trim() ? '' : v)); }, [query]);
+  // A service the server doesn't have (Seerr isn't set up but Lidarr is): open one it has.
+  const missing = !services.includes(service) && services.length > 0;
+  useEffect(() => { if (missing) navigate(servicePath(services[0]!), { replace: true }); }, [missing]);
 
   if (!services.includes(service)) {
     return (

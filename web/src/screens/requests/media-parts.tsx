@@ -248,7 +248,8 @@ export function MediaMineRow({ r }: { r: MediaRequest }) {
       <Chip state={state} />
     </>
   );
-  return ready ? <Link to={ready.to} class="reqs-row is-media">{body}</Link> : <Link to="/requests/my" class="reqs-row is-media">{body}</Link>;
+  const cls = 'reqs-row is-media is-' + r.kind;
+  return ready ? <Link to={ready.to} class={cls}>{body}</Link> : <Link to={`/requests/my?type=${r.kind === 'music' ? 'music' : 'books'}`} class={cls}>{body}</Link>;
 }
 
 /* Discover · Waiting for your approval. */
@@ -256,7 +257,7 @@ export function MediaApprovalRow({ r, actions }: { r: MediaRequest; actions: Med
   const p = { title: mediaName(r), name: who(r) };
   const busy = actions.busy(r);
   return (
-    <div class="reqs-row is-approval is-media">
+    <div class={'reqs-row is-approval is-media is-' + r.kind}>
       <RequestThumb r={r} />
       <span class="reqs-text is-wrap">
         <span class="reqs-name">{mediaName(r)}</span>

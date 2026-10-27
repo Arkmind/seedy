@@ -541,7 +541,7 @@ public sealed class MediaDiscoverService
         var series = Read(user)
             .Where(x => x.Item is Book b && !string.IsNullOrWhiteSpace(b.SeriesName) && x.Item.IndexNumber is not null)
             .GroupBy(x => ((Book)x.Item).SeriesName!, StringComparer.OrdinalIgnoreCase)
-            .Select(g => (Series: g.Key, Max: g.Max(x => x.Item.IndexNumber!.Value), Min: g.Min(x => x.Item.IndexNumber!.Value), Comic: g.Any(x => MediaLibrary.FormatOf(x.Item) == "comic"), At: g.Max(x => x.Reading.UpdatedAt)))
+            .Select(g => (Series: g.Key, Max: g.Max(x => x.Item.IndexNumber!.Value), Min: g.Min(x => x.Item.IndexNumber!.Value), Comic: g.Any(x => MediaLibrary.FormatOf(x.Item) == "comic"), At: g.Max(x => x.Reading.UpdatedAt), Last: g.OrderByDescending(x => x.Item.IndexNumber).First().Item))
             .OrderByDescending(s => s.At)
             .Take(10)
             .ToList();
@@ -567,6 +567,21 @@ public sealed class MediaDiscoverService
 
             var pick = found.FirstOrDefault(b => MediaLibrary.Fold(b.Series) == MediaLibrary.Fold(s.Series) && b.SeriesIndex is { } i && Math.Abs(i - next) < 0.01)
                 ?? found.FirstOrDefault(b => b.Series is null && MediaLibrary.Fold(b.Title) == MediaLibrary.Fold(s.Series + " " + next.ToString(CultureInfo.InvariantCulture)));
+
+            // Metadata providers often don't know comic issues or small series: name the next volume after the last
+            // one ("Kestrel No. 5" → "Kestrel No. 6"). Librarr and Shelfarr search by title and author.
+            if (pick is null && s.Last is { } last && (s.Comic || last.Name.TrimEnd().EndsWith(s.Max.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)))
+            {
+                var name = NextName(last.Name, s.Max, next, s.Series);
+                pick = new BookCardDto
+                {
+                    WorkId = "seedy:" + MediaLibrary.Fold(s.Series) + ":" + next.ToString(CultureInfo.InvariantCulture),
+                    Title = name,
+                    Author = _items.GetPeople(last).FirstOrDefault(p => p.Type == Jellyfin.Data.Enums.PersonKind.Author)?.Name,
+                    Formats = s.Comic ? ["comic"] : ["ebook", "audiobook"]
+                };
+            }
+
             if (pick is null)
             {
                 continue;
@@ -586,6 +601,19 @@ public sealed class MediaDiscoverService
         }
 
         return list;
+    }
+
+    /* "Kestrel No. 5" → "Kestrel No. 6", "Ember Run Vol. 2" → "Ember Run Vol. 3", else "Series 7". */
+    private static string NextName(string last, int lastIndex, int next, string series)
+    {
+        var number = lastIndex.ToString(CultureInfo.InvariantCulture);
+        var at = last.LastIndexOf(number, StringComparison.Ordinal);
+        if (at >= 0 && at + number.Length == last.TrimEnd().Length)
+        {
+            return last[..at] + next.ToString(CultureInfo.InvariantCulture);
+        }
+
+        return series + " " + next.ToString(CultureInfo.InvariantCulture);
     }
 
     private async Task<List<BookCardDto>> AudiobooksOfReadAsync(User user, CancellationToken ct)
@@ -679,7 +707,7 @@ public sealed class MediaDiscoverService
             var onServer = _library.FindBooks(b.Title, b.Series, b.SeriesIndex);
             b.OnServer = onServer.Select(x => x.Format).Distinct().ToList();
             var hit = active.FirstOrDefault(x => string.Equals(x.Request.ForeignId, b.WorkId, StringComparison.OrdinalIgnoreCase)
-                || (MediaLibrary.Fold(x.Request.Title) == MediaLibrary.Fold(b.Title) && (b.Author is null || MediaLibrary.Fold(x.Request.Subtitle) == MediaLibrary.Fold(b.Author))));
+                || MediaLibrary.Fold(x.Request.Title) == MediaLibrary.Fold(b.Title));
             if (onServer.Count > 0 && b.Formats.All(f => b.OnServer.Contains(f)))
             {
                 b.Status = "server";

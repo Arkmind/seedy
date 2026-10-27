@@ -395,10 +395,11 @@ function BookAppPanel({ service, m }: { service: BookApp; m: Media }) {
   const p = APP_PANEL[service];
   const app = m[service];
   const name = service === 'readarr' ? 'Readarr API' : APP_NAMES[service];
-  const used = ROUTES.filter((r) => m.routes[r.key] === service).map((r) => t(r.name));
+  const used = ROUTES.filter((r) => m.routes[r.key] === service).map((r) => t(r.plural));
+  const usedLine = used.length > 1 ? t('{a} and {b}', { a: used.slice(0, -1).join(', '), b: used[used.length - 1]! }) : used[0];
   return (
     <section aria-labelledby={service + '-h'} class="panel">
-      <Head id={service + '-h'} icon={p.icon} title={name} sub={used.length ? used.join(', ') : t(p.sub)} />
+      <Head id={service + '-h'} icon={p.icon} title={name} sub={usedLine ? usedLine.charAt(0).toLocaleUpperCase() + usedLine.slice(1) : t(p.sub)} />
       <UrlRow service={service} value={app.url} onCommit={(v) => setMedia((x) => ({ ...x, [service]: { ...x[service], url: v } }), 0)} placeholder={p.placeholder} />
       <KeyRow service={service} hint={app.apiKeyHint} name={t(p.key)} help={t(p.keyHelp)} />
       <ConnRow service={service} ready={!!app.url && !!app.apiKeyHint} />
