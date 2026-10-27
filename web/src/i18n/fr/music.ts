@@ -112,6 +112,7 @@ const fr: Record<string, string> = {
   'Previous': 'Précédent',
   'Song position': 'Position dans le morceau',
   'Lyrics': 'Paroles',
+  'Shuffle is on': 'Lecture aléatoire activée',
   'Queue': 'File d’attente',
   'Repeat': 'Répéter',
   'Repeat this song': 'Répéter ce morceau',

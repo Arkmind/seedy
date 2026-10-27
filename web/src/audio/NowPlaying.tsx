@@ -1,4 +1,4 @@
-import type { JSX } from 'preact';
+import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { fmtDate, dayOf } from '../lib/format';
 import { formatNumber, t, tn } from '../lib/i18n';
@@ -102,13 +102,22 @@ export function NowPlaying() {
 
 /* ───────── Lyrics and About the song ───────── */
 
-function TabsAndLyrics({ tab, setTab, track, position }: { tab: Tab; setTab: (t: Tab) => void; track: Track; position: number }) {
+function useLyrics(track: Track) {
   const lyrics = useAsync<Lyrics | null>(
     () => (track.HasLyrics === false ? Promise.resolve(null) : getLyrics(track.Id).catch(() => null)),
     [track.Id]
   );
   const lines = lyrics.data?.Lyrics?.filter((l) => l.Text !== undefined) ?? [];
   const synced = lines.length > 0 && lines.every((l) => typeof l.Start === 'number');
+  return { lines, synced, waiting: lyrics.loading && !lyrics.data };
+}
+
+const NoLyrics = () => (
+  <div class="apn-empty"><span class="apn-empty-title">{t('No lyrics for this song')}</span><span class="apn-empty-text">{t('Lyrics show here when the server has them, from a .lrc file next to the song or its tags.')}</span></div>
+);
+
+function TabsAndLyrics({ tab, setTab, track, position }: { tab: Tab; setTab: (t: Tab) => void; track: Track; position: number }) {
+  const { lines, synced, waiting } = useLyrics(track);
   return (
     <>
       <div role="tablist" aria-label={t('Player panels')} class="apn-tabs">
@@ -119,13 +128,20 @@ function TabsAndLyrics({ tab, setTab, track, position }: { tab: Tab; setTab: (t:
         {tab !== 'about' && lines.length > 0 && <span class="apn-tabs-note">{synced ? t('Synced · click a line to jump') : t('Not synced')}</span>}
       </div>
       {tab !== 'about'
-        ? (lyrics.loading && !lyrics.data ? <div class="apn-lyrics-wait"><span class="spinner" aria-label={t('Loading')} /></div>
+        ? (waiting ? <div class="apn-lyrics-wait"><span class="spinner" aria-label={t('Loading')} /></div>
           : lines.length ? <LyricLines lines={lines} synced={synced} position={position} />
-          : <div class="apn-empty"><span class="apn-empty-title">{t('No lyrics for this song')}</span><span class="apn-empty-text">{t('Lyrics show here when the server has them, from a .lrc file next to the song or its tags.')}</span></div>)
+          : <NoLyrics />)
         : <AboutSong track={track} />}
       <div aria-hidden="true" class="apn-fade" />
     </>
   );
+}
+
+/* The lyrics alone, for the player bar's Lyrics panel. */
+export function LyricsOnly({ track, position }: { track: Track; position: number }) {
+  const { lines, synced, waiting } = useLyrics(track);
+  if (waiting) return <div class="apn-lyrics-wait"><span class="spinner" aria-label={t('Loading')} /></div>;
+  return lines.length ? <LyricLines lines={lines} synced={synced} position={position} /> : <NoLyrics />;
 }
 
 function LyricLines({ lines, synced, position }: { lines: { Text: string; Start?: number }[]; synced: boolean; position: number }) {
@@ -199,7 +215,7 @@ export function sizeLabel(bytes: number): string {
 
 /* ───────── Up next ───────── */
 
-function UpNext({ s, onBack }: { s: AudioState; onBack?: () => void }) {
+export function UpNext({ s, onBack, actions }: { s: AudioState; onBack?: () => void; actions?: ComponentChildren }) {
   const added = s.added;
   const rest = s.context.slice(s.pos + 1);
   const empty = !added.length && !rest.length;
@@ -215,6 +231,7 @@ function UpNext({ s, onBack }: { s: AudioState; onBack?: () => void }) {
       <div class="apn-q-head">
         <h2 id="apn-q-h" class="apn-q-title">{t('Up next')}</h2>
         {!empty && <button type="button" class="apn-q-clear" onClick={clearQueue}>{t('Clear queue')}</button>}
+        {actions}
       </div>
       <div class="apn-q-scroll">
         {empty && <p class="apn-q-empty">{t('Nothing else is queued. Pick Play next or Add to queue on any song.')}</p>}

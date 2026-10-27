@@ -113,6 +113,54 @@ a.ap-bar-sub:hover { color: #ffffff; }
 }
 .ap-bar-speed:hover, .ap-bar-speed[aria-expanded='true'] { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
 
+.ap-bar-btn.is-active { background: var(--seedy-surface); color: #ffffff; }
+
+/* What an icon button does, on hover (the bar's buttons are icons only). */
+.ap-bar [data-tip], .ap-pop [data-tip] { position: relative; }
+.ap-bar [data-tip]::after, .ap-pop [data-tip]::after {
+  content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 10px); z-index: 3;
+  padding: 6px 10px; border-radius: 8px; background: var(--seedy-inverse); color: var(--seedy-ink-inverse);
+  font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: none; white-space: nowrap;
+  transform: translate(-50%, 4px); opacity: 0; pointer-events: none; transition: opacity 120ms ease, transform 120ms ease;
+}
+.ap-pop [data-tip]::after { bottom: auto; top: calc(100% + 8px); transform: translate(-50%, -4px); }
+.ap-bar [data-tip]:hover::after, .ap-pop [data-tip]:hover::after { opacity: 1; transform: translate(-50%, 0); transition-delay: 350ms; }
+.ap-bar .ap-tip-end[data-tip]::after, .ap-pop .ap-pop-actions > :last-child[data-tip]::after { left: auto; right: 0; transform: translate(0, 4px); }
+.ap-bar .ap-tip-end[data-tip]:hover::after, .ap-pop .ap-pop-actions > :last-child[data-tip]:hover::after { transform: none; }
+.ap-bar [aria-expanded='true'][data-tip]::after { display: none; }
+@media (hover: none) { .ap-bar [data-tip]::after, .ap-pop [data-tip]::after { display: none; } }
+
+/* Lyrics and Up next above the bar. */
+.ap-pop {
+  position: fixed; right: 24px; bottom: calc(var(--ap-bar-h) + 12px); z-index: 45; width: min(400px, calc(100vw - 32px));
+  height: min(560px, calc(100vh - var(--ap-bar-h) - 120px)); display: flex; flex-direction: column; padding: 16px 16px 0;
+  border-radius: var(--r-panel); background: var(--seedy-bg); box-shadow: 0 0 0 1px var(--seedy-hairline), 0 18px 48px rgba(0, 0, 0, 0.55);
+  animation: ap-pop-in 140ms ease-out; overflow: hidden;
+}
+@keyframes ap-pop-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .ap-pop { animation: none; } }
+.ap-pop.is-lyrics:has(.apn-empty) { height: auto; padding-bottom: 8px; }
+.ap-pop-head { flex: none; display: flex; align-items: flex-start; gap: 12px; }
+.ap-pop-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ap-pop-title { font-size: 18px; font-weight: 800; color: #ffffff; }
+.ap-pop-sub { font-size: 12px; color: var(--seedy-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ap-pop-actions { flex: none; display: flex; gap: 4px; margin-left: auto; }
+.ap-pop-btn {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0;
+  border-radius: var(--r-ctl); background: transparent; color: var(--seedy-text-2); cursor: pointer;
+}
+.ap-pop-btn:hover { background: var(--seedy-surface); color: #ffffff; }
+.ap-pop .apn-queue { flex: 1; padding: 0 0 16px; border-radius: 0; background: transparent; }
+.ap-pop .apn-q-head { gap: 4px; }
+.ap-pop .apn-q-title { flex: 1; }
+.ap-pop-lyrics { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.ap-pop .apn-lyrics { gap: 12px; padding: 14px 0 40%; }
+.ap-pop .apn-line { font-size: 18px; }
+.ap-pop .apn-line.is-current { font-size: 20px; }
+.ap-pop .apn-empty { padding: 14px 0; }
+.ap-pop .apn-empty-title { font-size: 18px; }
+.ap-pop .apn-empty-text { font-size: 13px; }
+
 @media (max-width: 1100px) {
   .ap-bar { grid-template-columns: minmax(0, 1fr) minmax(300px, 1.4fr) auto; gap: 16px; }
   .ap-bar-volume { display: none; }
@@ -167,7 +215,7 @@ a.ap-full-name:hover { color: #ffffff; text-decoration: underline; }
 
 .apn-grid {
   position: absolute; left: 32px; right: 32px; top: 96px; bottom: 32px;
-  display: grid; grid-template-columns: 400px minmax(0, 1fr) 320px; gap: 40px;
+  display: grid; grid-template-columns: 400px minmax(0, 1fr) clamp(320px, calc(320px + (100vw - 1440px) * 0.4), 520px); gap: 40px;
 }
 .apn-song { display: flex; flex-direction: column; justify-content: center; gap: 22px; min-height: 0; }
 .apn-cover { width: 360px; height: 360px; border-radius: 20px; box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6); }
@@ -305,7 +353,7 @@ a.apn-artist:hover { color: #ffffff; }
 /* Audiobook */
 .apb-grid {
   position: absolute; left: 32px; right: 32px; top: 96px; bottom: 32px;
-  display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 48px;
+  display: grid; grid-template-columns: minmax(0, 1fr) clamp(420px, calc(420px + (100vw - 1440px) * 0.3), 560px); gap: 48px;
 }
 .apb-main { display: flex; align-items: center; gap: 48px; padding-left: 40px; min-width: 0; }
 .apb-cover { width: 360px; height: 360px; border-radius: 20px; box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6); }

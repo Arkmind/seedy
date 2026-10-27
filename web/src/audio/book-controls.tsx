@@ -20,6 +20,7 @@ export function SpeedButton({ variant }: { variant: 'bar' | 'chip' }) {
       button={({ ref, open, toggle }) => (
         <button ref={ref} type="button" aria-haspopup="menu" aria-expanded={open ? 'true' : 'false'} onClick={toggle}
           class={variant === 'bar' ? 'ap-bar-speed' : 'apb-chip'}
+          data-tip={variant === 'bar' ? t('Playback speed') : undefined}
           aria-label={variant === 'bar' ? t('Playback speed {speed}', { speed: speedLabel(s.speed) }) : undefined}>
           {variant === 'bar' ? speedLabel(s.speed) : <>{t('Speed')} <b>{speedLabel(s.speed)}</b></>}
         </button>
@@ -59,6 +60,7 @@ export function SleepButton({ variant }: { variant: 'bar' | 'chip' }) {
       button={({ ref, open, toggle }) => (
         <button ref={ref} type="button" aria-haspopup="menu" aria-expanded={open ? 'true' : 'false'} onClick={toggle}
           class={(variant === 'bar' ? 'ap-bar-btn ap-bar-sleep' : 'apb-chip apb-sleep') + (on ? ' is-on' : '')}
+          data-tip={variant === 'bar' ? (on ? t('Sleep timer: {state}', { state: label }) : t('Sleep timer')) : undefined}
           aria-label={variant === 'bar' ? (on ? t('Sleep timer: {state}', { state: label }) : t('Sleep timer')) : undefined}>
           <AIcon name="moon" size={variant === 'bar' ? 18 : 17} />
           {variant === 'chip' && label}

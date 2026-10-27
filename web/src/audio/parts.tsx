@@ -1,5 +1,5 @@
 import type { JSX } from 'preact';
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { sendPlayCommand } from '../api/jellyfin';
 import type { SessionInfo } from '../api/types';
 import { listCastTargets } from '../lib/cast';
@@ -31,11 +31,22 @@ export function artistLink(tk?: Pick<Track, 'ArtistItems' | 'AlbumArtists'> | nu
 }
 
 /* A seek bar: the boards' track and fill (and thumb on the big players) over an invisible range input that takes the
-   pointer and the arrow keys. */
+   pointer and the arrow keys. The seek happens on the native "change" (release, or a key); preact/compat turns an
+   onChange prop on inputs into "input", so it's listened to directly. */
 export function SeekBar({ value, max, onSeek, label, valueText, class: cls, step = 1 }: {
   value: number; max: number; onSeek: (v: number) => void; label: string; valueText?: string; class?: string; step?: number;
 }) {
   const [drag, setDrag] = useState<number | null>(null);
+  const ref = useRef<HTMLInputElement>(null);
+  const seekRef = useRef(onSeek);
+  seekRef.current = onSeek;
+  useEffect(() => {
+    const input = ref.current;
+    if (!input) return;
+    const commit = () => { setDrag(null); seekRef.current(Number(input.value)); };
+    input.addEventListener('change', commit);
+    return () => input.removeEventListener('change', commit);
+  }, []);
   const v = drag ?? value;
   const f = max > 0 ? Math.max(0, Math.min(1, v / max)) : 0;
   const pct = (f * 100).toFixed(3) + '%';
@@ -46,9 +57,8 @@ export function SeekBar({ value, max, onSeek, label, valueText, class: cls, step
         <span class="ap-seek-thumb" style={{ left: pct }} />
       </span>
       <input
-        type="range" min={0} max={Math.max(1, max)} step={step} value={v} aria-label={label} aria-valuetext={valueText}
+        ref={ref} type="range" min={0} max={Math.max(1, max)} step={step} value={v} aria-label={label} aria-valuetext={valueText}
         onInput={(e) => setDrag(Number((e.target as HTMLInputElement).value))}
-        onChange={(e) => { const n = Number((e.target as HTMLInputElement).value); setDrag(null); onSeek(n); }}
       />
     </span>
   );
@@ -88,7 +98,7 @@ export function CastMenu({ class: cls, size = 18, button }: { class: string; siz
     <MenuButton
       width={300}
       button={({ ref, open, toggle }) => (
-        <button ref={ref} type="button" class={cls} aria-label={t('Play on another device')} aria-expanded={open ? 'true' : 'false'}
+        <button ref={ref} type="button" class={cls} data-tip={t('Play on another device')} aria-label={t('Play on another device')} aria-expanded={open ? 'true' : 'false'}
           onClick={() => { if (!open) { setSessions(null); listCastTargets().then(setSessions, () => setSessions([])); } toggle(); }}>
           {button ? button(open) : <AIcon name="cast" size={size} />}
         </button>
