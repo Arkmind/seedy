@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.2.9.0",
+        "changelog": "## What's Changed\n* Feature/music books by @Arkmind in https://github.com/Arkmind/seedy/pull/68\n\nMusic & Books on web 🌈 📖 yeeeeey\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.2.8...v0.2.9",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.2.9/seedy_0.2.9.0.zip",
+        "checksum": "16eedb66eaa950e23322d1c005cf4091",
+        "timestamp": "2026-10-27T22:25:54Z"
+      },
+      {
         "version": "0.2.8.0",
         "changelog": "## What's Changed\n* Fix/web wake lock by @Arkmind in https://github.com/Arkmind/seedy/pull/63\n* Fix/web player stalls by @Arkmind in https://github.com/Arkmind/seedy/pull/64\n* Fix/web season tabs by @Arkmind in https://github.com/Arkmind/seedy/pull/65\n* Fix/latest row title by @Arkmind in https://github.com/Arkmind/seedy/pull/66\n* Fix/discover opens title by @Arkmind in https://github.com/Arkmind/seedy/pull/67\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.2.7...v0.2.8",
         "targetAbi": "12.0.0.0",
