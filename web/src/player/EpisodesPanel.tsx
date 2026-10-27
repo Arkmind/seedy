@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { cardArt } from '../api/images';
 import type { BaseItem } from '../api/types';
 import { progressFraction, runtime } from '../lib/format';
@@ -34,14 +34,11 @@ export function EpisodesPanel({ current, episodes, onPlay }: { current: BaseItem
   return (
     <section class="pl-panel" aria-label={t('Episodes')}>
       {seasons.length > 1 && (
-        <div class="pl-seasons hscroll">
-          <Segmented<string>
-            label={t('Season')}
-            value={shown?.id ?? ''}
-            onChange={setSeason}
-            options={seasons.map((s) => ({ value: s.id, label: s.num === 0 ? t('Specials') : s.num !== undefined ? t('Season {n}', { n: s.num }) : s.name }))}
-          />
-        </div>
+        <SeasonTabs
+          value={shown?.id ?? ''}
+          onChange={setSeason}
+          options={seasons.map((s) => ({ value: s.id, label: s.num === 0 ? t('Specials') : s.num !== undefined ? t('Season {n}', { n: s.num }) : s.name }))}
+        />
       )}
       <div ref={listRef} class="pl-group">
         <span class="pl-label">{current.SeriesName ? `${current.SeriesName} · ${shown?.name ?? ''}` : shown?.name}</span>
@@ -76,5 +73,83 @@ export function EpisodesPanel({ current, episodes, onPlay }: { current: BaseItem
         })}
       </div>
     </section>
+  );
+}
+
+// Scrolls the tabs; near the end it heads for, it goes all the way rather than leave an arrow with a few pixels behind it.
+const slide = (el: HTMLElement, by: number) => {
+  const end = el.scrollWidth - el.clientWidth;
+  const to = el.scrollLeft + by;
+  el.scrollTo({ left: by > 0 ? (to > end - 56 ? end : to) : to < 56 ? 0 : to, behavior: 'smooth' });
+};
+
+// Brings a tab out from under the arrows.
+const reveal = (el: HTMLElement, tab: HTMLElement) => {
+  const box = el.getBoundingClientRect();
+  const r = tab.getBoundingClientRect();
+  const room = 64;
+  const off = r.left < box.left + room ? r.left - box.left - room : r.right > box.right - room ? r.right - box.right + room : 0;
+  if (off) slide(el, off);
+};
+
+/* A long-running show has more seasons than the panel holds: the tabs slide inside the pill (arrows, wheel or swipe)
+   and the picked season stays in view. */
+function SeasonTabs({ value, options, onChange }: { value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
+  const track = useRef<HTMLDivElement>(null);
+  const placed = useRef(false);
+  const [edges, setEdges] = useState({ left: false, right: false });
+
+  useEffect(() => {
+    const el = track.current;
+    if (!el) return;
+    const update = () => setEdges({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', update);
+      ro.disconnect();
+    };
+  }, [options.length]);
+
+  // Centred when the panel opens; later, brought out from under an arrow, like a tab the keyboard lands on.
+  useLayoutEffect(() => {
+    const el = track.current;
+    const tab = el?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!el || !tab) return;
+    if (placed.current) return reveal(el, tab);
+    placed.current = true;
+    const box = el.getBoundingClientRect();
+    const r = tab.getBoundingClientRect();
+    el.scrollLeft += r.left + r.width / 2 - (box.left + box.width / 2);
+  }, [value]);
+
+  const page = (dir: 1 | -1) => {
+    const el = track.current;
+    if (el) slide(el, dir * Math.max(120, el.clientWidth - 120));
+  };
+
+  // A mouse wheel moves the tabs sideways until they run out, then the panel scrolls as usual.
+  const wheel = (e: WheelEvent) => {
+    const el = track.current;
+    if (!el || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+    const before = el.scrollLeft;
+    el.scrollLeft += e.deltaY * (e.deltaMode === 1 ? 16 : 1);
+    if (el.scrollLeft !== before) e.preventDefault();
+  };
+
+  return (
+    <div class="pl-seasons">
+      <div ref={track} class="pl-seasons-track hscroll" onWheel={wheel} onFocusIn={(e) => track.current && reveal(track.current, e.target as HTMLElement)}>
+        <Segmented<string> label={t('Season')} value={value} onChange={onChange} options={options} />
+      </div>
+      <button type="button" class="pl-seasons-arrow is-left" aria-label={t('Scroll left')} tabIndex={-1} hidden={!edges.left} onClick={() => page(-1)}>
+        <span><Icon name="chevronLeft" size={16} stroke={2.4} /></span>
+      </button>
+      <button type="button" class="pl-seasons-arrow is-right" aria-label={t('Scroll right')} tabIndex={-1} hidden={!edges.right} onClick={() => page(1)}>
+        <span><Icon name="chevronRight" size={16} stroke={2.4} /></span>
+      </button>
+    </div>
   );
 }
