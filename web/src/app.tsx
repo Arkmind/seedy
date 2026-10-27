@@ -70,6 +70,16 @@ function LazyPlayer(props: { id: string }) {
   return <Comp {...props} />;
 }
 
+/* The book reader pulls in epub.js, so it loads on first use too. */
+function LazyReader(props: { id: string }) {
+  const [Comp, setComp] = useState<ComponentType<{ id: string }> | null>(null);
+  useEffect(() => {
+    import('./screens/books/reader/Reader').then((m) => setComp(() => m.Reader), () => window.location.reload());
+  }, []);
+  if (!Comp) return <div class="boot" style={{ background: '#111111' }}><div class="spinner" /></div>;
+  return <Comp {...props} />;
+}
+
 type Route = { pattern: string; render: (p: Record<string, string>) => preact.JSX.Element; admin?: boolean };
 
 const ROUTES: Route[] = [
@@ -82,6 +92,7 @@ const ROUTES: Route[] = [
   { pattern: '/request/:type/:tmdbId', render: (p) => <SeerrDetails mediaType={p.type as 'movie' | 'tv'} tmdbId={Number(p.tmdbId)} /> },
   { pattern: '/list/:kind', render: (p) => <ListScreen kind={p.kind} /> },
   { pattern: '/play/:id', render: (p) => <LazyPlayer id={p.id} /> },
+  { pattern: '/read/:id', render: (p) => <LazyReader id={p.id} /> },
   { pattern: '/livetv', render: () => <LiveOnNow /> },
   { pattern: '/livetv/guide', render: () => <LiveGuide /> },
   { pattern: '/livetv/channels', render: () => <LiveChannels /> },
