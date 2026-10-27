@@ -7,6 +7,8 @@ import { Link, href, navigate } from '../lib/router';
 import { pct, progressFraction } from '../lib/format';
 import { useStore } from '../lib/store';
 import { tvActive } from '../screens/me/effects';
+import { isAudioItem } from '../audio/api';
+import { playItem } from '../audio/engine';
 import { Icon } from './icons';
 import { t } from '../lib/i18n';
 
@@ -81,7 +83,12 @@ export function CardPlay({ item, label, origin, onPlay }: { item: BaseItem; labe
       class="card-play"
       aria-label={label}
       tabIndex={tv ? -1 : undefined}
-      onClick={() => { onPlay?.(); navigate(playPath(item, { from: origin })); }}
+      onClick={() => {
+        onPlay?.();
+        // Songs, albums, artists, music playlists and audiobooks play in the audio player.
+        if (isAudioItem(item)) void playItem(item);
+        else navigate(playPath(item, { from: origin }));
+      }}
     >
       <Icon name="playRound" size={22} />
     </button>

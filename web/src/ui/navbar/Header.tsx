@@ -4,14 +4,14 @@ import { logoUrl as seedyLogoUrl } from '../../api/seedy';
 import { userImageUrl } from '../../api/images';
 import { JELLYFIN_WEB } from '../../api/client';
 import type { SessionInfo } from '../../api/types';
-import { brandingStore, meStore, signOut, userStore } from '../../lib/app-state';
+import { brandingStore, meStore, signOut, userStore, viewsStore } from '../../lib/app-state';
 import { castTarget, listCastTargets } from '../../lib/cast';
 import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { Icon, type IconName } from '../icons';
 import { useStickyHeader } from '../sticky';
 import { MenuButton, MenuItem, toast } from '../overlay';
-import { LibrariesButton, LibrariesSheet } from './LibrariesMenu';
+import { LibrariesButton, LibrariesSheet, currentView } from './LibrariesMenu';
 import { NbIcon, type NbIconName } from './icons';
 import { SearchBox } from '../search/SearchBox';
 import './navbar.css';
@@ -67,6 +67,7 @@ export function Header({ variant = 'plain', active }: { variant?: 'overlay' | 'p
   const phone = usePhone();
   const { ref, stuck } = useStickyHeader<HTMLElement>();
   const pageMode = active === 'search';
+  const placeholder = searchPlaceholder(useStore(viewsStore), active);
   return (
     <>
       <header ref={ref} class={'site-header nb' + (glass ? ' is-overlay' : ' is-plain') + (stuck ? ' is-stuck' : '') + (phone ? ' is-phone' : '')}>
@@ -90,7 +91,7 @@ export function Header({ variant = 'plain', active }: { variant?: 'overlay' | 'p
               <LibrariesButton active={active} glass={glass} />
               <NavLink to="/favorites" icon="heart" label={t('Favorites')} current={active === 'favorites'} glass={glass} />
             </nav>
-            <SearchBox glass={glass} pageMode={pageMode} />
+            <SearchBox glass={glass} pageMode={pageMode} placeholder={placeholder} />
             <HeaderActions glass={glass} active={active} />
           </>
         )}
@@ -98,6 +99,12 @@ export function Header({ variant = 'plain', active }: { variant?: 'overlay' | 'p
       {phone && <TabBar active={active} />}
     </>
   );
+}
+
+/* Inside a music library the box says what it finds there. */
+function searchPlaceholder(views: Parameters<typeof currentView>[0], active: HeaderActive): string | undefined {
+  const ct = currentView(views, active)?.CollectionType;
+  return ct === 'music' ? t('Search artists, albums and songs') : undefined;
 }
 
 function NavLink({ to, icon, label, current, glass }: { to: string; icon: IconName; label: string; current: boolean; glass?: boolean }) {

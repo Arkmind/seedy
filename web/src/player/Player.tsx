@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { ApiError, get } from '../api/client';
 import { PLAYER_FIELDS, getEpisodes, getItem, getMediaSegments, getSimilar, sendPlayCommand } from '../api/jellyfin';
 import { castTarget } from '../lib/cast';
+import { isAudioItem } from '../audio/api';
+import { playItem } from '../audio/engine';
 import { resolvePlayable } from '../screens/browse/parts';
 import { chapterImageUrl, primaryUrl } from '../api/images';
 import type { PlaybackPrefs, SubtitlePrefs } from '../api/seedy';
@@ -93,6 +95,12 @@ export function Player({ id }: { id: string }) {
     getItem(id, PLAYER_FIELDS).then(
       async (item) => {
         if (!alive) return;
+        // Songs, albums, artists, music playlists and audiobooks play in the audio player, over the page they came from.
+        if (isAudioItem(item) && !castTarget.get()) {
+          void playItem(item, { startTicks: params.t ? Number(params.t) || 0 : undefined });
+          back('/');
+          return;
+        }
         // A show, season, collection, album or playlist: play what it leads to (resume point, next up, first track).
         if (!isPlayable(item)) {
           const target = await resolvePlayable(item).catch(() => undefined);

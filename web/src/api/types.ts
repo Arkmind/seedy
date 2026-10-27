@@ -3,7 +3,7 @@
 export type ItemKind =
   | 'Movie' | 'Series' | 'Season' | 'Episode' | 'BoxSet' | 'MusicAlbum' | 'MusicArtist' | 'Audio'
   | 'Person' | 'CollectionFolder' | 'Folder' | 'Video' | 'Trailer' | 'Playlist' | 'UserView' | 'MusicVideo'
-  | 'Genre' | 'Studio' | 'TvChannel' | 'Program' | 'Book' | 'Photo' | 'PhotoAlbum';
+  | 'Genre' | 'Studio' | 'TvChannel' | 'Program' | 'Book' | 'Photo' | 'PhotoAlbum' | 'AudioBook' | 'MusicGenre';
 
 export interface UserItemData {
   PlaybackPositionTicks?: number;
