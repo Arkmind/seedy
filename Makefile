@@ -7,10 +7,10 @@ SHELL := /usr/bin/env bash
 JELLYFIN_IMAGE := $(shell sed -n 's/^ *image: \(jellyfin\/jellyfin:.*\)/\1/p' dev/docker-compose.yml)
 PYTHON_IMAGE := python:3.12-slim
 
-.PHONY: help build typecheck clean web web-mock android android-shared android-test android-shots dev-up dev-down dev-logs dev-install dev-media dev-libraries dev-seerr dev-arr
+.PHONY: help build typecheck clean web web-mock android android-shared android-test android-shots dev-up dev-down dev-logs dev-install dev-media dev-libraries dev-seerr dev-arr dev-media-requests
 
 help:
-	@awk 'BEGIN { FS = ":.*## " } /^## / { printf "\n%s\n", substr($$0, 4) } /^[a-z-]+:.*## / { printf "  \033[1m%-18s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+	@awk 'BEGIN { FS = ":.*## " } /^## / { printf "\n%s\n", substr($$0, 4) } /^[a-z-]+:.*## / { printf "  \033[1m%-19s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
 ## Build
 
@@ -45,7 +45,7 @@ android-test: ## Run the Android unit tests and compare screens with the recorde
 android-shots: ## Re-record the Android screenshots (android/*/src/test/screenshots/)
 	cd android && ./gradlew recordRoborazziDebug
 
-## Test server (dev/docker-compose.yml: Jellyfin on :8096, Seerr on :5055, Sonarr on :8989 and :8990 (4K), Radarr on :7878)
+## Test server (dev/docker-compose.yml: Jellyfin :8096, Seerr :5055, Sonarr :8989 and :8990 (4K), Radarr :7878, Lidarr :8686, Shelfarr :5056, Librarr :5050)
 
 dev-up: ## Start the test server
 	cd dev && docker compose up -d
@@ -75,6 +75,9 @@ dev-seerr: ## Connect the test Seerr to the test Jellyfin
 
 dev-arr: ## Connect the test Sonarr, Sonarr 4K and Radarr to the test Seerr (after dev-seerr)
 	cd dev && python3 setup-arr.py
+
+dev-media-requests: ## Set up the test Lidarr, Shelfarr and Librarr; their keys go in dev/data
+	cd dev && python3 setup-media-requests.py
 
 # Personal targets (a deploy to your own server, say) can go in local.mk, which git ignores.
 -include local.mk

@@ -1,4 +1,5 @@
-# Local test server for Seedy: Jellyfin 12.2 with generated media, Seerr, and Sonarr/Radarr behind it.
+# Local test server for Seedy: Jellyfin 12.2 with generated media, Seerr, and Sonarr/Radarr behind it; Lidarr, Shelfarr and
+# Librarr for music, book and comic requests.
 # `make dev-install` (../build.sh --install-dev) puts the plugin in ./data/config/plugins/Seedy_<version>.
 services:
   jellyfin:
@@ -72,3 +73,68 @@ services:
       - ./data/radarr:/config
       - ./data/arr/movies:/data/movies
     restart: unless-stopped
+
+  # Music, book and comic requests: Lidarr (music), Shelfarr (ebooks and audiobooks) and Librarr (comics and manga). Like
+  # Sonarr and Radarr above, no indexer and no download client: requests are added and searched, nothing downloads, and
+  # their folders are outside ./data/media. Set them up with ./setup-media-requests.py.
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: seedy-lidarr
+    ports:
+      - "8686:8686"
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Europe/London
+    volumes:
+      - ./data/lidarr:/config
+      - ./data/arr/music:/data/music
+    restart: unless-stopped
+
+  # Its download sources (Anna's Archive, Z-Library, Gutenberg, LibriVox) are off unless enabled in its settings.
+  shelfarr:
+    image: ghcr.io/pedro-revez-silva/shelfarr:latest
+    container_name: seedy-shelfarr
+    ports:
+      - "5056:80"
+    environment:
+      - SOLID_QUEUE_IN_PUMA=1
+      - PUID=0
+      - PGID=0
+      - TZ=Europe/London
+    volumes:
+      - ./data/shelfarr:/rails/storage
+      - ./data/arr/ebooks:/ebooks
+      - ./data/arr/audiobooks:/audiobooks
+      - ./data/arr/downloads:/downloads
+    restart: unless-stopped
+
+  # Librarr downloads straight from the sites in its sources registry, so it gets an empty one, and MangaDex and web
+  # novels are off. Signs in as Alex / seedy; API key below (X-Api-Key).
+  librarr:
+    image: ghcr.io/jeremiahm37/librarr:latest
+    container_name: seedy-librarr
+    user: "0:0"
+    ports:
+      - "5050:5050"
+    environment:
+      - AUTH_USERNAME=Alex
+      - AUTH_PASSWORD=seedy
+      - API_KEY=seedy-dev-librarr-key
+      - LIBRARR_SOURCES_PATH=/etc/librarr/sources.json
+      - MANGADEX_ENABLED=false
+      - WEBNOVEL_ENABLED=false
+      - TZ=Europe/London
+    configs:
+      - source: librarr-sources
+        target: /etc/librarr/sources.json
+    volumes:
+      - ./data/librarr:/data
+      - ./data/arr/books/ebooks:/books/ebooks
+      - ./data/arr/books/audiobooks:/books/audiobooks
+      - ./data/arr/books/manga:/books/manga
+    restart: unless-stopped
+
+configs:
+  librarr-sources:
+    content: '{"version": 1}'
