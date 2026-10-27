@@ -243,7 +243,7 @@ function Pipeline({ stage }: { stage: Stage }) {
         return (
           <li key={i} class={cls + (i === stage.n - 1 ? ' is-current' : '')}>
             <span class="reqs-pipe-bar" aria-hidden="true" />
-            <span class="reqs-pipe-label">{label(i)}</span>
+            <span class="reqs-pipe-label" title={label(i)}>{label(i)}</span>
           </li>
         );
       })}

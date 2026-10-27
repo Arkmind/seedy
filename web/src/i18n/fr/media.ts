@@ -217,7 +217,7 @@ const fr: Record<string, string> = {
   'An admin approves requests before {app} searches': 'Un administrateur valide les demandes avant que {app} ne cherche',
 
   // Admin: page and connections
-  'Music and book requests': 'Demandes de musique et de livres',
+  'Music and book requests': 'Demandes musique et livres',
   'Seedy talks to these apps directly, so people can request music and books from the Requests page without another sign-in. Movie and show requests stay in Seerr.':
     'Seedy communique directement avec ces applications : chacun peut demander de la musique et des livres depuis la page Demandes, sans autre connexion. Les demandes de films et de séries restent dans Seerr.',
   '{app} server address': 'Adresse du serveur {app}',
