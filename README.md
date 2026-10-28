@@ -66,7 +66,8 @@ tries hard not to make your server convert anything it doesn't have to.
 - **Books**: books, audiobooks and comics in one library, series kept together, and a reader for EPUB (themes, fonts,
   text size, spacing, one or two pages or scrolling, contents, search, bookmarks), comics (CBZ) and PDF. Your place
   is saved on the server, so it follows you from device to device. Audiobooks have chapters, speed, a sleep timer, and
-  open the matching EPUB at the same point.
+  open the matching EPUB at the same point. A folder of MP3s (one per chapter or per CD) is one audiobook, played
+  file after file with your place kept across them.
 - **The player**: chapters and seek previews on the scrubber, audio and subtitle tracks (styled ASS/SSA and PGS are
   drawn in the browser), Up next, a pause screen, picks at the end of a movie, Watch together (SyncPlay) and casting
   to other Jellyfin apps.

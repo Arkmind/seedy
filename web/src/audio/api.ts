@@ -108,6 +108,41 @@ export async function containerTracks(item: BaseItem): Promise<Track[]> {
 
 export const getAudioItem = (id: string) => getItem(id, [...TRACK_FIELDS, 'Overview', 'Chapters', 'People', 'Studios', 'ProviderIds', 'MediaStreams', 'Tags']) as Promise<Track>;
 
+/* ── Audiobooks in several files ── */
+
+/* An MP3 per chapter or per CD: Seedy (AudiobooksController) shows the folder as one AudioBook item under the folder's
+   id, with its files in order. Ticks throughout. */
+export interface AudioPart { Id: string; Name: string; Start: number; RunTimeTicks: number; Size?: number | null }
+export interface AudiobookParts { Item: Track; Parts: AudioPart[] }
+
+/* The book as an item, its files under Parts. */
+export const asBook = (b: AudiobookParts): Track => ({ ...b.Item, Parts: b.Parts } as Track);
+export const partsOf = (item: BaseItem): AudioPart[] | undefined => (item as { Parts?: AudioPart[] }).Parts;
+/* This book, or one of its files. */
+export const isBookOrPart = (item: BaseItem, id?: string) => !!id && (item.Id === id || !!partsOf(item)?.some((p) => p.Id === id));
+
+/* The audiobooks in several files of a library. */
+export const listAudiobooks = (parentId: string, signal?: AbortSignal) => get<AudiobookParts[]>('/Seedy/Audiobooks', { parentId }, signal);
+
+/* Where the person is in a book in several files, saved by Seedy (/Seedy/Reading under the book's id): Jellyfin keeps
+   no place in a file's first or last five minutes, which in a book of short files is most of it. Locator: seconds. */
+export interface Place { Locator: string; Percent: number; Chapter?: string; ChapterIndex?: number; ChapterCount?: number; Finished: boolean }
+
+export function savePlace(bookId: string, place: Place, onExit = false) {
+  const session = getSession();
+  if (!session) return;
+  if (!onExit) { post(`/Seedy/Reading/${bookId}`, place).catch(() => undefined); return; }
+  try {
+    void fetch(`${SERVER_URL}/Seedy/Reading/${bookId}?ApiKey=${encodeURIComponent(session.token)}`, {
+      method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(place)
+    });
+  } catch { /* the last regular save stands */ }
+}
+
+/* The book a folder is, or a file is part of; undefined for a book in one file (204). */
+export const getAudiobook = (id: string) =>
+  get<AudiobookParts | undefined>(`/Seedy/Audiobooks/${id}`).then((b) => (b && typeof b === 'object' && b.Item ? b : undefined));
+
 /* ── Lyrics ── */
 
 export interface LyricLine { Text: string; Start?: number }

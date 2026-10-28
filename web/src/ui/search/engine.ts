@@ -3,6 +3,7 @@ import { getItems, getNextUp, getResume, type ItemsQuery } from '../../api/jelly
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { duration, episodeTag, plural, remainingSeconds, ticksToSeconds, timeLeft, yearRange } from '../../lib/format';
 import { t } from '../../lib/i18n';
+import { asBook, type AudiobookParts } from '../../audio/api';
 
 /* Search for the navigation bar and the Search page (Navigation bar board, "Typing a search").
 
@@ -299,6 +300,10 @@ export interface Results {
   loose: boolean;
 }
 
+const audiobooks = (searchTerm: string, signal: AbortSignal) =>
+  get<AudiobookParts[]>('/Seedy/Audiobooks', { searchTerm }, signal)
+    .catch((e: Error) => { if (e?.name === 'AbortError') throw e; return [] as AudiobookParts[]; });
+
 const items = (q: ItemsQuery, signal: AbortSignal) =>
   getItems({ recursive: true, fields: FIELDS, enableTotalRecordCount: true, imageTypeLimit: 1, ...q }, signal)
     .catch((e: Error) => { if (e?.name === 'AbortError') throw e; return { Items: [], TotalRecordCount: 0 } as ItemsResult; });
@@ -339,7 +344,7 @@ export async function search(raw: string, size: Size, signal: AbortSignal): Prom
   const nw = norm(words);
   const genreList = [...new Set(parsed.genres.flat())];
 
-  const [byName, eps, people, filtered] = await Promise.all([
+  const [byName, eps, people, filtered, books] = await Promise.all([
     items({ searchTerm: text, includeItemTypes: TITLE_TYPES, limit: L.titles }, signal),
     items({ searchTerm: text, includeItemTypes: ['Episode'], limit: L.episodes }, signal),
     nw.length >= 2 ? persons(words, L.people, signal) : Promise.resolve(EMPTY),
@@ -348,12 +353,16 @@ export async function search(raw: string, size: Size, signal: AbortSignal): Prom
           searchTerm: parsed.rest || undefined, includeItemTypes: ['Movie', 'Series'], genres: genreList.length ? genreList : undefined,
           years: parsed.years.length ? parsed.years : undefined, limit: L.titles * 2, sortBy: ['CommunityRating', 'SortName'], sortOrder: 'Descending'
         }, signal)
-      : Promise.resolve(EMPTY)
+      : Promise.resolve(EMPTY),
+    audiobooks(text, signal)
   ]);
 
   const titles = new Map<string, Hit>();
   const addTitle = (h: Hit) => { const prev = titles.get(h.item.Id); if (!prev || prev.score < h.score) titles.set(h.item.Id, h); };
-  for (const it of byName.Items) addTitle(hit(it, nameScore(nq, it) || 45, text));
+  // An audiobook in several files shows as the book, not as the file whose name matched.
+  const parts = new Set(books.flatMap((b) => b.Parts.map((p) => p.Id)));
+  for (const b of books) { const book = asBook(b); addTitle(hit(book, nameScore(nq, book) || 45, text)); }
+  for (const it of byName.Items) if (!parts.has(it.Id)) addTitle(hit(it, nameScore(nq, it) || 45, text));
   const fItems = filtered.Items.filter((it) => genreOk(it, parsed.genres));
   for (const it of fItems) addTitle(hit(it, nw ? (nameScore(nw, it) || 45) + 4 : 40, parsed.rest));
 

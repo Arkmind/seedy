@@ -15,8 +15,8 @@ import { getLocation } from '../lib/router';
 import { createStore } from '../lib/store';
 import { toast } from '../ui/overlay';
 import {
-  audioStreamOf, containerTracks, getAudioItem, getTracksByIds, openStream, qualityLabel, reportProgress, reportStart, reportStopped,
-  type Report, type Stream, type Track
+  audioStreamOf, containerTracks, getAudiobook, getAudioItem, getTracksByIds, openStream, qualityLabel, reportProgress, reportStart, reportStopped, savePlace,
+  type AudiobookParts, type Report, type Stream, type Track
 } from './api';
 
 export type SourceKind = 'album' | 'playlist' | 'artist' | 'mix' | 'library' | 'genre' | 'songs' | 'folder' | 'audiobook';
@@ -38,7 +38,9 @@ export type Source = NonNullable<PlayOptions['source']>;
 export type Repeat = 'off' | 'all' | 'one';
 export interface Entry { key: string; track: Track }
 export interface BookChapter { index: number; name: string; start: number; end: number }
-export interface BookInfo { id: string; name: string; author?: string; narrator?: string; duration: number; chapters: BookChapter[] }
+/* A book in several files plays them one after the other (context, in order); times are in the whole book. */
+export interface BookPart { id: string; start: number; duration: number }
+export interface BookInfo { id: string; name: string; author?: string; narrator?: string; duration: number; chapters: BookChapter[]; parts?: BookPart[] }
 export type Sleep = { kind: 'time'; at: number; minutes: number } | { kind: 'chapter'; index: number } | null;
 export interface StreamInfo { method: Stream['method']; quality: string }
 
@@ -134,6 +136,7 @@ let converted = false;
 let progressTimer = 0;
 let sleepTimer = 0;
 let lastSave = 0;
+let lastPlace = 0;
 /* Between two songs: the old one's pause isn't the person pausing. */
 let switching = false;
 /* Queue entries in the order they were first played, so turning shuffle on keeps them behind the current song
@@ -161,6 +164,7 @@ function media(): HTMLAudioElement {
     set({ playing: false });
     report('pause');
     save(true);
+    place(true);
     syncSession();
   });
   a.addEventListener('waiting', () => set({ loading: true }));
@@ -173,7 +177,23 @@ function media(): HTMLAudioElement {
   return a;
 }
 
-export const position = () => (stream && el ? stream.offset + (el.currentTime || 0) : timeStore.get().position);
+export const position = () => (stream && el ? partStart() + stream.offset + (el.currentTime || 0) : timeStore.get().position);
+
+/* Where this file starts in its book (a book in several files), in seconds; 0 for anything else. */
+function partStart(entry: Entry | null = state().current): number {
+  const s = state();
+  if (s.mode !== 'audiobook' || !s.book?.parts || !entry) return 0;
+  return s.book.parts.find((p) => p.id === entry.track.Id)?.start ?? 0;
+}
+
+/* The file of the book playing at [at] seconds. */
+function partAt(book: BookInfo | null, at: number): number {
+  const parts = book?.parts;
+  if (!parts?.length) return -1;
+  let i = 0;
+  while (i + 1 < parts.length && parts[i + 1].start <= at) i++;
+  return i;
+}
 
 function durationOf(entry: Entry | null): number {
   const s = state();
@@ -189,6 +209,7 @@ function onTime() {
   checkSleep(pos);
   if (Date.now() - lastSave > 5000) save();
   if (Date.now() - lastPositionState > 1000) syncPosition();
+  if (state().playing) place();
 }
 
 /* ───────── Loading ───────── */
@@ -203,7 +224,7 @@ async function load(entry: Entry, start: number, autoplay: boolean, convert = fa
   end(false, false);
   converted = convert;
   set({ current: entry, loading: true, stream: null, playing: autoplay ? state().playing : false });
-  timeStore.set({ position: start, duration: durationOf(entry) });
+  timeStore.set({ position: partStart(entry) + start, duration: durationOf(entry) });
   syncSession();
   const a = media();
   try {
@@ -264,7 +285,16 @@ async function onEnded() {
   const s = state();
   end(true, false);
   if (s.mode === 'audiobook') {
-    set({ playing: false, sleep: null });
+    // The book's next file, else the end of the book.
+    const nextPart = s.book?.parts && s.context[s.pos + 1];
+    if (nextPart) {
+      set({ pos: s.pos + 1 });
+      void load(nextPart, 0, true);
+      return;
+    }
+    // Done: back to the start of the book, paused.
+    place(true, true);
+    set({ playing: false, sleep: null, ...(s.book?.parts && s.context[0] ? { pos: 0, current: s.context[0] } : {}) });
     timeStore.set({ position: 0, duration: durationOf(s.current) });
     save(true);
     return;
@@ -288,7 +318,7 @@ function body(event?: string): Report | null {
   if (!s.current || !stream) return null;
   const queue = s.mode === 'music' ? [s.current, ...upNext(s)].slice(0, 60).map((e) => ({ Id: e.track.Id, PlaylistItemId: e.key })) : undefined;
   return {
-    ItemId: s.current.track.Id, MediaSourceId: stream.source.Id, PlaySessionId: stream.playSessionId, PositionTicks: ticks(position()),
+    ItemId: s.current.track.Id, MediaSourceId: stream.source.Id, PlaySessionId: stream.playSessionId, PositionTicks: ticks(position() - partStart()),
     IsPaused: el ? el.paused : true, IsMuted: s.muted, VolumeLevel: Math.round(s.volume * 100), PlayMethod: stream.method, CanSeek: true,
     PlaybackRate: el?.playbackRate ?? 1, RepeatMode: s.repeat === 'all' ? 'RepeatAll' : s.repeat === 'one' ? 'RepeatOne' : 'RepeatNone',
     PlaybackOrder: s.shuffle ? 'Shuffle' : 'Default', EventName: event, NowPlayingQueue: queue
@@ -463,7 +493,7 @@ export function cycleRepeat() {
 export function togglePlay() {
   const s = state();
   if (!s.current) return;
-  if (!stream) { void load(s.current, timeStore.get().position, true); return; }
+  if (!stream) { void load(s.current, timeStore.get().position - partStart(), true); return; }
   const a = media();
   if (a.paused) void a.play().catch(() => set({ playing: false }));
   else a.pause();
@@ -472,7 +502,7 @@ export function togglePlay() {
 export function play() {
   const s = state();
   if (!s.current) return;
-  if (!stream) { void load(s.current, timeStore.get().position, true); return; }
+  if (!stream) { void load(s.current, timeStore.get().position - partStart(), true); return; }
   void media().play().catch(() => set({ playing: false }));
 }
 
@@ -486,10 +516,20 @@ export function seek(to: number) {
   const dur = durationOf(s.current);
   const at = Math.max(0, dur ? Math.min(to, dur - 0.25) : to);
   timeStore.set({ position: at, duration: dur });
+  // Another file of the book: load it there (or only point at it while nothing's loaded).
+  const part = s.mode === 'audiobook' ? partAt(s.book, at) : -1;
+  if (part >= 0 && part !== s.pos && s.context[part]) {
+    const entry = s.context[part];
+    if (!stream) { set({ pos: part, current: entry }); timeStore.set({ position: at, duration: dur }); save(true); return; }
+    set({ pos: part });
+    void load(entry, at - partStart(entry), !media().paused);
+    return;
+  }
   if (!stream) { save(true); return; }
+  const local = at - partStart();
   // A conversion can't seek in the file: start a new one there.
-  if (stream.method !== 'DirectPlay') { void load(s.current, at, !media().paused, converted); return; }
-  try { media().currentTime = at; } catch { /* not seekable yet */ }
+  if (stream.method !== 'DirectPlay') { void load(s.current, local, !media().paused, converted); return; }
+  try { media().currentTime = local; } catch { /* not seekable yet */ }
   report('timeupdate');
   syncPosition();
 }
@@ -525,6 +565,7 @@ export function openPlayer(open = true, panel: AudioState['panel'] = 'lyrics') {
 
 /* Stops and forgets everything (signing out, or the person closing the player). */
 export function stop() {
+  place(true);
   ++loadSeq;
   end();
   window.clearTimeout(sleepTimer);
@@ -594,6 +635,21 @@ export function setSleep(sleep: Sleep) {
   }
 }
 
+/* Saves the place in a book in several files with Seedy (every 15 s while playing, and on pause, close and the end). */
+function place(now = false, finished = false, onExit = false) {
+  const s = state();
+  if (s.mode !== 'audiobook' || !s.book?.parts || !s.current) return;
+  if (!now && Date.now() - lastPlace < 15000) return;
+  lastPlace = Date.now();
+  const book = s.book;
+  const at = finished ? book.duration : position();
+  const ch = chapterAt(book, at);
+  savePlace(book.id, {
+    Locator: at.toFixed(1), Percent: book.duration ? Math.min(100, (at / book.duration) * 100) : 0,
+    Chapter: ch?.name, ChapterIndex: ch ? ch.index + 1 : undefined, ChapterCount: book.chapters.length, Finished: finished
+  }, onExit);
+}
+
 function checkSleep(pos: number) {
   const s = state();
   if (s.sleep?.kind !== 'chapter' || !s.book) return;
@@ -606,7 +662,7 @@ function checkSleep(pos: number) {
 
 const people = (item: Track, ...types: string[]) => (item.People ?? []).filter((p) => types.includes(p.Type ?? '')).map((p) => p.Name);
 
-function bookInfo(item: Track): BookInfo {
+function bookInfo(item: Track, multi?: AudiobookParts): BookInfo {
   const duration = seconds(item.RunTimeTicks);
   const list = (item.Chapters ?? []).slice().sort((a, b) => a.StartPositionTicks - b.StartPositionTicks);
   const chapters: BookChapter[] = list.length
@@ -614,7 +670,9 @@ function bookInfo(item: Track): BookInfo {
     : [{ index: 0, name: item.Name, start: 0, end: duration }];
   const author = people(item, 'Author', 'Writer')[0] ?? item.AlbumArtist ?? item.Artists?.[0];
   const narrator = people(item, 'Narrator', 'Composer', 'Reader')[0];
-  return { id: item.Id, name: item.Album && item.Album !== item.Name ? item.Album : item.Name, author, narrator: narrator !== author ? narrator : undefined, duration, chapters };
+  const parts = multi?.Parts.map((p) => ({ id: p.Id, start: seconds(p.Start), duration: seconds(p.RunTimeTicks) }));
+  const name = multi || !item.Album || item.Album === item.Name ? item.Name : item.Album;
+  return { id: item.Id, name, author, narrator: narrator !== author ? narrator : undefined, duration, chapters, parts };
 }
 
 /* ───────── Starting playback ───────── */
@@ -681,23 +739,38 @@ export async function playItem(item: Pick<Track, 'Id' | 'Type' | 'AlbumId' | 'Al
   return playContainer(item.Id, opts);
 }
 
-/* Plays an audiobook (AudioBook item id), resuming where this profile left off unless startTicks is given. */
+/* Plays an audiobook (an AudioBook item, or the folder of a book in several files, or any of its files), resuming
+   where this profile left off unless startTicks (in the whole book) is given. */
 export async function playAudiobook(id: string, opts: PlayOptions = {}): Promise<void> {
   try {
-    const item = await getAudioItem(id);
-    const book = bookInfo(item);
+    const multi = await getAudiobook(id).catch(() => undefined);
+    const item = multi?.Item ?? await getAudioItem(id);
+    const book = bookInfo(item, multi);
     let start = opts.startTicks !== undefined ? seconds(opts.startTicks) : seconds(item.UserData?.PlaybackPositionTicks);
     if (start >= book.duration - 5) start = 0;
-    const entry = mk(item);
+    const context = multi ? multi.Parts.map((p) => mk(partTrack(multi.Item, p))) : [mk(item)];
+    const pos = Math.max(0, partAt(book, start));
+    const entry = context[pos];
     set({
-      mode: 'audiobook', current: entry, context: [entry], original: null, pos: 0, added: [], fromAdded: false,
+      mode: 'audiobook', current: entry, context, original: null, pos, added: [], fromAdded: false,
       source: { kind: 'audiobook', id: item.Id, name: book.name }, shuffle: false, repeat: 'off', book, sleep: null,
       open: opts.open ?? state().open
     });
-    await load(entry, start, true);
+    await load(entry, start - (book.parts?.[pos]?.start ?? 0), true);
   } catch {
     toast(t('Couldn’t start playback'), 'error');
   }
+}
+
+/* One file of a book in several files, as the player's track: its own id and length, the book's name and cover. */
+function partTrack(book: Track, p: AudiobookParts['Parts'][number]): Track {
+  const cover = book.ImageTags?.Primary
+    ? { ParentPrimaryImageItemId: book.Id, ParentPrimaryImageTag: book.ImageTags.Primary }
+    : { ParentPrimaryImageItemId: book.ParentPrimaryImageItemId, ParentPrimaryImageTag: book.ParentPrimaryImageTag };
+  return {
+    Id: p.Id, Name: p.Name, Type: 'AudioBook', MediaType: 'Audio', RunTimeTicks: p.RunTimeTicks, Album: book.Name, AlbumArtist: book.AlbumArtist,
+    Artists: book.Artists, People: book.People, ParentId: book.Id, ...cover
+  } as Track;
 }
 
 /* ───────── Recently played sources (Jump back in) ───────── */
@@ -722,7 +795,8 @@ export function recentSources(): RecentSource[] {
 
 const KEEP: (keyof Track)[] = [
   'Id', 'Name', 'Type', 'MediaType', 'Artists', 'ArtistItems', 'AlbumArtist', 'AlbumArtists', 'Album', 'AlbumId', 'AlbumPrimaryImageTag',
-  'RunTimeTicks', 'IndexNumber', 'ParentIndexNumber', 'ProductionYear', 'HasLyrics', 'Genres', 'ParentId', 'Chapters', 'People', 'DateCreated'
+  'RunTimeTicks', 'IndexNumber', 'ParentIndexNumber', 'ProductionYear', 'HasLyrics', 'Genres', 'ParentId', 'Chapters', 'People', 'DateCreated',
+  'ParentPrimaryImageItemId', 'ParentPrimaryImageTag'
 ];
 
 function slim(e: Entry): Entry {
@@ -777,7 +851,8 @@ let lastPositionState = 0;
 function artwork(track: Track): MediaImage[] {
   const tag = track.ImageTags?.Primary;
   const src = tag ? imageUrl(track.Id, 'Primary', { tag, maxWidth: 512 })
-    : track.AlbumId && track.AlbumPrimaryImageTag ? imageUrl(track.AlbumId, 'Primary', { tag: track.AlbumPrimaryImageTag, maxWidth: 512 }) : '';
+    : track.AlbumId && track.AlbumPrimaryImageTag ? imageUrl(track.AlbumId, 'Primary', { tag: track.AlbumPrimaryImageTag, maxWidth: 512 })
+    : track.ParentPrimaryImageItemId && track.ParentPrimaryImageTag ? imageUrl(track.ParentPrimaryImageItemId, 'Primary', { tag: track.ParentPrimaryImageTag, maxWidth: 512 }) : '';
   return src ? [{ src, sizes: '512x512', type: 'image/jpeg' }] : [];
 }
 
@@ -831,7 +906,7 @@ function init() {
     if (b === 'signedOut' && state().current) stop();
   });
   if (bootState.get() === 'ready') restore();
-  window.addEventListener('pagehide', () => { save(true); end(); });
+  window.addEventListener('pagehide', () => { save(true); place(true, false, true); end(); });
   // Other Jellyfin apps controlling this one (the video player handles them while it's open).
   onRemote('Playstate', (d: { Command?: string; SeekPositionTicks?: number }) => {
     if (!state().current || /^\/play\//i.test(getLocation().path)) return;

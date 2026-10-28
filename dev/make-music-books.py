@@ -995,6 +995,8 @@ AUDIOBOOKS = [
     dict(author='Ruth Calder', title='Night Ferry', narrator='Imogen Lark', f0=212, year=2025, art=1, genre='Thriller', n=12,
          desc='A night crossing, a cabin that is not on the deck plan, and a passenger who insists the ferry sank in 1987. The novel behind the film.'),
     dict(author='Paul Imre', title='The Undercroft', narrator='Daniel Oyelaran', f0=98, year=2023, art=5, genre='Horror', n=10),
+    # One MP3 per chapter, as many rips come: Seedy plays the folder as one book.
+    dict(author='Dana Holm', title='North of Nowhere', narrator='Imogen Lark', f0=190, year=2024, art=0, genre='Mystery', n=8, files='mp3'),
 ]
 
 
@@ -1017,6 +1019,20 @@ def make_audiobooks():
             rng = np.random.default_rng(seed_of(ab['title']))
             chapters = [(t, int(rng.integers(20, 34))) for t in titles[:ab['n']]]
         seed = seed_of(ab['author'], ab['title'], 'audio')
+        if ab.get('files') == 'mp3':
+            for i, (t, secs) in enumerate(chapters):
+                part = folder / f'{i + 1:02d} - {t.replace("/", "-")}.mp3'
+                if part.exists():
+                    continue
+                x = narration(secs, sr, seed + i, ab['f0'])
+                chime = bell(midi(76), 2.5, sr) * 0.12 + bell(midi(83), 2.5, sr) * 0.08
+                x[:len(chime)] += chime[:len(x)]
+                wav = WORK / f'ab{seed:08x}-{i:02d}.wav'
+                write_wav(wav, x, sr)
+                job(part, wav, cover, 'mp3', {'title': t, 'album': ab['title'], 'artist': ab['author'], 'album_artist': ab['author'],
+                                              'composer': ab['narrator'], 'comment': f'Read by {ab["narrator"]}', 'genre': ab['genre'],
+                                              'date': str(ab['year']), 'track': f'{i + 1}/{len(chapters)}'})
+            continue
         parts, meta, at = [], [';FFMETADATA1', f'title={ab["title"]}'], 0
         for i, (t, secs) in enumerate(chapters):
             x = narration(secs, sr, seed + i, ab['f0'])

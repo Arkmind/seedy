@@ -13,6 +13,7 @@ import { Icon } from '../../ui/icons';
 import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { EmptyState, ErrorState } from '../browse/parts';
 import { AudioCover, BookCover } from './covers';
+import { isBookOrPart } from '../../audio/api';
 import { authorLine, authorsOf, formatOf, getBookInfo, isAudioBook, isComic, listReading, loadLibraryItems, normalize, seriesOf, workKey, type Reading } from './api';
 import {
   AudioCard, BookCard, ContinueCard, SectionHead, SeriesCard, bookSub, comicSub, roughTime, tc, useColumns,
@@ -373,7 +374,11 @@ function ContinueSection({ view, data }: { view: BaseItem; data: BooksData }) {
     type Cand = { at: number; make: () => Promise<ContinueEntry> };
     const cands: Cand[] = [
       ...books.map(({ r, item }) => ({ at: time(r.UpdatedAt), make: () => readingEntry(item, r) })),
-      ...listening.map((item) => ({ at: item.Id === playing ? Date.now() : time(item.UserData?.LastPlayedDate), make: async () => audioEntry(item, item.Id === playing) }))
+      ...listening.map((item) => {
+        // Jellyfin's session names the file playing, which for a book in several files is one of its parts.
+        const live = isBookOrPart(item, playing);
+        return { at: live ? Date.now() : time(item.UserData?.LastPlayedDate), make: async () => audioEntry(item, live) };
+      })
     ];
     cands.sort((a, b) => b.at - a.at);
     return Promise.all(cands.slice(0, 6).map((c) => c.make()));

@@ -2,6 +2,7 @@ import { Fragment, type ComponentChildren } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { primaryUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
+import { partsOf } from '../../audio/api';
 import { playAudiobook } from '../../audio/engine';
 import { userStore } from '../../lib/app-state';
 import { dayOf, duration, pct, ticksToSeconds, timeLeft } from '../../lib/format';
@@ -134,7 +135,11 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
     const apply = (p: boolean) => setItem((it) => ({ ...it, UserData: { ...it.UserData, Played: p } }));
     apply(on);
     try {
-      if (audio) await setPlayed(item.Id, on);
+      if (audio) {
+        await setPlayed(item.Id, on);
+        // A book in several files also has Seedy's place in it (see Audiobooks on the server).
+        if (partsOf(item)) await (on ? saveReading(item.Id, { Locator: '', Percent: 100, Finished: true }) : deleteReading(item.Id));
+      }
       else if (on) await saveReading(item.Id, { Locator: r?.Locator ?? '', Percent: 100, Chapter: r?.Chapter, ChapterIndex: r?.ChapterIndex, ChapterCount: r?.ChapterCount, Finished: true });
       else await deleteReading(item.Id);
       toast(on ? t('Marked {name} as read', { name: item.Name }) : t('Marked {name} as unread', { name: item.Name }));
@@ -304,13 +309,15 @@ function FormatCard({ item, current, canDownload }: { item: BaseItem; current: b
   const f = formatOf(item);
   const size = useFileSize(item);
   const audio = f === 'audio';
-  const container = ((item as { Path?: string }).Path ?? '').split('.').pop()?.toUpperCase() ?? '';
+  // A book in several files (an MP3 per chapter) says so: "MP3 · 8 files".
+  const parts = partsOf(item);
+  const container = (parts ? (item as { Container?: string }).Container ?? '' : /\.(\w+)$/.exec((item as { Path?: string }).Path ?? '')?.[1] ?? '').toUpperCase();
   const narrator = audio ? narratorOf(item) : undefined;
   const note = audio ? (narrator ? t('narrated by {name}', { name: narrator }) : item.RunTimeTicks ? duration(ticksToSeconds(item.RunTimeTicks)) : '')
     : f === 'epub' || f === 'cbz' ? t('reads in Seedy')
     : f === 'pdf' ? t('print edition')
     : f === 'cbr' ? t('download to read') : '';
-  const sub = [audio ? container || 'M4B' : size, note].filter(Boolean).join(' · ');
+  const sub = [audio ? container || 'M4B' : size, parts ? tn(parts.length, '{n} file', '{n} files') : '', note].filter(Boolean).join(' · ');
   const body = (
     <>
       <span aria-hidden="true" class={'bkd-format-icon' + (audio ? ' is-accent' : '')}>
