@@ -5,6 +5,7 @@ import { backdropUrl, imageUrl } from '../../api/images';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { t, tn } from '../../lib/i18n';
 import { useAsync, useStore } from '../../lib/store';
+import { BackBar } from '../../ui/BackBar';
 import { Header } from '../../ui/navbar/Header';
 import { ItemCard } from '../../ui/cards';
 import { toast } from '../../ui/overlay';
@@ -97,6 +98,11 @@ export function MusicArtistPage({ item: initial }: { item: BaseItem }) {
       <section aria-labelledby="mu-ar-h" class="mu-ar-hero">
         <ArtistArt artist={item} latest={d ? d.albums[0] ?? d.singles[0] : undefined} />
         <div aria-hidden="true" class="mu-ar-shade" />
+        <BackBar over class="mu-ar-back" crumbs={view ? [
+          { label: view.Name, to: `/library/${view.Id}` },
+          { label: t('Artists'), to: `/library/${view.Id}?tab=artists` },
+          { label: item.Name }
+        ] : [{ label: item.Name }]} />
         <div class="mu-ar-text">
           <span class="mu-over">{t('Artist')}</span>
           <h1 id="mu-ar-h" class={'mu-ar-name' + nameSize(item.Name)}>{item.Name}</h1>

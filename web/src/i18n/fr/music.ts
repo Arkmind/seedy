@@ -120,6 +120,7 @@ const fr: Record<string, string> = {
   'Repeat playlist': 'Répéter la playlist',
   'Repeat queue': 'Répéter la file d’attente',
   'Volume {n}%': 'Volume {n} %',
+  '{n}%': '{n} %',
   'Play on another device': 'Lire sur un autre appareil',
   'Couldn’t play {name}': 'Impossible de lire {name}',
   'Couldn’t start playback': 'Impossible de lancer la lecture',

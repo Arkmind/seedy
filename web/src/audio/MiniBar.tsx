@@ -13,7 +13,8 @@ import { CastMenu, SeekBar, VolumeBar, artistLink, artistsOf, clock, remaining, 
 import { SleepButton, SpeedButton } from './book-controls';
 
 /* The player bar at the bottom of every page while something plays (Music boards: song, transport and progress,
-   lyrics, queue, cast, volume, open; Books board: the book and its chapter, ±30 s, speed, sleep timer, chapters).
+   lyrics, queue, cast, volume, open; Books board: the book and its chapter, ±30 s, speed, sleep timer, chapters,
+   volume).
    Icon buttons name themselves on hover (data-tip); Lyrics and Queue open a panel above the bar; while nothing plays,
    a close button puts the bar away. */
 export function MiniBar() {
@@ -68,6 +69,12 @@ export function MiniBar() {
           <SpeedButton variant="bar" />
           <SleepButton variant="bar" />
           <button type="button" class="ap-bar-btn is-soft" data-tip={t('Chapters')} aria-label={t('Chapters')} onClick={() => openPlayer(true)}><AIcon name="chapters" size={18} /></button>
+          <span class="ap-bar-volume is-book">
+            <button type="button" class="ap-bar-mute" data-tip={s.muted ? t('Unmute') : t('Mute')} aria-label={s.muted ? t('Unmute') : t('Mute')} onClick={toggleMute}>
+              <AIcon name={volumeIcon(s.volume, s.muted)} size={18} />
+            </button>
+            <VolumeBar volume={s.volume} muted={s.muted} onChange={setVolume} />
+          </span>
           <button type="button" class={'ap-bar-btn is-soft' + (close ? '' : ' ap-tip-end')} data-tip={t('Open the player')} aria-label={t('Open the player')} onClick={() => openPlayer(true)}><AIcon name="expand" size={16} /></button>
           {close}
         </div>

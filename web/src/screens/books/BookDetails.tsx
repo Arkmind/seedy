@@ -9,6 +9,7 @@ import { dayOf, duration, pct, ticksToSeconds, timeLeft } from '../../lib/format
 import { formatNumber, locale, t, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
+import { BackBar } from '../../ui/BackBar';
 import { Header } from '../../ui/navbar/Header';
 import { toast } from '../../ui/overlay';
 import { MoreActions, useView } from '../browse/details-parts';
@@ -169,6 +170,11 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
       <Header active={view ? { viewId: view.Id } : null} />
       <div class="bkd-hero-wrap">
         <div aria-hidden="true" class="bkd-glow" style={{ background: `radial-gradient(900px 460px at 16% 0%, ${glow} 0%, rgba(14, 14, 14, 0) 70%)` }} />
+        <BackBar class="is-hero" crumbs={[
+          ...(view ? [{ label: view.Name, to: libPath }] : []),
+          ...(series ? [{ label: series.name, to: `${libPath}?tab=series&series=${encodeURIComponent(series.name)}` }] : []),
+          { label: item.Name }
+        ]} />
         <section class="bkd-hero" aria-labelledby="bkd-h">
           <span class={'bkd-cover' + (audio ? ' is-audio' : '')}>
             {audio ? <AudioCover item={item} size="lg" width={600} /> : <BookCover item={item} size="lg" width={600} />}

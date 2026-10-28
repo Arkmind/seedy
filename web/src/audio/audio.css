@@ -107,6 +107,9 @@ a.ap-bar-sub:hover { color: #ffffff; }
 .ap-bar-volume { display: flex; align-items: center; gap: 8px; color: var(--seedy-text-hero); }
 .ap-bar-mute { display: flex; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
 .ap-bar-mute:hover { color: #ffffff; }
+.ap-bar-volume.is-book { gap: 2px; margin-left: 2px; }
+.ap-bar-volume.is-book .ap-bar-mute { width: 36px; height: 36px; align-items: center; justify-content: center; border-radius: 13px; }
+.ap-bar-volume.is-book .ap-vol { width: 84px; }
 .ap-bar-speed {
   height: 36px; padding: 0 12px; border: 0; border-radius: 11px; background: var(--seedy-surface); color: #ffffff;
   font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; font-variant-numeric: tabular-nums;
@@ -377,6 +380,17 @@ a.apn-artist:hover { color: #ffffff; }
 .apb-chip b { font-weight: 900; }
 .apb-chip:hover, .apb-chip[aria-expanded='true'] { background: rgba(255, 255, 255, 0.18); }
 .apb-chip.is-on { color: var(--seedy-accent); }
+.apb-volume { display: flex; align-items: center; gap: 10px; max-width: 460px; color: var(--seedy-text-hero); }
+.apb-mute {
+  flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 13px;
+  background: rgba(255, 255, 255, 0.1); color: #ffffff; cursor: pointer;
+}
+.apb-mute:hover { background: rgba(255, 255, 255, 0.18); }
+.ap-vol.is-apb { flex: 1; width: auto; height: 6px; }
+.ap-vol.is-apb .ap-seek-track { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.18); }
+.ap-vol.is-apb .ap-seek-fill { background: #ffffff; }
+.ap-vol.is-apb .ap-seek-thumb { display: block; opacity: 1; border-radius: 4px; }
+.apb-vol-n { flex: none; width: 40px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 .apb-chapters { display: flex; flex-direction: column; gap: 6px; padding: 20px; border-radius: 24px; background: rgba(0, 0, 0, 0.34); overflow: hidden; min-height: 0; }
 .apb-ch-head { flex: none; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 6px 8px; }
