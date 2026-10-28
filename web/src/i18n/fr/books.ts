@@ -45,6 +45,8 @@ const fr: Record<string, string> = {
   'About {time} left': 'Environ {time} restant',
   '{n} page left': '{n} page restante',
   '{n} pages left': '{n} pages restantes',
+  '{n} file': '{n} fichier',
+  '{n} files': '{n} fichiers',
   '{read} of {total} read': '{read} sur {total} lus',
   'Various authors': 'Plusieurs auteurs',
   'Unknown author': 'Auteur inconnu',

@@ -18,6 +18,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<SeerrService>();
         serviceCollection.AddSingleton<TrailerService>();
         serviceCollection.AddSingleton<BookFiles>();
+        serviceCollection.AddSingleton<Audiobooks>();
         serviceCollection.AddSingleton<HomeService>();
         serviceCollection.AddSingleton<PlaybackRecorder>();
         serviceCollection.AddSingleton<Services.Media.ServiceHttp>();

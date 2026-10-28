@@ -224,6 +224,26 @@ export function cardStatus(status: CardStatus, requestedBy?: string | null, shor
   }
 }
 
+/* Requests made, approved or dropped since the page loaded. Cards follow them at once (Requested, Waiting, or Request
+   again) and "Your requests" reloads, without fetching every row again. Keyed by a book's work id, an album's id, or
+   "artist:" + an artist's id for a whole discography. */
+const askedStore = createStore<{ n: number; cards: Record<string, { status: CardStatus; by?: string | null }> }>({ n: 0, cards: {} });
+
+export function noteRequest(r: MediaRequest, next: MediaRequest | null = r) {
+  const status: CardStatus = !next || next.status === 'declined' || next.status === 'cancelled' ? 'none'
+    : next.status === 'pending' ? 'waiting' : next.status === 'downloading' ? 'downloading' : 'requested';
+  const keys = r.kind === 'book' ? [r.foreignId] : r.mode === 'artist' ? ['artist:' + r.foreignId] : r.albums.map((a) => a.mbid);
+  const card = { status, by: r.requestedByMe ? null : r.requestedBy };
+  askedStore.set((s) => ({ n: s.n + 1, cards: { ...s.cards, ...Object.fromEntries(keys.map((k) => [k, card])) } }));
+}
+
+/* A card as it stands after this page's requests; what's on the server stays so. */
+export function useAsked<T extends { status: CardStatus; requestedBy?: string | null }>(card: T, ...keys: (string | undefined)[]): T {
+  const { cards } = useStore(askedStore);
+  const hit = keys.map((k) => (k ? cards[k] : undefined)).find(Boolean);
+  return hit && card.status !== 'server' ? { ...card, status: hit.status, requestedBy: hit.by } : card;
+}
+
 /* Where a finished request opens: the reader for ebooks and comics, the title's page otherwise. */
 export function readyAction(r: MediaRequest): { label: string; to: string } | null {
   if (r.status !== 'ready' || !r.itemId) return null;
@@ -332,7 +352,9 @@ export function useMediaActions(onChange: (r: MediaRequest, next: MediaRequest |
   const run = async (r: MediaRequest, call: () => Promise<MediaRequest | null>, done: string, failed: string) => {
     setBusy((b) => ({ ...b, [r.id]: true }));
     try {
-      onChange(r, await call());
+      const next = await call();
+      onChange(r, next);
+      noteRequest(r, next);
       toast(done);
       void refreshMediaSummary();
     } catch (e) {
@@ -363,13 +385,11 @@ export function useMediaActions(onChange: (r: MediaRequest, next: MediaRequest |
 export function MediaTopLists({ kind }: { kind: 'music' | 'book' }) {
   const summary = useMediaSummary();
   const canManage = !!summary?.canManage;
-  const mine = useAsync(() => mediaList('mine', kind), [kind]);
-  const pending = useAsync(() => (canManage ? mediaList('all', kind) : Promise.resolve(null)), [canManage, kind]);
+  const asked = useStore(askedStore).n;
+  const mine = useAsync(() => mediaList('mine', kind), [kind, asked]);
+  const pending = useAsync(() => (canManage ? mediaList('all', kind) : Promise.resolve(null)), [canManage, kind, asked]);
   const [gone, setGone] = useState<Set<string>>(new Set());
-  const actions = useMediaActions((r) => {
-    setGone((g) => new Set(g).add(r.id));
-    mine.reload();
-  });
+  const actions = useMediaActions((r) => setGone((g) => new Set(g).add(r.id)));
   const mineList = (mine.data?.results ?? []).filter((r) => r.status !== 'declined').slice(0, 3);
   const waiting = (pending.data?.results ?? []).filter((r) => r.status === 'pending' && !gone.has(r.id));
   const retry = (reload: () => void) => <button type="button" class="btn btn-secondary is-xs" onClick={reload}>{t('Try again')}</button>;

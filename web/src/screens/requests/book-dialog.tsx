@@ -5,7 +5,7 @@ import { useAsync } from '../../lib/store';
 import { Icon, type IconName } from '../../ui/icons';
 import { Sheet, toast } from '../../ui/overlay';
 import type { BookTarget } from './books';
-import { BookArt, refreshMediaSummary, SERVICE_NAMES } from './media-parts';
+import { BookArt, noteRequest, refreshMediaSummary, SERVICE_NAMES } from './media-parts';
 import { Quota } from './music-dialog';
 
 /* Request a book (RequestBook board): the ebook, the audiobook or both (a comic for comics), the language, the
@@ -95,6 +95,7 @@ function Body({ book, opts, row, loading, error, retry, onClose, onDone }: {
         language: lang || undefined
       });
       toast(res.status === 'pending' ? t('Requested. An admin approves it first.') : t('Requested. {app} is on it.', { app: SERVICE_NAMES[res.service] }));
+      noteRequest(res);
       void refreshMediaSummary();
       onDone?.();
       onClose();

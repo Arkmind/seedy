@@ -1,5 +1,6 @@
 import { SERVER_URL, del, get, getSession, post, request } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
+import { asBook, listAudiobooks } from '../../audio/api';
 import type { BaseItem } from '../../api/types';
 
 /* The reader's side of the Seedy API (BooksController): the book file, its length and chapters, comic pages, and
@@ -115,10 +116,7 @@ export function authorLine(item: BaseItem): string {
   return names.slice(0, -1).join(', ') + ' & ' + names[names.length - 1];
 }
 
-/* Audiobooks keep their narrator as the composer (or a Narrator person when a plugin set one). */
-export const narratorOf = (item: BaseItem) => (item.People ?? []).find((p) => p.Type === 'Narrator' || p.Role === 'Narrator')?.Name
-  ?? (item.People ?? []).find((p) => p.Type === 'Composer')?.Name
-  ?? (item as BaseItem & { Composers?: { Name: string }[] }).Composers?.[0]?.Name;
+export { narratorOf } from '../../audio/api';
 
 /* The series a book is part of. Jellyfin also names a "series" after the folder a book sits in (the author's), with no
    number: that isn't one. */
@@ -139,8 +137,27 @@ export const BOOK_FIELDS = [
   'MediaSources', 'SeriesName', 'ProviderIds', 'Studios', 'Overview', 'Chapters', 'CanDownload'
 ];
 
-/* Everything in a books library, books and audiobooks, in one go: the tabs sort and group it themselves. */
+/* Everything in a books library, books and audiobooks, in one go: the tabs sort and group it themselves. An audiobook
+   in several files comes as one book, where its first file was. */
 export async function loadLibraryItems(parentId: string, signal?: AbortSignal): Promise<BaseItem[]> {
+  const [items, books] = await Promise.all([loadAll(parentId, signal), listAudiobooks(parentId, signal).catch(() => [])]);
+  if (!books.length) return items;
+  const byPart = new Map<string, BaseItem>();
+  for (const b of books) {
+    const book = asBook(b);
+    for (const p of b.Parts) byPart.set(p.Id, book);
+  }
+  const shown = new Set<string>();
+  return items.flatMap((it) => {
+    const book = byPart.get(it.Id);
+    if (!book) return [it];
+    if (shown.has(book.Id)) return [];
+    shown.add(book.Id);
+    return [book];
+  });
+}
+
+async function loadAll(parentId: string, signal?: AbortSignal): Promise<BaseItem[]> {
   const out: BaseItem[] = [];
   const page = 500;
   for (let start = 0; start < 20000; start += page) {

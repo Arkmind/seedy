@@ -28,10 +28,19 @@ import { MusicAlbumPage } from '../music/Album';
 import { MusicArtistPage } from '../music/Artist';
 import { t, tn } from '../../lib/i18n';
 import { BookDetails } from '../books/BookDetails';
+import { asBook, getAudiobook, withPlace } from '../../audio/api';
+
+/* An audiobook in several files opens as the book: its folder, or any of its files. */
+async function asAudiobook(item: BaseItem): Promise<BaseItem> {
+  if (item.Type !== 'Folder' && item.Type !== 'AudioBook') return item;
+  const book = await getAudiobook(item.Id).catch(() => undefined);
+  if (book) return asBook(book);
+  return item.Type === 'AudioBook' ? withPlace(item) : item;
+}
 
 export function Details({ id }: { id: string }) {
   const [version, setVersion] = useState(0);
-  const { data: item, error, loading, reload } = useAsync(() => getItem(id), [id, version]);
+  const { data: item, error, loading, reload } = useAsync(() => getItem(id).then(asAudiobook), [id, version]);
   /* A dialog changed this title (metadata, match, images) or deleted it. */
   const managed = useStore(manageChanged);
   useEffect(() => {

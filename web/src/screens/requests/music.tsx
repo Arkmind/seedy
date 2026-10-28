@@ -10,7 +10,7 @@ import { Icon } from '../../ui/icons';
 import { ListFrame } from '../browse/Lists';
 import { EmptyState, ErrorState, Lazy } from '../browse/parts';
 import { Frame, NotSetUp, useServices } from './frame';
-import { AlbumArt, cardStatus, initials, MediaTopLists } from './media-parts';
+import { AlbumArt, cardStatus, initials, MediaTopLists, useAsked } from './media-parts';
 import { RequestMusicArtist } from './music-dialog';
 
 /* Requests · Music (RequestsMusic board): Lidarr inside Seedy. Your music requests and approvals, then new releases
@@ -56,7 +56,8 @@ export function useMusicDialog() {
 }
 
 /* A 180 px album: cover, type, state, and Request · More info on hover. */
-export function AlbumCard({ r, meta, onOpen, width }: { r: MusicRelease; meta: { text: string; accent: boolean }; onOpen: (r: MusicRelease, request: boolean) => void; width?: number }) {
+export function AlbumCard({ r: release, meta, onOpen, width }: { r: MusicRelease; meta: { text: string; accent: boolean }; onOpen: (r: MusicRelease, request: boolean) => void; width?: number }) {
+  const r = useAsked(release, release.mbid, release.upcoming ? undefined : release.artistMbid && 'artist:' + release.artistMbid);
   const status = cardStatus(r.status, r.requestedBy);
   const onServer = r.status === 'server' && r.itemId;
   const canAsk = r.status === 'none' && !!r.artistMbid;

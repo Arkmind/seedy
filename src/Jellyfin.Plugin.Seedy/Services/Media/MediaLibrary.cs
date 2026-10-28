@@ -48,6 +48,7 @@ public sealed class MediaLibrary
 {
     private static readonly TimeSpan Ttl = TimeSpan.FromMinutes(2);
     private readonly ILibraryManager _library;
+    private readonly Audiobooks _audiobooks;
     private readonly IFileSystem _fs;
     private readonly ILogger<MediaLibrary> _logger;
     private readonly object _lock = new();
@@ -58,11 +59,13 @@ public sealed class MediaLibrary
     /// Initializes a new instance of the <see cref="MediaLibrary"/> class.
     /// </summary>
     /// <param name="library">Library manager.</param>
+    /// <param name="audiobooks">Audiobooks in several files.</param>
     /// <param name="fs">File system.</param>
     /// <param name="logger">Logger.</param>
-    public MediaLibrary(ILibraryManager library, IFileSystem fs, ILogger<MediaLibrary> logger)
+    public MediaLibrary(ILibraryManager library, Audiobooks audiobooks, IFileSystem fs, ILogger<MediaLibrary> logger)
     {
         _library = library;
+        _audiobooks = audiobooks;
         _fs = fs;
         _logger = logger;
     }
@@ -244,8 +247,13 @@ public sealed class MediaLibrary
             }
         }
 
-        var list = _library.GetItemList(new InternalItemsQuery { IncludeItemTypes = [BaseItemKind.Book, BaseItemKind.AudioBook], Recursive = true, DtoOptions = new DtoOptions(false) })
+        var items = _library.GetItemList(new InternalItemsQuery { IncludeItemTypes = [BaseItemKind.Book, BaseItemKind.AudioBook], Recursive = true, DtoOptions = new DtoOptions(false) });
+        // An audiobook in several files is one book, under its folder's id.
+        var groups = _audiobooks.Group(items);
+        var parts = groups.SelectMany(g => g.Parts).Select(p => p.Id).ToHashSet();
+        var list = items.Where(i => !parts.Contains(i.Id))
             .Select(i => new ServerBook(i.Id.ToString("N"), i.Name, FormatOf(i), i is Book book ? book.SeriesName : null, i.IndexNumber))
+            .Concat(groups.Select(g => new ServerBook(g.Folder.Id.ToString("N"), g.Name, "audiobook", null, null)))
             .ToList();
         lock (_lock)
         {
