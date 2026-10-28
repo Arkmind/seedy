@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.2.10.0",
+        "changelog": "## What's Changed\n* Audiobooks in several files, request cards by @Arkmind in https://github.com/Arkmind/seedy/pull/69\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.2.9...v0.2.10",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.2.10/seedy_0.2.10.0.zip",
+        "checksum": "80f4c1504967ca4907feae645844e798",
+        "timestamp": "2026-10-28T02:53:46Z"
+      },
+      {
         "version": "0.2.9.0",
         "changelog": "## What's Changed\n* Feature/music books by @Arkmind in https://github.com/Arkmind/seedy/pull/68\n\nMusic & Books on web 🌈 📖 yeeeeey\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.2.8...v0.2.9",
         "targetAbi": "12.0.0.0",
