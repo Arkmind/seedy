@@ -15,7 +15,8 @@ import { getLocation } from '../lib/router';
 import { createStore } from '../lib/store';
 import { toast } from '../ui/overlay';
 import {
-  audioStreamOf, containerTracks, getAudiobook, getAudioItem, getTracksByIds, openStream, qualityLabel, reportProgress, reportStart, reportStopped, savePlace,
+  audioStreamOf, containerTracks, getAudiobook, getAudioItem, getTracksByIds, narratorOf, openStream, qualityLabel, reportProgress, reportStart, reportStopped,
+  savePlace, withPlace,
   type AudiobookParts, type Report, type Stream, type Track
 } from './api';
 
@@ -635,10 +636,10 @@ export function setSleep(sleep: Sleep) {
   }
 }
 
-/* Saves the place in a book in several files with Seedy (every 15 s while playing, and on pause, close and the end). */
+/* Saves the place in the book with Seedy (every 15 s while playing, and on pause, close and the end); see Place. */
 function place(now = false, finished = false, onExit = false) {
   const s = state();
-  if (s.mode !== 'audiobook' || !s.book?.parts || !s.current) return;
+  if (s.mode !== 'audiobook' || !s.book || !s.current) return;
   if (!now && Date.now() - lastPlace < 15000) return;
   lastPlace = Date.now();
   const book = s.book;
@@ -669,7 +670,7 @@ function bookInfo(item: Track, multi?: AudiobookParts): BookInfo {
     ? list.map((c, i) => ({ index: i, name: c.Name || t('Chapter {n}', { n: i + 1 }), start: seconds(c.StartPositionTicks), end: i + 1 < list.length ? seconds(list[i + 1].StartPositionTicks) : duration }))
     : [{ index: 0, name: item.Name, start: 0, end: duration }];
   const author = people(item, 'Author', 'Writer')[0] ?? item.AlbumArtist ?? item.Artists?.[0];
-  const narrator = people(item, 'Narrator', 'Composer', 'Reader')[0];
+  const narrator = narratorOf(item);
   const parts = multi?.Parts.map((p) => ({ id: p.Id, start: seconds(p.Start), duration: seconds(p.RunTimeTicks) }));
   const name = multi || !item.Album || item.Album === item.Name ? item.Name : item.Album;
   return { id: item.Id, name, author, narrator: narrator !== author ? narrator : undefined, duration, chapters, parts };
@@ -744,7 +745,7 @@ export async function playItem(item: Pick<Track, 'Id' | 'Type' | 'AlbumId' | 'Al
 export async function playAudiobook(id: string, opts: PlayOptions = {}): Promise<void> {
   try {
     const multi = await getAudiobook(id).catch(() => undefined);
-    const item = multi?.Item ?? await getAudioItem(id);
+    const item = multi?.Item ?? await withPlace(await getAudioItem(id));
     const book = bookInfo(item, multi);
     let start = opts.startTicks !== undefined ? seconds(opts.startTicks) : seconds(item.UserData?.PlaybackPositionTicks);
     if (start >= book.duration - 5) start = 0;

@@ -116,10 +116,7 @@ export function authorLine(item: BaseItem): string {
   return names.slice(0, -1).join(', ') + ' & ' + names[names.length - 1];
 }
 
-/* Audiobooks keep their narrator as the composer (or a Narrator person when a plugin set one). */
-export const narratorOf = (item: BaseItem) => (item.People ?? []).find((p) => p.Type === 'Narrator' || p.Role === 'Narrator')?.Name
-  ?? (item.People ?? []).find((p) => p.Type === 'Composer')?.Name
-  ?? (item as BaseItem & { Composers?: { Name: string }[] }).Composers?.[0]?.Name;
+export { narratorOf } from '../../audio/api';
 
 /* The series a book is part of. Jellyfin also names a "series" after the folder a book sits in (the author's), with no
    number: that isn't one. */

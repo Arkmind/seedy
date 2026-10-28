@@ -124,8 +124,8 @@ export const isBookOrPart = (item: BaseItem, id?: string) => !!id && (item.Id ==
 /* The audiobooks in several files of a library. */
 export const listAudiobooks = (parentId: string, signal?: AbortSignal) => get<AudiobookParts[]>('/Seedy/Audiobooks', { parentId }, signal);
 
-/* Where the person is in a book in several files, saved by Seedy (/Seedy/Reading under the book's id): Jellyfin keeps
-   no place in a file's first or last five minutes, which in a book of short files is most of it. Locator: seconds. */
+/* Where the person is in an audiobook, saved by Seedy (/Seedy/Reading under the book's id): Jellyfin keeps no place in
+   a file's first or last five minutes, which in a book of short files is most of it. Locator: seconds. */
 export interface Place { Locator: string; Percent: number; Chapter?: string; ChapterIndex?: number; ChapterCount?: number; Finished: boolean }
 
 export function savePlace(bookId: string, place: Place, onExit = false) {
@@ -137,6 +137,45 @@ export function savePlace(bookId: string, place: Place, onExit = false) {
       method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(place)
     });
   } catch { /* the last regular save stands */ }
+}
+
+/* Seedy's saved place, as /Seedy/Reading returns it. It wins over Jellyfin's resume point unless another app played
+   the book more than a minute after it was saved. */
+export interface SavedPlace { Locator?: string; Finished: boolean; UpdatedAt?: string }
+
+export function mergePlace<T extends BaseItem>(item: T, place?: SavedPlace | null): T {
+  const secs = Number(place?.Locator);
+  if (!place || (!place.Finished && !(place.Locator && secs >= 0))) return item;
+  const ud = item.UserData;
+  if ((Date.parse(ud?.LastPlayedDate ?? '') || 0) > (Date.parse(place.UpdatedAt ?? '') || 0) + 60_000) return item;
+  const pos = place.Finished ? 0 : Math.round(secs * 10_000_000);
+  const total = item.RunTimeTicks ?? 0;
+  return {
+    ...item,
+    UserData: { ...ud, Played: place.Finished, PlaybackPositionTicks: pos, PlayedPercentage: !place.Finished && total ? (pos / total) * 100 : undefined, LastPlayedDate: place.UpdatedAt ?? ud?.LastPlayedDate }
+  };
+}
+
+const getPlace = (id: string) => get<SavedPlace | undefined>(`/Seedy/Reading/${id}`).then((r) => (r && typeof r === 'object' ? r : undefined));
+
+/* An audiobook in one file with Seedy's place in it (a book in several files has it from the server already). */
+export async function withPlace<T extends BaseItem>(item: T): Promise<T> {
+  if (item.Type !== 'AudioBook' || partsOf(item)) return item;
+  return mergePlace(item, await getPlace(item.Id).catch(() => undefined));
+}
+
+/* Who reads an audiobook: a Narrator (Jellyfin 12 makes one from the composer tag), else a composer, else an artist
+   who isn't the author, as many rips tag it (Jellyfin lists those as actors; the album artist is the author). */
+export function narratorOf(item: BaseItem): string | undefined {
+  const people = item.People ?? [];
+  const tagged = people.find((p) => p.Type === 'Narrator' || p.Role === 'Narrator' || p.Type === 'Reader')?.Name
+    ?? people.find((p) => p.Type === 'Composer')?.Name
+    ?? (item as BaseItem & { Composers?: { Name: string }[] }).Composers?.[0]?.Name;
+  if (tagged || item.Type !== 'AudioBook') return tagged;
+  const fold = (s?: string) => (s ?? '').trim().toLowerCase();
+  const authors = new Set([...people.filter((p) => p.Type === 'Author' || p.Type === 'Writer').map((p) => p.Name), item.AlbumArtist ?? ''].map(fold));
+  return people.find((p) => p.Type === 'Actor' && !authors.has(fold(p.Name)))?.Name
+    ?? (item.AlbumArtist ? item.Artists?.find((a) => !authors.has(fold(a))) : undefined);
 }
 
 /* The book a folder is, or a file is part of; undefined for a book in one file (204). */

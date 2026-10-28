@@ -137,8 +137,8 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
     try {
       if (audio) {
         await setPlayed(item.Id, on);
-        // A book in several files also has Seedy's place in it (see Audiobooks on the server).
-        if (partsOf(item)) await (on ? saveReading(item.Id, { Locator: '', Percent: 100, Finished: true }) : deleteReading(item.Id));
+        // Seedy keeps its own place in audiobooks (see Place in the audio API).
+        await (on ? saveReading(item.Id, { Locator: '', Percent: 100, Finished: true }) : deleteReading(item.Id));
       }
       else if (on) await saveReading(item.Id, { Locator: r?.Locator ?? '', Percent: 100, Chapter: r?.Chapter, ChapterIndex: r?.ChapterIndex, ChapterCount: r?.ChapterCount, Finished: true });
       else await deleteReading(item.Id);

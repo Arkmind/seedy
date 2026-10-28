@@ -191,8 +191,9 @@ public sealed partial class Audiobooks
         var done = all || (at > 0 && position >= at);
 
         // Seedy's player saves its own place in the book (under the folder's id), as Jellyfin keeps no place in a file's
-        // first or last five minutes: in a book of short files, that's most of it. The newer of the two wins.
-        if (_db.GetReading(user.Id.N(), g.Folder.Id.N()) is { } place && (last is null || place.UpdatedAt >= last.Value)
+        // first or last five minutes: in a book of short files, that's most of it. It wins unless another app played the
+        // book more than a minute after it was saved (Seedy's own reports to Jellyfin land around the same time).
+        if (_db.GetReading(user.Id.N(), g.Folder.Id.N()) is { } place && (last is null || place.UpdatedAt >= last.Value.AddMinutes(-1))
             && double.TryParse(place.Locator, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds))
         {
             last = place.UpdatedAt;
