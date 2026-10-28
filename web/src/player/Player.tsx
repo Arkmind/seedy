@@ -4,7 +4,7 @@ import { ApiError, get } from '../api/client';
 import { PLAYER_FIELDS, getEpisodes, getItem, getMediaSegments, getSimilar, sendPlayCommand } from '../api/jellyfin';
 import { castTarget } from '../lib/cast';
 import { isAudioItem } from '../audio/api';
-import { playItem, playTracks } from '../audio/engine';
+import { holdSession, playItem, playTracks, releaseSession } from '../audio/engine';
 import { resolvePlayable } from '../screens/browse/parts';
 import { chapterImageUrl, primaryUrl } from '../api/images';
 import type { PlaybackPrefs, SubtitlePrefs } from '../api/seedy';
@@ -1191,6 +1191,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   useEffect(() => {
     const nav = navigator as Navigator & { mediaSession?: MediaSession };
     if (!nav.mediaSession || typeof MediaMetadata === 'undefined') return;
+    holdSession();
     const art = primaryUrl(item, 512);
     try {
       nav.mediaSession.metadata = new MediaMetadata({
@@ -1208,10 +1209,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     set('seekto', (d) => { if (d.seekTime !== undefined) msRef.current.seekTo(d.seekTime); });
     set('nexttrack', next ? () => msRef.current.goNext(false) : null);
     set('previoustrack', prevEp ? () => msRef.current.goPrev() : null);
-    return () => {
-      (['play', 'pause', 'seekbackward', 'seekforward', 'seekto', 'nexttrack', 'previoustrack'] as MediaSessionAction[]).forEach((a) => set(a, null));
-      try { nav.mediaSession!.metadata = null; } catch { /* ignore */ }
-    };
+    return releaseSession;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.Id, next?.Id, prevEp?.Id]);
   useEffect(() => {

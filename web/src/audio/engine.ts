@@ -848,6 +848,11 @@ function restore() {
 /* ───────── System media controls ───────── */
 
 let lastPositionState = 0;
+/* The chapter the controls show, so they follow the book from one chapter to the next. */
+let sessionChapter: number | undefined;
+/* The video players take the controls while they're open (holdSession) and hand them back when they close. */
+let held = false;
+const ACTIONS: MediaSessionAction[] = ['play', 'pause', 'stop', 'previoustrack', 'nexttrack', 'seekbackward', 'seekforward', 'seekto'];
 
 function artwork(track: Track): MediaImage[] {
   const tag = track.ImageTags?.Primary;
@@ -858,12 +863,13 @@ function artwork(track: Track): MediaImage[] {
 }
 
 function syncSession() {
-  if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
+  if (held || typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
   const s = state();
   const tk = s.current?.track;
   try {
     if (!tk) { navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = 'none'; return; }
     const chapter = s.mode === 'audiobook' ? chapterAt(s.book, position()) : undefined;
+    sessionChapter = chapter?.index;
     navigator.mediaSession.metadata = new MediaMetadata({
       title: chapter && s.book && s.book.chapters.length > 1 ? chapter.name : tk.Name,
       artist: s.mode === 'audiobook' ? s.book?.author ?? '' : (tk.Artists ?? []).join(', ') || tk.AlbumArtist || '',
@@ -876,8 +882,11 @@ function syncSession() {
 
 function syncPosition() {
   lastPositionState = Date.now();
-  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
-  const dur = durationOf(state().current);
+  if (held || !('mediaSession' in navigator)) return;
+  const s = state();
+  if (s.mode === 'audiobook' && chapterAt(s.book, position())?.index !== sessionChapter) syncSession();
+  if (!navigator.mediaSession.setPositionState) return;
+  const dur = durationOf(s.current);
   if (!dur) return;
   try { navigator.mediaSession.setPositionState({ duration: dur, position: Math.min(dur, position()), playbackRate: el?.playbackRate || 1 }); } catch { /* bad values */ }
 }
@@ -896,6 +905,29 @@ function installSession() {
   h('seekbackward', (d) => skip(-(d.seekOffset ?? (book() ? 30 : 10))));
   h('seekforward', (d) => skip(d.seekOffset ?? (book() ? 30 : 10)));
   h('seekto', (d) => { if (typeof d.seekTime === 'number') seek(d.seekTime); });
+}
+
+/* A video player is taking the system controls: clears what the music left there (they set their own). */
+export function holdSession() {
+  held = true;
+  if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
+  for (const a of ACTIONS) {
+    try { navigator.mediaSession.setActionHandler(a, null); } catch { /* unsupported action */ }
+  }
+  try {
+    navigator.mediaSession.metadata = null;
+    navigator.mediaSession.playbackState = 'none';
+    navigator.mediaSession.setPositionState?.();
+  } catch { /* old browsers */ }
+}
+
+/* The video player closed: the controls are the music's again. */
+export function releaseSession() {
+  if (!held) return;
+  held = false;
+  installSession();
+  syncSession();
+  syncPosition();
 }
 
 /* ───────── Start-up ───────── */
