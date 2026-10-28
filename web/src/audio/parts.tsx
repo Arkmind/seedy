@@ -68,7 +68,10 @@ export function VolumeBar({ volume, muted, onChange, class: cls }: { volume: num
   const v = muted ? 0 : volume;
   return (
     <span class={'ap-seek ap-vol' + (cls ? ' ' + cls : '')}>
-      <span class="ap-seek-track" aria-hidden="true"><span class="ap-seek-fill" style={{ width: (v * 100).toFixed(1) + '%' }} /></span>
+      <span class="ap-seek-track" aria-hidden="true">
+        <span class="ap-seek-fill" style={{ width: (v * 100).toFixed(1) + '%' }} />
+        <span class="ap-seek-thumb" style={{ left: (v * 100).toFixed(1) + '%' }} />
+      </span>
       <input type="range" min={0} max={100} step={1} value={Math.round(v * 100)} aria-label={t('Volume')} aria-valuetext={t('Volume {n}%', { n: Math.round(v * 100) })}
         onInput={(e) => onChange(Number((e.target as HTMLInputElement).value) / 100)} />
     </span>

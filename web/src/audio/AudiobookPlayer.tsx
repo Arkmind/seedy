@@ -6,15 +6,17 @@ import { formatNumber, t } from '../lib/i18n';
 import { navigate } from '../lib/router';
 import { useAsync, useStore } from '../lib/store';
 import { Cover, useCoverTint } from './cover';
-import { audioStore, chapterAt, nextChapter, openPlayer, pause, previousChapter, seek, seekChapter, skip, timeStore, type BookInfo } from './engine';
+import {
+  audioStore, chapterAt, nextChapter, openPlayer, pause, previousChapter, seek, seekChapter, setVolume, skip, timeStore, toggleMute, type BookInfo
+} from './engine';
 import { AIcon, Skip30 } from './icons';
 import { PlayButton } from './MiniBar';
-import { SeekBar, clock, remaining } from './parts';
+import { SeekBar, VolumeBar, clock, remaining, volumeIcon } from './parts';
 import { SleepButton, SpeedButton } from './book-controls';
 import { PlayerShell } from './Shell';
 
 /* The Audiobook player (Audiobook board): cover; the chapter with its progress, ±30 s and chapter skips; speed, sleep
-   timer and "Read the EPUB from here" when the server has the book too; the chapters, listened ones ticked. */
+   timer and "Read the EPUB from here" when the server has the book too; the volume; the chapters, listened ones ticked. */
 
 const norm = (s?: string) => (s ?? '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
@@ -100,6 +102,11 @@ export function AudiobookPlayer() {
                   <AIcon name="book" size={17} />{t('Read the EPUB from here')}
                 </button>
               )}
+            </div>
+            <div class="apb-volume">
+              <button type="button" class="apb-mute" aria-label={s.muted ? t('Unmute') : t('Mute')} onClick={toggleMute}><AIcon name={volumeIcon(s.volume, s.muted)} size={20} /></button>
+              <VolumeBar class="is-apb" volume={s.volume} muted={s.muted} onChange={setVolume} />
+              <span class="apb-vol-n">{t('{n}%', { n: formatNumber(s.muted ? 0 : Math.round(s.volume * 100)) })}</span>
             </div>
           </div>
         </section>
