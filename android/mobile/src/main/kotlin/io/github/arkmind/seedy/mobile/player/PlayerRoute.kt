@@ -34,6 +34,8 @@ import androidx.core.util.Consumer
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.compose.ContentFrame
@@ -70,6 +72,8 @@ fun PlayerRoute(id: UUID) {
     var seasonEpisodes by remember { mutableStateOf<List<BaseItemDto>?>(null) }
 
     FullScreenSideways(activity)
+    // Videos don't play in the background (a picture-in-picture window keeps the app started until it's closed).
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { player.pause() }
     // Settings · Playback › Picture in picture: going to the home screen while a video plays keeps it in a window.
     val autoPip = player.settings.pictureInPicture && state.playing
     DisposableEffect(activity, autoPip) {

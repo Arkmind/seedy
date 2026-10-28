@@ -314,6 +314,10 @@ class PlayerController(private val context: Context, private val session: UserSe
         exo.playWhenReady = !exo.playWhenReady
     }
 
+    fun pause() {
+        exo.playWhenReady = false
+    }
+
     fun seekTo(ms: Long) {
         exo.seekTo(ms.coerceIn(0, (_state.value.durationMs - 250).coerceAtLeast(0)))
         _state.update { it.copy(positionMs = exo.currentPosition, ended = false) }
