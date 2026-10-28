@@ -8,6 +8,7 @@ import { plural, ticksToSeconds, timeLeft } from '../../lib/format';
 import { t, tn } from '../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
+import { BackBar } from '../../ui/BackBar';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { MenuButton, MenuItem, toast } from '../../ui/overlay';
@@ -186,6 +187,7 @@ export function BooksLibrary({ view }: { view: BaseItem }) {
       <Header active={{ viewId: view.Id }} />
       <main class="bk-main">
         <div class="bk-top">
+          <BackBar crumbs={[{ label: t('Libraries'), to: '/' }, { label: view.Name }]} />
           <div class="bk-head">
             <div class="bk-title">
               <h1>{view.Name}</h1>

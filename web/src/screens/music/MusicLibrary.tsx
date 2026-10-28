@@ -6,6 +6,7 @@ import { meStore } from '../../lib/app-state';
 import { t, tn } from '../../lib/i18n';
 import { Link, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
+import { BackBar } from '../../ui/BackBar';
 import { Header } from '../../ui/navbar/Header';
 import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { useInView } from '../browse/parts';
@@ -70,6 +71,7 @@ export function MusicLibrary({ view }: { view: BaseItem }) {
       <Header active={{ viewId: view.Id }} />
       <main class="mu-main">
         <div class="mu-head">
+          <BackBar crumbs={[{ label: t('Libraries'), to: '/' }, { label: view.Name }]} />
           <div class="mu-head-row">
             <div class="mu-title">
               <h1>{view.Name}</h1>

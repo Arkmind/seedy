@@ -103,6 +103,8 @@ const fr: Record<string, string> = {
   'Add': 'Ajouter',
   'Close': 'Fermer',
   'Back': 'Retour',
+  'Back to {name}': 'Retour à {name}',
+  'Breadcrumb': 'Fil d’Ariane',
   'Done': 'Terminé',
   'Try again': 'Réessayer',
   'Retry': 'Réessayer',

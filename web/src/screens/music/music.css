@@ -254,7 +254,7 @@
 
 .mu-hero-wrap { position: relative; }
 .mu-hero-glow { position: absolute; inset: 0 0 -120px 0; pointer-events: none; }
-.mu-al-hero { position: relative; display: flex; align-items: flex-end; gap: 40px; padding: 40px var(--gutter) 0; }
+.mu-al-hero { position: relative; display: flex; align-items: flex-end; gap: 40px; padding: 24px var(--gutter) 0; }
 .mu-al-cover { flex: 0 0 300px; width: 300px; height: 300px; border-radius: 18px; box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6); }
 .mu-al-cover .ap-cover-title { font-size: 34px; }
 .mu-al-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; padding-bottom: 6px; }
@@ -292,6 +292,7 @@
 .mu-ar-art { position: absolute; inset: 0; width: 100%; height: 100%; }
 .mu-ar-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
 .mu-ar-shade { position: absolute; inset: 0; background: linear-gradient(0deg, #0e0e0e 0%, rgba(14, 14, 14, 0.2) 55%, rgba(14, 14, 14, 0) 100%); }
+.backbar.mu-ar-back { position: absolute; top: 20px; left: var(--gutter); right: var(--gutter); }
 .mu-ar-text { position: absolute; left: var(--gutter); right: var(--gutter); bottom: 34px; display: flex; flex-direction: column; gap: 14px; }
 .mu-ar-name {
   margin: 0; font-size: 96px; line-height: 0.88; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase; color: #ffffff;
@@ -375,7 +376,9 @@ a.mu-chip:hover { background: var(--seedy-inverse); color: var(--seedy-ink-inver
   .mu-tr-head, .mu-tr, .mu-tr-head.is-list, .mu-tr.is-list { grid-template-columns: 32px minmax(0, 1fr) 64px 40px; padding: 0 8px; gap: 8px; }
   .mu-tr-more { display: none; }
   .mu-al-title { font-size: 40px; }
-  .mu-ar-hero { height: 360px; }
+  /* The name stays clear of the back bar: the hero grows instead. */
+  .mu-ar-hero { height: auto; min-height: 360px; display: flex; flex-direction: column; justify-content: flex-end; padding-top: 80px; }
+  .mu-ar-text { position: relative; left: auto; right: auto; bottom: auto; margin: 0 var(--gutter) 34px; }
   .mu-ar-name { font-size: 48px; }
   .mu-pop-row { grid-template-columns: 24px 48px minmax(0, 1fr) 52px; }
   .mu-pop-plays { display: none; }

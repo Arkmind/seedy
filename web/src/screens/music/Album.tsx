@@ -8,6 +8,7 @@ import { dayOf } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
+import { BackBar } from '../../ui/BackBar';
 import { Header } from '../../ui/navbar/Header';
 import { MenuItem, toast } from '../../ui/overlay';
 import { EmptyState } from '../browse/parts';
@@ -116,6 +117,12 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
       <Header active={view ? { viewId: view.Id } : null} />
       <div class="mu-hero-wrap">
         <div aria-hidden="true" class="mu-hero-glow" style={{ background: `radial-gradient(900px 420px at 18% 0%, color-mix(in srgb, ${tint[0]} 75%, transparent) 0%, rgba(14, 14, 14, 0) 70%)` }} />
+        <BackBar class="is-hero" crumbs={[
+          ...(view ? [{ label: view.Name, to: `/library/${view.Id}` }] : []),
+          ...(playlist ? (view ? [{ label: t('Playlists'), to: `/library/${view.Id}?tab=playlists` }] : [])
+            : artist ? [{ label: artist.Name, to: `/details/${artist.Id}` }] : []),
+          { label: item.Name }
+        ]} />
         <section aria-labelledby="mu-al-h" class="mu-al-hero">
           {playlist && covers.length >= 2 && !item.ImageTags?.Primary ? (
             <span class="mu-al-cover mu-pl-grid">{[0, 1, 2, 3].map((i) => <Cover key={i} item={covers[i % covers.length]} width={300} class="mu-pl-cell" />)}</span>

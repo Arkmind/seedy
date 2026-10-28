@@ -495,3 +495,22 @@ a.btn-primary:hover, a.btn-square:hover { color: var(--seedy-text); }
   font: inherit; font-size: 14px; font-weight: 600; transition: color var(--t-fast) var(--ease);
 }
 .link-btn:hover { color: #ffffff; }
+
+/* Back button and breadcrumbs above a library or a title (Music and Books boards). */
+.backbar { position: relative; z-index: 2; display: flex; align-items: center; gap: 14px; min-width: 0; }
+.backbar.is-hero { padding: 20px var(--gutter) 0; }
+.backbar-btn {
+  flex: none; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-menu);
+  background: var(--seedy-surface); color: #ffffff; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.backbar-btn:hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.backbar-btn svg, .crumb svg { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+.backbar-btn svg { stroke-width: 2.2; }
+.backbar-nav { min-width: 0; }
+.crumbs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.crumb { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.crumb svg { flex: none; stroke: #6a6a6a; stroke-width: 2.4; }
+.crumb-link { color: var(--seedy-text-2); transition: color var(--t-fast) var(--ease); }
+.backbar.is-over .crumb-link { color: var(--seedy-text); }
+a.crumb-link:hover { color: #ffffff; }
+.crumb-here { color: #ffffff; overflow-wrap: anywhere; }
