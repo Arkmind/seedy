@@ -82,7 +82,7 @@ fun MusicRoute(id: UUID) {
         MusicLibraryScreen(
             state, playing,
             MusicActions(
-                onBack = c.nav::back,
+                onBack = { if (state.genre != null) vm.openGenre(null) else c.nav.back() },
                 onSearch = { c.nav.go(Route.Search) },
                 onCast = { c.openCast() },
                 onTab = vm::setTab,

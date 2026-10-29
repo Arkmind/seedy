@@ -28,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,6 +100,15 @@ fun MusicLibraryScreen(
     bottomPadding: Dp,
     listState: LazyListState = rememberLazyListState(),
 ) {
+    // Another view (a chip, See all, a genre) starts at the top; coming back to the page keeps its place.
+    val view = state.tab.name + (state.genre?.id ?: "")
+    var shown by rememberSaveable { mutableStateOf(view) }
+    LaunchedEffect(view) {
+        if (view != shown) {
+            shown = view
+            listState.scrollToItem(0)
+        }
+    }
     LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = bottomPadding + 24.dp)) {
         item(key = "head") {
             MusicHeader(state.view?.name ?: t("Music"), actions.onBack, top = topInset()) {
