@@ -146,11 +146,13 @@ class BooksRepo(private val session: UserSession) {
             ).content.items
         }.getOrDefault(emptyList())
         val who = fold(author)
-        items.firstOrNull { b ->
-            if (fold(b.name) != fold(name)) return@firstOrNull false
+        val same = items.filter { b ->
+            if (fold(b.name) != fold(name)) return@filter false
             val known = authorsOf(b).map { fold(it.first) }.filter { it.isNotEmpty() }
             who.isEmpty() || known.isEmpty() || who in known
         }
+        // The EPUB first: only it opens at the same point in the book.
+        same.firstOrNull { formatOf(it) == BookFormat.Epub } ?: same.firstOrNull()
     }
 
     private fun fold(s: String?) = java.text.Normalizer.normalize(s.orEmpty().lowercase(), java.text.Normalizer.Form.NFKD)

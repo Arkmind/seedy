@@ -10,6 +10,7 @@ import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -132,10 +133,13 @@ class MusicArtistViewModel(session: UserSession) : ViewModel() {
         job?.cancel()
         job = viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
+                // coroutineScope: a failed lookup ends here, inside runCatching, instead of cancelling the page's scope.
                 runCatching {
-                    val artist = async { api.musicArtist(target.mbid) }
-                    val options = async { api.options("music") }
-                    artist.await() to options.await()
+                    coroutineScope {
+                        val artist = async { api.musicArtist(target.mbid) }
+                        val options = async { api.options("music") }
+                        artist.await() to options.await()
+                    }
                 }
             }
             val (artist, options) = result.getOrNull() ?: run {
@@ -310,9 +314,11 @@ class BookRequestViewModel(session: UserSession) : ViewModel() {
         job = viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    val details = async { api.bookDetails(target.card) }
-                    val options = async { api.options("book") }
-                    details.await() to options.await()
+                    coroutineScope {
+                        val details = async { api.bookDetails(target.card) }
+                        val options = async { api.options("book") }
+                        details.await() to options.await()
+                    }
                 }
             }
             val (book, options) = result.getOrNull() ?: run {
