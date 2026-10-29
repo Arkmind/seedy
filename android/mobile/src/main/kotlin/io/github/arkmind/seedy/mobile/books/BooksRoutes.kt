@@ -12,10 +12,6 @@ fun BooksRoute(id: UUID) = NotYet("Books")
 @Composable
 fun BookRoute(id: UUID) = NotYet("Book")
 
-/** Board "Android · Reader": EPUB, comics and PDF. */
-@Composable
-fun ReaderRoute(id: UUID) = NotYet("Reader")
-
 /** Board "Android · Audiobook": the full-screen audiobook player. */
 @Composable
 fun AudiobookPlayerRoute() = NotYet("Audiobook")
