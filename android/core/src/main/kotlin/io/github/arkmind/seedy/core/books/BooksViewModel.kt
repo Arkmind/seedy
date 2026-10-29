@@ -82,7 +82,13 @@ class BooksViewModel(private val session: UserSession, private val libraryId: UU
         job = viewModelScope.launch {
             _state.update { it.copy(error = false) }
             if (_state.value.name.isEmpty()) launch { runCatching { repo.item(libraryId) }.getOrNull()?.let { v -> _state.update { it.copy(name = v.name.orEmpty()) } } }
-            val lib = runCatching { repo.library(libraryId, force) }.getOrNull()
+            val lib = try {
+                repo.library(libraryId, force)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
             if (lib == null) {
                 _state.update { it.copy(loading = false, error = it.data == null) }
                 return@launch
