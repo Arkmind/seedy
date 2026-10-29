@@ -80,6 +80,28 @@ class MediaRequestsShots {
         )
     }
 
+    /** No board: a music row's See all. */
+    @Test
+    fun seeAll() = shot("AndroidRequestsSeeAll") {
+        io.github.arkmind.seedy.mobile.requests.MediaRowScreen(
+            music = true, row = "missing",
+            state = io.github.arkmind.seedy.core.mediarequests.MediaRowViewModel.State(albums = MediaRequestsSamples.music.musicRows.flatMap { it.items.orEmpty() }),
+            onBack = {}, onAlbum = {}, onBook = {}, onRetry = {}, today = MediaRequestsSamples.today,
+        )
+    }
+
+    /** No board: the books search. */
+    @Test
+    fun search() = shot("AndroidRequestsSearch") {
+        io.github.arkmind.seedy.mobile.requests.MediaSearchScreen(
+            music = false,
+            state = io.github.arkmind.seedy.core.mediarequests.MediaSearchViewModel.State(
+                text = "halden", query = "halden", books = MediaRequestsSamples.books.bookRows.flatMap { it.items.orEmpty() },
+            ),
+            onText = {}, onBack = {}, onRetry = {}, onArtist = {}, onAlbum = {}, onBook = {}, bottomPadding = tabBarHeight(), autofocus = false, today = MediaRequestsSamples.today,
+        )
+    }
+
     /** No board: the artist window. */
     @Test
     fun artist() = shot("AndroidRequestArtist", tab = null) {
