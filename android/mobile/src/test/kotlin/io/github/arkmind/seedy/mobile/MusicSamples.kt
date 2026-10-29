@@ -104,9 +104,9 @@ object MusicSamples {
         home = MusicHome(
             jump = listOf(northline, playlist("Late night", 1, 26), album("Lumen Fields", 2, "Lumen Fields"), album("Field Recordings", 3, year = 2016)),
             mixes = listOf(
-                Mix("artist", webId(idFor("ada-radio", 0))!!, "Ada Vale radio", "Ada Vale and 24 artists like them", listOf(northline, album("Harbor Lights", 7, "Harbor Lights"))),
-                Mix("favs", webId(idFor("favs", 1))!!, "Your favourites mix", "Songs you love, and more like them", listOf(album("Late night", 1), album("Night Ferry", 8, "Oren Moss"))),
-                Mix("new", webId(idFor("new", 2))!!, "Something new", "Albums on the server you’ve never played", listOf(album("Undertow", 2, "Oren Moss"), album("Field Recordings", 3))),
+                Mix("artist", webId(idFor("ada-radio", 0))!!, "Ada Vale radio", "Ada Vale and 24 like her", listOf(northline, album("Harbor Lights", 7, "Harbor Lights"))),
+                Mix("favs", webId(idFor("favs", 1))!!, "Late night", "Slow songs from your favourites", listOf(album("Late night", 1), album("Night Ferry", 8, "Oren Moss"))),
+                Mix("new", webId(idFor("new", 2))!!, "Something new", "Albums you’ve never played", listOf(album("Undertow", 2, "Oren Moss"), album("Field Recordings", 3))),
             ),
             recent = listOf(
                 album("Blue Hour", 4, "Lumen Fields", 2026), album("Copper Line", 6, "The Quiet Engine", 2025), album("Harbor Lights", 7, "Harbor Lights", 2025),
