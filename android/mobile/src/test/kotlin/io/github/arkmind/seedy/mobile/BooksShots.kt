@@ -77,4 +77,39 @@ class BooksShots {
     fun audiobook() = shot("AndroidAudiobook") {
         AudiobookScreen(BooksSamples.playing, BooksSamples.playingTime, AudiobookActions(), output = "WH-1000XM5", volume = 0.7f, now = BooksSamples.now)
     }
+
+    /** No board: the audiobook player's Chapters sheet. */
+    @Test
+    fun audiobookChapters() = shot("AndroidAudiobookChapters") {
+        AudiobookScreen(BooksSamples.playing, BooksSamples.playingTime, AudiobookActions(), output = "WH-1000XM5", volume = 0.7f, now = BooksSamples.now)
+        io.github.arkmind.seedy.mobile.books.ChaptersSheet(BooksSamples.fogBook, BooksSamples.fogPosition, onPick = {}, onClose = {})
+    }
+
+    /** No board: the audiobook player's Bookmarks sheet. */
+    @Test
+    fun audiobookBookmarks() = shot("AndroidAudiobookBookmarks") {
+        AudiobookScreen(BooksSamples.playing, BooksSamples.playingTime, AudiobookActions(), output = "WH-1000XM5", volume = 0.7f, now = BooksSamples.now, bookmarked = true)
+        io.github.arkmind.seedy.mobile.books.BookmarksSheet(BooksSamples.fogBook, BooksSamples.fogPosition, BooksSamples.bookmarks, onAdd = {}, onRemove = {}, onPick = {}, onClose = {})
+    }
+
+    /** No board: an audiobook's own page (Listen first, Read the EPUB second). */
+    @Test
+    fun audiobookDetails() = shot("AndroidAudiobookDetails", Tab.Libraries) {
+        BookScreen(BooksSamples.audioDetails, BookActions(onDownload = {}), bottomPadding = 0.dp, now = BooksSamples.now)
+    }
+
+    /** No board: the books library's Series view. */
+    @Test
+    fun booksSeries() = shot("AndroidBooksSeries", Tab.Libraries, mini = true) {
+        BooksScreen(BooksSamples.books.copy(view = io.github.arkmind.seedy.core.books.BooksView.Series), BooksActions(), bottomPadding = MiniBarSpace, now = BooksSamples.now)
+    }
+
+    /** No board: one series opened. */
+    @Test
+    fun booksOneSeries() = shot("AndroidBooksOneSeries", Tab.Libraries) {
+        BooksScreen(
+            BooksSamples.books.copy(view = io.github.arkmind.seedy.core.books.BooksView.Series, focus = "The Halden Cycle"), BooksActions(),
+            bottomPadding = 0.dp, now = BooksSamples.now,
+        )
+    }
 }

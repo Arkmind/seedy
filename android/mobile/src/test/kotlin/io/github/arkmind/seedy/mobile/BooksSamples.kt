@@ -181,4 +181,19 @@ object BooksSamples {
         sizes = mapOf(orchardEpub.id to 2_202_010L, orchardPdf.id to 9_017_754L),
         policyDownload = true,
     )
+
+    val bookmarks = listOf(
+        io.github.arkmind.seedy.core.books.Bookmark("4512.0", 1, "The Inlet", 0),
+        io.github.arkmind.seedy.core.books.Bookmark("20870.0", 6, "The Lighthouse", 0),
+    )
+
+    /** The audiobook of The Glass Orchard, half-way, with its EPUB alongside. */
+    val audioDetails = details.copy(
+        item = orchardAudio.copy(
+            userData = orchardAudio.userData?.copy(playbackPositionTicks = 7 * 3600L * SEC, lastPlayedDate = nowDate.minusHours(3)),
+            overview = GLASS_OVERVIEW,
+            chapters = (0 until 28).map { ChapterInfo(startPositionTicks = it * 1843L * SEC, name = "Chapter ${it + 1}", imageDateModified = nowDate) },
+        ),
+        reading = null, info = null, twinReading = orchardReading,
+    )
 }

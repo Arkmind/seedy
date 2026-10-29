@@ -178,7 +178,7 @@ private fun SpeedSheet(speed: Float, onPick: (Float) -> Unit, onClose: () -> Uni
 }
 
 @Composable
-private fun SleepSheet(sleep: Sleep?, chapter: BookChapter?, onPick: (Sleep?) -> Unit, onClose: () -> Unit) {
+internal fun SleepSheet(sleep: Sleep?, chapter: BookChapter?, onPick: (Sleep?) -> Unit, onClose: () -> Unit) {
     BottomSheet(onClose) {
         SheetHead(t("Sleep timer"))
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
@@ -198,7 +198,7 @@ private fun SleepSheet(sleep: Sleep?, chapter: BookChapter?, onPick: (Sleep?) ->
 
 /** The chapters (web apb-chapters): listened ones ticked, the current one lit, each one's length; a tap goes there. */
 @Composable
-private fun ChaptersSheet(book: BookInfo, pos: Double, onPick: (Int) -> Unit, onClose: () -> Unit) {
+internal fun ChaptersSheet(book: BookInfo, pos: Double, onPick: (Int) -> Unit, onClose: () -> Unit) {
     val accent = LocalAccent.current
     val current = chapterOf(book, pos)?.index ?: 0
     val listened = if (book.duration > 0) (pos / book.duration * 100).roundToInt() else 0
@@ -231,7 +231,7 @@ private fun ChaptersSheet(book: BookInfo, pos: Double, onPick: (Int) -> Unit, on
 
 /** Bookmarks: "Add bookmark" here, then the saved ones (a tap goes there, × removes one). */
 @Composable
-private fun BookmarksSheet(
+internal fun BookmarksSheet(
     book: BookInfo,
     pos: Double,
     bookmarks: List<Bookmark>,
