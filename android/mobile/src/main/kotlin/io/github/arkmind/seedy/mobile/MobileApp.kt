@@ -45,7 +45,7 @@ import io.github.arkmind.seedy.mobile.audio.miniBarSpace
 import io.github.arkmind.seedy.mobile.books.AudiobookPlayerRoute
 import io.github.arkmind.seedy.mobile.books.BookRoute
 import io.github.arkmind.seedy.mobile.books.BooksRoute
-import io.github.arkmind.seedy.mobile.books.ReaderRoute
+import io.github.arkmind.seedy.mobile.books.reader.ReaderRoute
 import io.github.arkmind.seedy.mobile.music.AlbumRoute
 import io.github.arkmind.seedy.mobile.music.ArtistRoute
 import io.github.arkmind.seedy.mobile.music.MusicRoute
@@ -284,7 +284,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                 entry<Route.NowPlaying> { WithOverlay { NowPlayingRoute() } }
                 entry<Route.Books> { WithTabBar(tabs, tab, nav) { BooksRoute(it.id) } }
                 entry<Route.Book> { WithTabBar(tabs, tab, nav) { BookRoute(it.id) } }
-                entry<Route.Reader> { WithOverlay { ReaderRoute(it.id) } }
+                entry<Route.Reader> { WithOverlay { ReaderRoute(it.id, it.percent) } }
                 entry<Route.AudiobookPlayer> { WithOverlay { AudiobookPlayerRoute() } }
                 entry<Route.Search> { SearchRoute() }
                 entry<Route.LiveTv> { LiveTvRoute() }

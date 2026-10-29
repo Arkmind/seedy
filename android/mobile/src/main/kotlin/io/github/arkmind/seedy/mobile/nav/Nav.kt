@@ -38,8 +38,8 @@ sealed interface Route {
     data class Books(val id: UUID) : Route
     /** A book or an audiobook (board "Android · Book details"). */
     data class Book(val id: UUID) : Route
-    /** The reader (board "Android · Reader"): EPUB, comics, PDF. */
-    data class Reader(val id: UUID) : Route
+    /** The reader (board "Android · Reader"): EPUB, comics, PDF; [percent] opens at that share of the book (from the audiobook). */
+    data class Reader(val id: UUID, val percent: Double? = null) : Route
     /** The full-screen audiobook player (board "Android · Audiobook"). */
     data object AudiobookPlayer : Route
 }
