@@ -207,6 +207,7 @@ object BookIcons {
     val HeartFilled = IconDef(2.2f, listOf(IconPart("M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z", filled = true)))
     val Close = IconDef(2.4f, "M6 6l12 12", "M18 6L6 18")
     val Refresh = IconDef(2f, "M19.5 12a7.5 7.5 0 1 1-2.3-5.4", "M19.5 4v3.5H16")
+    val Restart = IconDef(2.1f, "M4 12a8 8 0 1 0 2.4-5.7", "M4 4v5h5")
     val Sort = IconDef(2f, "M7 4v16", "M3 16l4 4 4-4", "M12 6h9", "M12 11h6", "M12 16h3")
     val Stop = IconDef(2.2f, "M7 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z")
     val Star = IconDef(0f, listOf(IconPart("M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z", filled = true)))

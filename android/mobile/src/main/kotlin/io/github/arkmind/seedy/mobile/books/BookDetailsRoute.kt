@@ -40,6 +40,7 @@ import io.github.arkmind.seedy.mobile.manage.rememberManageSheets
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Toast
+import io.github.arkmind.seedy.player.audio.PlayOptions
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.currentSession
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -103,6 +104,18 @@ fun BookDetailsRoute(id: UUID) {
                 val played = state.played
                 val label = if (state.audio) (if (played) t("Mark as not listened") else t("Mark as listened")) else if (played) t("Mark as unread") else t("Mark as read")
                 add(MenuEntry(BookIcons.Check, label, run = vm::togglePlayed))
+                if (startedAt(state)) {
+                    add(
+                        MenuEntry(BookIcons.Restart, t("Start over"), run = {
+                            if (state.audio) {
+                                audio?.playAudiobook(item.id, PlayOptions(startTicks = 0))
+                                nav.go(Route.AudiobookPlayer)
+                            } else {
+                                vm.startOver { nav.go(Route.Reader(it.id)) }
+                            }
+                        }),
+                    )
+                }
                 val fav = item.userData?.isFavorite == true
                 add(MenuEntry(if (fav) BookIcons.HeartFilled else BookIcons.Heart, if (fav) t("Remove from favorites") else t("Add to favorites"), run = vm::toggleFavorite))
                 if (state.canDownload && state.parts == null) {
@@ -123,6 +136,13 @@ fun BookDetailsRoute(id: UUID) {
         ManageSheetHost(sheets, say = { bulk.say(it) }, onDeleted = { _, _ -> nav.back() })
         Toast(message ?: bulkState.message, { vm.messageShown(); bulk.messageShown() }, Modifier.align(Alignment.BottomCenter).padding(bottom = miniBarSpace()))
     }
+}
+
+/** Whether the book (or audiobook) is under way: Start over then has a meaning. */
+private fun startedAt(state: BookViewModel.State): Boolean {
+    val item = state.item ?: return false
+    if (state.audio) return item.userData?.played != true && (item.userData?.playbackPositionTicks ?: 0) > 0
+    return state.reading?.let { !it.finished && it.percent > 0 } == true
 }
 
 private fun formatLabel(item: BaseItemDto): String = when (val f = formatOf(item)) {

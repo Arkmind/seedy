@@ -12,5 +12,6 @@
   "Bookmark": "Signet",
   "No bookmarks yet": "Pas encore de signets",
   "Downloading {name}": "Téléchargement de {name}",
-  "Couldn’t download {name}": "Impossible de télécharger {name}"
+  "Couldn’t download {name}": "Impossible de télécharger {name}",
+  "Start over": "Recommencer"
 }

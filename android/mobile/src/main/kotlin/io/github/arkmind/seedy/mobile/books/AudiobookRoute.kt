@@ -60,6 +60,9 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
+import io.github.arkmind.seedy.mobile.browse.topInset
+import io.github.arkmind.seedy.mobile.parts.HeaderButton
+import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -76,9 +79,19 @@ fun AudiobookRoute() {
     val state by audio.state.collectAsStateWithLifecycle()
     val time by audio.time.collectAsStateWithLifecycle()
     val book = state.book?.takeIf { state.isBook && state.current != null }
-    // Nothing (or music) playing: there's no audiobook to show.
-    LaunchedEffect(book == null) { if (book == null) nav.back() }
-    if (book == null) return
+    // Listen opens the player while the book loads; nothing (or music) playing a while later: there's no book to show.
+    var waited by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(8_000)
+        waited = true
+    }
+    LaunchedEffect(book == null, waited) { if (book == null && waited) nav.back() }
+    if (book == null) {
+        Box(Modifier.fillMaxSize().background(Color(0xFF121212))) {
+            Row(Modifier.padding(start = 8.dp, top = topInset())) { HeaderButton(BookIcons.ChevronDown, nav::back) }
+        }
+        return
+    }
     val vm = viewModel(key = "audiobook") { AudiobookViewModel(session) }
     val marks by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(book.id) { uuidOf(book.id)?.let { vm.open(it, book.name, book.author) } }

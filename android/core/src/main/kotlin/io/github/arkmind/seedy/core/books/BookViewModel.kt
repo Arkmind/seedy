@@ -185,6 +185,17 @@ class BookViewModel(private val session: UserSession, private val id: UUID) : Vi
         }
     }
 
+    /** Back to the first page (the reader's settings and bookmarks stay), then [open] the book. */
+    fun startOver(open: (BaseItemDto) -> Unit) {
+        val item = _state.value.item ?: return
+        viewModelScope.launch {
+            runCatching { repo.saveReading(item.id, Reading(locator = "", percent = 0.0, finished = false)) }
+            _state.update { it.copy(reading = repo.reading(item.id)) }
+            BooksRepo.invalidate()
+            open(item)
+        }
+    }
+
     fun messageShown() {
         _message.value = null
     }

@@ -69,6 +69,7 @@ class BooksViewModel(private val session: UserSession, private val libraryId: UU
     private val _state = MutableStateFlow(State(view = view, focus = focus))
     val state: StateFlow<State> = _state.asStateFlow()
     private var job: Job? = null
+    private var loadedAt = 0L
 
     init {
         load(force = false)
@@ -76,6 +77,7 @@ class BooksViewModel(private val session: UserSession, private val libraryId: UU
 
     /** Loads the library again (its items come from a minute-long cache unless [force]); the places always fresh. */
     fun load(force: Boolean = true) {
+        loadedAt = System.currentTimeMillis()
         job?.cancel()
         job = viewModelScope.launch {
             _state.update { it.copy(error = false) }
@@ -92,8 +94,10 @@ class BooksViewModel(private val session: UserSession, private val libraryId: UU
         }
     }
 
-    /** Back on the page: places may have moved. */
-    fun refresh() = load(force = false)
+    /** Back on the page: places may have moved (the page opening loads them already). */
+    fun refresh() {
+        if (System.currentTimeMillis() - loadedAt > 3_000) load(force = false)
+    }
 
     fun setView(view: BooksView) = _state.update { it.copy(view = view, focus = null) }
 
