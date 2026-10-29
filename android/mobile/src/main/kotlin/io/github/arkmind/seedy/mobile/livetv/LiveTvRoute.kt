@@ -34,6 +34,8 @@ import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.mobile.parts.Tab
 import io.github.arkmind.seedy.mobile.parts.TabBar
 import io.github.arkmind.seedy.mobile.parts.tabBarHeight
+import io.github.arkmind.seedy.mobile.parts.barHeight
+import io.github.arkmind.seedy.mobile.audio.AudioMiniBar
 import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalCore
@@ -114,6 +116,7 @@ fun LiveTvScreen(
             }
         }
         val tabs = if (viewer.requests) Tab.entries else Tab.entries - Tab.Requests
+        AudioMiniBar(Modifier.align(Alignment.BottomCenter).padding(bottom = barHeight() + 8.dp))
         TabBar(tabs, Tab.Libraries, onTab, Modifier.align(Alignment.BottomCenter))
     }
 }

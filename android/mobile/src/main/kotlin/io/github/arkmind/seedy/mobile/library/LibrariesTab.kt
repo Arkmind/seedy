@@ -55,7 +55,7 @@ fun LibrariesTab() {
     val state by vm.state.collectAsStateWithLifecycle()
     LibrariesScreen(
         state,
-        onOpen = { view -> if (view.collectionType == CollectionType.LIVETV) nav.go(Route.LiveTv) else nav.go(Route.Library(view.id)) },
+        onOpen = nav::openLibrary,
         onSearch = { nav.go(Route.Search) },
         // Viewing history and "Order and hide libraries" are Settings pages the phone doesn't have yet.
         onHistory = {},
