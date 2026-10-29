@@ -1,0 +1,11 @@
+{
+  "Couldn’t load this list": "Impossible de charger cette liste",
+  "Show requests": "Afficher les demandes",
+  "Soon": "Bientôt",
+  "Type a title, an author or a series.": "Tapez un titre, un auteur ou une série.",
+  "{artist} · {n} of {total}": "{artist} · {n} sur {total}",
+  "{n} book request": "{n} demande de livre",
+  "{n} book requests": "{n} demandes de livres",
+  "{n} music request in progress": "{n} demande de musique en cours",
+  "{n} music requests in progress": "{n} demandes de musique en cours"
+}
