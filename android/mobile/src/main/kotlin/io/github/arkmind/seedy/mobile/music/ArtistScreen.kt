@@ -126,7 +126,7 @@ fun ArtistScreen(
             }
         }
         if (item == null) {
-            if (state.error) item(key = "err") { Message(t("Couldn’t load this artist"), t("Check your connection and try again."), t("Try again"), actions.onRetry) }
+            if (state.error) item(key = "err") { Message(t("Couldn’t load this artist."), t("The server didn’t answer. Check your connection and try again."), t("Try again"), actions.onRetry) }
             return@LazyColumn
         }
         item(key = "actions") {

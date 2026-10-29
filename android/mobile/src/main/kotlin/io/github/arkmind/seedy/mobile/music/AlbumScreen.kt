@@ -109,7 +109,7 @@ fun AlbumScreen(
                     IconButton44(MusicIcons.More, actions.onMore)
                 }
                 if (item == null) {
-                    if (state.error) Message(t("Couldn’t load this album"), t("Check your connection and try again."), t("Try again"), actions.onRetry)
+                    if (state.error) Message(t("Couldn’t load this title"), t("The server didn’t answer. Check your connection and try again."), t("Try again"), actions.onRetry)
                     else Skeleton(Modifier.padding(top = 6.dp).size(220.dp).align(Alignment.CenterHorizontally), radius = 14.dp)
                     return@Column
                 }
@@ -160,7 +160,7 @@ fun AlbumScreen(
         }
         if (item == null) return@LazyColumn
         when {
-            state.tracks == null && state.tracksError -> item(key = "err") { Message(t("Couldn’t load the songs"), t("Check your connection and try again."), t("Try again"), actions.onRetry) }
+            state.tracks == null && state.tracksError -> item(key = "err") { Message(t("Couldn’t load the songs"), t("The server didn’t answer. Check your connection and try again."), t("Try again"), actions.onRetry) }
             state.tracks == null -> items(8) { Skeleton(Modifier.padding(horizontal = 20.dp, vertical = 8.dp).fillMaxWidth().height(40.dp)) }
             tracks.isEmpty() -> item(key = "empty") {
                 if (playlist) Message(t("This playlist is empty"), t("Add songs from their ⋯ menu."))

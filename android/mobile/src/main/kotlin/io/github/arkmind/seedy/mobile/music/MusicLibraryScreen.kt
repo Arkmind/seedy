@@ -112,7 +112,7 @@ fun MusicLibraryScreen(
             }
         }
         if (state.error) {
-            item(key = "error") { Message(t("Couldn’t load this library"), t("Check your connection and try again."), t("Try again"), actions.onRetry) }
+            item(key = "error") { Message(t("Couldn’t load the library."), t("The server didn’t answer. Check your connection and try again."), t("Try again"), actions.onRetry) }
             return@LazyColumn
         }
         when (state.tab) {
@@ -290,7 +290,7 @@ private fun LazyListScope.more(p: Paged, key: String, onMore: () -> Unit, onRetr
 private fun LazyListScope.albums(p: Paged, state: MusicLibraryViewModel.State, actions: MusicActions, tab: MusicTab) {
     if (tab == MusicTab.Albums) item(key = "tools") { Toolbar(countOf(p) { tn(it, "{n} album", "{n} albums") }, MusicSorts.Albums, state.albumSort, state.favorites, actions) }
     when {
-        p.error && p.items.isEmpty() -> item(key = "err") { Message(t("Couldn’t load the albums"), t("Check your connection and try again."), t("Try again")) { actions.onMore(tab) } }
+        p.error && p.items.isEmpty() -> item(key = "err") { Message(t("Couldn’t load the albums"), t("The server didn’t answer. Check your connection and try again."), t("Try again")) { actions.onMore(tab) } }
         !p.loaded -> gridSkeleton(2)
         p.items.isEmpty() -> item(key = "empty") {
             if (state.favorites) Message(t("No favourite albums yet"), t("Tap the heart on an album and it shows up here."))
@@ -305,7 +305,7 @@ private fun LazyListScope.artists(state: MusicLibraryViewModel.State, actions: M
     val p = state.artists
     item(key = "tools") { Toolbar(countOf(p) { tn(it, "{n} artist", "{n} artists") }, MusicSorts.Artists, state.artistSort, state.favorites, actions) }
     when {
-        p.error && p.items.isEmpty() -> item(key = "err") { Message(t("Couldn’t load the artists"), t("Check your connection and try again."), t("Try again")) { actions.onMore(MusicTab.Artists) } }
+        p.error && p.items.isEmpty() -> item(key = "err") { Message(t("Couldn’t load the artists"), t("The server didn’t answer. Check your connection and try again."), t("Try again")) { actions.onMore(MusicTab.Artists) } }
         !p.loaded -> gridSkeleton(3, round = true)
         p.items.isEmpty() -> item(key = "empty") {
             Message(if (state.favorites) t("No favourite artists yet") else t("No artists yet"), t("Artists show up here once the server finds their albums."))
@@ -319,7 +319,7 @@ private fun LazyListScope.songs(state: MusicLibraryViewModel.State, playing: Pla
     val p = state.songs
     item(key = "tools") { Toolbar(countOf(p) { songsLabel(it) }, MusicSorts.Songs, state.songSort, state.favorites, actions) }
     when {
-        p.error && p.items.isEmpty() -> item(key = "err") { Message(t("Couldn’t load the songs"), t("Check your connection and try again."), t("Try again")) { actions.onMore(MusicTab.Songs) } }
+        p.error && p.items.isEmpty() -> item(key = "err") { Message(t("Couldn’t load the songs"), t("The server didn’t answer. Check your connection and try again."), t("Try again")) { actions.onMore(MusicTab.Songs) } }
         !p.loaded -> items(8) { Skeleton(Modifier.padding(horizontal = 20.dp, vertical = 7.dp).fillMaxWidth().height(44.dp)) }
         p.items.isEmpty() -> item(key = "empty") {
             if (state.favorites) Message(t("No favourite songs yet"), t("Tap the heart on a song and it shows up here."))
@@ -336,7 +336,7 @@ private fun LazyListScope.playlists(state: MusicLibraryViewModel.State, actions:
     val list = state.playlists
     item(key = "tools") { Toolbar(list?.let { tn(it.size, "{n} playlist", "{n} playlists") }, actions = actions) }
     if (state.playlistsError && list == null) {
-        item(key = "err") { Message(t("Couldn’t load your playlists."), t("Check your connection and try again."), t("Try again")) { actions.onTab(MusicTab.Playlists) } }
+        item(key = "err") { Message(t("Couldn’t load your playlists."), t("The server didn’t answer. Check your connection and try again."), t("Try again")) { actions.onTab(MusicTab.Playlists) } }
         return
     }
     val cells: List<Any> = listOf("new") + (list ?: List(3) { "skel$it" })
