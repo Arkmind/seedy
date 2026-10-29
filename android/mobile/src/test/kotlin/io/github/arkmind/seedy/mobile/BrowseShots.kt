@@ -76,7 +76,10 @@ class BrowseShots {
 
     @Test
     fun requests() = shot("AndroidRequests", Tab.Requests) {
-        RequestsScreen(RequestsSamples.discover, RequestsActions(onOpenSeerr = {}), bottomPadding = tabBarHeight(), today = RequestsSamples.today)
+        RequestsScreen(
+            RequestsSamples.discover, RequestsActions(onOpenSeerr = {}), bottomPadding = tabBarHeight(), today = RequestsSamples.today,
+            services = MediaRequestsSamples.services(io.github.arkmind.seedy.core.mediarequests.RequestService.Movies),
+        )
     }
 
     /** No board: the details hero for a Seerr title. */

@@ -28,6 +28,8 @@ data class SeedyMe(
     /** The admin's playback defaults (Seedy admin · Branding & playback), for settings the person hasn't changed. */
     val defaults: PlaybackPrefs = PlaybackPrefs(),
     val requests: RequestsFeatures = RequestsFeatures(),
+    /** Music and book requests (Lidarr, Shelfarr, Librarr…): null on servers without them. */
+    val media: io.github.arkmind.seedy.core.mediarequests.MediaFeatures? = null,
     val historyEnabled: Boolean = false,
     val homeRows: List<HomeRowSetting> = emptyList(),
     val pluginVersion: String = "",

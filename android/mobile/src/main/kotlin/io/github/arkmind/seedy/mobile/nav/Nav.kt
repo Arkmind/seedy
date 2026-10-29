@@ -42,6 +42,10 @@ sealed interface Route {
     data class Reader(val id: UUID, val percent: Double? = null) : Route
     /** The full-screen audiobook player (board "Android · Audiobook"). */
     data object AudiobookPlayer : Route
+    /** Music or book requests' search: MusicBrainz artists and albums, or books. */
+    data class MediaRequestsSearch(val music: Boolean) : Route
+    /** A music or books Discover row's "See all" (a [io.github.arkmind.seedy.core.mediarequests.MusicRow] or BookRow key). */
+    data class MediaRequestsRow(val music: Boolean, val row: String) : Route
 }
 
 /** Moves between pages; every screen reaches it through [LocalMobileNav]. */

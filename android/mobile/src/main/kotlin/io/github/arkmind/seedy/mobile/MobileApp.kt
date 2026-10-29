@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -223,7 +224,9 @@ private data object TabsKey
 private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) {
     val scope = rememberCoroutineScope()
     val images = remember(session) { Images(session.api) }
-    val viewer = rememberViewer(session, images)
+    // The phone's Requests tab, as the web's: Seerr, or music or book requests (TV's Requests stays Seerr's).
+    val me by session.seedyFlow.collectAsState()
+    val viewer = rememberViewer(session, images).let { v -> if (me?.media?.let { it.music || it.books } == true) v.copy(requests = true) else v }
     val stack = remember(session) { mutableStateListOf<Any>(TabsKey) }
     var tab by rememberSaveable { mutableStateOf(Tab.Home) }
     val nav = remember(stack) { MobileNav(stack) { tab = it } }
@@ -293,6 +296,8 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                 entry<Route.Player> { PlayerRoute(it.id) }
                 entry<Route.SeerrTitle> { WithTabBar(tabs, tab, nav, reserve = true) { SeerrTitleRoute(it.mediaType, it.tmdbId) } }
                 entry<Route.SeerrTitles> { WithTabBar(tabs, tab, nav, reserve = true) { SeerrTitlesRoute(it.kind) } }
+                entry<Route.MediaRequestsSearch> { WithTabBar(tabs, tab, nav, reserve = true) { io.github.arkmind.seedy.mobile.requests.MediaSearchRoute(it.music) } }
+                entry<Route.MediaRequestsRow> { WithTabBar(tabs, tab, nav, reserve = true) { io.github.arkmind.seedy.mobile.requests.MediaRowRoute(it.music, it.row) } }
                 entry<Route.Admin> { WithOverlay { AdminRoute(it.page, it.id) } }
             },
         )
