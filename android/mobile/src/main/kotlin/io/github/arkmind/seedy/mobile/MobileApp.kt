@@ -282,7 +282,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                 entry<Route.Album> { WithTabBar(tabs, tab, nav) { AlbumRoute(it.id) } }
                 entry<Route.Artist> { WithTabBar(tabs, tab, nav) { ArtistRoute(it.id) } }
                 entry<Route.NowPlaying> { WithOverlay { NowPlayingRoute() } }
-                entry<Route.Books> { WithTabBar(tabs, tab, nav) { BooksRoute(it.id) } }
+                entry<Route.Books> { WithTabBar(tabs, tab, nav) { BooksRoute(it.id, it.view, it.focus) } }
                 entry<Route.Book> { WithTabBar(tabs, tab, nav) { BookRoute(it.id) } }
                 entry<Route.Reader> { WithOverlay { ReaderRoute(it.id) } }
                 entry<Route.AudiobookPlayer> { WithOverlay { AudiobookPlayerRoute() } }

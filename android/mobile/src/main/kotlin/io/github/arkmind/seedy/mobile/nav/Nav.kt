@@ -34,8 +34,8 @@ sealed interface Route {
     data class Artist(val id: UUID) : Route
     /** The full-screen music player (board "Android · Now playing"). */
     data object NowPlaying : Route
-    /** A books library (board "Android · Books"): All, Ebooks, Audiobooks, Comics, Series. */
-    data class Books(val id: UUID) : Route
+    /** A books library (board "Android · Books"): All, Ebooks, Audiobooks, Comics, Series; [view] and [focus] open a series or author. */
+    data class Books(val id: UUID, val view: String? = null, val focus: String? = null) : Route
     /** A book or an audiobook (board "Android · Book details"). */
     data class Book(val id: UUID) : Route
     /** The reader (board "Android · Reader"): EPUB, comics, PDF. */

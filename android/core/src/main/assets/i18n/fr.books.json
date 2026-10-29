@@ -1,0 +1,16 @@
+{
+  "Series you’re in": "Séries en cours",
+  "Audiobook · listening": "Livre audio · en écoute",
+  "Search books": "Rechercher des livres",
+  "No results": "Aucun résultat",
+  "Authors": "Auteurs",
+  "Read · {n}%": "Lire · {n} %",
+  "Listen · {n}%": "Écouter · {n} %",
+  "Less": "Moins",
+  "{time} left in the book": "{time} restantes dans le livre",
+  "Sleep": "Veille",
+  "Bookmark": "Signet",
+  "No bookmarks yet": "Pas encore de signets",
+  "Downloading {name}": "Téléchargement de {name}",
+  "Couldn’t download {name}": "Impossible de télécharger {name}"
+}
