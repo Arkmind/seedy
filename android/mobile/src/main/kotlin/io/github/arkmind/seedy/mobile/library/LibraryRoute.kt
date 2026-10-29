@@ -73,6 +73,8 @@ import io.github.arkmind.seedy.mobile.browse.ToolButton
 import io.github.arkmind.seedy.mobile.browse.topInset
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
+import io.github.arkmind.seedy.mobile.books.BooksRoute
+import io.github.arkmind.seedy.mobile.music.MusicRoute
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.Artwork
@@ -95,6 +97,12 @@ fun LibraryRoute(id: UUID) {
     val vm = viewModel(key = "library:$id") { LibraryViewModel(session, id) }
     val bulk = viewModel(key = "library-bulk:$id") { BulkViewModel(session) }
     val state by vm.state.collectAsStateWithLifecycle()
+    // Opened by id alone (a home row's "See all"): music and books libraries have their own pages.
+    when (state.view?.collectionType) {
+        CollectionType.MUSIC -> return MusicRoute(id)
+        CollectionType.BOOKS -> return BooksRoute(id)
+        else -> Unit
+    }
     val bulkState by bulk.state.collectAsStateWithLifecycle()
     var filtering by remember { mutableStateOf(false) }
     val perms = remember(session) { ManagePerms.of(session) }
@@ -115,7 +123,7 @@ fun LibraryRoute(id: UUID) {
                 onBack = nav::back,
                 onSwitch = { view ->
                     nav.back()
-                    if (view.collectionType == CollectionType.LIVETV) nav.go(Route.LiveTv) else nav.go(Route.Library(view.id))
+                    nav.openLibrary(view)
                 },
                 onSearch = { nav.go(Route.Search) },
                 onShuffle = { vm.shuffle(nav::play) },

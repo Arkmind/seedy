@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -120,7 +121,7 @@ fun InProgressCard(open: List<SeerrRequest>, waiting: Int, downloading: Int, sea
         Box(Modifier.width(46.dp).height(42.dp)) {
             open.take(2).forEachIndexed { i, r ->
                 // The board's 2 px ring sits outside each poster (a box-shadow), over the one before.
-                Box(Modifier.offset(x = (18 * i - 2).dp, y = (-2).dp).size(32.dp, 46.dp).background(SeedyColors.Panel, RoundedCornerShape(8.dp)).padding(2.dp)) {
+                Box(Modifier.offset(x = (18 * i - 2).dp).requiredSize(32.dp, 46.dp).background(SeedyColors.Panel, RoundedCornerShape(8.dp)).padding(2.dp)) {
                     Artwork(tmdbImage(r.posterPath, "w92"), Modifier.matchParentSize().clip(RoundedCornerShape(6.dp)), placeholder = SeedyColors.Surface2)
                 }
             }

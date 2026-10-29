@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +39,21 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.SessionState
 import io.github.arkmind.seedy.core.session.UserSession
 import io.github.arkmind.seedy.mobile.admin.AdminRoute
+import io.github.arkmind.seedy.mobile.audio.AudioMiniBar
+import io.github.arkmind.seedy.mobile.audio.AudioScope
+import io.github.arkmind.seedy.mobile.audio.LocalAudio
+import io.github.arkmind.seedy.mobile.audio.miniBarSpace
+import io.github.arkmind.seedy.mobile.books.AudiobookPlayerRoute
+import io.github.arkmind.seedy.mobile.books.BookRoute
+import io.github.arkmind.seedy.mobile.books.BooksRoute
+import io.github.arkmind.seedy.mobile.books.reader.ReaderRoute
+import io.github.arkmind.seedy.mobile.music.AlbumRoute
+import io.github.arkmind.seedy.mobile.music.ArtistRoute
+import io.github.arkmind.seedy.mobile.music.MusicRoute
+import io.github.arkmind.seedy.mobile.music.NowPlayingRoute
+import io.github.arkmind.seedy.mobile.parts.barHeight
+import io.github.arkmind.seedy.player.audio.AudioEngine
+import androidx.compose.ui.platform.LocalContext
 import io.github.arkmind.seedy.mobile.details.DetailsRoute
 import io.github.arkmind.seedy.mobile.favorites.FavoritesTab
 import io.github.arkmind.seedy.mobile.library.LibrariesTab
@@ -208,17 +224,23 @@ private data object TabsKey
 private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) {
     val scope = rememberCoroutineScope()
     val images = remember(session) { Images(session.api) }
-    val viewer = rememberViewer(session, images)
+    // The phone's Requests tab, as the web's: Seerr, or music or book requests (TV's Requests stays Seerr's).
+    val me by session.seedyFlow.collectAsState()
+    val viewer = rememberViewer(session, images).let { v -> if (me?.media?.let { it.music || it.books } == true) v.copy(requests = true) else v }
     val stack = remember(session) { mutableStateListOf<Any>(TabsKey) }
     var tab by rememberSaveable { mutableStateOf(Tab.Home) }
     val nav = remember(stack) { MobileNav(stack) { tab = it } }
+    val context = LocalContext.current
+    val audio = remember { AudioEngine.get(context, core) }
+    nav.audio = audio
     val tabs = if (viewer.requests) Tab.entries else Tab.entries - Tab.Requests
     val account = AccountActions(
         onSwitchProfile = { scope.launch { core.sessions.switchProfile() } },
         onSignOut = { scope.launch { core.sessions.signOut() } },
         onSettings = { nav.go(Route.Settings) },
     )
-    CompositionLocalProvider(LocalViewer provides viewer, LocalSession provides session, LocalCore provides core, LocalMobileNav provides nav) {
+    CompositionLocalProvider(LocalViewer provides viewer, LocalSession provides session, LocalCore provides core, LocalMobileNav provides nav, LocalAudio provides audio) {
+      AudioScope {
         NavDisplay(
             backStack = stack,
             onBack = { nav.back() },
@@ -251,23 +273,35 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                             Tab.Requests -> RequestsTab()
                         }
                         }
+                        AudioMiniBar(Modifier.align(Alignment.BottomCenter).padding(bottom = barHeight() + 8.dp))
                         TabBar(tabs, tab, { tab = it }, Modifier.align(Alignment.BottomCenter))
                         overlay.content?.invoke()
                     }
                 }
                 // The boards keep the tab bar under these pages, lit on the tab they were opened from.
-                entry<Route.Details> { WithTabBar(tabs, tab, nav) { DetailsRoute(it.id) } }
-                entry<Route.Library> { WithTabBar(tabs, tab, nav) { LibraryRoute(it.id) } }
+                entry<Route.Details> { WithTabBar(tabs, tab, nav, reserve = true) { DetailsRoute(it.id) } }
+                entry<Route.Library> { WithTabBar(tabs, tab, nav, reserve = true) { LibraryRoute(it.id) } }
+                entry<Route.Music> { WithTabBar(tabs, tab, nav) { MusicRoute(it.id) } }
+                entry<Route.Album> { WithTabBar(tabs, tab, nav) { AlbumRoute(it.id) } }
+                entry<Route.Artist> { WithTabBar(tabs, tab, nav) { ArtistRoute(it.id) } }
+                entry<Route.NowPlaying> { WithOverlay { NowPlayingRoute() } }
+                entry<Route.Books> { WithTabBar(tabs, tab, nav) { BooksRoute(it.id, it.view, it.focus) } }
+                entry<Route.Book> { WithTabBar(tabs, tab, nav) { BookRoute(it.id) } }
+                entry<Route.Reader> { WithOverlay { ReaderRoute(it.id, it.percent) } }
+                entry<Route.AudiobookPlayer> { WithOverlay { AudiobookPlayerRoute() } }
                 entry<Route.Search> { SearchRoute() }
                 entry<Route.LiveTv> { LiveTvRoute() }
-                entry<Route.Settings> { WithTabBar(tabs, tab, nav) { SettingsRoute(appVersion) } }
+                entry<Route.Settings> { WithTabBar(tabs, tab, nav, reserve = true) { SettingsRoute(appVersion) } }
                 entry<Route.SettingsPage> { SettingsPageRoute(it.page, appVersion) }
                 entry<Route.Player> { PlayerRoute(it.id) }
-                entry<Route.SeerrTitle> { WithTabBar(tabs, tab, nav) { SeerrTitleRoute(it.mediaType, it.tmdbId) } }
-                entry<Route.SeerrTitles> { WithTabBar(tabs, tab, nav) { SeerrTitlesRoute(it.kind) } }
+                entry<Route.SeerrTitle> { WithTabBar(tabs, tab, nav, reserve = true) { SeerrTitleRoute(it.mediaType, it.tmdbId) } }
+                entry<Route.SeerrTitles> { WithTabBar(tabs, tab, nav, reserve = true) { SeerrTitlesRoute(it.kind) } }
+                entry<Route.MediaRequestsSearch> { WithTabBar(tabs, tab, nav, reserve = true) { io.github.arkmind.seedy.mobile.requests.MediaSearchRoute(it.music) } }
+                entry<Route.MediaRequestsRow> { WithTabBar(tabs, tab, nav, reserve = true) { io.github.arkmind.seedy.mobile.requests.MediaRowRoute(it.music, it.row) } }
                 entry<Route.Admin> { WithOverlay { AdminRoute(it.page, it.id) } }
             },
         )
+      }
     }
 }
 
@@ -281,13 +315,21 @@ private fun WithOverlay(content: @Composable () -> Unit) {
     }
 }
 
-/** A page with the tab bar under it; a tab goes back to the tabs on that tab. The page's sheets cover the bar. */
+/**
+ * A page with the tab bar under it; a tab goes back to the tabs on that tab. The page's sheets cover the bar. The mini
+ * player floats over the page's bottom (the page pads its list by [miniBarSpace]), or takes its own strip when
+ * [reserve] (pages that don't know about it).
+ */
 @Composable
-private fun WithTabBar(tabs: List<Tab>, current: Tab, nav: MobileNav, content: @Composable () -> Unit) {
+private fun WithTabBar(tabs: List<Tab>, current: Tab, nav: MobileNav, reserve: Boolean = false, content: @Composable () -> Unit) {
     val overlay = remember { OverlayHost() }
+    val strip = if (reserve) miniBarSpace() else 0.dp
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
-            Box(Modifier.weight(1f)) { CompositionLocalProvider(LocalOverlayHost provides overlay, content = content) }
+            Box(Modifier.weight(1f)) {
+                Box(Modifier.fillMaxSize().padding(bottom = strip)) { CompositionLocalProvider(LocalOverlayHost provides overlay, content = content) }
+                AudioMiniBar(Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp))
+            }
             TabBar(tabs, current, nav::toTab)
         }
         overlay.content?.invoke()

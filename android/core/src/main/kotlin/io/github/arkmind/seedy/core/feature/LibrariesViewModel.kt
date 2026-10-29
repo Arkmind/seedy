@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.core.feature
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.arkmind.seedy.core.audio.AudioApi
 import io.github.arkmind.seedy.core.browse.Browse
 import io.github.arkmind.seedy.core.browse.ItemsQuery
 import io.github.arkmind.seedy.core.browse.countLabel
@@ -27,6 +28,7 @@ import java.util.UUID
 /** The Libraries tab (board "Android · Libraries"): each library with how much it holds and a picture from inside it. */
 class LibrariesViewModel(session: UserSession) : ViewModel() {
     private val browse = Browse(session)
+    private val audio = AudioApi(session)
 
     data class Tile(
         val view: BaseItemDto,
@@ -63,6 +65,21 @@ class LibrariesViewModel(session: UserSession) : ViewModel() {
             browse.items(ItemsQuery(parentId = if (type == CollectionType.LIVETV) null else view.id, includeTypes = types, limit = 0, images = emptyList(), fields = emptyList())).totalRecordCount
         }.getOrNull() ?: return
         var label = countLabel(type, n)
+        if (type == CollectionType.MUSIC) {
+            // "186 albums · 2,140 songs".
+            val songs = runCatching { browse.items(ItemsQuery(parentId = view.id, includeTypes = listOf(BaseItemKind.AUDIO), limit = 0, images = emptyList(), fields = emptyList())).totalRecordCount }.getOrNull()
+            if (songs != null && songs > 0) label = join(label, tn(songs, "{n} song", "{n} songs"))
+        }
+        if (type == CollectionType.BOOKS) {
+            // "412 books · 96 audiobooks": an audiobook in several files counts once.
+            label = runCatching {
+                val books = browse.items(ItemsQuery(parentId = view.id, includeTypes = listOf(BaseItemKind.BOOK), limit = 0, images = emptyList(), fields = emptyList())).totalRecordCount
+                val files = browse.items(ItemsQuery(parentId = view.id, includeTypes = listOf(BaseItemKind.AUDIO_BOOK), limit = 0, images = emptyList(), fields = emptyList())).totalRecordCount
+                val grouped = if (files > 0) audio.audiobooks(view.id) else emptyList()
+                val audiobooks = files - grouped.sumOf { it.parts.size } + grouped.size
+                join(tn(books, "{n} book", "{n} books"), if (audiobooks > 0) tn(audiobooks, "{n} audiobook", "{n} audiobooks") else null)
+            }.getOrDefault(label)
+        }
         if (type == CollectionType.TVSHOWS) {
             // "· 4 new episodes": unwatched episodes added this week.
             val fresh = runCatching {
@@ -84,12 +101,21 @@ class LibrariesViewModel(session: UserSession) : ViewModel() {
             CollectionType.TVSHOWS -> listOf(BaseItemKind.SERIES)
             CollectionType.MOVIES -> listOf(BaseItemKind.MOVIE)
             CollectionType.MUSIC -> listOf(BaseItemKind.MUSIC_ALBUM, BaseItemKind.MUSIC_ARTIST)
+            CollectionType.BOOKS -> listOf(BaseItemKind.BOOK, BaseItemKind.AUDIO_BOOK)
             CollectionType.LIVETV -> return
             else -> emptyList()
         }
+        // Albums and books seldom have backdrops: their covers stand in.
+        val covers = view.collectionType == CollectionType.MUSIC || view.collectionType == CollectionType.BOOKS
         val pick = runCatching {
-            browse.items(ItemsQuery(parentId = view.id, includeTypes = types, sortBy = listOf(ItemSortBy.RANDOM), limit = 12, countTotal = false, images = listOf(ImageType.BACKDROP), fields = emptyList()))
-                .items.firstOrNull { !it.backdropImageTags.isNullOrEmpty() }
+            browse.items(
+                ItemsQuery(
+                    parentId = view.id, includeTypes = types, sortBy = listOf(ItemSortBy.RANDOM), limit = 12, countTotal = false,
+                    images = listOf(ImageType.BACKDROP, ImageType.PRIMARY), fields = emptyList(),
+                ),
+            ).items.let { items ->
+                items.firstOrNull { !it.backdropImageTags.isNullOrEmpty() } ?: if (covers) items.firstOrNull { it.imageTags?.containsKey(ImageType.PRIMARY) == true } else null
+            }
         }.getOrNull() ?: return
         update(view.id) { it.copy(art = pick) }
     }

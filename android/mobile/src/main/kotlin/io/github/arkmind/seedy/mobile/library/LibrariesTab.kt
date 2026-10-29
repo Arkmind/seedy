@@ -55,7 +55,7 @@ fun LibrariesTab() {
     val state by vm.state.collectAsStateWithLifecycle()
     LibrariesScreen(
         state,
-        onOpen = { view -> if (view.collectionType == CollectionType.LIVETV) nav.go(Route.LiveTv) else nav.go(Route.Library(view.id)) },
+        onOpen = nav::openLibrary,
         onSearch = { nav.go(Route.Search) },
         // Viewing history and "Order and hide libraries" are Settings pages the phone doesn't have yet.
         onHistory = {},
@@ -100,7 +100,7 @@ private fun LibraryTile(tile: LibrariesViewModel.Tile, onClick: () -> Unit, modi
     val images = LocalViewer.current.images
     Column(modifier.tap(onClick = onClick), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(13.dp))) {
-            Artwork(tile.art?.let { images?.backdrop(it, 480) }, Modifier.matchParentSize())
+            Artwork(tile.art?.let { images?.backdrop(it, 480) ?: images?.primary(it, 480) }, Modifier.matchParentSize())
             Box(Modifier.matchParentSize().background(Color(0x590A0A0A)))
             Box(
                 Modifier.align(Alignment.BottomStart).padding(10.dp).size(34.dp).clip(RoundedCornerShape(10.dp)).background(SeedyColors.Bg.copy(alpha = 0.8f)),
@@ -125,6 +125,7 @@ fun libraryIcon(type: CollectionType?): IconDef = when (type) {
     CollectionType.LIVETV -> AppIcons.LiveTv
     CollectionType.PLAYLISTS -> AppIcons.Playlist
     CollectionType.MUSIC, CollectionType.MUSICVIDEOS -> WebIcons.Music
+    CollectionType.BOOKS -> WebIcons.Book
     else -> WebIcons.Folder
 }
 

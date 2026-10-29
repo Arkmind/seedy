@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.mobile.audio.miniBarSpace
 import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -40,9 +41,13 @@ enum class Tab(val label: String, val icon: IconDef) {
     Requests("Requests", AppIcons.Requests),
 }
 
-/** How much of the bottom the tab bar covers, for lists that scroll under it. */
+/** How much of the bottom the tab bar (and the mini player over it, while one shows) covers, for lists that scroll under it. */
 @Composable
-fun tabBarHeight(): Dp = 10.dp + 32.dp + 5.dp + 17.dp + bottomInset()
+fun tabBarHeight(): Dp = barHeight() + miniBarSpace()
+
+/** The tab bar alone: the mini player floats 8 px above it. */
+@Composable
+fun barHeight(): Dp = 10.dp + 32.dp + 5.dp + 17.dp + bottomInset()
 
 @Composable
 private fun bottomInset(): Dp = max(26.dp, WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 8.dp)
