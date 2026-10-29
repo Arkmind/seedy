@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.mobile.music
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -75,6 +76,8 @@ fun MusicRoute(id: UUID) {
     }
     // A new queue joins Jump back in.
     LaunchedEffect(playing.sourceId) { if (playing.sourceId != null) vm.reloadJump() }
+    // Back from a genre's albums goes to all genres first.
+    BackHandler(enabled = state.genre != null) { vm.openGenre(null) }
     Box(Modifier.fillMaxSize()) {
         MusicLibraryScreen(
             state, playing,

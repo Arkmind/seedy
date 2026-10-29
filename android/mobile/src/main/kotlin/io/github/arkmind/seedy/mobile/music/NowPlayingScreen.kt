@@ -133,7 +133,7 @@ fun NowPlayingScreen(state: AudioState, time: AudioTime, lyrics: Lyrics, output:
             },
     ) {
         // The cover takes what the rest leaves (342 px on the board's 390 × 844).
-        val cover = minOf(maxWidth - 48.dp, maxHeight - 502.dp - nav).coerceAtLeast(160.dp)
+        val cover = minOf(maxWidth - 48.dp, maxHeight - 466.dp - topInset() - nav).coerceAtLeast(160.dp)
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = topInset()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 IconButton44(MusicIcons.Down, actions.onClose)

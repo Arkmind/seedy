@@ -163,7 +163,7 @@ class MusicLibraryViewModel(
     /* ── Tabs ── */
 
     fun setTab(tab: MusicTab) {
-        _state.update { it.copy(tab = tab, genre = if (tab == MusicTab.Genres) it.genre else null) }
+        _state.update { it.copy(tab = tab, genre = null) }
         ensure(tab)
     }
 
