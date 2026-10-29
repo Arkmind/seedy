@@ -7,6 +7,7 @@ import android.os.Looper
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.fillMaxSize
@@ -117,6 +118,8 @@ fun EpubPage(file: File, controller: EpubController, background: Int, padding: P
         modifier = Modifier.fillMaxSize().padding(padding),
         factory = { context ->
             WebView(context).apply {
+                // Without these a WebView in Compose sizes its page to its content, and the book's 100% height is 0.
+                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 setBackgroundColor(background)
                 isVerticalScrollBarEnabled = false
                 isHorizontalScrollBarEnabled = false
