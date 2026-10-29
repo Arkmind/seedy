@@ -14,7 +14,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -51,6 +54,11 @@ import kotlinx.coroutines.launch
 /* Comics (CBZ pages from the server) and PDFs (drawn on the phone): one page at a time, swiped or tapped (the left and
    right thirds turn, the middle shows or hides the bars), or one long strip (Scroll). Right to left for manga. */
 
+/** The pages keep clear of the system bars and the camera, and don't move when the bars hide. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun steadyInsets(): PaddingValues = WindowInsets.systemBarsIgnoringVisibility.union(WindowInsets.displayCutout).asPaddingValues()
+
 /** Where a tap on the page goes. */
 private fun Modifier.pageTaps(rtl: Boolean, onPrev: () -> Unit, onNext: () -> Unit, onMiddle: () -> Unit): Modifier = pointerInput(rtl) {
     detectTapGestures { o ->
@@ -86,7 +94,7 @@ fun ComicPages(count: Int, index: Int, settings: ComicSettings, pageUrl: (Int) -
         if (settings.scroll) return@LaunchedEffect
         for (n in index + 2..index + 3) if (n < count) context.imageLoader.enqueue(ImageRequest.Builder(context).data(pageUrl(n)).build())
     }
-    val safe = WindowInsets.safeDrawing.asPaddingValues()
+    val safe = steadyInsets()
     if (settings.scroll) {
         val list = rememberLazyListState(initialFirstVisibleItemIndex = index)
         StripSync(list, index, onIndex)
@@ -144,7 +152,7 @@ fun PdfPagesView(pdf: PdfPages, index: Int, onIndex: (Int) -> Unit, onTap: () ->
     val pager = rememberPagerState(initialPage = index) { pdf.count }
     val scope = rememberCoroutineScope()
     PagerSync(pager, index, onIndex, onTurn)
-    val safe = WindowInsets.safeDrawing.asPaddingValues()
+    val safe = steadyInsets()
     HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1, key = { it }) { n ->
         BoxWithConstraints(
             Modifier.fillMaxSize().pageTaps(

@@ -47,6 +47,7 @@ import io.github.arkmind.seedy.mobile.audio.LocalAudio
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Toast
+import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.currentSession
 import java.util.UUID
@@ -69,6 +70,7 @@ fun ReaderRoute(id: UUID, percent: Double? = null) {
         ReaderViewModel(session, id, percent, ReaderPrefs(context), BookCache(context, BooksApi(session)))
     }
     val state by vm.state.collectAsStateWithLifecycle()
+    val books = remember(session) { BooksApi(session) }
     var shown by rememberSaveable { mutableStateOf(true) }
     var sheet by remember { mutableStateOf<Sheet?>(null) }
     var toast by remember { mutableStateOf<String?>(null) }
@@ -99,7 +101,7 @@ fun ReaderRoute(id: UUID, percent: Double? = null) {
                 ReaderMessage(PageTheme.Dark, t("This book isn’t here"), t("It may have been removed from the server, or it’s outside what this profile can see."))
             }
             state.kind == Kind.Epub -> EpubReader(vm, state, shown, { shown = it }, sheet, { sheet = it })
-            state.kind == Kind.Comic -> ComicReader(vm, state, shown, { shown = it }, sheet, { sheet = it }, BooksApi(session))
+            state.kind == Kind.Comic -> ComicReader(vm, state, shown, { shown = it }, sheet, { sheet = it }, books)
             state.kind == Kind.Pdf -> PdfReader(vm, state, shown) { shown = it }
             state.kind == Kind.NoPages -> ReaderScreen(ReaderChrome(title = item.name.orEmpty(), theme = PageTheme.Black), true, ReaderActions(back)) {
                 ReaderMessage(PageTheme.Black, t("This comic has no pages"), t("Seedy found no images in the file."))
@@ -201,6 +203,8 @@ private fun EpubReader(
                 epub.error.let { m -> if (!m.isNullOrEmpty()) t("The file may be damaged or not an EPUB. ({message})", "message" to m) else t("The file may be damaged or not an EPUB.") },
             )
             else -> {
+                // Above and below the text column, a tap shows or hides the bars too.
+                Box(Modifier.fillMaxSize().tap { setShown(!shown) })
                 epub.file?.let { file ->
                     EpubPage(file, controller, paletteOf(s.theme).bg.toArgb(), padding) { e ->
                         when (e) {

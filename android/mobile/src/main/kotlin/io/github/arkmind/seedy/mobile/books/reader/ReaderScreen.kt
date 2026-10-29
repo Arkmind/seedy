@@ -51,12 +51,15 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.books.PageTheme
+import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.IconPart
@@ -191,24 +194,30 @@ private fun TopBar(c: ReaderChrome, p: ReaderPalette, top: Dp, a: ReaderActions)
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            BarButton(ReaderIcons.Back, 22.dp, p.title, a.onBack)
+            BarButton(ReaderIcons.Back, 22.dp, p.title, t("Back to the book"), a.onBack)
             Column(Modifier.weight(1f).padding(start = 4.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 SText(c.title, size = 14.sp, weight = 800, color = p.title, maxLines = 1)
                 if (c.sub.isNotEmpty()) SText(c.sub, size = 12.sp, color = p.sub, maxLines = 1)
             }
-            if (c.settings) BarButton(ReaderIcons.Type, 21.dp, p.icon, a.onSettings)
+            if (c.settings) BarButton(ReaderIcons.Type, 21.dp, p.icon, t("Reading settings"), a.onSettings)
             c.bookmark?.let { on ->
-                BarButton(if (on) ReaderIcons.BookmarkOn else ReaderIcons.Bookmark, 20.dp, if (on) LocalAccent.current else p.icon, a.onBookmark)
+                BarButton(
+                    if (on) ReaderIcons.BookmarkOn else ReaderIcons.Bookmark, 20.dp, if (on) LocalAccent.current else p.icon,
+                    if (on) t("Remove bookmark") else t("Add bookmark"), a.onBookmark,
+                )
             }
-            if (c.contents) BarButton(ReaderIcons.Contents, 21.dp, p.icon, a.onContents)
+            if (c.contents) BarButton(ReaderIcons.Contents, 21.dp, p.icon, t("Contents"), a.onContents)
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
     }
 }
 
 @Composable
-private fun BarButton(icon: IconDef, size: Dp, color: Color, onClick: () -> Unit) {
-    Box(Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).tap(onClick = onClick), contentAlignment = Alignment.Center) {
+private fun BarButton(icon: IconDef, size: Dp, color: Color, label: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).tap(onClick = onClick).semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
         SIcon(icon, size = size, color = color)
     }
 }
@@ -238,7 +247,7 @@ private fun Scrubber(page: Int, total: Int, rtl: Boolean, p: ReaderPalette, a: R
     val fraction = if (total > 0) (shown.toFloat() / total).coerceIn(0f, 1f) else 0f
     val actions by rememberUpdatedState(a)
     val pageNow by rememberUpdatedState(page)
-    BoxWithConstraints(Modifier.fillMaxWidth().height(20.dp)) {
+    BoxWithConstraints(Modifier.fillMaxWidth().height(20.dp).semantics { contentDescription = t("Position in the book") }) {
         val width = constraints.maxWidth.toFloat()
         fun valueAt(x: Float): Int {
             val f = (x / width).coerceIn(0f, 1f).let { if (rtl) 1f - it else it }

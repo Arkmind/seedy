@@ -7,12 +7,14 @@ import io.github.arkmind.seedy.core.audio.Reading
 import io.github.arkmind.seedy.core.browse.Browse
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.model.api.BaseItemDto
 import java.io.File
 import java.util.UUID
@@ -224,7 +226,7 @@ class ReaderViewModel(
 
     private suspend fun openPdf(item: BaseItemDto, reading: Reading?) {
         _state.update { it.copy(paged = PagedState(count = it.info?.pages ?: 0, index = 0)) }
-        val pdf = runCatching { PdfPages(cache.file(item, "pdf")) }.getOrElse {
+        val pdf = runCatching { cache.file(item, "pdf").let { f -> withContext(Dispatchers.IO) { PdfPages(f) } } }.getOrElse {
             if (it is CancellationException) throw it
             _state.update { s -> s.copy(paged = s.paged?.copy(failed = true)) }
             return

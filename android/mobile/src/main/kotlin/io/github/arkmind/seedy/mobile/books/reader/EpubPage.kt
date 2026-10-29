@@ -71,6 +71,11 @@ class EpubController {
         if (w != null && loaded) w.evaluateJavascript(js, null) else queue += js
     }
 
+    internal fun detach() {
+        web = null
+        loaded = false
+    }
+
     internal fun pageLoaded() {
         loaded = true
         val pending = queue.toList()
@@ -136,7 +141,7 @@ fun EpubPage(file: File, controller: EpubController, background: Int, padding: P
                 removeJavascriptInterface("SeedyReader")
                 destroy()
             }
-            controller.web = null
+            controller.detach()
         }
     }
 }
@@ -145,7 +150,8 @@ fun EpubPage(file: File, controller: EpubController, background: Int, padding: P
 private class ReaderClient(private val context: Context, private val file: File, private val onLoaded: () -> Unit) : WebViewClient() {
     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
         val url = request.url
-        if (url.host != HOST) return if (url.scheme == "blob" || url.scheme == "data") null else blocked()
+        if (url.scheme != "https" && url.scheme != "http") return null
+        if (url.host != HOST) return blocked()
         val path = url.path.orEmpty()
         return runCatching {
             when {

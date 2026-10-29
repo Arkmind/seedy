@@ -55,7 +55,7 @@ body p,body li,body blockquote,body dd,body dt,body div,body span{line-height:in
 body h1,body h2,body h3,body h4,body h5,body h6{color:${th.heading}!important;line-height:1.15!important}
 body a{color:${th.heading}!important}
 ${family ? `body *:not(pre):not(code):not(kbd):not(samp){font-family:inherit!important}
-body h1{font-size:1.6471em!important;font-weight:700!important;line-height:1.1!important;margin:0 0 0.9412em!important}
+body h1{font-size:1.6471em!important;font-weight:700!important;line-height:1.1!important;margin:0 0 ${Math.round(s.size * 16 / 17)}px!important}
 body p{margin:0 0 0.7059em!important;text-align:start!important}
 body :has(+ h1){font-family:'Seedy Sans','Noto Sans',system-ui,sans-serif!important;font-size:11px!important;font-weight:800!important;letter-spacing:0.14em!important;text-transform:uppercase!important;text-indent:0!important;color:${th.label}!important;margin:0 0 8px!important;line-height:1.362!important}` : ''}
 ::selection{background:rgba(255,159,255,0.35)}`;
@@ -211,6 +211,7 @@ body :has(+ h1){font-family:'Seedy Sans','Noto Sans',system-ui,sans-serif!import
   /* After going to a page by number (the scrubber, a saved percent), that number shows until the page turns: the screen
      holding a page's first words usually starts a little before them. */
   let jump = null;
+  let spineHooks = null;
 
   const host = () => document.getElementById('book');
 
@@ -309,8 +310,8 @@ body :has(+ h1){font-family:'Seedy Sans','Noto Sans',system-ui,sans-serif!import
     touch = null;
     if (!s || scrolls(settings)) return;
     const t = e.changedTouches[0];
-    const dx = t.screenX - s.x;
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(t.screenY - s.y) * 1.5 && Date.now() - s.at < 800) {
+    const dx = t.clientX - s.x;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(t.clientY - s.y) * 1.5 && Date.now() - s.at < 800) {
       swiped = Date.now();
       if (dx < 0) next(); else prev();
     }
@@ -321,6 +322,9 @@ body :has(+ h1){font-family:'Seedy Sans','Noto Sans',system-ui,sans-serif!import
   function render() {
     const s = settings;
     if (rend) { rend.destroy(); rend = null; }
+    // A rendition leaves its hook on the book's spine when destroyed (epub.js 0.3.93): keep the book's own only.
+    if (!spineHooks) spineHooks = book.spine.hooks.content.hooks.slice();
+    else book.spine.hooks.content.hooks = spineHooks.slice();
     host().innerHTML = '';
     document.documentElement.style.background = theme(s).bg;
     document.body.style.background = theme(s).bg;
@@ -343,7 +347,8 @@ body :has(+ h1){font-family:'Seedy Sans','Noto Sans',system-ui,sans-serif!import
       report();
     });
     r.on('click', onClick);
-    r.on('touchstart', (e) => { const t = e.changedTouches[0]; touch = { x: t.screenX, y: t.screenY, at: Date.now() }; });
+    // Within the page's frame (screenX isn't reliable in a WebView); the frame doesn't move during a swipe.
+    r.on('touchstart', (e) => { const t = e.changedTouches[0]; touch = { x: t.clientX, y: t.clientY, at: Date.now() }; });
     r.on('touchend', onTouchEnd);
     void (async () => {
       let target = lastCfi || undefined;
