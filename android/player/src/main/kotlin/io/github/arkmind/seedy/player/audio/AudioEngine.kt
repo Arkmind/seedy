@@ -488,7 +488,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
         }
     }
 
-    /** Queues songs, after the current one ([next]) or at the end of "Added by you"; starts them when nothing plays. */
+    /** Queues songs, after the current one ([next]) or at the end of "Added by you"; starts them when nothing plays. The page says so. */
     fun addToQueue(tracks: List<BaseItemDto>, next: Boolean = false) {
         if (tracks.isEmpty()) return
         val s = _state.value
@@ -499,7 +499,6 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
         val entries = tracks.map(::mk)
         set { copy(added = if (next) entries + added else added + entries) }
         save(true)
-        say(if (tracks.size == 1) t("Added to the queue") else t("{n} songs added to the queue", "n" to tracks.size))
     }
 
     fun removeFromQueue(key: String) {

@@ -120,7 +120,7 @@ fun MiniBar(state: AudioState, time: AudioTime, actions: MiniBarActions, modifie
                     SeekGlyph(back = true, seconds = 30, size = 24.dp, color = SeedyColors.White)
                 }
             } else {
-                BarButton(AudioIcons.Previous, t("Previous song"), actions.onPrevious)
+                BarButton(AudioIcons.Previous, t("Previous"), actions.onPrevious)
             }
             Box(
                 Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Inverse).tap(onClick = actions.onToggle),
@@ -128,7 +128,7 @@ fun MiniBar(state: AudioState, time: AudioTime, actions: MiniBarActions, modifie
             ) {
                 SIcon(if (state.playing) AudioIcons.Pause else AudioIcons.Play, size = 18.dp, color = SeedyColors.InkInverse)
             }
-            if (book == null) BarButton(AudioIcons.Next, t("Next song"), actions.onNext)
+            if (book == null) BarButton(AudioIcons.Next, t("Next"), actions.onNext)
         }
         Box(Modifier.align(Alignment.BottomStart).padding(horizontal = 10.dp).fillMaxWidth().height(2.dp).background(Color(0x26FFFFFF))) {
             Box(Modifier.fillMaxHeight().fillMaxWidth(time.fraction).background(SeedyColors.White))

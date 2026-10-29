@@ -125,6 +125,7 @@ fun libraryIcon(type: CollectionType?): IconDef = when (type) {
     CollectionType.LIVETV -> AppIcons.LiveTv
     CollectionType.PLAYLISTS -> AppIcons.Playlist
     CollectionType.MUSIC, CollectionType.MUSICVIDEOS -> WebIcons.Music
+    CollectionType.BOOKS -> WebIcons.Book
     else -> WebIcons.Folder
 }
 
