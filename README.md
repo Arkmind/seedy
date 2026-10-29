@@ -91,6 +91,11 @@ tries hard not to make your server convert anything it doesn't have to.
   Vision) and, on TVs, what the receiver can take over HDMI, and asks Jellyfin for exactly that.
 - **The player** (AndroidX Media3): chapters, audio and subtitle tracks, subtitle timing, skip buttons and the next
   episode.
+- **Music and books on the phone**: the same music home, album and artist pages as the web, a mini player over every
+  page, Now playing with synced lyrics and a queue you can reorder, and music that keeps playing with the screen off,
+  with its controls in the notification shade and on the lock screen. Books, audiobooks and comics, with a reader for
+  EPUB, comics and PDF that picks up where you left off on the web, and an audiobook player with chapters, speed, a
+  sleep timer and bookmarks. Music and book requests are on the Requests tab.
 - **"Who's watching?"** profiles, several servers, servers found on your network, and Quick Connect, both to sign in
   and to approve another device from the app.
 - **Works without the plugin.** On a plain Jellyfin server you get your libraries, search, Live TV and the player.
