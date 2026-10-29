@@ -123,6 +123,8 @@ fun AudioCover(
     titleSize: TextUnit = 17.sp,
     initials: String? = null,
     initialsSize: TextUnit = 44.sp,
+    /** The title's letter spacing (em): the cards' small titles are set tight, the big covers' aren't. */
+    titleTracking: Float = -0.01f,
 ) {
     val seed = coverSeed(seedId)
     val palette = CoverPalettes[seed % CoverPalettes.size]
@@ -135,7 +137,7 @@ fun AudioCover(
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     SText(
                         title, Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = maxWidth * 0.08f, end = maxWidth * 0.08f, bottom = maxHeight * 0.07f),
-                        size = titleSize, weight = 900, color = palette[3], tracking = -0.01f, lineHeight = 0.95f, uppercase = true,
+                        size = titleSize, weight = 900, color = palette[3], tracking = titleTracking, lineHeight = 0.95f, uppercase = true,
                     )
                 }
             }

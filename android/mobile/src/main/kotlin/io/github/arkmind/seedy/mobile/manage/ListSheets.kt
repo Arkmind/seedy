@@ -177,7 +177,7 @@ fun NewPlaylistContent(state: NewPlaylistState, actions: NewPlaylistActions, onD
             FieldLabel(t("Name"))
             BoardField(state.name, actions::setName, placeholder = t("Name it"), autoCorrect = true)
         }
-        Row(
+        if (state.startsWith.isNotEmpty()) Row(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(SeedyColors.Row).padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),

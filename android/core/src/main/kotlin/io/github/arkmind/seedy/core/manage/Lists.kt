@@ -203,7 +203,8 @@ interface NewPlaylistActions {
 
 class NewPlaylistViewModel(session: UserSession, private val target: AddTarget) : ViewModel(), NewPlaylistActions {
     private val api = ManageApi(session)
-    private val _state = MutableStateFlow(NewPlaylistState(startsWith = t("Starts with {name}", "name" to target.name), art = target.art))
+    // An empty one (the music library's New playlist) starts with nothing and is a music playlist, as on the web.
+    private val _state = MutableStateFlow(NewPlaylistState(startsWith = if (target.ids.isEmpty()) "" else t("Starts with {name}", "name" to target.name), art = target.art))
     val state: StateFlow<NewPlaylistState> = _state.asStateFlow()
 
     init {
@@ -244,7 +245,7 @@ class NewPlaylistViewModel(session: UserSession, private val target: AddTarget) 
         _state.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
             val people = if (s.audience == Audience.People) s.people.map { it.person.id to it.canEdit } else emptyList()
-            val result = runCatching { api.createPlaylist(s.name.trim(), target.ids, people, s.audience == Audience.Everyone) }
+            val result = runCatching { api.createPlaylist(s.name.trim(), target.ids, people, s.audience == Audience.Everyone, if (target.ids.isEmpty()) "Audio" else null) }
             result.onSuccess {
                 _state.update { it.copy(busy = false) }
                 onDone(t("Made {name}", "name" to s.name.trim()))
