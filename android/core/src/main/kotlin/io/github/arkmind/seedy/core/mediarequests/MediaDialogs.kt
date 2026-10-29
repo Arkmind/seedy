@@ -116,8 +116,8 @@ class MusicArtistViewModel(session: UserSession) : ViewModel() {
     val state: StateFlow<State> = _state.asStateFlow()
     private var job: Job? = null
 
+    /** Shows [target] afresh (the window opens with nothing picked but what it suggests). */
     fun open(target: Target) {
-        if (_state.value.target == target && (_state.value.ready || job?.isActive == true)) return
         _state.value = State(target = target)
         load()
     }
@@ -293,8 +293,8 @@ class BookRequestViewModel(session: UserSession) : ViewModel() {
     val state: StateFlow<State> = _state.asStateFlow()
     private var job: Job? = null
 
+    /** Shows [target] afresh (the window opens with nothing picked but what it suggests). */
     fun open(target: Target) {
-        if (_state.value.target == target && (_state.value.details != null || job?.isActive == true)) return
         _state.value = State(target = target)
         load()
     }

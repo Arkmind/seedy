@@ -130,16 +130,19 @@ class MediaRequestsViewModel(session: UserSession) : ViewModel() {
         }
     }
 
+    /** Discover's rows; one that doesn't answer is left out, and asked again the next time the page opens. */
     private fun loadRows(music: Boolean) {
         if (music) {
             for (row in MusicRow.entries) viewModelScope.launch {
-                val items = io { api.musicRow(row).results }.orEmpty()
-                _state.update { s -> s.copy(musicRows = s.musicRows.map { if (it.row == row) it.copy(items = items) else it }) }
+                val items = io { api.musicRow(row).results }
+                if (items == null) rowsLoaded.remove(true)
+                _state.update { s -> s.copy(musicRows = s.musicRows.map { if (it.row == row) it.copy(items = items ?: it.items ?: emptyList()) else it }) }
             }
         } else {
             for (row in BookRow.entries) viewModelScope.launch {
                 val r = io { api.bookRow(row) }
-                _state.update { s -> s.copy(bookRows = s.bookRows.map { if (it.row == row) it.copy(items = r?.results.orEmpty(), source = r?.source) else it }) }
+                if (r == null) rowsLoaded.remove(false)
+                _state.update { s -> s.copy(bookRows = s.bookRows.map { if (it.row == row) it.copy(items = r?.results ?: it.items ?: emptyList(), source = r?.source ?: it.source) else it }) }
             }
         }
     }
