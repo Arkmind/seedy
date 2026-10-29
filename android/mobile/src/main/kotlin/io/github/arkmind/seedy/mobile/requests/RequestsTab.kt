@@ -1,8 +1,5 @@
 package io.github.arkmind.seedy.mobile.requests
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,22 +11,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -38,6 +34,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.feature.RequestsViewModel
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.mediarequests.MediaRequestsViewModel
+import io.github.arkmind.seedy.core.mediarequests.MediaTab
+import io.github.arkmind.seedy.core.mediarequests.RequestService
 import io.github.arkmind.seedy.core.requests.SeerrRequest
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.requests.TitlesKind
@@ -47,12 +46,9 @@ import io.github.arkmind.seedy.mobile.library.Message
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.MobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
-import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tabBarHeight
 import io.github.arkmind.seedy.mobile.parts.tap
-import io.github.arkmind.seedy.ui.icons.SIcon
-import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
@@ -75,9 +71,36 @@ class RequestsActions(
     val onMore: (RequestsViewModel.Tab) -> Unit = {},
 )
 
-/** Board "Android · Requests" (the Requests tab). */
+/**
+ * Board "Android · Requests" (the Requests tab): Movies & shows from Seerr, Music from Lidarr and Books from Shelfarr
+ * or Librarr, as tabs over the page for the services the server offers (web: requests/frame.tsx).
+ */
 @Composable
 fun RequestsTab() {
+    val session = currentSession()
+    val me by session.seedyFlow.collectAsStateWithLifecycle()
+    val media = me?.media
+    val services = buildList {
+        if (session.hasRequests) add(RequestService.Movies)
+        if (media?.music == true) add(RequestService.Music)
+        if (media?.books == true) add(RequestService.Books)
+    }
+    var picked by rememberSaveable { mutableStateOf<RequestService?>(null) }
+    val service = picked?.takeIf { it in services } ?: services.firstOrNull() ?: RequestService.Movies
+    val mediaVm = if (media?.music == true || media?.books == true) viewModel { MediaRequestsViewModel(session) } else null
+    val tabs = if (services.size > 1) {
+        ServiceTabs(services, service) {
+            picked = it
+            // Another service opens on its Discover, as the web's links do.
+            mediaVm?.setTab(it == RequestService.Music, MediaTab.Discover)
+        }
+    } else null
+    if (service == RequestService.Movies || mediaVm == null) MoviesRequests(tabs) else MediaRequestsTab(mediaVm, service == RequestService.Music, tabs)
+}
+
+/** Movies & shows: Seerr's Discover and requests. */
+@Composable
+private fun MoviesRequests(services: ServiceTabs?) {
     val session = currentSession()
     val nav = LocalMobileNav.current
     val context = LocalContext.current
@@ -90,14 +113,7 @@ fun RequestsTab() {
         RequestsActions(
             onTab = vm::setTab,
             onSearch = { nav.go(Route.Search) },
-            onOpenSeerr = seerr?.let { url ->
-                {
-                    try {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    } catch (_: ActivityNotFoundException) {
-                    }
-                }
-            },
+            onOpenSeerr = seerr?.let { url -> { context.openUrl(url) } },
             onTitle = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
             onRequest = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
             onSeeAll = { nav.go(Route.SeerrTitles(it.key)) },
@@ -106,6 +122,47 @@ fun RequestsTab() {
             onRetry = vm::retry,
             onMessageShown = vm::clearMessage,
             onMore = vm::loadMore,
+        ),
+        bottomPadding = tabBarHeight(),
+        services = services,
+    )
+}
+
+/** Music or Books: Lidarr's or Shelfarr's Discover, the requests, and the request windows. */
+@Composable
+private fun MediaRequestsTab(vm: MediaRequestsViewModel, music: Boolean, services: ServiceTabs?) {
+    val session = currentSession()
+    val nav = LocalMobileNav.current
+    val context = LocalContext.current
+    val state by vm.state.collectAsStateWithLifecycle()
+    LaunchedEffect(music) { vm.open(music) }
+    val open = mediaOpeners { vm.say(it) }
+    val media = session.seedy?.media
+    val appUrl = if (music) media?.lidarrUrl else media?.shelfarrUrl ?: media?.librarrUrl ?: media?.readarrUrl
+    MediaRequestsScreen(
+        state, music, services,
+        MediaActions(
+            onTab = { vm.setTab(music, it) },
+            onSearch = { nav.go(Route.MediaRequestsSearch(music)) },
+            onOpenApp = appUrl?.takeIf { it.isNotBlank() }?.let { url -> { context.openUrl(url) } },
+            onAlbum = open.album,
+            onBook = open.book,
+            onSeeAll = { nav.go(Route.MediaRequestsRow(music, it)) },
+            onShow = vm::setShow,
+            onRetry = { vm.open(music) },
+            onReady = open.ready,
+            onOpenItem = { r -> r.itemId?.let(open.item) },
+            onApprove = vm::approve,
+            onDecline = vm::decline,
+            onSearchNow = vm::searchNow,
+            onAcceptLower = vm::acceptLower,
+            onRemove = vm::remove,
+            appUrl = { r ->
+                val url = when (r.service) { "lidarr" -> media?.lidarrUrl; "shelfarr" -> media?.shelfarrUrl; "librarr" -> media?.librarrUrl; else -> media?.readarrUrl }
+                url?.takeIf { it.isNotBlank() }?.let { { context.openUrl(it) } }
+            },
+            cover = vm.api::bookCover,
+            onMessageShown = vm::clearMessage,
         ),
         bottomPadding = tabBarHeight(),
     )
@@ -122,21 +179,20 @@ fun MobileNav.openSeerr(mediaType: String, tmdbId: Int, jellyfinItemId: String?)
  * progress, and Discover's rows of titles to request; the other tabs list requests.
  */
 @Composable
-fun RequestsScreen(state: RequestsViewModel.State, actions: RequestsActions, bottomPadding: Dp, today: LocalDate = LocalDate.now()) {
+fun RequestsScreen(
+    state: RequestsViewModel.State,
+    actions: RequestsActions,
+    bottomPadding: Dp,
+    today: LocalDate = LocalDate.now(),
+    services: ServiceTabs? = null,
+) {
     val summary = state.summary
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = bottomPadding + 24.dp)) {
             item(key = "head") {
                 Column(Modifier.padding(start = 20.dp, end = 16.dp, top = topInset()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SText(t("Requests"), Modifier.weight(1f), size = 24.sp, weight = 900, color = SeedyColors.White, maxLines = 1)
-                        HeaderButton(WebIcons.Search, actions.onSearch, color = SeedyColors.TextHero, stroke = 2.2f)
-                        actions.onOpenSeerr?.let { open ->
-                            Box(Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).tap(onClick = open), contentAlignment = Alignment.Center) {
-                                SIcon(WebIcons.External, size = 20.dp, color = SeedyColors.TextHero, stroke = 2.2f)
-                            }
-                        }
-                    }
+                    RequestsTitleRow(actions.onSearch, actions.onOpenSeerr)
+                    if (services != null) ServiceTabsRow(services, Modifier.padding(end = 4.dp))
                     Tabs(state, actions, Modifier.padding(end = 4.dp))
                     if (state.tab == RequestsViewModel.Tab.Discover && state.inProgress.isNotEmpty()) {
                         InProgressCard(
@@ -156,39 +212,16 @@ fun RequestsScreen(state: RequestsViewModel.State, actions: RequestsActions, bot
     }
 }
 
-/** The board's switch: 40 px tabs on a 4 px #1a1a1a track; My requests counts the open ones, All the waiting ones. */
+/** The board's switch; My requests counts the open ones, All the waiting ones. */
 @Composable
 private fun Tabs(state: RequestsViewModel.State, actions: RequestsActions, modifier: Modifier) {
     val summary = state.summary
     val tabs = buildList {
-        add(Triple(RequestsViewModel.Tab.Discover, t("Discover"), 0))
-        add(Triple(RequestsViewModel.Tab.Mine, t("My requests"), summary?.open ?: state.open.size))
-        if (summary?.canViewAll == true) add(Triple(RequestsViewModel.Tab.All, t("All requests"), summary.pending ?: 0))
+        add(SwitchItem(RequestsViewModel.Tab.Discover, t("Discover")))
+        add(SwitchItem(RequestsViewModel.Tab.Mine, t("My requests"), summary?.open ?: state.open.size))
+        if (summary?.canViewAll == true) add(SwitchItem(RequestsViewModel.Tab.All, t("All requests"), summary.pending ?: 0, pending = true))
     }
-    Row(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(SeedyColors.Row).padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        for ((tab, label, count) in tabs) {
-            val on = state.tab == tab
-            Row(
-                Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(11.dp)).background(if (on) SeedyColors.Inverse else Color.Transparent)
-                    .tap { actions.onTab(tab) },
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SText(label, size = 14.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.InkInverse else SeedyColors.Text, maxLines = 1)
-                if (count > 0) {
-                    val pending = tab == RequestsViewModel.Tab.All
-                    Box(
-                        Modifier.height(20.dp).widthIn(min = 20.dp).background(if (pending) SeedyColors.Pending else if (on) Color(0xFFDCDCDC) else SeedyColors.Surface2, CircleShape)
-                            .padding(horizontal = 6.dp),
-                        contentAlignment = Alignment.Center,
-                    ) { SText("$count", size = 11.sp, weight = 800, color = if (pending || on) SeedyColors.InkInverse else SeedyColors.Text, maxLines = 1) }
-                }
-            }
-        }
-    }
+    RequestsSwitch(tabs, state.tab, actions.onTab, modifier)
 }
 
 private fun LazyListScope.discover(state: RequestsViewModel.State, actions: RequestsActions, today: LocalDate) {
