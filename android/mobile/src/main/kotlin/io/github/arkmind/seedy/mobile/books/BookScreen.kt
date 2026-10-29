@@ -29,6 +29,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
@@ -106,9 +108,14 @@ fun BookScreen(state: BookViewModel.State, actions: BookActions, bottomPadding: 
             return@Box
         }
         val audio = state.audio
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = bottomPadding + 28.dp)) {
+        val glow = heroGlow(item, audio)
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                // The top 420 px take the cover's colour, fading out (behind the page, not part of its layout).
+                .drawBehind { drawRect(Brush.verticalGradient(listOf(glow, glow.copy(alpha = 0f)), endY = 420.dp.toPx()), size = Size(size.width, 420.dp.toPx())) }
+                .padding(bottom = bottomPadding + 28.dp),
+        ) {
             Box {
-                HeroGlow(item, audio)
                 Column {
                     Row(
                         Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = topInset()),
@@ -169,18 +176,17 @@ fun BookScreen(state: BookViewModel.State, actions: BookActions, bottomPadding: 
     }
 }
 
-/** The page's top takes the cover's colour: the drawn cover's hill, or the picture's own colour, fading out by 420 px. */
+/** The page's top takes the cover's colour: the drawn cover's hill, or the picture's own colour. */
 @Composable
-private fun HeroGlow(item: BaseItemDto, audio: Boolean) {
+private fun heroGlow(item: BaseItemDto, audio: Boolean): Color {
     val url = bookArt(item, 64)
     val rgb = rememberDominant(url)
-    val color = when {
+    return when {
         url != null && rgb != null -> scaledColor(rgb, 40f)
         url != null -> SeedyColors.Bg
         audio -> io.github.arkmind.seedy.ui.components.coverPalette("${item.name.orEmpty()}|${authorLine(item)}")[0]
         else -> bookPalette(item.name.orEmpty(), authorLine(item))[2]
     }
-    Box(Modifier.fillMaxWidth().height(420.dp).background(Brush.verticalGradient(listOf(color, color.copy(alpha = 0f)))))
 }
 
 @Composable

@@ -145,10 +145,19 @@ fun AudiobookScreen(
                 HeaderButton(BookIcons.More, actions.onMore)
             }
             Box(Modifier.fillMaxWidth().padding(top = 16.dp), contentAlignment = Alignment.Center) {
-                AudioCover(
-                    art, seed, Modifier.size(290.dp).boxShadow(Color(0x80000000), blur = 60.dp, y = 24.dp, radius = 16.dp).clip(RoundedCornerShape(16.dp)),
-                    title = book.name, titleSize = 26.sp,
-                )
+                val cover = Modifier.size(290.dp).boxShadow(Color(0x80000000), blur = 60.dp, y = 24.dp, radius = 16.dp).clip(RoundedCornerShape(16.dp))
+                if (art != null) {
+                    AudioCover(art, seed, cover, title = book.name, titleSize = 26.sp)
+                } else {
+                    // The drawn cover with the title set on it the boards' way (8% in, 7% up, lines 0.95 apart).
+                    Box(cover) {
+                        AudioCover(null, seed, Modifier.matchParentSize())
+                        CoverText(
+                            book.name, Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 23.2.dp, end = 23.2.dp, bottom = 20.3.dp),
+                            size = 26.sp, lineHeight = 0.95f, tracking = 0f, color = coverPalette(seed)[3],
+                        )
+                    }
+                }
             }
             Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 22.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (multi && ch != null) {

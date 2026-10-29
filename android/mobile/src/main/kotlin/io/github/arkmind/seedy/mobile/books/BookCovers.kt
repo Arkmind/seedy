@@ -27,7 +27,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.text.font.FontWeight
+import io.github.arkmind.seedy.ui.theme.BaseText
+import io.github.arkmind.seedy.ui.theme.NotoLineRatio
+import kotlin.math.roundToInt
 import coil3.compose.AsyncImage
 import io.github.arkmind.seedy.core.audio.authorLine
 import io.github.arkmind.seedy.ui.components.AudioCover
@@ -107,9 +114,9 @@ fun BookCover(
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 val side = maxWidth * 0.11f
                 if (titleSize.value > 0f && title.isNotEmpty()) {
-                    SText(
+                    CoverText(
                         title, Modifier.align(Alignment.TopStart).fillMaxWidth().padding(start = side, end = side, top = maxHeight * 0.09f),
-                        size = titleSize, weight = 900, lineHeight = 1f, tracking = -0.01f, color = ink, uppercase = true,
+                        size = titleSize, lineHeight = 1f, tracking = -0.01f, color = ink,
                     )
                 }
                 if (authorSize.value > 0f && author.isNotEmpty()) {
@@ -128,6 +135,23 @@ fun BookCover(
             drawRect(Color.Black.copy(alpha = 0.22f), size = Size(5.dp.toPx(), size.height))
         }
     }
+}
+
+/**
+ * A drawn cover's title: 900 capitals at [size], lines [lineHeight] apart, boxed the CSS way (a wrapped text's first
+ * and last lines lose their share of the font's own height, as on the boards).
+ */
+@Composable
+fun CoverText(text: String, modifier: Modifier, size: TextUnit, lineHeight: Float, tracking: Float, color: Color) {
+    BasicText(
+        text.uppercase(),
+        modifier.layout { measurable, constraints ->
+            val p = measurable.measure(constraints)
+            val cut = ((NotoLineRatio - lineHeight) * size.toPx()).coerceAtLeast(0f)
+            layout(p.width, (p.height - cut).roundToInt().coerceAtLeast(0)) { p.place(0, -(cut / 2).roundToInt()) }
+        },
+        style = BaseText.copy(fontSize = size, fontWeight = FontWeight(900), color = color, letterSpacing = tracking.em, lineHeight = lineHeight.em),
+    )
 }
 
 /** A library item's book cover (its picture, else drawn from its title and author). */
