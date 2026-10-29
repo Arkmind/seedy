@@ -63,8 +63,9 @@ fun miniBarSpace(): Dp = if (LocalMiniBar.current) MiniBarSpace else 0.dp
 
 /** Icons the audio players share (boards "Android · Music", "Android · Now playing"). */
 object AudioIcons {
-    val Previous = IconDef(2.2f, listOf(IconPart("M18 5v14L8 12z", filled = true), IconPart("M6 5v14")))
-    val Next = IconDef(2.2f, listOf(IconPart("M6 5v14l10-7z", filled = true), IconPart("M18 5v14")))
+    // The triangles are filled without a stroke (as the boards draw them); the bars are 2.2 px round-capped lines.
+    val Previous = IconDef(0f, listOf(IconPart("M18 5v14L8 12z", filled = true), IconPart("M4.9 5a1.1 1.1 0 0 1 2.2 0v14a1.1 1.1 0 0 1 -2.2 0z", filled = true)))
+    val Next = IconDef(0f, listOf(IconPart("M6 5v14l10-7z", filled = true), IconPart("M16.9 5a1.1 1.1 0 0 1 2.2 0v14a1.1 1.1 0 0 1 -2.2 0z", filled = true)))
     val Pause = IconDef(0f, listOf(IconPart("M7.2 4.5h1.6a1.2 1.2 0 0 1 1.2 1.2v12.6a1.2 1.2 0 0 1 -1.2 1.2h-1.6a1.2 1.2 0 0 1 -1.2 -1.2v-12.6a1.2 1.2 0 0 1 1.2 -1.2Z", filled = true), IconPart("M15.2 4.5h1.6a1.2 1.2 0 0 1 1.2 1.2v12.6a1.2 1.2 0 0 1 -1.2 1.2h-1.6a1.2 1.2 0 0 1 -1.2 -1.2v-12.6a1.2 1.2 0 0 1 1.2 -1.2Z", filled = true)))
     val Play = WebIcons.Play
 }

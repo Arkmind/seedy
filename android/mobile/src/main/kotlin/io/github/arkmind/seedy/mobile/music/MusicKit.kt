@@ -92,8 +92,8 @@ object MusicIcons {
     val Shuffle = IconDef(2.2f, "M16 3h5v5", "M4 20L21 3", "M21 16v5h-5", "M15 15l6 6", "M4 4l5 5")
     val Repeat = IconDef(2.2f, "M17 2l3 3-3 3", "M4 11V9a4 4 0 0 1 4-4h12", "M7 22l-3-3 3-3", "M20 13v2a4 4 0 0 1-4 4H4")
     val Play = IconDef(0f, listOf(IconPart("M7 4.5v15l12-7.5z", filled = true)))
-    val Previous = IconDef(2.2f, listOf(IconPart("M18 5v14L8 12z", filled = true), IconPart("M6 5v14")))
-    val Next = IconDef(2.2f, listOf(IconPart("M6 5v14l10-7z", filled = true), IconPart("M18 5v14")))
+    val Previous = io.github.arkmind.seedy.mobile.audio.AudioIcons.Previous
+    val Next = io.github.arkmind.seedy.mobile.audio.AudioIcons.Next
     val Pause = IconDef(
         0f,
         listOf(
@@ -144,7 +144,18 @@ data class Playing(
 @Composable
 fun ItemCover(item: BaseItemDto?, modifier: Modifier = Modifier, width: Int = 360, title: String? = null, titleSize: TextUnit = 12.sp) {
     val images = LocalViewer.current.images
-    AudioCover(coverUrl(item, images, width), webId(item?.albumId ?: item?.id), modifier, title = title, titleSize = titleSize)
+    AudioCover(coverUrl(item, images, width), webId(item?.albumId ?: item?.id), modifier, title = title, titleSize = titleSize, titleTracking = coverTracking(titleSize))
+}
+
+/** The boards set the cards' small cover titles 1% tight, the big covers' (album, player) as they come. */
+fun coverTracking(size: TextUnit): Float = if (size.value <= 15f) -0.01f else 0f
+
+/** A song's cover for the player: its own picture, its album's, or the album's drawn cover with [title] on it. */
+@Composable
+fun SongCover(track: BaseItemDto, modifier: Modifier = Modifier, width: Int = 720, title: String? = null, titleSize: TextUnit = 34.sp) {
+    val audio = io.github.arkmind.seedy.mobile.audio.LocalAudio.current
+    val url = audio?.artwork(track, width) ?: coverUrl(track, LocalViewer.current.images, width)
+    AudioCover(url, webId(track.albumId ?: track.id), modifier, title = title, titleSize = titleSize, titleTracking = coverTracking(titleSize))
 }
 
 /** An artist's picture, or their initials on the drawn colours. */
@@ -334,10 +345,12 @@ fun MixCard(mix: Mix, palette: List<Color>, onClick: () -> Unit, modifier: Modif
         modifier.size(236.dp, 124.dp).clip(shape)
             .cssGradient(135f, listOf(palette[1], palette[0])).tap(onClick = onClick),
     ) {
-        Row(Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 12.dp)) {
-            mix.covers.take(2).forEachIndexed { i, c ->
+        // Two 52 px covers, the second 18 px over the first (CSS margin-left: -18px).
+        val covers = mix.covers.take(2)
+        Box(Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 12.dp).size(width = if (covers.size > 1) 86.dp else 52.dp, height = 52.dp)) {
+            covers.forEachIndexed { i, c ->
                 Box(
-                    Modifier.offset(x = if (i == 1) (-18).dp else 0.dp).size(52.dp)
+                    Modifier.align(if (i == 0) Alignment.TopStart else Alignment.TopEnd).size(52.dp)
                         .boxShadow(Color(0x66000000), blur = 16.dp, y = 6.dp, radius = 9.dp).clip(RoundedCornerShape(9.dp)),
                 ) { ItemCover(c, Modifier.fillMaxSize(), width = 240) }
             }

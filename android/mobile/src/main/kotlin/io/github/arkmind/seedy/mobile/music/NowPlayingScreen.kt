@@ -144,7 +144,7 @@ fun NowPlayingScreen(state: AudioState, time: AudioTime, lyrics: Lyrics, output:
                 }
                 IconButton44(MusicIcons.More, actions.onMore)
             }
-            TrackCover(
+            SongCover(
                 tk, Modifier.padding(top = 16.dp).size(cover).align(Alignment.CenterHorizontally)
                     .boxShadow(Color(0x80000000), blur = 60.dp, y = 24.dp, radius = 16.dp).clip(RoundedCornerShape(16.dp)),
                 width = 720, title = tk.album ?: tk.name, titleSize = 34.sp,

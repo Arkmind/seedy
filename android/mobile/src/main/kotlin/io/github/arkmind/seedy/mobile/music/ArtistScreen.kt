@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -98,7 +99,7 @@ fun ArtistScreen(
     var allAlbums by rememberSaveable { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = bottomPadding + 24.dp)) {
         item(key = "hero") {
-            Box(Modifier.fillMaxWidth().height(330.dp)) {
+            Box(Modifier.fillMaxWidth().height(330.dp).clipToBounds()) {
                 if (item != null) ArtistArt(item, palette, Modifier.fillMaxSize())
                 Box(
                     Modifier.fillMaxSize().cssGradient(
