@@ -1,10 +1,13 @@
 package io.github.arkmind.seedy.player
 
 import android.content.Context
+import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -16,9 +19,12 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.upstream.Loader
+import androidx.media3.session.MediaSession
 import io.github.arkmind.seedy.core.data.DevicePrefs
 import io.github.arkmind.seedy.core.data.DeviceSettings
+import io.github.arkmind.seedy.core.format.Images
 import io.github.arkmind.seedy.core.format.TICKS_PER_SECOND
+import io.github.arkmind.seedy.core.format.episodeTag
 import io.github.arkmind.seedy.core.settings.ResolvedStyle
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.CoroutineScope
@@ -138,6 +144,18 @@ class PlayerController(private val context: Context, private val session: UserSe
         .setSeekForwardIncrementMs(seekForwardSeconds * 1000L)
         .build()
 
+    /**
+     * The system's view of this player: headset and Bluetooth buttons, Google Assistant, Android TV's media controls.
+     * An episode's Next goes to the next one.
+     */
+    private val mediaSession = MediaSession.Builder(context, object : ForwardingPlayer(exo) {
+        private val episode get() = item?.type == BaseItemKind.EPISODE
+        override fun getAvailableCommands(): Player.Commands =
+            if (episode) super.getAvailableCommands().buildUpon().add(Player.COMMAND_SEEK_TO_NEXT).build() else super.getAvailableCommands()
+        override fun isCommandAvailable(command: Int) = (episode && command == Player.COMMAND_SEEK_TO_NEXT) || super.isCommandAvailable(command)
+        override fun seekToNext() = playNext()
+    }).setId("seedy-player-${UUID.randomUUID()}").build()
+
     private var item: BaseItemDto? = null
     private var stream: ActiveStream? = null
     private var text: TextSubtitles? = null
@@ -239,7 +257,8 @@ class PlayerController(private val context: Context, private val session: UserSe
             return _state.update { st -> st.copy(loading = false, problem = "network") }
         }
         stream = s
-        val media = MediaItem.Builder().setUri(s.url).apply { if (s.isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }.build()
+        val media = MediaItem.Builder().setUri(s.url).setMediaMetadata(metadata(it))
+            .apply { if (s.isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }.build()
         val wasPlaying = exo.playWhenReady
         exo.setMediaItem(media, opts.startTicks / 10_000)
         exo.prepare()
@@ -293,6 +312,10 @@ class PlayerController(private val context: Context, private val session: UserSe
     fun playPause() {
         if (_state.value.ended) seekTo(0)
         exo.playWhenReady = !exo.playWhenReady
+    }
+
+    fun pause() {
+        exo.playWhenReady = false
     }
 
     fun seekTo(ms: Long) {
@@ -568,12 +591,24 @@ class PlayerController(private val context: Context, private val session: UserSe
         stream = null
     }
 
+    /** What the system's media controls show: the title, its show and episode, and its picture. */
+    private fun metadata(it: BaseItemDto): MediaMetadata {
+        val images = Images(session.api)
+        val art = if (it.type == BaseItemKind.TV_CHANNEL) images.primary(it, 512) else images.landscape(it, 960)
+        return MediaMetadata.Builder()
+            .setTitle(it.name)
+            .setArtist(if (it.type == BaseItemKind.EPISODE) listOfNotNull(it.seriesName, it.episodeTag.ifEmpty { null }).joinToString(" · ") else null)
+            .setArtworkUri(art?.let(Uri::parse))
+            .build()
+    }
+
     /** Reports the stop, ends any conversion and frees the decoder. Call once, when the player closes. */
     fun release() {
         jobs.forEach { it.cancel() }
         val snapshot = Triple(item, stream, exo.currentPosition)
         val paused = !exo.playWhenReady
         val speed = exo.playbackParameters.speed
+        mediaSession.release()
         exo.release()
         val (it, s, pos) = snapshot
         if (it != null && s != null) {

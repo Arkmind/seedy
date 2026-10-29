@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { ApiError } from '../api/client';
 import { getPrograms, type Program } from '../api/livetv';
+import { holdSession, releaseSession } from '../audio/engine';
 import type { BaseItem } from '../api/types';
 import { clock, duration, episodeTag } from '../lib/format';
 import { t } from '../lib/i18n';
@@ -12,7 +13,7 @@ import {
   categoryOf, endMs, fraction, isAiring, isFavorite, noteWatched, previousChannelId, programTitle, recState, startMs, toggleRecord,
   useChannels, useNow, useTimers, type LiveChannel
 } from '../screens/livetv/data';
-import { ChannelLogo, HeartIcon, LtIcon, RecDot } from '../screens/livetv/parts';
+import { ChannelLogo, HeartIcon, LtIcon, RecDot, logoSrc } from '../screens/livetv/parts';
 import '../screens/livetv/livetv.css';
 import type { ProfileOptions } from './device-profile';
 import { keyAction } from './keys';
@@ -335,18 +336,17 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
   useEffect(() => {
     const nav = navigator as Navigator & { mediaSession?: MediaSession };
     if (!nav.mediaSession || typeof MediaMetadata === 'undefined') return;
+    holdSession();
+    const logo = logoSrc(channel, 256);
     try {
-      nav.mediaSession.metadata = new MediaMetadata({ title: cur ? programTitle(cur) : channel?.label ?? '', artist: channel?.label ?? '' });
+      nav.mediaSession.metadata = new MediaMetadata({
+        title: cur ? programTitle(cur) : channel?.label ?? '', artist: channel?.label ?? '',
+        artwork: logo ? [{ src: logo, sizes: '512x512', type: 'image/png' }] : []
+      });
       nav.mediaSession.setActionHandler('nexttrack', () => step(1));
       nav.mediaSession.setActionHandler('previoustrack', () => step(-1));
     } catch { /* unsupported */ }
-    return () => {
-      try {
-        nav.mediaSession!.setActionHandler('nexttrack', null);
-        nav.mediaSession!.setActionHandler('previoustrack', null);
-        nav.mediaSession!.metadata = null;
-      } catch { /* unsupported */ }
-    };
+    return releaseSession;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cur?.Id, chId, order.length]);
 
