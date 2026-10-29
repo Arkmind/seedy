@@ -100,7 +100,7 @@ private fun LibraryTile(tile: LibrariesViewModel.Tile, onClick: () -> Unit, modi
     val images = LocalViewer.current.images
     Column(modifier.tap(onClick = onClick), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(13.dp))) {
-            Artwork(tile.art?.let { images?.backdrop(it, 480) }, Modifier.matchParentSize())
+            Artwork(tile.art?.let { images?.backdrop(it, 480) ?: images?.primary(it, 480) }, Modifier.matchParentSize())
             Box(Modifier.matchParentSize().background(Color(0x590A0A0A)))
             Box(
                 Modifier.align(Alignment.BottomStart).padding(10.dp).size(34.dp).clip(RoundedCornerShape(10.dp)).background(SeedyColors.Bg.copy(alpha = 0.8f)),
