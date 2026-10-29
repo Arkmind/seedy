@@ -27,6 +27,8 @@ import io.github.arkmind.seedy.mobile.music.MusicActions
 import io.github.arkmind.seedy.mobile.music.MusicLibraryScreen
 import io.github.arkmind.seedy.mobile.music.NowPlayingActions
 import io.github.arkmind.seedy.mobile.music.NowPlayingScreen
+import io.github.arkmind.seedy.mobile.music.QueueSheet
+import io.github.arkmind.seedy.mobile.music.LyricsPanel
 import io.github.arkmind.seedy.mobile.parts.Tab
 import io.github.arkmind.seedy.mobile.parts.TabBar
 import io.github.arkmind.seedy.ui.components.CoverPalettes
@@ -65,7 +67,7 @@ class MusicShots {
                 }
             }
         }
-        compose.mainClock.advanceTimeBy(500)
+        compose.mainClock.advanceTimeBy(1500)
         compose.onRoot().captureRoboImage("src/test/screenshots/$name.png")
     }
 
@@ -82,6 +84,40 @@ class MusicShots {
     @Test
     fun artist() = shot("AndroidMusicArtist") {
         ArtistScreen(MusicSamples.artistState, MusicSamples.playing, CoverPalettes[0], ArtistActions(), bottomPadding = miniBarSpace())
+    }
+
+    @Test
+    fun homeMore() = shot("AndroidMusicHomeMore") {
+        MusicLibraryScreen(
+            MusicSamples.homeMore, MusicSamples.playing, MusicActions(), bottomPadding = miniBarSpace(),
+            listState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = 8),
+        )
+    }
+
+    @Test
+    fun albumsTab() = shot("AndroidMusicAlbums") {
+        MusicLibraryScreen(MusicSamples.albumsTab, MusicSamples.playing, MusicActions(), bottomPadding = miniBarSpace())
+    }
+
+    @Test
+    fun songsTab() = shot("AndroidMusicSongs") {
+        MusicLibraryScreen(MusicSamples.songsTab, MusicSamples.playing, MusicActions(), bottomPadding = miniBarSpace())
+    }
+
+    @Test
+    fun playlist() = shot("AndroidMusicPlaylist") {
+        AlbumScreen(MusicSamples.playlistState, MusicSamples.playing, CoverPalettes[6][1], AlbumActions(), bottomPadding = miniBarSpace())
+    }
+
+    @Test
+    fun queue() = shot("AndroidMusicQueue", bars = false) {
+        NowPlayingScreen(MusicSamples.queued, MusicSamples.time, MusicSamples.lyrics, "WH-1000XM5", CoverPalettes[0][1], NowPlayingActions())
+        QueueSheet(MusicSamples.queued, {}, {}, { _, _, _ -> }, {}, {})
+    }
+
+    @Test
+    fun lyrics() = shot("AndroidMusicLyrics", bars = false) {
+        LyricsPanel("Northline", "Northline · Ada Vale", MusicSamples.lyrics, MusicSamples.time.position, CoverPalettes[0][1], {}, {})
     }
 
     @Test

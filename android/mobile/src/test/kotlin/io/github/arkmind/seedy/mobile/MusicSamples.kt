@@ -118,9 +118,43 @@ object MusicSamples {
         ),
     )
 
+    private val allAlbums = listOf(
+        northline, album("Blue Hour", 4, "Lumen Fields", 2026), album("Copper Line", 6, "The Quiet Engine", 2025), album("Harbor Lights", 7, "Harbor Lights", 2025),
+        album("Small Hours", 5, "Kestrel Choir"), album("Undertow", 2, "Oren Moss"), album("Field Recordings", 3, year = 2016),
+    )
+
+    val albumsTab = library.copy(
+        tab = io.github.arkmind.seedy.core.music.MusicTab.Albums,
+        albums = io.github.arkmind.seedy.core.music.Paged(allAlbums, 14, loaded = true),
+    )
+
+    val songsTab = library.copy(
+        tab = io.github.arkmind.seedy.core.music.MusicTab.Songs, favorites = true,
+        songs = io.github.arkmind.seedy.core.music.Paged(northlineTracks, 117, loaded = true),
+    )
+
+    val homeMore = library.copy(
+        home = library.home.copy(
+            playlists = listOf(
+                PlaylistPreview(playlist("Focus", 4, 11), listOf(northline, album("Blue Hour", 4), album("Copper Line", 6), album("Undertow", 2)), "11 songs · 42 min"),
+                PlaylistPreview(playlist("Late night", 1, 26), listOf(album("Late night", 1)), "26 songs · 1 h 42 min"),
+            ),
+            top = listOf(TopArtist(adaVale, 1240), TopArtist(idFor("Oren Moss", 8).let { BaseItemDto(id = it, type = BaseItemKind.MUSIC_ARTIST, name = "Oren Moss") }, 312)),
+            genres = listOf("Indie folk" to 5, "Ambient" to 2, "Chamber pop" to 2, "Electronic" to 2).mapIndexed { i, (g, n) ->
+                io.github.arkmind.seedy.core.music.GenreSample(BaseItemDto(id = idFor(g, i), type = BaseItemKind.MUSIC_GENRE, name = g, albumCount = n), allAlbums[i + 1])
+            },
+        ),
+    )
+
     /* ── Album ── */
 
     val albumState = AlbumViewModel.State(item = northline, tracks = northlineTracks, canDownload = true)
+
+    val playlistState = AlbumViewModel.State(
+        item = playlist("Road trip", 6, 33),
+        tracks = listOf(northlineTracks[0], track("Copper Line", album("Copper Line", 6, "The Quiet Engine"), 3, "3:58", listOf("The Quiet Engine")), northlineTracks[1],
+            track("Harbor Lights", album("Harbor Lights", 7, "Harbor Lights"), 1, "4:20", listOf("Harbor Lights")), track("Undertow", album("Undertow", 2, "Oren Moss"), 2, "5:02", listOf("Oren Moss"))),
+    )
 
     /* ── Artist ── */
 
@@ -142,6 +176,8 @@ object MusicSamples {
     )
 
     /* ── Now playing ── */
+
+    val queued = audio.copy(added = listOf(Entry("a1", track("Undertow", album("Undertow", 2, "Oren Moss"), 2, "5:02", listOf("Oren Moss")))))
 
     val lyrics = Lyrics(
         playingTrack.id,

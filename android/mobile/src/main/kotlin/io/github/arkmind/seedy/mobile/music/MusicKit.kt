@@ -330,7 +330,7 @@ fun JumpTile(item: BaseItemDto, current: Boolean, playing: Boolean, onClick: () 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        if (item.type == org.jellyfin.sdk.model.api.BaseItemKind.MUSIC_ARTIST) ArtistCover(item, Modifier.size(56.dp), width = 144, initialsSize = 18.sp)
+        if (item.type == org.jellyfin.sdk.model.api.BaseItemKind.MUSIC_ARTIST) ArtistCover(item, Modifier.size(56.dp).clip(CircleShape), width = 144, initialsSize = 18.sp)
         else ItemCover(item, Modifier.size(56.dp), width = 144)
         SText(item.name.orEmpty(), Modifier.weight(1f), size = 12.sp, weight = 700, lineHeight = 1.3f, color = SeedyColors.White, maxLines = 2)
         if (current) EqBars(playing)
