@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -20,9 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
@@ -181,12 +179,13 @@ fun MediaSummaryCard(title: String, requests: List<MediaRequest>, counts: List<S
     ) {
         val shown = requests.take(2)
         val music = shown.firstOrNull()?.music ?: true
-        // The 2 px ring (a box-shadow on the board) sits outside each cover, over the one before.
+        // The 2 px ring (a box-shadow on the board) sits outside each cover, over the one before; the strip is as tall as
+        // the covers, so the rings overhang it by 2 px all round.
         if (music) {
             Box(Modifier.width((36 + 24 * (shown.size - 1).coerceAtLeast(0)).dp).height(36.dp)) {
                 shown.forEachIndexed { i, r ->
-                    Box(Modifier.offset(x = (24 * i - 2).dp, y = (-2).dp).size(40.dp).background(SeedyColors.Panel, RoundedCornerShape(10.dp)).padding(2.dp)) {
-                        RequestThumbArt(r, Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)))
+                    Box(Modifier.offset(x = (24 * i - 2).dp).requiredSize(40.dp).background(SeedyColors.Panel, RoundedCornerShape(10.dp)).padding(2.dp)) {
+                        RequestThumbGradient(artIndex(r.albums.firstOrNull()?.mbid ?: r.foreignId), r.coverUrl, book = false, Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)))
                     }
                 }
             }
@@ -194,10 +193,10 @@ fun MediaSummaryCard(title: String, requests: List<MediaRequest>, counts: List<S
             Box(Modifier.width((28 + 18 * (shown.size - 1).coerceAtLeast(0)).dp).height(42.dp)) {
                 shown.forEachIndexed { i, r ->
                     Box(
-                        Modifier.offset(x = (18 * i - 2).dp, y = (-2).dp).size(32.dp, 46.dp)
+                        Modifier.offset(x = (18 * i - 2).dp).requiredSize(32.dp, 46.dp)
                             .background(SeedyColors.Panel, RoundedCornerShape(topStart = 5.dp, bottomStart = 5.dp, topEnd = 8.dp, bottomEnd = 8.dp)).padding(2.dp),
                     ) {
-                        RequestThumbArt(r, Modifier.size(28.dp, 42.dp).clip(BookShapeSmall))
+                        RequestThumbGradient(artIndex(r.foreignId), r.coverUrl, book = true, Modifier.size(28.dp, 42.dp).clip(BookShapeSmall))
                     }
                 }
             }
@@ -260,15 +259,7 @@ private val BookShape = RoundedCornerShape(topStart = 3.dp, bottomStart = 3.dp, 
 @Composable
 fun BookCover(b: BookCard, cover: String?, modifier: Modifier) {
     Box(modifier.boxShadow(Color.Black.copy(alpha = 0.45f), 26.dp, 12.dp, 9.dp)) {
-        RequestBookArt(
-            artIndex(b.workId), cover, b.title, b.author,
-            Modifier.matchParentSize().clip(BookShape).drawWithContent {
-                drawContent()
-                // inset 5px 0 0 rgba(0,0,0,.22), inset 6px 0 0 rgba(255,255,255,.06)
-                drawRect(Color.White.copy(alpha = 0.06f), size = Size(6.dp.toPx(), size.height))
-                drawRect(Color.Black.copy(alpha = 0.22f), topLeft = Offset.Zero, size = Size(5.dp.toPx(), size.height))
-            },
-        )
+        RequestBookArt(artIndex(b.workId), cover, b.title, b.author, Modifier.matchParentSize().clip(BookShape), spine = true)
     }
 }
 

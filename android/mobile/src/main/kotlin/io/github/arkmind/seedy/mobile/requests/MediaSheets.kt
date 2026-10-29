@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -51,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
@@ -65,6 +65,7 @@ import io.github.arkmind.seedy.core.mediarequests.MusicArtistViewModel
 import io.github.arkmind.seedy.core.mediarequests.MusicRelease
 import io.github.arkmind.seedy.mobile.browse.Chip
 import io.github.arkmind.seedy.mobile.manage.BigButton
+import io.github.arkmind.seedy.mobile.parts.bleed
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.SeedySwitch
 import io.github.arkmind.seedy.ui.components.initialsOf
@@ -254,9 +255,14 @@ fun RequestArtistContent(state: MusicArtistViewModel.State, actions: ArtistSheet
                             val on = state.mode == mode
                             Box(
                                 Modifier.height(40.dp).clip(RoundedCornerShape(11.dp)).background(if (on) SeedyColors.Inverse else Color.Transparent)
-                                    .tap { actions.mode(mode) }.padding(horizontal = 10.dp),
+                                    .tap { actions.mode(mode) }.padding(horizontal = 6.dp),
                                 contentAlignment = Alignment.Center,
-                            ) { SText(t(mode.label), size = 13.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.InkInverse else SeedyColors.Text, maxLines = 1) }
+                            ) {
+                                SText(
+                                    t(mode.label), size = 13.sp, weight = if (on) 800 else 600, lineHeight = 1.15f, align = TextAlign.Center,
+                                    color = if (on) SeedyColors.InkInverse else SeedyColors.Text, maxLines = 2,
+                                )
+                            }
                         }
                     }
                 }
@@ -297,20 +303,22 @@ fun RequestArtistContent(state: MusicArtistViewModel.State, actions: ArtistSheet
     }
 }
 
-/** Albums · 5 / EPs · 3 / Singles · 9, and Select all while picking albums. */
+/** Albums · 5 / EPs · 3 / Singles · 9; then, as Request seasons' list head, the type's name and Select all while picking albums. */
 @Composable
 private fun Types(state: MusicArtistViewModel.State, actions: ArtistSheetActions) {
     val counts = state.counts
     val types = listOf("album" to "Albums · {n}", "ep" to "EPs · {n}", "single" to "Singles · {n}").filter { (counts[it.first] ?: 0) > 0 }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        LazyRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(end = 4.dp)) {
-            for ((type, label) in types) {
-                item(key = type) { Chip(t(label, "n" to (counts[type] ?: 0)), state.type == type, { actions.type(type) }) }
-            }
+    LazyRow(Modifier.fillMaxWidth().bleed(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(horizontal = 16.dp)) {
+        for ((type, label) in types) {
+            item(key = type) { Chip(t(label, "n" to (counts[type] ?: 0)), state.type == type, { actions.type(type) }) }
         }
+    }
+    Row(Modifier.fillMaxWidth().heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically) {
+        val name = when (state.type) { "ep" -> t("EPs"); "single" -> t("Singles"); else -> t("Albums") }
+        SText(name, Modifier.weight(1f), size = 15.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
         if (state.mode == MusicArtistViewModel.Mode.Albums && state.open.isNotEmpty()) {
             Row(
-                Modifier.height(44.dp).tap(onClick = actions.toggleAll).padding(start = 4.dp),
+                Modifier.height(44.dp).tap(onClick = actions.toggleAll).padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 SText(t("Select all"), size = 13.sp, weight = 700, color = SeedyColors.Text, maxLines = 1)
@@ -320,39 +328,41 @@ private fun Types(state: MusicArtistViewModel.State, actions: ArtistSheetActions
     }
 }
 
+/** An album as Request seasons draws a season: the box, its cover, title and line, and where it is under them. */
 @Composable
 private fun ReleaseRow(r: MusicRelease, state: MusicArtistViewModel.State, actions: ArtistSheetActions) {
     val accent = LocalAccent.current
     val locked = MusicArtistViewModel.State.locked(r)
     val on = state.on(r)
+    val picking = state.mode == MusicArtistViewModel.Mode.Albums
     val shape = RoundedCornerShape(13.dp)
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(shape).background(if (on && state.mode == MusicArtistViewModel.Mode.Albums) Color(0xFF1C1C1C) else Color.Transparent)
-            .border(1.dp, if (on && state.mode == MusicArtistViewModel.Mode.Albums) accent else Color(0xFF222222), shape)
-            .then(if (locked || state.mode != MusicArtistViewModel.Mode.Albums) Modifier else Modifier.tap { actions.toggle(r.mbid) })
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+        Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(shape).background(if (on && picking) Color(0xFF1C1C1C) else Color.Transparent)
+            .border(1.dp, if (on && picking) accent else Color(0xFF222222), shape)
+            .then(if (locked || !picking) Modifier else Modifier.tap { actions.toggle(r.mbid) })
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         TickBox(on = on, locked = locked)
-        RequestAlbumArt(artIndex(r.mbid), r.coverUrl, Modifier.size(40.dp).clip(RoundedCornerShape(7.dp)))
+        RequestAlbumArt(artIndex(r.mbid), r.coverUrl, Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             SText(r.title, size = 14.sp, weight = 700, color = if (locked) SeedyColors.Text2 else SeedyColors.White, maxLines = 1)
             MediaFormat.releaseSub(r).takeIf { it.isNotEmpty() }?.let { SText(it, size = 12.sp, color = SeedyColors.Text3, maxLines = 1) }
-        }
-        val status = MediaFormat.cardStatus(r.status, r.requestedBy)
-        val text = status?.text ?: if (r.upcoming) t("Not out yet") else t("Not on the server")
-        val (bg, ink, dot) = when {
-            r.status == "server" -> Triple(SeedyColors.Ok.copy(alpha = 0.1f), SeedyColors.Ok, SeedyColors.Ok)
-            r.status == "none" -> Triple(Color(0xFF262626), SeedyColors.TextHero, SeedyColors.TextHero)
-            else -> Triple(SeedyColors.Pending.copy(alpha = 0.1f), SeedyColors.Pending, stateColour(status?.dot ?: "pending"))
-        }
-        Row(
-            Modifier.widthIn(max = 120.dp).clip(CircleShape).background(bg).padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp),
-        ) {
-            Box(Modifier.size(6.dp).background(dot, CircleShape))
-            SText(text, size = 11.sp, weight = 700, color = ink, maxLines = 1)
+            val status = MediaFormat.cardStatus(r.status, r.requestedBy)
+            val text = status?.text ?: if (r.upcoming) t("Not out yet") else t("Not on the server")
+            val (bg, ink, dot) = when (r.status) {
+                "server" -> Triple(SeedyColors.Ok.copy(alpha = 0.1f), SeedyColors.Ok, SeedyColors.Ok)
+                "none" -> Triple(Color(0xFF262626), SeedyColors.TextHero, SeedyColors.TextHero)
+                else -> Triple(SeedyColors.Pending.copy(alpha = 0.1f), SeedyColors.Pending, stateColour(status?.dot ?: "pending"))
+            }
+            Row(
+                Modifier.padding(top = 4.dp).clip(CircleShape).background(bg).padding(horizontal = 9.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Box(Modifier.size(6.dp).background(dot, CircleShape))
+                SText(text, size = 11.sp, weight = 700, color = ink, maxLines = 1)
+            }
         }
     }
 }

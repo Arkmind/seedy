@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -305,7 +306,7 @@ fun MediaRequestRow(
                         MediaFormat.serviceName(r.service), Modifier.background(SeedyColors.Surface, CircleShape).padding(horizontal = 7.dp, vertical = 1.dp),
                         size = 9.sp, weight = 800, tracking = 0.06f, uppercase = true, color = SeedyColors.TextHero, maxLines = 1,
                     )
-                    SText(MediaFormat.whatLine(r, everyone, today), Modifier.weight(1f), size = 12.sp, color = SeedyColors.Text3, maxLines = 1)
+                    SText(MediaFormat.whatLine(r, everyone, today), Modifier.weight(1f), size = 12.sp, color = SeedyColors.Text3, maxLines = 2)
                 }
                 MediaFormat.note(r)?.takeIf { it.text.isNotEmpty() }?.let { n: ToneText ->
                     SText(n.text, size = 12.sp, weight = 600, color = toneColour(n.tone, accent), maxLines = 2)
@@ -347,30 +348,35 @@ fun MediaRequestRow(
     }
 }
 
-/** Asked → Approved → Searching → Downloading → Ready, lit up to where the request is (red where it's stuck). */
+/**
+ * Asked → Approved → Searching → Downloading → Ready, lit up to where the request is (red where it's stuck). The phone
+ * has no room for five names: the current stage's sits under its bar, running on under the ones still to come.
+ */
 @Composable
 private fun Pipeline(stage: io.github.arkmind.seedy.core.mediarequests.MediaStage) {
     val accent = LocalAccent.current
-    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        MediaFormat.Stages.forEachIndexed { i, name ->
-            val current = i == stage.n - 1
-            val label = if (stage.label != null && current) stage.label!! else t(name)
-            val bar = when {
-                i >= stage.n -> Color(0xFF262626)
-                stage.fail && current -> SeedyColors.Danger
-                i == 4 -> SeedyColors.Ok
-                else -> accent
+    val gap = 5.dp
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            for (i in MediaFormat.Stages.indices) {
+                val bar = when {
+                    i >= stage.n -> Color(0xFF262626)
+                    stage.fail && i == stage.n - 1 -> SeedyColors.Danger
+                    i == 4 -> SeedyColors.Ok
+                    else -> accent
+                }
+                Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(3.dp)).background(bar))
             }
-            val ink = when {
-                current && stage.fail -> SeedyColors.Danger
-                current -> SeedyColors.White
-                i < stage.n -> SeedyColors.Text2
-                else -> Color(0xFF5A5A5A)
-            }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Box(Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)).background(bar))
-                SText(label, size = 10.sp, weight = if (current) 800 else 600, color = ink, maxLines = 1)
-            }
+        }
+        val i = (stage.n - 1).coerceIn(0, 4)
+        val label = stage.label ?: t(MediaFormat.Stages[i])
+        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            if (i > 0) Spacer(Modifier.weight(i.toFloat()))
+            SText(
+                label, Modifier.weight((5 - i).toFloat()), size = 11.sp, weight = 800,
+                color = if (stage.fail) SeedyColors.Danger else SeedyColors.White, maxLines = 1,
+                align = if (i == 4) androidx.compose.ui.text.style.TextAlign.Start else null,
+            )
         }
     }
 }

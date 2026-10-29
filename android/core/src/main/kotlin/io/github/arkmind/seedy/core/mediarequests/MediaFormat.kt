@@ -203,23 +203,26 @@ object MediaFormat {
         else -> null
     }
 
-    /** "Fri 16 Oct" within a month either way, "4 Dec" this year, "Jan 2027", else the year; soon when it's out within two weeks. */
+    /**
+     * "16 Oct" within a month either way (the web adds the weekday; the phone boards leave it out), "4 Dec" this year,
+     * "Jan 2027", else the year; soon when it's out within two weeks.
+     */
     private fun releaseWhen(date: String?, today: LocalDate): Pair<String, Boolean> {
         val d = if (date != null && date.length == 4) null else day(date)
         if (d == null) return (date?.take(4) ?: "") to false
         val days = ChronoUnit.DAYS.between(today, d)
         return when {
-            kotlin.math.abs(days) <= 31 -> weekdayDate(d) to (days in 0..14)
+            kotlin.math.abs(days) <= 31 -> dayMonth(d) to (days in 0..14)
             days > 0 && d.year == today.year -> dayMonth(d) to false
             days > 0 && date!!.length >= 7 -> monthYear(d) to false
             else -> d.year.toString() to false
         }
     }
 
-    /** The line under an album: "Ada Vale · Fri 16 Oct", "Ada Vale · you have 7 of 8"; lit when it's out soon. */
+    /** The line under an album: "Ada Vale · 16 Oct", "Ada Vale · 7 of 8" (the phone board's short form); lit when it's out soon. */
     fun releaseMeta(r: MusicRelease, row: MusicRow?, today: LocalDate): Pair<String, Boolean> {
         val artist = r.artist.orEmpty()
-        if (row == MusicRow.Missing && r.of != null) return t("{artist} · you have {n} of {total}", "artist" to artist, "n" to (r.have ?: 0), "total" to r.of) to false
+        if (row == MusicRow.Missing && r.of != null) return t("{artist} · {n} of {total}", "artist" to artist, "n" to (r.have ?: 0), "total" to r.of) to false
         if (row == MusicRow.Trending) return listOf(artist, r.date?.take(4).orEmpty()).filter { it.isNotEmpty() }.joinToString(" · ") to false
         val (text, soon) = releaseWhen(r.date, today)
         return listOf(artist, text).filter { it.isNotEmpty() }.joinToString(" · ") to (r.upcoming && soon)

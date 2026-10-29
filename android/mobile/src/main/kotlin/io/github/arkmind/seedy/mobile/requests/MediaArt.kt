@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,22 +18,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import kotlin.math.roundToInt
 import io.github.arkmind.seedy.core.mediarequests.MediaFormat
 import io.github.arkmind.seedy.ui.components.CoverPalettes
+import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
+import io.github.arkmind.seedy.ui.theme.NotoLineRatio
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.parseHexColor
@@ -57,6 +67,29 @@ private val BookPalettes: List<List<Color>> = listOf(
 private val BookPaths = listOf(
     "M0 300 L0 210 Q100 170 200 210 V300Z", "M0 300 L200 160 V300Z", "M0 230 L50 190 L100 220 L150 170 L200 200 V300 H0Z", "M0 300 V240 H200 V300Z",
 ).map { PathParser().parsePathString(it).toPath() }
+
+/**
+ * Text set in CSS line boxes ([lineHeight] × size each, the glyphs centred in them): Compose keeps the font's whole
+ * ascent above the first line and descent under the last, so the block loses the difference to the CSS box, half at
+ * the top and half at the foot. The covers' tight titles then stack and sit as on the boards, also over several lines.
+ */
+@Composable
+private fun CssText(text: String, modifier: Modifier, size: TextUnit, weight: Int, color: Color, lineHeight: Float, tracking: Float = 0f, maxLines: Int = 3) {
+    BasicText(
+        text.uppercase(),
+        modifier.layout { measurable, constraints ->
+            val placeable = measurable.measure(constraints)
+            val cut = ((NotoLineRatio - lineHeight) * size.toPx()).coerceAtLeast(0f)
+            layout(placeable.width, (placeable.height - cut).roundToInt().coerceAtLeast(0)) { placeable.place(0, -(cut / 2).roundToInt()) }
+        },
+        style = BaseText.copy(
+            fontSize = size, fontWeight = FontWeight(weight), color = color, lineHeight = lineHeight.em,
+            letterSpacing = if (tracking == 0f) TextUnit.Unspecified else tracking.em,
+        ),
+        maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
 
 /** The web's hash of [seed], the index the art is drawn from. */
 fun artIndex(seed: String): Long = MediaFormat.hash(seed)
@@ -108,9 +141,9 @@ fun RequestAlbumArt(
             if (round) {
                 SText(text, Modifier.align(Alignment.Center), size = initialsSize, weight = 900, color = c[3], align = TextAlign.Center, maxLines = 1)
             } else {
-                SText(
+                CssText(
                     text, Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = maxWidth * 0.08f, end = maxWidth * 0.08f, bottom = maxHeight * 0.08f),
-                    size = textSize, weight = 900, lineHeight = 0.95f, uppercase = true, color = c[3], maxLines = 3,
+                    size = textSize, weight = 900, color = c[3], lineHeight = 0.95f,
                 )
             }
         }
@@ -118,7 +151,10 @@ fun RequestAlbumArt(
     }
 }
 
-/** A 2:3 book cover: the image, or the boards' drawn cover with the title at the top and the author at the foot. */
+/**
+ * A 2:3 book cover: the image, or the boards' drawn cover with the title at the top and the author at the foot. [spine]
+ * shades the left edge the boards' way (inset shadows: under the drawing, over the background).
+ */
 @Composable
 fun RequestBookArt(
     index: Long,
@@ -128,11 +164,17 @@ fun RequestBookArt(
     modifier: Modifier = Modifier,
     titleSize: TextUnit = 11.sp,
     authorSize: TextUnit = 6.sp,
+    spine: Boolean = false,
 ) {
     val c = BookPalettes[(index % BookPalettes.size).toInt()]
     val s = (index % 4).toInt()
     BoxWithConstraints(modifier.background(c[0])) {
         Canvas(Modifier.fillMaxSize()) {
+            if (spine) {
+                // inset 5px 0 0 rgba(0,0,0,.22), inset 6px 0 0 rgba(255,255,255,.06)
+                drawRect(Color.White.copy(alpha = 0.06f), size = Size(6.dp.toPx(), size.height))
+                drawRect(Color.Black.copy(alpha = 0.22f), size = Size(5.dp.toPx(), size.height))
+            }
             // viewBox 0 0 200 300, preserveAspectRatio xMidYMid slice.
             val k = maxOf(size.width / 200f, size.height / 300f)
             translate((size.width - 200f * k) / 2f, (size.height - 300f * k) / 2f) {
@@ -143,9 +185,9 @@ fun RequestBookArt(
             }
         }
         if (titleSize.value > 0f) {
-            SText(
+            CssText(
                 title, Modifier.align(Alignment.TopStart).fillMaxWidth().padding(start = maxWidth * 0.11f, end = maxWidth * 0.11f, top = maxHeight * 0.09f),
-                size = titleSize, weight = 900, lineHeight = 1f, tracking = -0.01f, uppercase = true, color = c[3], maxLines = 4,
+                size = titleSize, weight = 900, color = c[3], lineHeight = 1f, tracking = -0.01f, maxLines = 4,
             )
             if (!author.isNullOrEmpty()) {
                 SText(
@@ -156,6 +198,27 @@ fun RequestBookArt(
         }
         CoverImage(url, Modifier.matchParentSize())
     }
+}
+
+/**
+ * The summary card's small covers: the image over the boards' plain gradient (160°: an album's band to its background,
+ * a book's background to its hill).
+ */
+@Composable
+fun RequestThumbGradient(index: Long, url: String?, book: Boolean, modifier: Modifier) {
+    val (from, to) = if (book) BookPalettes[(index % BookPalettes.size).toInt()].let { it[0] to it[2] }
+    else CoverPalettes[(index % CoverPalettes.size).toInt()].let { it[1] to it[0] }
+    Box(
+        modifier.drawBehind {
+            // CSS linear-gradient(160deg): the line runs from the top-left-ish corner down, 20° off vertical.
+            val a = Math.toRadians(160.0)
+            val dx = kotlin.math.sin(a).toFloat()
+            val dy = -kotlin.math.cos(a).toFloat()
+            val half = (kotlin.math.abs(size.width * dx) + kotlin.math.abs(size.height * dy)) / 2f
+            val c = Offset(size.width / 2f, size.height / 2f)
+            drawRect(Brush.linearGradient(listOf(from, to), start = c - Offset(dx, dy) * half, end = c + Offset(dx, dy) * half))
+        },
+    ) { CoverImage(url, Modifier.matchParentSize()) }
 }
 
 /** The badges' colours (web media.css .reqs-type). */
