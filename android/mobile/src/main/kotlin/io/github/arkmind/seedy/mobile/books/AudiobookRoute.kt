@@ -147,7 +147,8 @@ fun AudiobookRoute() {
                             // Reading takes over from listening: the place is kept for when they come back to it.
                             audio.pause()
                             nav.back()
-                            nav.go(Route.Reader(e.id))
+                            val percent = if (book.duration > 0) kotlin.math.round(pos / book.duration * 1000) / 10 else 0.0
+                            nav.go(Route.Reader(e.id, percent))
                         }))
                     }
                     add(MenuEntry(BookIcons.Stop, t("Stop playback"), line = true, run = { audio.stop(); nav.back() }))

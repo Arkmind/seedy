@@ -37,7 +37,6 @@ enum class ReaderLayout(val key: String) { One("one"), Two("two"), Scroll("scrol
 enum class Fit(val key: String) { Screen("screen"), Width("width") }
 enum class Direction(val key: String) { Ltr("ltr"), Rtl("rtl") }
 
-data class Bookmark(val cfi: String, val page: Int, val label: String, val at: Long)
 
 data class EpubSettings(
     val theme: PageTheme = PageTheme.Dark,
