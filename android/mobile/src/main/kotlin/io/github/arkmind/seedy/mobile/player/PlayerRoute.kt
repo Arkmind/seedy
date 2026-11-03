@@ -53,11 +53,11 @@ import java.util.UUID
 
 /** Boards "Android · Player" and its panels: plays [id] full screen, sideways. */
 @Composable
-fun PlayerRoute(id: UUID) {
+fun PlayerRoute(id: UUID, startTicks: Long? = null) {
     val session = currentSession()
     val context = LocalContext.current
     val nav = LocalMobileNav.current
-    val vm = viewModel { PlayerViewModel(context, session, id) }
+    val vm = viewModel { PlayerViewModel(context, session, id, startTicks) }
     val player = vm.controller
     val state by player.state.collectAsStateWithLifecycle()
     val activity = LocalActivity.current as? ComponentActivity

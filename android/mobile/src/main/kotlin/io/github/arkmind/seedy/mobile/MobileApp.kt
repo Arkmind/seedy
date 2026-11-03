@@ -293,7 +293,8 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                 entry<Route.LiveTv> { LiveTvRoute() }
                 entry<Route.Settings> { WithTabBar(tabs, tab, nav, reserve = true) { SettingsRoute(appVersion) } }
                 entry<Route.SettingsPage> { SettingsPageRoute(it.page, appVersion) }
-                entry<Route.Player> { PlayerRoute(it.id) }
+                entry<Route.History> { WithTabBar(tabs, tab, nav, reserve = true) { io.github.arkmind.seedy.mobile.history.HistoryRoute() } }
+                entry<Route.Player> { PlayerRoute(it.id, it.startTicks) }
                 entry<Route.SeerrTitle> { WithTabBar(tabs, tab, nav, reserve = true) { SeerrTitleRoute(it.mediaType, it.tmdbId) } }
                 entry<Route.SeerrTitles> { WithTabBar(tabs, tab, nav, reserve = true) { SeerrTitlesRoute(it.kind) } }
                 entry<Route.MediaRequestsSearch> { WithTabBar(tabs, tab, nav, reserve = true) { io.github.arkmind.seedy.mobile.requests.MediaSearchRoute(it.music) } }

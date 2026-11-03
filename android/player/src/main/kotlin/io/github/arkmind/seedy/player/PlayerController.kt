@@ -204,8 +204,8 @@ class PlayerController(private val context: Context, private val session: UserSe
         })
     }
 
-    /** Starts [id] where the person left it (or from the start once watched). */
-    fun open(id: UUID) {
+    /** Starts [id] where the person left it (or from the start once watched), or at [startTicks] when given. */
+    fun open(id: UUID, startTicks: Long? = null) {
         scope.launch {
             if (!placed) {
                 autoBitrate = Network.autoBitrate(device, Network.place(context, session), session.user.policy?.remoteClientBitrateLimit ?: 0)
@@ -220,17 +220,17 @@ class PlayerController(private val context: Context, private val session: UserSe
                 }
             }.getOrNull()
             if (loaded == null) return@launch _state.update { it.copy(loading = false, problem = "network") }
-            start(loaded)
+            start(loaded, startTicks)
             if (loaded.type == BaseItemKind.TV_CHANNEL) followProgram(loaded.id)
         }
     }
 
-    private suspend fun start(it: BaseItemDto) {
+    private suspend fun start(it: BaseItemDto, startTicks: Long? = null) {
         item = it
         started = false
         skipped.clear()
         _state.update { s -> PlayerState(item = it, quality = s.quality, speed = s.speed, subtitleOffsetMs = s.subtitleOffsetMs) }
-        val resumeTicks = if (it.userData?.played == true) 0L else it.userData?.playbackPositionTicks ?: 0L
+        val resumeTicks = startTicks ?: if (it.userData?.played == true) 0L else it.userData?.playbackPositionTicks ?: 0L
         val source = it.mediaSources?.firstOrNull()
         val (audio, subtitle) = keptPicks(it, source)
         val opts = StreamOptions(

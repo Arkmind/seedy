@@ -19,7 +19,10 @@ sealed interface Route {
     data object Settings : Route
     /** A settings page: "profile", "home", "playback", "subtitles", "display", "gestures", "about"… */
     data class SettingsPage(val page: String) : Route
-    data class Player(val id: UUID) : Route
+    /** Viewing history (web History board, built with the settings kit). */
+    data object History : Route
+    /** [startTicks] starts there instead of where the person left off (0: from the beginning). */
+    data class Player(val id: UUID, val startTicks: Long? = null) : Route
     /** A title that's on Seerr but not on the server (search, Discover…). */
     data class SeerrTitle(val mediaType: String, val tmdbId: Int) : Route
     /** A Discover row's "See all" (a [io.github.arkmind.seedy.core.requests.TitlesKind] key). */

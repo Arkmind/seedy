@@ -200,6 +200,7 @@ data class SettingsNav(
     val open: (String) -> Unit = {},
     val requests: () -> Unit = {},
     val admin: () -> Unit = {},
+    val history: () -> Unit = {},
 )
 
 /**
@@ -434,11 +435,12 @@ fun BoardSwitch(on: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = tru
     }
 }
 
+/** A setting that's on or off; [modifier] goes on the whole row (a library being moved). */
 @Composable
-fun SwitchRow(name: String, help: String?, on: Boolean, device: Boolean = false, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
+fun SwitchRow(name: String, help: String?, on: Boolean, device: Boolean = false, enabled: Boolean = true, modifier: Modifier = Modifier, onChange: (Boolean) -> Unit) {
     val label = remember { CssBox() }
     Row(
-        Modifier.tap(role = Role.Switch, enabled = enabled) { onChange(!on) }.settingsRow(label),
+        modifier.tap(role = Role.Switch, enabled = enabled) { onChange(!on) }.settingsRow(label),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
