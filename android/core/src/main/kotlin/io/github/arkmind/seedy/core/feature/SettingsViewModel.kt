@@ -26,6 +26,7 @@ import io.github.arkmind.seedy.core.settings.ResolvedStyle
 import io.github.arkmind.seedy.core.settings.SettingsActions
 import io.github.arkmind.seedy.core.settings.SettingsState
 import io.github.arkmind.seedy.core.settings.SettingsState.Companion.Keys
+import io.github.arkmind.seedy.core.settings.SystemCaptions
 import io.github.arkmind.seedy.core.settings.CodeState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -105,6 +106,7 @@ class SettingsViewModel(
             serverAddress = session.server.address,
             serverVersion = session.server.version,
             deviceName = deviceName(),
+            captionStyle = if (device.systemCaptionStyle) SystemCaptions.look(core.context, ResolvedStyle.of(device, me?.prefs?.subtitles)) else null,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, SettingsState())
 

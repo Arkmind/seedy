@@ -11,6 +11,7 @@ import org.jellyfin.sdk.model.ClientInfo
 
 /** The app's long-lived parts, created once by the Application. */
 class SeedyCore(context: Context, appVersion: String) {
+    val context: Context = context.applicationContext
     val jellyfin = createJellyfin {
         this.context = context.applicationContext
         clientInfo = ClientInfo(name = "Seedy", version = appVersion)

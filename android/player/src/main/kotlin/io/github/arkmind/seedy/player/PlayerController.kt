@@ -26,6 +26,7 @@ import io.github.arkmind.seedy.core.format.Images
 import io.github.arkmind.seedy.core.format.TICKS_PER_SECOND
 import io.github.arkmind.seedy.core.format.episodeTag
 import io.github.arkmind.seedy.core.settings.ResolvedStyle
+import io.github.arkmind.seedy.core.settings.SystemCaptions
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -167,8 +168,14 @@ class PlayerController(private val context: Context, private val session: UserSe
     val seekBackSeconds: Int get() = device.seekBack ?: prefs?.seekBackSeconds ?: 10
     val seekForwardSeconds: Int get() = device.seekForward ?: prefs?.seekForwardSeconds ?: 30
 
-    /** Settings · Subtitles › how they look, here. */
-    val subtitleLook: ResolvedStyle get() = ResolvedStyle.of(device, session.seedy?.prefs?.subtitles)
+    /**
+     * Settings · Subtitles › how they look, here: [now] is this device's settings as they are now (the player's Subtitle
+     * style panel changes them while it plays). Android's caption style replaces Seedy's look when this device follows it.
+     */
+    fun subtitleLook(now: DeviceSettings = DevicePrefs.get(context).current): ResolvedStyle {
+        val base = ResolvedStyle.of(now, session.seedy?.prefs?.subtitles)
+        return if (now.systemCaptionStyle) SystemCaptions.look(context, base) else base
+    }
 
     /** Settings · Gestures and Remote. */
     val settings: DeviceSettings get() = device

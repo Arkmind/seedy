@@ -514,17 +514,20 @@ private fun SubtitlesSection(state: SettingsState, actions: SettingsActions, f: 
                 t("Style"), t("Seedy’s look, or your TV’s caption settings"), listOf(Choice(false, t("Seedy")), Choice(true, t("This TV’s"))), d.systemCaptionStyle,
                 { v -> actions.setDevice { it.copy(systemCaptionStyle = v) } }, device = true, focus = f("style"),
             )
-            TvChoiceRow(t("Size"), null, Choices.sizes(), s.size, { v -> actions.setSubtitleStyle { it.copy(size = v) } }, device = true, focus = f("size"))
-            TvChoiceRow(t("Weight"), null, Choices.weights(), s.weight, { v -> actions.setSubtitleStyle { it.copy(weight = v) } }, device = true)
-            val colors = Choices.colors()
-            TvChoiceRow(
-                t("Text colour"), null, colors.map { it.first }, s.color, { v -> actions.setSubtitleStyle { it.copy(color = v) } }, device = true,
-                dot = Color(colors.firstOrNull { it.first.value == s.color }?.second ?: 0xFFFFFFFF),
-            )
-            TvChoiceRow(t("Background"), null, Choices.backgrounds().map { it.first }, s.background, { v -> actions.setSubtitleStyle { it.copy(background = v) } }, device = true)
-            TvChoiceRow(t("Outline"), null, Choices.outlines(), s.outline, { v -> actions.setSubtitleStyle { it.copy(outline = v) } }, device = true)
+            // The TV's caption style brings its own size, colours, edge and font; only the position stays Seedy's.
+            if (!d.systemCaptionStyle) {
+                TvChoiceRow(t("Size"), null, Choices.sizes(), s.size, { v -> actions.setSubtitleStyle { it.copy(size = v) } }, device = true, focus = f("size"))
+                TvChoiceRow(t("Weight"), null, Choices.weights(), s.weight, { v -> actions.setSubtitleStyle { it.copy(weight = v) } }, device = true)
+                val colors = Choices.colors()
+                TvChoiceRow(
+                    t("Text colour"), null, colors.map { it.first }, s.color, { v -> actions.setSubtitleStyle { it.copy(color = v) } }, device = true,
+                    dot = Color(colors.firstOrNull { it.first.value == s.color }?.second ?: 0xFFFFFFFF),
+                )
+                TvChoiceRow(t("Background"), null, Choices.backgrounds().map { it.first }, s.background, { v -> actions.setSubtitleStyle { it.copy(background = v) } }, device = true)
+                TvChoiceRow(t("Outline"), null, Choices.outlines(), s.outline, { v -> actions.setSubtitleStyle { it.copy(outline = v) } }, device = true)
+            }
             TvChoiceRow(t("Position"), null, Choices.positions(), s.position, { v -> actions.setSubtitleStyle { it.copy(position = v) } }, device = true)
-            TvChoiceRow(t("Font"), null, Choices.fonts(), s.font, { v -> actions.setSubtitleStyle { it.copy(font = v) } }, device = true)
+            if (!d.systemCaptionStyle) TvChoiceRow(t("Font"), null, Choices.fonts(), s.font, { v -> actions.setSubtitleStyle { it.copy(font = v) } }, device = true)
 
             TvSectionTitle(t("Rendering"))
             TvChoiceRow(t("Burn subtitles in"), t("Auto burns in picture subtitles only when needed"), Choices.burnIns(), d.burnIn, { v -> actions.setDevice { it.copy(burnIn = v) } }, device = true)

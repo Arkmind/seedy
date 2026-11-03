@@ -80,6 +80,8 @@ data class SettingsState(
     val password: PasswordForm = PasswordForm(),
     /** Without Seedy, the language is this device's. */
     val deviceLanguage: String? = null,
+    /** Android's caption style, when this device follows it (Subtitles › Use your phone's caption style). */
+    val captionStyle: ResolvedStyle? = null,
 ) {
     val custom: Map<String, JsonElement> get() = prefs.custom
     fun customBool(key: String, default: Boolean): Boolean = custom[key]?.let { runCatching { it.jsonPrimitive.booleanOrNull }.getOrNull() } ?: default
@@ -87,7 +89,7 @@ data class SettingsState(
     fun customString(key: String): String? = custom[key]?.let { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }
 
     val playback: PlaybackPrefs get() = prefs.playback
-    val style: ResolvedStyle get() = ResolvedStyle.of(device, prefs.subtitles)
+    val style: ResolvedStyle get() = captionStyle ?: ResolvedStyle.of(device, prefs.subtitles)
     val language: String get() = (if (seedy) customString(Keys.Language) else deviceLanguage) ?: "auto"
     val backdrops: Boolean get() = customBool(Keys.Backdrops, true)
 

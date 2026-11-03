@@ -39,7 +39,9 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.compose.ContentFrame
+import io.github.arkmind.seedy.core.feature.SettingsViewModel
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.ui.theme.LocalCore
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.parts.PrimaryButton
 import io.github.arkmind.seedy.player.PlayerViewModel
@@ -60,6 +62,11 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null) {
     val vm = viewModel { PlayerViewModel(context, session, id, startTicks) }
     val player = vm.controller
     val state by player.state.collectAsStateWithLifecycle()
+    val core = checkNotNull(LocalCore.current)
+    // This phone's settings as they change: the Subtitle style panel changes the look while the video plays.
+    val device by core.device.flow.collectAsStateWithLifecycle()
+    val settings = viewModel { SettingsViewModel(core, session) }
+    val settingsState by settings.state.collectAsStateWithLifecycle()
     val activity = LocalActivity.current as? ComponentActivity
     val scope = rememberCoroutineScope()
 
@@ -107,6 +114,7 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null) {
     BackHandler {
         when {
             state.problem != null -> nav.back()
+            panel == PlayerPanel.Style -> panel = PlayerPanel.Tracks
             panel != null -> panel = null
             locked -> controls = true
             else -> nav.back()
@@ -127,7 +135,7 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null) {
             else -> 18.sp
         },
         lift = subtitlePrefs?.lift ?: true,
-        look = player.subtitleLook,
+        look = player.subtitleLook(device),
         doubleTapSeek = player.settings.doubleTapSeek,
         actions = PlayerActions(
             onBack = { nav.back() },
@@ -162,10 +170,11 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null) {
                     onAudio = player::selectAudio,
                     onSubtitle = player::selectSubtitle,
                     onOffset = player::setSubtitleOffset,
-                    onStyle = {},
+                    onStyle = { settings.load("subtitles"); panel = PlayerPanel.Style },
                     onClose = { panel = null },
                 )
                 PlayerPanel.Speed -> SpeedPanel(state.speed, onSpeed = { player.setSpeed(it); panel = null }, onClose = { panel = null })
+                PlayerPanel.Style -> StylePanel(settingsState, settings, onBack = { panel = PlayerPanel.Tracks }, onClose = { panel = null })
                 null -> Unit
             }
         },

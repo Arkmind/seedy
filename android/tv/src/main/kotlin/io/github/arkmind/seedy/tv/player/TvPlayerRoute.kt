@@ -159,7 +159,7 @@ fun TvPlayerRoute(id: UUID) {
             seekBack = player.seekBackSeconds,
             seekForward = player.seekForwardSeconds,
             subtitleSize = subtitleSize,
-            look = player.subtitleLook,
+            look = player.subtitleLook(),
             panelOpen = tool != null,
             focus = focus,
             actions = TvPlayerActions(

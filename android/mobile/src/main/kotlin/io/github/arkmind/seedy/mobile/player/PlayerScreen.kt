@@ -80,7 +80,7 @@ class PlayerActions(
     val onPanel: (PlayerPanel?) -> Unit,
 )
 
-enum class PlayerPanel { Episodes, Tracks, Speed }
+enum class PlayerPanel { Episodes, Tracks, Speed, Style }
 
 /** The board's bottom actions. */
 private object PlayerIcons {

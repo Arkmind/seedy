@@ -38,13 +38,16 @@ import kotlin.math.roundToInt
 @Composable
 fun SubtitleLine(text: String, style: ResolvedStyle, size: TextUnit, modifier: Modifier = Modifier, preview: Boolean = true, boardPx: Float? = null) {
     val density = LocalDensity.current
-    val px = with(density) { size.toPx() }
+    // Android's caption style scales the text itself (its 50 % … 200 %).
+    val scaled = style.system?.let { size * it.scale } ?: size
+    val px = with(density) { scaled.toPx() }
+    val edge = Color(style.edgeArgb())
     // One board pixel: a dp on the phone boards, half of one on the TV boards.
     val u = boardPx ?: density.density
     val base = BaseText.copy(
-        fontSize = size,
+        fontSize = scaled,
         fontWeight = FontWeight(if (style.weight == "bold") 800 else 600),
-        fontFamily = when (style.font) {
+        fontFamily = style.system?.typeface?.let { FontFamily(it) } ?: when (style.font) {
             "system" -> FontFamily.Default
             "print" -> FontFamily.Serif
             "typewriter", "console" -> FontFamily.Monospace
@@ -61,18 +64,18 @@ fun SubtitleLine(text: String, style: ResolvedStyle, size: TextUnit, modifier: M
     val layers: List<TextStyle> = when (style.outline) {
         "none" -> listOf(base)
         "outline" -> listOf(
-            base.copy(color = Color.Black, background = Color.Transparent, drawStyle = Stroke(width = px * 0.11f, join = StrokeJoin.Round)),
+            base.copy(color = edge, background = Color.Transparent, drawStyle = Stroke(width = px * 0.11f, join = StrokeJoin.Round)),
             base.copy(background = Color.Transparent),
         )
         "raised" -> listOf(
             base.copy(shadow = Shadow(Color.White.copy(alpha = 0.4f), Offset(-0.035f * px, -0.035f * px), 0.01f)),
-            base.copy(background = Color.Transparent, shadow = Shadow(Color.Black.copy(alpha = 0.75f), Offset(0.09f * px, 0.09f * px), blur(0.03f * px))),
-            base.copy(background = Color.Transparent, shadow = Shadow(Color.Black, Offset(0.045f * px, 0.045f * px), 0.01f)),
+            base.copy(background = Color.Transparent, shadow = Shadow(edge.copy(alpha = 0.75f), Offset(0.09f * px, 0.09f * px), blur(0.03f * px))),
+            base.copy(background = Color.Transparent, shadow = Shadow(edge, Offset(0.045f * px, 0.045f * px), 0.01f)),
         )
         // The Subtitles board's preview shadow is lighter than the player's.
         else -> listOf(
-            base.copy(shadow = Shadow(Color.Black, Offset.Zero, blur(2f * u))),
-            base.copy(background = Color.Transparent, shadow = Shadow(Color.Black.copy(alpha = 0.9f), Offset(0f, 2f * u), blur((if (preview) 4f else 8f) * u))),
+            base.copy(shadow = Shadow(edge, Offset.Zero, blur(2f * u))),
+            base.copy(background = Color.Transparent, shadow = Shadow(edge.copy(alpha = 0.9f), Offset(0f, 2f * u), blur((if (preview) 4f else 8f) * u))),
         )
     }
     Box(modifier.cssLines(px, 1.3f), contentAlignment = Alignment.TopCenter) {

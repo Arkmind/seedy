@@ -44,60 +44,72 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 @Composable
 fun SubtitlesPage(state: SettingsState, actions: SettingsActions, nav: SettingsNav) {
     val sheet = rememberSheet()
+    SettingsPage(t("Subtitles"), t("When subtitles turn on by themselves, and how they look on this phone."), nav.back, overlay = { SheetHost(sheet) }) {
+        SubtitlesContent(state, actions, sheet)
+        SaveLine(state.saving, state.error)
+    }
+}
+
+/**
+ * The Subtitles page under its title, for a [CssColumn] (the page, and the player's Subtitle style panel): the preview,
+ * when they show, how they look (Android's caption style leaves only the position to pick), how they're drawn.
+ */
+@Composable
+fun SubtitlesContent(state: SettingsState, actions: SettingsActions, sheet: SheetState) {
     val s = state.style
     val d = state.device
-    SettingsPage(t("Subtitles"), t("When subtitles turn on by themselves, and how they look on this phone."), nav.back, overlay = { SheetHost(sheet) }) {
-        Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
-            SubtitlePreview(s, Modifier.fillMaxWidth(), radius = 16.dp, textSizes = PhonePreviewSizes, side = 10.dp, barInset = 12.dp, barHeight = 4.dp) {
-                SText(
-                    t("Preview"),
-                    Modifier.padding(start = 10.dp, top = 10.dp).clip(CircleShape).background(Color(0xBF0E0E0E)).padding(horizontal = 9.dp, vertical = 3.dp),
-                    size = 10.sp, weight = 800, tracking = 0.1f, color = SeedyColors.TextHero, uppercase = true,
-                )
-            }
+    Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
+        SubtitlePreview(s, Modifier.fillMaxWidth(), radius = 16.dp, textSizes = PhonePreviewSizes, side = 10.dp, barInset = 12.dp, barHeight = 4.dp) {
+            SText(
+                t("Preview"),
+                Modifier.padding(start = 10.dp, top = 10.dp).clip(CircleShape).background(Color(0xBF0E0E0E)).padding(horizontal = 9.dp, vertical = 3.dp),
+                size = 10.sp, weight = 800, tracking = 0.1f, color = SeedyColors.TextHero, uppercase = true,
+            )
         }
+    }
 
-        if (state.config != null) {
-            SectionTitle(t("When to show them"))
-            val accent = LocalAccent.current
-            Card(Modifier.padding(horizontal = 16.dp)) {
-                Choices.modes().forEachIndexed { i, m ->
-                    if (i > 0) RowLine()
-                    val on = m.value == state.subtitleMode
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = 58.dp).tap(role = Role.RadioButton) { actions.setSubtitleMode(m.value) }.padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    ) {
-                        Box(Modifier.size(22.dp).border(2.dp, if (on) accent else Color(0xFF5A5A5A), CircleShape), contentAlignment = Alignment.Center) {
-                            if (on) Box(Modifier.size(10.dp).background(accent, CircleShape))
-                        }
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            SText(m.name, size = 14.sp, weight = 700, color = SeedyColors.White)
-                            SText(m.help, size = 12.sp, color = SeedyColors.Text3)
-                        }
+    if (state.config != null) {
+        SectionTitle(t("When to show them"))
+        val accent = LocalAccent.current
+        Card(Modifier.padding(horizontal = 16.dp)) {
+            Choices.modes().forEachIndexed { i, m ->
+                if (i > 0) RowLine()
+                val on = m.value == state.subtitleMode
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 58.dp).tap(role = Role.RadioButton) { actions.setSubtitleMode(m.value) }.padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Box(Modifier.size(22.dp).border(2.dp, if (on) accent else Color(0xFF5A5A5A), CircleShape), contentAlignment = Alignment.Center) {
+                        if (on) Box(Modifier.size(10.dp).background(accent, CircleShape))
                     }
-                }
-            }
-            Section(null) {
-                row {
-                    PickRow(t("Language"), t("Used by Smart and Always"), state.subtitleLanguage) {
-                        actions.loadLanguages()
-                        val options = listOf(Choice("", t("Any"))) + state.languages
-                        sheet.open(t("Language"), options, state.config?.subtitleLanguagePreference.orEmpty()) { v ->
-                            actions.setConfig { it.copy(subtitleLanguagePreference = v.ifEmpty { null }) }
-                        }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        SText(m.name, size = 14.sp, weight = 700, color = SeedyColors.White)
+                        SText(m.help, size = 12.sp, color = SeedyColors.Text3)
                     }
                 }
             }
         }
-
-        Section(t("How they look"), t("Styled subtitles (ASS and SSA) and picture subtitles (PGS, VobSub) keep their own look.")) {
+        Section(null) {
             row {
-                SwitchRow(t("Use your phone’s caption style"), t("Follow Settings › Accessibility › Caption preferences"), d.systemCaptionStyle, device = true) { v ->
-                    actions.setDevice { it.copy(systemCaptionStyle = v) }
+                PickRow(t("Language"), t("Used by Smart and Always"), state.subtitleLanguage) {
+                    actions.loadLanguages()
+                    val options = listOf(Choice("", t("Any"))) + state.languages
+                    sheet.open(t("Language"), options, state.config?.subtitleLanguagePreference.orEmpty()) { v ->
+                        actions.setConfig { it.copy(subtitleLanguagePreference = v.ifEmpty { null }) }
+                    }
                 }
             }
+        }
+    }
+
+    Section(t("How they look"), t("Styled subtitles (ASS and SSA) and picture subtitles (PGS, VobSub) keep their own look.")) {
+        row {
+            SwitchRow(t("Use your phone’s caption style"), t("Follow Settings › Accessibility › Caption preferences"), d.systemCaptionStyle, device = true) { v ->
+                actions.setDevice { it.copy(systemCaptionStyle = v) }
+            }
+        }
+        if (!d.systemCaptionStyle) {
             row { SegRow(t("Size"), null, Choices.sizes(), s.size, device = true) { v -> actions.setSubtitleStyle { it.copy(size = v) } } }
             row { SegRow(t("Weight"), null, Choices.weights(), s.weight, device = true) { v -> actions.setSubtitleStyle { it.copy(weight = v) } } }
             row {
@@ -119,23 +131,22 @@ fun SubtitlesPage(state: SettingsState, actions: SettingsActions, nav: SettingsN
                 }
             }
             row { SegRow(t("Outline"), null, Choices.outlines(), s.outline, device = true) { v -> actions.setSubtitleStyle { it.copy(outline = v) } } }
-            row { SegRow(t("Position"), null, Choices.positions(), s.position, device = true) { v -> actions.setSubtitleStyle { it.copy(position = v) } } }
         }
+        row { SegRow(t("Position"), null, Choices.positions(), s.position, device = true) { v -> actions.setSubtitleStyle { it.copy(position = v) } } }
+    }
 
-        Section(t("Rendering"), t("Burning subtitles into the picture costs the server a lot. Leave these alone unless subtitles go out of sync.")) {
-            row {
-                val options = Choices.burnIns()
-                PickRow(t("Burn subtitles in"), t("Auto burns in picture subtitles only when needed"), Choices.label(options, d.burnIn), device = true) {
-                    sheet.open(t("Burn subtitles in"), options, d.burnIn) { v -> actions.setDevice { it.copy(burnIn = v) } }
-                }
-            }
-            row {
-                SwitchRow(t("Show picture subtitles on this phone"), t("Draw PGS and VobSub here instead of on the server"), d.pictureSubtitles, device = true) { v ->
-                    actions.setDevice { it.copy(pictureSubtitles = v) }
-                }
+    Section(t("Rendering"), t("Burning subtitles into the picture costs the server a lot. Leave these alone unless subtitles go out of sync.")) {
+        row {
+            val options = Choices.burnIns()
+            PickRow(t("Burn subtitles in"), t("Auto burns in picture subtitles only when needed"), Choices.label(options, d.burnIn), device = true) {
+                sheet.open(t("Burn subtitles in"), options, d.burnIn) { v -> actions.setDevice { it.copy(burnIn = v) } }
             }
         }
-        SaveLine(state.saving, state.error)
+        row {
+            SwitchRow(t("Show picture subtitles on this phone"), t("Draw PGS and VobSub here instead of on the server"), d.pictureSubtitles, device = true) { v ->
+                actions.setDevice { it.copy(pictureSubtitles = v) }
+            }
+        }
     }
 }
 
