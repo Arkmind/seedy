@@ -25,10 +25,13 @@ import { SelectionBar, useSelection } from './library-select';
 import { manageChanged } from './manage/host';
 import { BooksLibrary } from '../books/BooksLibrary';
 import { MusicLibrary } from '../music/MusicLibrary';
+import { PhotosLibrary } from '../photos/PhotosLibrary';
+import { isPhotoLibrary } from '../photos/api';
 
 /* ───────── Tabs, sorts and filters ───────── */
 
-export type TabId = 'all' | 'suggestions' | 'favorites' | 'collections' | 'genres' | 'albums' | 'artists' | 'overview' | 'songs' | 'playlists' | 'folders';
+export type TabId = 'all' | 'suggestions' | 'favorites' | 'collections' | 'genres' | 'albums' | 'artists' | 'overview' | 'songs' | 'playlists' | 'folders'
+  | 'timeline' | 'videos' | 'cameras';
 interface Tab { id: TabId; label: string }
 
 export function tabsFor(ct?: string): Tab[] {
@@ -39,6 +42,11 @@ export function tabsFor(ct?: string): Tab[] {
     case 'music': return [
       { id: 'overview', label: 'Overview' }, { id: 'albums', label: 'Albums' }, { id: 'artists', label: 'Artists' }, { id: 'songs', label: 'Songs' },
       { id: 'playlists', label: 'Playlists' }, { id: 'genres', label: 'Genres' }, { id: 'folders', label: 'Folders' }
+    ];
+    // Photos libraries (Jellyfin's "Home videos and photos") have the Photos boards' tabs (screens/photos).
+    case 'photos': case 'homevideos': return [
+      { id: 'timeline', label: 'Timeline' }, { id: 'folders', label: 'Folders' }, { id: 'videos', label: 'Videos' },
+      { id: 'favorites', label: 'Favorites' }, { id: 'cameras', label: 'Cameras' }
     ];
     default: return [{ id: 'all', label: 'All' }];
   }
@@ -52,6 +60,7 @@ export function typesFor(ct?: string): string[] | undefined {
     case 'boxsets': return ['BoxSet'];
     case 'musicvideos': return ['MusicVideo'];
     case 'homevideos': return ['Video', 'Photo'];
+    case 'photos': return ['Photo', 'PhotoAlbum'];
     case 'playlists': return ['Playlist'];
     case 'books': return ['Book'];
     default: return ['Movie', 'Series', 'Video', 'MusicVideo', 'BoxSet'];
@@ -175,6 +184,7 @@ export function Library({ id }: { id: string }) {
   if (view.Type !== 'CollectionFolder' && view.Type !== 'UserView' && view.Type !== 'Folder' && !known) return <Redirect to={`/details/${view.Id}`} />;
   if (view.CollectionType === 'books') return <BooksLibrary view={view} />;
   if (view.CollectionType === 'music') return <MusicLibrary view={view} />;
+  if (isPhotoLibrary(view.CollectionType)) return <PhotosLibrary view={view} />;
   return <LibraryView view={view} />;
 }
 

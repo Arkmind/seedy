@@ -107,6 +107,7 @@ function searchPlaceholder(views: Parameters<typeof currentView>[0], active: Hea
   // In a music or books library the box says what it finds there (Music and Books library boards).
   if (ct === 'music') return t('Search artists, albums and songs');
   if (ct === 'books') return t('Search books, authors and series');
+  if (ct === 'photos' || ct === 'homevideos') return t('Search photos, folders and dates');
   return undefined;
 }
 
