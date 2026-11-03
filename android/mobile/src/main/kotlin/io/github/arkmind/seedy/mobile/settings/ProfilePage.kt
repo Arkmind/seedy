@@ -129,9 +129,12 @@ fun ProfilePage(state: SettingsState, actions: SettingsActions, nav: SettingsNav
             }
         }
 
-        Section(t("Devices")) {
-            row {
-                PickRow(t("Signed in on"), t("Sign out the ones you don’t use any more"), state.devices?.let { tn(it, "{n} device", "{n} devices") } ?: "") {}
+        // Jellyfin lets only admins list and sign out devices.
+        if (state.isAdmin) {
+            Section(t("Devices")) {
+                row {
+                    PickRow(t("Signed in on"), t("Sign out the ones you don’t use any more"), state.devices?.let { tn(it, "{n} device", "{n} devices") } ?: "") { nav.open("devices") }
+                }
             }
         }
 

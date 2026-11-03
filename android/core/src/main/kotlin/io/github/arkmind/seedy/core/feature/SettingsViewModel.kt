@@ -53,7 +53,6 @@ import org.jellyfin.sdk.api.client.extensions.authenticationApi
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.localizationApi
-import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.api.client.extensions.userViewApi
 import org.jellyfin.sdk.model.FileInfo
@@ -126,9 +125,9 @@ class SettingsViewModel(
         }
         if ("profile" in all) {
             session.seedyApi?.let { api -> io { api.passwordState().changedAt?.let { d -> extras.update { it.copy(passwordChanged = changedLabel(d)) } } } }
-            io {
-                val sessions = session.api.sessionApi.getSessions().content
-                val n = sessions.filter { it.userId == session.userId }.mapNotNull { it.deviceId }.distinct().size
+            // Jellyfin lets only admins list and remove devices; for everyone else the Devices row stays hidden.
+            if (session.seedy?.isAdmin ?: (session.user.policy?.isAdministrator == true)) io {
+                val n = io.github.arkmind.seedy.core.settings.myDevices(io.github.arkmind.seedy.core.admin.AdminHttp(session.api), session.userId.toString()).size
                 extras.update { it.copy(devices = n) }
             }
         }

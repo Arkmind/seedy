@@ -181,7 +181,7 @@ private val TvIcon = IconDef(1.8f, "M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 
 private val PhoneIcon = IconDef(1.8f, "M9 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z", "M11 18h2")
 private val ComputerIcon = IconDef(1.8f, "M6 5h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z", "M2 19h20")
 
-private fun deviceIcon(kind: DeviceKind): IconDef = when (kind) {
+internal fun deviceIcon(kind: DeviceKind): IconDef = when (kind) {
     DeviceKind.Tv -> TvIcon
     DeviceKind.Phone -> PhoneIcon
     DeviceKind.Computer -> ComputerIcon

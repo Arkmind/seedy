@@ -8,6 +8,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.feature.SettingsViewModel
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.settings.MyDevicesViewModel
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.ui.components.NotYet
 import io.github.arkmind.seedy.ui.theme.LocalCore
@@ -15,7 +16,7 @@ import io.github.arkmind.seedy.ui.theme.currentSession
 
 /**
  * One settings page (boards "Android · Settings · …"): [page] is "profile", "home", "playback", "advanced",
- * "subtitles", "display", "gestures" or "about"; "libraries" is Home screen opened on its libraries.
+ * "subtitles", "display", "gestures", "about" or "devices"; "libraries" is Home screen opened on its libraries.
  */
 @Composable
 fun SettingsPageRoute(page: String, appVersion: String) {
@@ -37,6 +38,11 @@ fun SettingsPageRoute(page: String, appVersion: String) {
         "display" -> DisplayPage(state, vm, to)
         "gestures" -> GesturesPage(state, vm, to)
         "about" -> AboutPage(state, appVersion, to)
+        "devices" -> {
+            val devices = viewModel { MyDevicesViewModel(session) }
+            val list by devices.state.collectAsStateWithLifecycle()
+            MyDevicesPage(list, devices, to)
+        }
         else -> NotYet(t("Settings"))
     }
 }
