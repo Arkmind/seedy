@@ -216,7 +216,7 @@ private fun HistoryRow(e: HistoryEntry, recent: Boolean, nav: HistoryNav, onMore
             }
             SText(HistoryFormat.sub(e), size = 13.sp, color = if (e.hidden) Faint else SeedyColors.Text3, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(3.dp))
-            SText(HistoryFormat.state(e), size = 12.sp, weight = 600, color = if (e.hidden) SeedyColors.Text3 else SeedyColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            SText(HistoryFormat.state(e), size = 12.sp, weight = 600, color = if (e.hidden) SeedyColors.Text3 else SeedyColors.Text, maxLines = 2)
             SText(HistoryFormat.whenOf(e, recent), size = 12.sp, color = if (e.hidden) Faint else SeedyColors.Text3, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Column {

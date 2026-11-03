@@ -75,7 +75,12 @@ private val Amber = Color(0xFFFFC98A)
 /** "about 0.8 GB" for the whole video, or "about 2.3 GB an hour" when its length isn't known (live TV). */
 private fun estimate(c: DataChoice, seconds: Double?): String {
     val g = c.bitrate * (seconds ?: 3600.0) / 8 / 1e9
-    val size = if (g < 10) formatNumber(BigDecimal(g).setScale(1, RoundingMode.HALF_UP)) else formatNumber(g.roundToInt())
+    // "Up to" never rounds up.
+    val size = when {
+        g < 10 -> formatNumber(BigDecimal(g).setScale(1, if (c.upTo) RoundingMode.FLOOR else RoundingMode.HALF_UP))
+        c.upTo -> formatNumber(g.toInt())
+        else -> formatNumber(g.roundToInt())
+    }
     return when {
         seconds == null && c.upTo -> t("up to {size} GB an hour", "size" to size)
         seconds == null -> t("about {size} GB an hour", "size" to size)

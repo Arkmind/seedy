@@ -169,7 +169,7 @@ fun PhonePlayerScreen(
             Controls(state, seekBack, seekForward, actions)
         }
         shownSwipe?.let { SwipeOverlay(it) }
-        if (!controls && state.skip != null && !locked) {
+        if (!controls && state.skip != null && !locked && shownSwipe == null) {
             Box(Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 24.dp)) { SkipButton(state, actions.onSkip) }
         }
         panel()

@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.mobile
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -19,7 +20,7 @@ import org.robolectric.annotation.GraphicsMode
 class LiveTvShots {
     @get:Rule val compose = createComposeRule()
 
-    private fun shot(name: String, view: LiveView) {
+    private fun shot(name: String, view: LiveView, over: @Composable () -> Unit = {}) {
         compose.setContent {
             SeedyTheme {
                 LiveTvScreen(
@@ -27,6 +28,7 @@ class LiveTvShots {
                     onView = {}, onBack = {}, onChannelNumber = {}, onFavoritesOnly = {}, onDay = {}, onSelect = { _, _ -> }, onRecord = {},
                     onFavorite = {}, onWatch = {}, onPlayRecording = {}, onTab = {},
                 )
+                over()
             }
         }
         compose.onRoot().captureRoboImage("src/test/screenshots/$name.png")
@@ -35,4 +37,9 @@ class LiveTvShots {
     @Test fun onNow() = shot("AndroidLiveTV", LiveView.OnNow)
 
     @Test fun guide() = shot("AndroidLiveGuide", LiveView.Guide)
+
+    /** No board: the header's # (the web's Channel number box) as a sheet. */
+    @Test fun channelNumber() = shot("AndroidChannelNumber", LiveView.OnNow) {
+        io.github.arkmind.seedy.mobile.livetv.ChannelNumberSheet(LiveSamples.state.channels, {}, {}, initial = "7")
+    }
 }

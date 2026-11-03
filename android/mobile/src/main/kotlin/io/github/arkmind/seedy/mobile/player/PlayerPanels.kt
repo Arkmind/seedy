@@ -225,7 +225,7 @@ fun StylePanel(state: SettingsState, actions: SettingsActions, onBack: () -> Uni
                 }
                 Divider()
                 CssColumn(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
-                    SubtitlesContent(state, actions, sheet)
+                    SubtitlesContent(state, actions, sheet, player = true)
                     Spacer(Modifier.height(20.dp))
                 }
             }

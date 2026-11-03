@@ -52,13 +52,49 @@ fun SubtitlesPage(state: SettingsState, actions: SettingsActions, nav: SettingsN
 
 /**
  * The Subtitles page under its title, for a [CssColumn] (the page, and the player's Subtitle style panel): the preview,
- * when they show, how they look (Android's caption style leaves only the position to pick), how they're drawn.
+ * when they show, how they look (Android's caption style leaves only the position to pick), how they're drawn. In the
+ * [player], how they look leads and there's no preview.
  */
 @Composable
-fun SubtitlesContent(state: SettingsState, actions: SettingsActions, sheet: SheetState) {
+fun SubtitlesContent(state: SettingsState, actions: SettingsActions, sheet: SheetState, player: Boolean = false) {
     val s = state.style
     val d = state.device
-    Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
+    // In the player, the look comes first and the video behind stands in for the preview.
+    val look: @Composable () -> Unit = {
+        Section(t("How they look"), t("Styled subtitles (ASS and SSA) and picture subtitles (PGS, VobSub) keep their own look.")) {
+            row {
+                SwitchRow(t("Use your phone’s caption style"), t("Follow Settings › Accessibility › Caption preferences"), d.systemCaptionStyle, device = true) { v ->
+                    actions.setDevice { it.copy(systemCaptionStyle = v) }
+                }
+            }
+            if (!d.systemCaptionStyle) {
+                row { SegRow(t("Size"), null, Choices.sizes(), s.size, device = true) { v -> actions.setSubtitleStyle { it.copy(size = v) } } }
+                row { SegRow(t("Weight"), null, Choices.weights(), s.weight, device = true) { v -> actions.setSubtitleStyle { it.copy(weight = v) } } }
+                row {
+                    val fonts = Choices.fonts()
+                    PickRow(t("Font"), null, Choices.label(fonts, s.font), device = true) {
+                        sheet.open(t("Font"), fonts, s.font) { v -> actions.setSubtitleStyle { it.copy(font = v) } }
+                    }
+                }
+                row {
+                    val colors = Choices.colors()
+                    SwatchRow(t("Text colour"), colors.firstOrNull { it.first.value == s.color }?.first?.label, colors.map { Swatch(it.first.value, it.first.label, it.second) }, s.color, device = true) { v ->
+                        actions.setSubtitleStyle { it.copy(color = v) }
+                    }
+                }
+                row {
+                    val bgs = Choices.backgrounds()
+                    SwatchRow(t("Background"), bgs.firstOrNull { it.first.value == s.background }?.first?.label, bgs.map { Swatch(it.first.value, it.first.label, it.second.takeIf { v -> v != 0L }) }, s.background, device = true) { v ->
+                        actions.setSubtitleStyle { it.copy(background = v) }
+                    }
+                }
+                row { SegRow(t("Outline"), null, Choices.outlines(), s.outline, device = true) { v -> actions.setSubtitleStyle { it.copy(outline = v) } } }
+            }
+            row { SegRow(t("Position"), null, Choices.positions(), s.position, device = true) { v -> actions.setSubtitleStyle { it.copy(position = v) } } }
+        }
+    }
+    if (player) look()
+    if (!player) Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
         SubtitlePreview(s, Modifier.fillMaxWidth(), radius = 16.dp, textSizes = PhonePreviewSizes, side = 10.dp, barInset = 12.dp, barHeight = 4.dp) {
             SText(
                 t("Preview"),
@@ -103,37 +139,7 @@ fun SubtitlesContent(state: SettingsState, actions: SettingsActions, sheet: Shee
         }
     }
 
-    Section(t("How they look"), t("Styled subtitles (ASS and SSA) and picture subtitles (PGS, VobSub) keep their own look.")) {
-        row {
-            SwitchRow(t("Use your phone’s caption style"), t("Follow Settings › Accessibility › Caption preferences"), d.systemCaptionStyle, device = true) { v ->
-                actions.setDevice { it.copy(systemCaptionStyle = v) }
-            }
-        }
-        if (!d.systemCaptionStyle) {
-            row { SegRow(t("Size"), null, Choices.sizes(), s.size, device = true) { v -> actions.setSubtitleStyle { it.copy(size = v) } } }
-            row { SegRow(t("Weight"), null, Choices.weights(), s.weight, device = true) { v -> actions.setSubtitleStyle { it.copy(weight = v) } } }
-            row {
-                val fonts = Choices.fonts()
-                PickRow(t("Font"), null, Choices.label(fonts, s.font), device = true) {
-                    sheet.open(t("Font"), fonts, s.font) { v -> actions.setSubtitleStyle { it.copy(font = v) } }
-                }
-            }
-            row {
-                val colors = Choices.colors()
-                SwatchRow(t("Text colour"), colors.firstOrNull { it.first.value == s.color }?.first?.label, colors.map { Swatch(it.first.value, it.first.label, it.second) }, s.color, device = true) { v ->
-                    actions.setSubtitleStyle { it.copy(color = v) }
-                }
-            }
-            row {
-                val bgs = Choices.backgrounds()
-                SwatchRow(t("Background"), bgs.firstOrNull { it.first.value == s.background }?.first?.label, bgs.map { Swatch(it.first.value, it.first.label, it.second.takeIf { v -> v != 0L }) }, s.background, device = true) { v ->
-                    actions.setSubtitleStyle { it.copy(background = v) }
-                }
-            }
-            row { SegRow(t("Outline"), null, Choices.outlines(), s.outline, device = true) { v -> actions.setSubtitleStyle { it.copy(outline = v) } } }
-        }
-        row { SegRow(t("Position"), null, Choices.positions(), s.position, device = true) { v -> actions.setSubtitleStyle { it.copy(position = v) } } }
-    }
+    if (!player) look()
 
     Section(t("Rendering"), t("Burning subtitles into the picture costs the server a lot. Leave these alone unless subtitles go out of sync.")) {
         row {

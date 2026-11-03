@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.mobile
 
+import io.github.arkmind.seedy.mobile.player.MobileDataSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -114,6 +115,17 @@ class BrowseShots {
     fun filters() = shot("AndroidFilters") {
         LibraryScreen(BrowseSamples.moviesLibrary, LibraryActions(), bottomPadding = 0.dp)
         FilterSheet(BrowseSamples.moviesLibrary.copy(options = BrowseSamples.filterOptions), count = { 12 }, onApply = {}, onDismiss = {})
+    }
+
+    @Test
+    fun mobileData() = shot("AndroidMobileData") {
+        Box(Modifier.fillMaxSize()) {
+            DetailsScreen(BrowseSamples.details, DetailsActions(onMore = {}), canRequest = true, bottomPadding = tabBarHeight())
+            TabBar(Tab.entries, Tab.Home, {}, Modifier.align(Alignment.BottomCenter))
+            MobileDataSheet(
+                Samples.thePass.id, io.github.arkmind.seedy.core.data.DeviceSettings(qualityMobile = 2_000_000), { _, _ -> }, {}, item = Samples.thePass,
+            )
+        }
     }
 
     @Test
