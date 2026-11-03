@@ -22,7 +22,7 @@ import {
 } from './api';
 import { PIcon } from './icons';
 import {
-  FolderCard, FolderGrid, MemoryCard, ROW, SizeSwitch, TabRow, Timeline, countsLine, openPhoto, useTileSize
+  FolderCard, FolderGrid, MemoryCard, rowFor, SizeSwitch, TabRow, Timeline, countsLine, openPhoto, useTileSize
 } from './parts';
 import { PhotoViewer } from './Viewer';
 import { downloadZip } from './zip';
@@ -49,7 +49,7 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
   const camera = loc.query.get('camera');
   const base = `/library/${view.Id}`;
   const [size, setSize] = useTileSize();
-  const row = ROW[size];
+  const row = rowFor(size);
   const managed = useStore(manageChanged);
 
   const counts = useAsync(() => Promise.all([

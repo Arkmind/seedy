@@ -15,7 +15,7 @@ import {
   MEDIA_TYPES, PHOTO_FIELDS, ancestorsOf, dateRange, folderInfo, getMedia, groupByDay, isVideo, subfolders, thumbUrl, type FolderInfo, type PhotoItem
 } from './api';
 import { PIcon } from './icons';
-import { FolderCard, FolderGrid, JustifiedRows, ROW, TabRow, Timeline, countsLine, openPhoto, useTileSize } from './parts';
+import { FolderCard, FolderGrid, JustifiedRows, rowFor, TabRow, Timeline, countsLine, openPhoto, useTileSize } from './parts';
 import { PhotoSelectionBar } from './PhotosLibrary';
 import { PhotoViewer } from './Viewer';
 import { downloadZip } from './zip';
@@ -38,7 +38,7 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
   const show: Show = showParam && ['photos', 'videos', 'favorites'].includes(showParam) ? showParam : 'all';
   const sort = SORTS.find((s) => s.id === loc.query.get('sort')) ?? SORTS[0];
   const [size] = useTileSize();
-  const row = ROW[size];
+  const row = rowFor(size);
   const managed = useStore(manageChanged);
   const user = useStore(userStore);
   const canDownload = !!(user?.Policy as { EnableContentDownloading?: boolean } | undefined)?.EnableContentDownloading;

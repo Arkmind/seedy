@@ -221,4 +221,10 @@ export function countsLine(photos: number, videos: number): string {
   return [photos || !videos ? tn(photos, '{n} photo', '{n} photos') : '', videos ? tn(videos, '{n} video', '{n} videos') : ''].filter(Boolean).join(' · ');
 }
 
+/* A row's height for a tile size; phones take smaller rows so two or three photos share one. */
+export function rowFor(size: TileSize): number {
+  const phone = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 720px)').matches;
+  return Math.round(ROW[size] * (phone ? 0.6 : 1));
+}
+
 export { ROW };
