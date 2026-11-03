@@ -113,7 +113,8 @@ class SignIn(private val sessions: Sessions) {
         when (r.action) {
             ForgotPasswordAction.PIN_CODE -> Forgot.Pin(
                 r.pinFile?.takeIf { it.isNotBlank() },
-                r.pinExpirationDate?.atZone(java.time.ZoneOffset.UTC)?.withZoneSameInstant(java.time.ZoneId.systemDefault())?.toLocalDateTime(),
+                // The SDK gives server times in this device's zone already.
+                r.pinExpirationDate,
             )
             ForgotPasswordAction.IN_NETWORK_REQUIRED -> Forgot.InNetworkRequired
             else -> Forgot.AskAdmin

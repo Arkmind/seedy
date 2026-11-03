@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +25,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -70,9 +75,10 @@ fun HomeScreenPage(state: SettingsState, actions: SettingsActions, nav: Settings
     val sheet = rememberSheet()
     val scroll = rememberScrollState()
     var librariesTop by remember { mutableStateOf<Float?>(null) }
+    val topRoom = with(LocalDensity.current) { (WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 12.dp).toPx() }
     LaunchedEffect(focus, librariesTop != null) {
         val top = librariesTop
-        if (focus == "libraries" && top != null) scroll.animateScrollTo(top.toInt())
+        if (focus == "libraries" && top != null) scroll.animateScrollTo((top - topRoom).toInt().coerceAtLeast(0))
     }
     SettingsPage(t("Home screen"), t("Which rows you see and in what order. Follows your profile to every device."), nav.back, overlay = { SheetHost(sheet) }, scroll = scroll) {
         if (state.seedy) {
@@ -170,7 +176,8 @@ private fun LibraryList(state: SettingsState, actions: SettingsActions, librarie
     val shape = RoundedCornerShape(16.dp)
     // Not clipped: the library being moved grows past the card's edges.
     CssColumn(Modifier.padding(horizontal = 16.dp).fillMaxWidth().background(SeedyColors.Panel, RoundedCornerShape(18.dp))) {
-        shown.forEachIndexed { i, l ->
+        // Keyed, so a row keeps its gesture while it moves past the others.
+        shown.forEachIndexed { i, l -> key(l.id) {
             val lifted = l.id == drag
             if (i > 0 && !lifted) RowLine()
             SwitchRow(
@@ -192,7 +199,7 @@ private fun LibraryList(state: SettingsState, actions: SettingsActions, librarie
                         ) { c, d -> c.consume(); move(d.y) }
                     },
             ) { actions.setLibraryOnHome(l.id, it) }
-        }
+        } }
     }
 }
 
@@ -245,7 +252,7 @@ private fun RowList(state: SettingsState, actions: SettingsActions, preview: Str
 
     // Not clipped: the row being moved grows past the list's edges.
     Column(Modifier.fillMaxWidth().background(SeedyColors.Panel, RoundedCornerShape(18.dp))) {
-        shown.forEachIndexed { i, r ->
+        shown.forEachIndexed { i, r -> key(r.kind) {
             val lifted = r.kind == (drag ?: preview)
             if (i > 0 && !lifted) RowLine()
             RowItem(
@@ -268,7 +275,7 @@ private fun RowList(state: SettingsState, actions: SettingsActions, preview: Str
             ) { on ->
                 actions.setRows(rows.map { HomeRowPref(it.kind, if (it.kind == r.kind) on else it.enabled, it.count, it.pinned) })
             }
-        }
+        } }
     }
 }
 

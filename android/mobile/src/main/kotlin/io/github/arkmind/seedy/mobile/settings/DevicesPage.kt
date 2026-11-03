@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -21,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.admin.people.DeviceRow
+import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.settings.MyDevicesActions
@@ -37,6 +39,9 @@ import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 
+/* Long-lived servers collect many devices; show them a page at a time (the server Devices page's step). */
+private const val Page = 40
+
 /**
  * Settings › Profile › Signed in on (the server Devices board's rows, for one person): every app signed in to this
  * profile, newest first, each with Sign out; this phone is marked and stays.
@@ -45,6 +50,7 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 fun MyDevicesPage(state: MyDevicesState, actions: MyDevicesActions, nav: SettingsNav) {
     var leaving by remember { mutableStateOf<DeviceRow?>(null) }
     var others by remember { mutableStateOf(false) }
+    var shown by remember { mutableIntStateOf(Page) }
     val list = state.devices
     SettingsPage(
         t("Signed in on"),
@@ -77,10 +83,17 @@ fun MyDevicesPage(state: MyDevicesState, actions: MyDevicesActions, nav: Setting
                 list == null && state.error != null -> CardNote(state.error.orEmpty(), action = t("Try again"), onAction = actions::reload)
                 list == null -> SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3)
                 list.isEmpty() -> CardNote(t("No devices are signed in to your profile."))
-                else -> list.forEachIndexed { i, d ->
+                else -> list.take(shown).forEachIndexed { i, d ->
                     if (i > 0) RowLine()
                     DeviceItem(d) { leaving = d }
                 }
+            }
+        }
+        if (list != null && list.size > shown) {
+            Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.Center) {
+                PillButton(t("Show more"), { shown += Page }, trailing = {
+                    SText(t("{n} more", "n" to formatNumber(list.size - shown)), size = 13.sp, weight = 600, color = SeedyColors.Text3, maxLines = 1)
+                })
             }
         }
         FootNote(t("To sign out this phone, use Sign out in Settings."))

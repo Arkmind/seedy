@@ -51,8 +51,10 @@
  "You’re on mobile data": "Vous êtes sur les données mobiles",
  "about {size} GB": "environ {size} Go",
  "about {size} GB an hour": "environ {size} Go par heure",
+ "about {size} MB": "environ {size} Mo",
  "up to {size} GB": "jusqu’à {size} Go",
  "up to {size} GB an hour": "jusqu’à {size} Go par heure",
+ "up to {size} MB": "jusqu’à {size} Mo",
  "{episodes} · {aired} out": "{episodes} · {aired} diffusés",
  "{n} chapter": "{n} chapitre",
  "{n} chapters": "{n} chapitres"
