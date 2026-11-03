@@ -12,6 +12,9 @@ import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import org.jellyfin.sdk.api.client.extensions.authenticationApi
 import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.model.api.AuthenticateUserByName
+import org.jellyfin.sdk.model.api.ForgotPasswordAction
+import org.jellyfin.sdk.model.api.ForgotPasswordDto
+import org.jellyfin.sdk.model.api.ForgotPasswordPinDto
 import org.jellyfin.sdk.model.api.QuickConnectDto
 import org.jellyfin.sdk.model.api.UserDto
 
@@ -90,6 +93,41 @@ class SignIn(private val sessions: Sessions) {
             }
         }
     }.flowOn(Dispatchers.IO)
+
+    /** What Jellyfin's "Forgot password" says to do. */
+    sealed interface Forgot {
+        /** Only an admin can help (or the server couldn't be asked). */
+        data object AskAdmin : Forgot
+        /** Resets work only from the server's own network. */
+        data object InNetworkRequired : Forgot
+        /** The server wrote a PIN to [file] on its disk, good until [until] (local time); redeeming it makes it the password. */
+        data class Pin(val file: String?, val until: java.time.LocalDateTime?) : Forgot
+    }
+
+    suspend fun forgotPassword(server: SavedServer, userName: String): Forgot = withContext(Dispatchers.IO) {
+        val r = try {
+            sessions.apiFor(server).authenticationApi.forgotPassword(ForgotPasswordDto(enteredUsername = userName)).content
+        } catch (_: ApiClientException) {
+            return@withContext Forgot.AskAdmin
+        }
+        when (r.action) {
+            ForgotPasswordAction.PIN_CODE -> Forgot.Pin(
+                r.pinFile?.takeIf { it.isNotBlank() },
+                r.pinExpirationDate?.atZone(java.time.ZoneOffset.UTC)?.withZoneSameInstant(java.time.ZoneId.systemDefault())?.toLocalDateTime(),
+            )
+            ForgotPasswordAction.IN_NETWORK_REQUIRED -> Forgot.InNetworkRequired
+            else -> Forgot.AskAdmin
+        }
+    }
+
+    /** The profiles whose password became [pin], or null when the PIN didn't work (wrong or expired). */
+    suspend fun redeemPin(server: SavedServer, pin: String): List<String>? = withContext(Dispatchers.IO) {
+        try {
+            sessions.apiFor(server).authenticationApi.forgotPasswordPin(ForgotPasswordPinDto(pin = pin)).content.takeIf { it.success }?.usersReset.orEmpty()
+        } catch (_: ApiClientException) {
+            null
+        }
+    }
 
     private companion object {
         const val POLL_MS = 3_000L

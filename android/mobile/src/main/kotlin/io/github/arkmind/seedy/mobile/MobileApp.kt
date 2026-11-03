@@ -85,6 +85,7 @@ import io.github.arkmind.seedy.mobile.parts.pagePadding
 import io.github.arkmind.seedy.mobile.parts.tabBarHeight
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.signin.AddServerScreen
+import io.github.arkmind.seedy.mobile.signin.ForgotSheet
 import io.github.arkmind.seedy.mobile.signin.PasswordScreen
 import io.github.arkmind.seedy.mobile.signin.ProfilesScreen
 import io.github.arkmind.seedy.mobile.signin.QuickConnectSheet
@@ -181,9 +182,10 @@ private fun SignInFlow(core: SeedyCore, server: SavedServer) {
                     onPassword = vm::setPassword,
                     onRemember = vm::setRemember,
                     onSignIn = vm::signIn,
-                    onForgot = {},
+                    onForgot = vm::forgot,
                     onQuickConnect = { quickConnect = true },
                 )
+                state.forgot?.let { f -> ForgotSheet(f, vm::setPin, vm::redeemPin, vm::closeForgot) }
                 if (quickConnect) QuickConnect(core, server) { quickConnect = false }
             }
             entry<AddServerKey> { AddServerEntry(core, onBack = { stack.removeLastOrNull() }) }
