@@ -112,7 +112,7 @@ export function History() {
       () => {
         if (id !== req.current) return;
         setStatus('ready');
-        toast("Couldn't load earlier plays", 'error');
+        toast(t("Couldn't load earlier plays"), 'error');
       }
     );
   };
@@ -143,9 +143,9 @@ export function History() {
       } else {
         setItems((list) => list.map((i) => (i.titleId === e.titleId ? { ...i, hidden: next } : i)));
       }
-      toast(next ? `${name} hidden. It no longer shapes your recommendations.` : `${name} is back in your history`);
+      toast(next ? t('{name} hidden. It no longer shapes your recommendations.', { name }) : t('{name} is back in your history', { name }));
     } catch {
-      toast(`Couldn't ${next ? 'hide' : 'unhide'} ${name}`, 'error');
+      toast(next ? t("Couldn't hide {name}", { name }) : t("Couldn't unhide {name}", { name }), 'error');
     }
   };
 
@@ -156,7 +156,7 @@ export function History() {
       setTotal((t) => Math.max(0, t - 1));
       toast(t('Removed from history'));
     } catch {
-      toast("Couldn't remove that play", 'error');
+      toast(t("Couldn't remove that play"), 'error');
     }
   };
 
@@ -174,7 +174,7 @@ export function History() {
       setTotal(0);
       toast(t('History cleared'));
     } catch {
-      toast("Couldn't clear history", 'error');
+      toast(t("Couldn't clear history"), 'error');
     }
   };
 
@@ -237,7 +237,7 @@ export function History() {
           >
             {FILTERS.map((f) => (
               <button key={f.value} type="button" role="tab" class="tab" tabIndex={filter === f.value ? 0 : -1} aria-selected={filter === f.value ? 'true' : 'false'} onClick={() => setFilter(f.value)}>
-                {f.label}
+                {t(f.label)}
               </button>
             ))}
           </div>
@@ -263,13 +263,13 @@ export function History() {
             <div class="empty-body">
               {search ? (
                 <>
-                  <h2 class="empty-title">Nothing in your history for “{search}”</h2>
-                  <p class="empty-text">Try another title, or switch to All{showHidden ? '' : ' and turn on Show hidden'}.</p>
+                  <h2 class="empty-title">{t('Nothing in your history for “{search}”', { search })}</h2>
+                  <p class="empty-text">{showHidden ? t('Try another title, or switch to All.') : t('Try another title, or switch to All and turn on Show hidden.')}</p>
                 </>
               ) : filtered ? (
                 <>
-                  <h2 class="empty-title">No {filter === 'movies' ? 'movies' : 'shows'} played yet</h2>
-                  <p class="empty-text">{filter === 'movies' ? t('Movies') : t('Episodes')} you play on this profile show up here, newest first.</p>
+                  <h2 class="empty-title">{filter === 'movies' ? t('No movies played yet') : t('No shows played yet')}</h2>
+                  <p class="empty-text">{filter === 'movies' ? t('Movies you play on this profile show up here, newest first.') : t('Episodes you play on this profile show up here, newest first.')}</p>
                 </>
               ) : (
                 <>
