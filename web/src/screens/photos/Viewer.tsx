@@ -429,7 +429,8 @@ function Details({ item }: { item: PhotoItem }) {
   const geo = item.Latitude !== undefined && item.Longitude !== undefined && item.Latitude !== null && item.Longitude !== null && !(item.Latitude === 0 && item.Longitude === 0);
   const sizeLine = [w && h ? `${w} × ${h}` : '', video ? duration(ticksToSeconds(item.RunTimeTicks)) : mp ? `${mp} MP` : ''].filter(Boolean).join(' · ');
   const fileLine = [formatName(item, file.type), bytesLabel(file.size)].filter(Boolean).join(' · ');
-  const cover = folderCover ?? item;
+  // The folder's first photo, or this one when that has no picture.
+  const cover = folderCover?.ImageTags?.Primary ? folderCover : item;
   return (
     <aside class="ph-v-info" aria-labelledby="ph-info-h">
       <h2 id="ph-info-h">{t('Details')}</h2>

@@ -22,6 +22,8 @@ import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.UserItemDataDto
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -68,6 +70,8 @@ object PhotosSamples {
         }
     }
 
+    private fun sdk(d: LocalDateTime): LocalDateTime = d.atOffset(ZoneOffset.UTC).atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
+
     fun photo(
         art: Int, ar: Float, taken: LocalDateTime, album: String? = null, fav: Boolean = false, dur: Int? = null,
         name: String = "Photo", path: String? = null, more: (BaseItemDto) -> BaseItemDto = { it },
@@ -77,7 +81,8 @@ object PhotosSamples {
         return more(
             BaseItemDto(
                 id = id, type = if (dur != null) BaseItemKind.VIDEO else BaseItemKind.PHOTO, mediaType = if (dur != null) MediaType.VIDEO else MediaType.PHOTO,
-                name = name, width = (ar * 1000).roundToInt(), height = 1000, premiereDate = taken, dateCreated = taken, album = album,
+                // As the SDK reads Jellyfin's dates: the camera's clock (stored as UTC) in this machine's time zone.
+                name = name, width = (ar * 1000).roundToInt(), height = 1000, premiereDate = sdk(taken), dateCreated = sdk(taken), album = album,
                 albumId = album?.let { UUID.nameUUIDFromBytes(it.toByteArray()) }, path = path, runTimeTicks = dur?.let { it * 10_000_000L },
                 userData = UserItemDataDto(playbackPositionTicks = 0, playCount = 0, isFavorite = fav, played = false, key = id.toString(), itemId = id),
             ),

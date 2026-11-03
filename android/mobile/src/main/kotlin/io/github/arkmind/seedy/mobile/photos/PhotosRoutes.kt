@@ -240,6 +240,8 @@ fun PhotoViewerRoute(id: UUID, play: Boolean) {
                     item.albumId?.let { a -> cover = runCatching { api.folderInfo(BaseItemDto(id = a, type = BaseItemKind.PHOTO_ALBUM), recursive = false).covers.firstOrNull() }.getOrNull() }
                 }
                 BottomSheet({ info = null }) {
+                    // The sheet is drawn by the page's overlay host, outside this route's providers: give it the image addresses again.
+                    CompositionLocalProvider(LocalPhotosApi provides api) {
                     SheetHead(t("Details"))
                     PhotoDetails(
                         items.firstOrNull { it.id == item.id } ?: item, file, cover,
@@ -251,6 +253,7 @@ fun PhotoViewerRoute(id: UUID, play: Boolean) {
                         },
                         onFolder = { info = null; item.albumId?.let { nav.go(Route.PhotoFolder(it)) } },
                     )
+                    }
                 }
             }
             Toast(message, { message = null }, Modifier.align(Alignment.BottomCenter).padding(bottom = 140.dp))

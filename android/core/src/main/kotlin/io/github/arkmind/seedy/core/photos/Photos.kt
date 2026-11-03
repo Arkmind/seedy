@@ -29,6 +29,8 @@ import java.net.URL
 import java.net.URLEncoder
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.TextStyle
 import java.util.Locale
 import java.util.UUID
@@ -67,8 +69,13 @@ fun ratioOf(item: BaseItemDto): Float {
     return r.coerceIn(0.5f, 3f)
 }
 
-/** When it was taken: the EXIF date (Jellyfin keeps the camera's clock as if it were UTC), else when the file was saved. */
-fun takenAt(item: BaseItemDto): LocalDateTime? = item.premiereDate ?: item.dateCreated
+/**
+ * When it was taken: the EXIF date, else when the file was saved. Jellyfin keeps the camera's clock as if it were UTC
+ * and the SDK reads its dates into this phone's time zone, so the EXIF date is turned back into the camera's clock.
+ */
+fun takenAt(item: BaseItemDto): LocalDateTime? = item.premiereDate?.let(::cameraClock) ?: item.dateCreated
+
+fun cameraClock(d: LocalDateTime): LocalDateTime = d.atZone(ZoneId.systemDefault()).withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()
 
 /* ───────── Grouping ───────── */
 

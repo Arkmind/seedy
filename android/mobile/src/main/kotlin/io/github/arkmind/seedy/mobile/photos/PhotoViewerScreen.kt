@@ -84,6 +84,7 @@ import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import kotlinx.coroutines.delay
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.ImageType
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -352,7 +353,9 @@ fun PhotoDetails(item: BaseItemDto, file: Pair<Long?, String?>?, cover: BaseItem
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(SeedyColors.Row).tap(onClick = onFolder).padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Box(Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)).background(SeedyColors.Surface)) { PhotoImage(cover ?: item, 52.dp, Modifier.fillMaxSize()) }
+                // The folder's first photo, or this one when that has no picture.
+                val art = cover?.takeIf { it.imageTags?.get(ImageType.PRIMARY) != null } ?: item
+                Box(Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)).background(SeedyColors.Surface)) { PhotoImage(art, 52.dp, Modifier.fillMaxSize()) }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     SText(t("In folder"), size = 12.sp, color = SeedyColors.Text3)
                     SText(item.album.orEmpty(), size = 14.sp, weight = 700, color = SeedyColors.White, maxLines = 1)
