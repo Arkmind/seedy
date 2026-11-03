@@ -15,7 +15,7 @@ import io.github.arkmind.seedy.ui.theme.currentSession
 
 /**
  * One settings page (boards "Android · Settings · …"): [page] is "profile", "home", "playback", "advanced",
- * "subtitles", "display", "gestures" or "about".
+ * "subtitles", "display", "gestures" or "about"; "libraries" is Home screen opened on its libraries.
  */
 @Composable
 fun SettingsPageRoute(page: String, appVersion: String) {
@@ -25,11 +25,12 @@ fun SettingsPageRoute(page: String, appVersion: String) {
     val context = LocalContext.current
     val vm = viewModel { SettingsViewModel(core, session) }
     val state by vm.state.collectAsStateWithLifecycle()
-    LaunchedEffect(page) { vm.load(if (page == "home") "homescreen" else page) }
+    LaunchedEffect(page) { vm.load(if (page == "home" || page == "libraries") "homescreen" else page) }
     val to = settingsNav(state, nav, context)
     when (page) {
         "profile" -> ProfilePage(state, vm, to)
         "home" -> HomeScreenPage(state, vm, to)
+        "libraries" -> HomeScreenPage(state, vm, to, focus = "libraries")
         "playback" -> PlaybackPage(state, vm, to)
         "advanced" -> AdvancedPage(state, vm, to)
         "subtitles" -> SubtitlesPage(state, vm, to)

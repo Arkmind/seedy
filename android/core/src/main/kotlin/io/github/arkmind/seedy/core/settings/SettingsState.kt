@@ -272,6 +272,8 @@ interface SettingsActions {
     fun setRowOrder(mine: Boolean) {}
     fun setRows(rows: List<HomeRowPref>) {}
     fun setLibraryOnHome(id: UUID, on: Boolean) {}
+    /** The libraries' order: the Libraries tab, My media and Settings follow it (Jellyfin's OrderedViews). */
+    fun setLibraryOrder(ids: List<UUID>) {}
     fun setConfig(transform: (UserConfiguration) -> UserConfiguration) {}
     fun setSubtitleMode(mode: String) {}
     fun setDevice(transform: (DeviceSettings) -> DeviceSettings) {}

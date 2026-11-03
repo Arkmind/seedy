@@ -262,6 +262,11 @@ class SettingsViewModel(
         )
     }
 
+    override fun setLibraryOrder(ids: List<UUID>) {
+        extras.update { x -> x.copy(libraries = x.libraries?.let { list -> ids.mapNotNull { id -> list.firstOrNull { it.id == id } } + list.filter { it.id !in ids } }) }
+        setConfig { it.copy(orderedViews = ids) }
+    }
+
     /* ── This device ── */
 
     override fun setDevice(transform: (DeviceSettings) -> DeviceSettings) = core.device.update(transform)
