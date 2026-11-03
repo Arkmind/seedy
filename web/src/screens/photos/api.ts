@@ -29,7 +29,7 @@ export type PhotoItem = BaseItem & {
   ImageBlurHashes?: Record<string, Record<string, string>>;
 };
 
-export const PHOTO_FIELDS = ['DateCreated', 'PrimaryImageAspectRatio', 'Path', 'ParentId', 'MediaSources'];
+export const PHOTO_FIELDS = ['DateCreated', 'PrimaryImageAspectRatio', 'Path', 'ParentId', 'MediaSources', 'Width', 'Height'];
 
 const uid = () => getSession()?.userId ?? '';
 const token = () => getSession()?.token ?? '';

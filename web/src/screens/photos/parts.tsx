@@ -194,12 +194,12 @@ export function MemoryCard({ memory, onOpen }: { memory: Memory; onOpen: () => v
 
 /* A folder card: three photos in the hero's mosaic, then its name, counts and dates. */
 export function FolderCard({ item, to }: { item: BaseItem; to: string }) {
-  const [ref, seen] = useInView<HTMLAnchorElement>('400px');
+  const [ref, seen] = useInView<HTMLDivElement>('400px');
   const [info, setInfo] = useState<FolderInfo>();
   useEffect(() => { if (seen) folderInfo(item).then(setInfo, () => undefined); }, [seen, item.Id]);
   const covers = info?.covers ?? [];
   return (
-    <Link ref={ref as never} to={to} class="ph-folder">
+    <div ref={ref} class="ph-folder-wrap"><Link to={to} class="ph-folder">
       <span class={'ph-folder-art' + (covers.length >= 3 ? ' is-three' : '')} aria-hidden="true">
         {covers.slice(0, covers.length >= 3 ? 3 : 1).map((c, i) => <span key={c.Id}><img src={thumbUrl(c, i ? 160 : 320)} alt="" loading="lazy" decoding="async" draggable={false} /></span>)}
         {!covers.length && <span class="ph-folder-empty"><PIcon name="folder" size={28} stroke={2} /></span>}
@@ -208,7 +208,7 @@ export function FolderCard({ item, to }: { item: BaseItem; to: string }) {
       <span class="ph-folder-sub">
         {info ? [countsLabel(info.photos, info.videos), info.to ? fmtMonthYear(info.to) : ''].filter(Boolean).join(' · ') : ' '}
       </span>
-    </Link>
+    </Link></div>
   );
 }
 

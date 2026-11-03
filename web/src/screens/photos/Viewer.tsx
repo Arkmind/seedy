@@ -277,7 +277,7 @@ function Stage({ item, rotation, view, setView, onSwipe }: { item: PhotoItem; ro
       e.preventDefault();
       const [px, py] = rel(e);
       const factor = Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0022));
-      setView(zoomAt(viewRef.current, viewRef.current.s * factor, px, py));
+      setView((v) => zoomAt(v, v.s * factor, px, py));
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);

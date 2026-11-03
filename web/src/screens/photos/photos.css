@@ -299,3 +299,4 @@
   .ph-v-thumb { height: 56px; }
   .ph-v-info { width: 100%; top: auto; max-height: 62%; border-left: 0; border-top: 1px solid var(--seedy-surface); border-radius: 20px 20px 0 0; }
 }
+.ph-folder-wrap { min-width: 0; }
