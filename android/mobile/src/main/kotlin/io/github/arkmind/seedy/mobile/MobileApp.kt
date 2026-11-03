@@ -287,6 +287,9 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                 entry<Route.NowPlaying> { WithOverlay { NowPlayingRoute() } }
                 entry<Route.Books> { WithTabBar(tabs, tab, nav) { BooksRoute(it.id, it.view, it.focus) } }
                 entry<Route.Book> { WithTabBar(tabs, tab, nav) { BookRoute(it.id) } }
+                entry<Route.Photos> { WithTabBar(tabs, tab, nav) { io.github.arkmind.seedy.mobile.photos.PhotosRoute(it.id) } }
+                entry<Route.PhotoFolder> { WithTabBar(tabs, tab, nav) { io.github.arkmind.seedy.mobile.photos.PhotoFolderRoute(it.id, it.photo) } }
+                entry<Route.PhotoViewer> { WithOverlay { io.github.arkmind.seedy.mobile.photos.PhotoViewerRoute(it.id, it.play) } }
                 entry<Route.Reader> { WithOverlay { ReaderRoute(it.id, it.percent) } }
                 entry<Route.AudiobookPlayer> { WithOverlay { AudiobookPlayerRoute() } }
                 entry<Route.Search> { SearchRoute() }
