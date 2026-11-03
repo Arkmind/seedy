@@ -77,6 +77,11 @@
   color: var(--seedy-text-2); cursor: pointer; transition: color var(--t-fast) var(--ease);
 }
 .signin-back:hover { color: #ffffff; }
+.signin-file {
+  max-width: 100%; padding: 10px 14px; border-radius: var(--r-ctl); background: rgba(20, 20, 20, 0.9);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; color: var(--seedy-text-2);
+  text-align: center; overflow-wrap: anywhere;
+}
 
 .signin-form { width: 100%; display: flex; flex-direction: column; gap: 14px; }
 .signin-field { width: 100%; height: 52px; font-size: 16px; }
