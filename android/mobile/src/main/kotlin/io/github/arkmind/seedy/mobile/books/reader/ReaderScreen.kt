@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.books.PageTheme
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.IconPart
@@ -188,7 +189,7 @@ fun ReaderScreen(chrome: ReaderChrome, shown: Boolean, actions: ReaderActions, p
 
 @Composable
 private fun TopBar(c: ReaderChrome, p: ReaderPalette, top: Dp, a: ReaderActions) {
-    Column(Modifier.fillMaxWidth().background(p.bg.copy(alpha = 0.96f)).tap {}) {
+    Column(Modifier.fillMaxWidth().background(p.bg.copy(alpha = 0.96f)).blockTaps()) {
         Row(
             Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, top = top, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -224,7 +225,7 @@ private fun BarButton(icon: IconDef, size: Dp, color: Color, label: String, onCl
 
 @Composable
 private fun Footer(c: ReaderChrome, p: ReaderPalette, bottom: Dp, a: ReaderActions) {
-    Column(Modifier.fillMaxWidth().background(p.bg.copy(alpha = 0.96f)).tap {}) {
+    Column(Modifier.fillMaxWidth().background(p.bg.copy(alpha = 0.96f)).blockTaps()) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         Column(
             Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = bottom),

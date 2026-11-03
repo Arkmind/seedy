@@ -52,6 +52,7 @@ import io.github.arkmind.seedy.core.feature.SeasonsTarget
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.seedy.SeerrDetails
+import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.components.SeedySwitch
@@ -117,7 +118,7 @@ fun RequestSeasonsContent(
                 Modifier.fillMaxSize().padding(top = 150.dp)
                     .shadow(40.dp, RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp), ambientColor = Color.Black, spotColor = Color.Black)
                     .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)).background(SeedyColors.Panel)
-                    .tap {},
+                    .blockTaps(),
             ) {
                 Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp, bottom = 6.dp).size(36.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(SeedyColors.Stroke))
                 Column(

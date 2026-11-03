@@ -3,9 +3,9 @@ name: Android
 on:
   push:
     branches: [master]
-    paths: ['android/**', 'web/src/ui/tokens.css', 'web/src/ui/icons.tsx', 'web/src/i18n/**', 'scripts/android-shared.ts', '.github/workflows/android.yml']
+    paths: ['android/**', 'web/src/ui/tokens.css', 'web/src/ui/icons.tsx', 'web/src/i18n/**', 'scripts/android-shared.ts', 'scripts/android-dead-handlers.sh', '.github/workflows/android.yml']
   pull_request:
-    paths: ['android/**', 'web/src/ui/tokens.css', 'web/src/ui/icons.tsx', 'web/src/i18n/**', 'scripts/android-shared.ts', '.github/workflows/android.yml']
+    paths: ['android/**', 'web/src/ui/tokens.css', 'web/src/ui/icons.tsx', 'web/src/i18n/**', 'scripts/android-shared.ts', 'scripts/android-dead-handlers.sh', '.github/workflows/android.yml']
 
 permissions:
   contents: read
@@ -34,6 +34,10 @@ jobs:
         run: |
           bun scripts/android-shared.ts
           git diff --exit-code -- android/
+
+      - name: No controls that do nothing
+        working-directory: .
+        run: scripts/android-dead-handlers.sh
 
       - name: Unit tests and screenshots
         run: ./gradlew testDebugUnitTest verifyRoborazziDebug

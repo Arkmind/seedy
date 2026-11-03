@@ -394,7 +394,7 @@ private fun RequestMenu(r: MediaRequest, actions: MediaActions, onRemove: (Media
             val own = r.requestedByMe && r.status == "pending"
             add(MenuEntry(WebIcons.Close, if (own) t("Cancel request") else t("Remove request"), danger = true) { onRemove(r) })
         }
-        if (isEmpty()) add(MenuEntry(Blank, t("Nothing to do here yet")) {})
+        if (isEmpty()) add(MenuEntry(Blank, t("Nothing to do here yet")) {}) // no-op: only says so; a tap closes the menu
     }
     ItemMenuSheet(t("More for {title}", "title" to MediaFormat.name(r)), entries, onDismiss)
 }

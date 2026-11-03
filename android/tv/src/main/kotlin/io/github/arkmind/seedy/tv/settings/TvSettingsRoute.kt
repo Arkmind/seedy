@@ -29,6 +29,6 @@ fun TvSettingsRoute(appVersion: String, onPlace: (TvPlace) -> Unit = {}) {
     Box(Modifier.fillMaxSize()) {
         TvSettingsScreen(state, vm, appVersion, onLeave = nav::back)
         // The rail's places are the shell's: picking one leaves Settings for it.
-        TvRail(places, current = null, onPlace = onPlace, onProfile = vm::switchProfile, onSettings = {}, settingsCurrent = true)
+        TvRail(places, current = null, onPlace = onPlace, onProfile = vm::switchProfile, onSettings = {}, settingsCurrent = true) // no-op: already on Settings
     }
 }
