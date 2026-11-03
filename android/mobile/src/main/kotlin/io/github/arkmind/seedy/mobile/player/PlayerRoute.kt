@@ -55,11 +55,11 @@ import java.util.UUID
 
 /** Boards "Android · Player" and its panels: plays [id] full screen, sideways. */
 @Composable
-fun PlayerRoute(id: UUID, startTicks: Long? = null) {
+fun PlayerRoute(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
     val session = currentSession()
     val context = LocalContext.current
     val nav = LocalMobileNav.current
-    val vm = viewModel { PlayerViewModel(context, session, id, startTicks) }
+    val vm = viewModel { PlayerViewModel(context, session, id, startTicks, maxBitrate) }
     val player = vm.controller
     val state by player.state.collectAsStateWithLifecycle()
     val core = checkNotNull(LocalCore.current)
@@ -79,8 +79,12 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null) {
     var seasonEpisodes by remember { mutableStateOf<List<BaseItemDto>?>(null) }
 
     FullScreenSideways(activity)
-    // Videos don't play in the background (a picture-in-picture window keeps the app started until it's closed).
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { player.pause() }
+    // Settings · Gestures › swipe for brightness and volume; the screen's own brightness comes back on leaving.
+    val swipeLevels = remember(activity) { if (player.settings.swipeControls) activity?.let(::PhoneSwipeLevels) else null }
+    DisposableEffect(swipeLevels) { onDispose { swipeLevels?.restore() } }
+    // Videos stop in the background (a picture-in-picture window keeps the app started until it's closed), unless
+    // Settings · Playback › Keep the sound going with the screen off is on.
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { if (!player.playsInBackground) player.pause() }
     // Settings · Playback › Picture in picture: going to the home screen while a video plays keeps it in a window.
     val autoPip = player.settings.pictureInPicture && state.playing
     DisposableEffect(activity, autoPip) {
@@ -137,6 +141,7 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null) {
         lift = subtitlePrefs?.lift ?: true,
         look = player.subtitleLook(device),
         doubleTapSeek = player.settings.doubleTapSeek,
+        swipeLevels = swipeLevels,
         actions = PlayerActions(
             onBack = { nav.back() },
             onPlayPause = { touched++; player.playPause() },

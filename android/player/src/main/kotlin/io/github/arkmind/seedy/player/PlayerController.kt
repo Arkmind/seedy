@@ -109,7 +109,8 @@ class PlayerController(private val context: Context, private val session: UserSe
         },
         pictureSubtitles = device.pictureSubtitles,
         burnIn = device.burnIn,
-        hevc = device.hevc, av1 = device.av1, hdr = device.hdr, dts = device.dts, truehd = device.truehd, mkv = device.mkv,
+        // TV · Match dynamic range off: HDR is tone-mapped to SDR, so the TV never switches mode (phones don't show it).
+        hevc = device.hevc, av1 = device.av1, hdr = device.hdr && device.matchDynamicRange, dts = device.dts, truehd = device.truehd, mkv = device.mkv,
         preferFmp4 = device.preferFmp4,
     )
 
@@ -144,6 +145,11 @@ class PlayerController(private val context: Context, private val session: UserSe
         .setSeekBackIncrementMs(seekBackSeconds * 1000L)
         .setSeekForwardIncrementMs(seekForwardSeconds * 1000L)
         .build()
+        .apply {
+            // Match frame rate: the display follows the video's rate when it can switch without going dark (Android TV's
+            // "Match content frame rate" setting can make that every time); off keeps the screen's rate.
+            videoChangeFrameRateStrategy = if (device.matchFrameRate) C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_ONLY_IF_SEAMLESS else C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF
+        }
 
     /**
      * The system's view of this player: headset and Bluetooth buttons, Google Assistant, Android TV's media controls.
@@ -156,6 +162,12 @@ class PlayerController(private val context: Context, private val session: UserSe
         override fun isCommandAvailable(command: Int) = (episode && command == Player.COMMAND_SEEK_TO_NEXT) || super.isCommandAvailable(command)
         override fun seekToNext() = playNext()
     }).setId("seedy-player-${UUID.randomUUID()}").build()
+
+    /** Bound to [VideoService] while this video may play on with the screen off. */
+    private val background = if (device.backgroundAudio) VideoService.start(context, mediaSession) else null
+
+    /** Settings · Playback › Keep the sound going with the screen off. */
+    val playsInBackground: Boolean get() = background != null
 
     private var item: BaseItemDto? = null
     private var stream: ActiveStream? = null
@@ -211,11 +223,14 @@ class PlayerController(private val context: Context, private val session: UserSe
         })
     }
 
-    /** Starts [id] where the person left it (or from the start once watched), or at [startTicks] when given. */
-    fun open(id: UUID, startTicks: Long? = null) {
+    /**
+     * Starts [id] where the person left it (or from the start once watched), or at [startTicks] when given; [maxBitrate]
+     * is what Auto stands for this time (the mobile data prompt's pick).
+     */
+    fun open(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
         scope.launch {
             if (!placed) {
-                autoBitrate = Network.autoBitrate(device, Network.place(context, session), session.user.policy?.remoteClientBitrateLimit ?: 0)
+                autoBitrate = maxBitrate ?: Network.autoBitrate(device, Network.place(context, session), session.user.policy?.remoteClientBitrateLimit ?: 0)
                 placed = true
             }
             val loaded = runCatching {
@@ -615,6 +630,7 @@ class PlayerController(private val context: Context, private val session: UserSe
         val snapshot = Triple(item, stream, exo.currentPosition)
         val paused = !exo.playWhenReady
         val speed = exo.playbackParameters.speed
+        VideoService.stop(context, mediaSession, background)
         mediaSession.release()
         exo.release()
         val (it, s, pos) = snapshot

@@ -21,8 +21,11 @@ sealed interface Route {
     data class SettingsPage(val page: String) : Route
     /** Viewing history (web History board, built with the settings kit). */
     data object History : Route
-    /** [startTicks] starts there instead of where the person left off (0: from the beginning). */
-    data class Player(val id: UUID, val startTicks: Long? = null) : Route
+    /**
+     * [startTicks] starts there instead of where the person left off (0: from the beginning); [maxBitrate] is the
+     * quality picked on the mobile data prompt for this video.
+     */
+    data class Player(val id: UUID, val startTicks: Long? = null, val maxBitrate: Int? = null) : Route
     /** A title that's on Seerr but not on the server (search, Discover…). */
     data class SeerrTitle(val mediaType: String, val tmdbId: Int) : Route
     /** A Discover row's "See all" (a [io.github.arkmind.seedy.core.requests.TitlesKind] key). */
@@ -60,8 +63,12 @@ class MobileNav(private val stack: SnapshotStateList<Any>, private val selectTab
     }
 
     fun go(route: Route) {
+        if (route is Route.Player && beforePlay?.invoke(route) == true) return
         stack.add(route)
     }
+
+    /** Set by the shell: Settings · Playback › Ask before using mobile data; true when it asks instead of playing. */
+    var beforePlay: ((Route.Player) -> Boolean)? = null
 
     fun back() {
         if (stack.size > 1) stack.removeAt(stack.lastIndex)

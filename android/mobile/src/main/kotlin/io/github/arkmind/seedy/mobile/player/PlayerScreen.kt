@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -112,8 +113,14 @@ fun PhonePlayerScreen(
     look: ResolvedStyle? = null,
     /** Settings · Gestures: a double tap on the left or right half skips back or forward. */
     doubleTapSeek: Boolean = false,
+    /** Settings · Gestures: swipes up and down change these (left: brightness, right: volume); null when off. */
+    swipeLevels: SwipeLevels? = null,
+    /** A swipe shown as under way (screenshot tests). */
+    swiping: Swipe? = null,
     panel: @Composable () -> Unit = {},
 ) {
+    var swipe by remember { mutableStateOf<Swipe?>(null) }
+    val shownSwipe = swiping ?: swipe
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         video()
         Box(
@@ -126,7 +133,25 @@ fun PhonePlayerScreen(
                 } else {
                     detectTapGestures(onTap = { onToggleControls() })
                 }
-            },
+            }.then(
+                if (swipeLevels == null || locked) Modifier else Modifier.pointerInput(swipeLevels) {
+                    // A full swipe over most of the screen's height goes from nothing to everything.
+                    detectVerticalDragGestures(
+                        onDragStart = { o ->
+                            val side = if (o.x < size.width / 2) SwipeSide.Brightness else SwipeSide.Volume
+                            swipe = Swipe(side, swipeLevels.get(side))
+                        },
+                        onDragEnd = { swipe = null },
+                        onDragCancel = { swipe = null },
+                    ) { change, dy ->
+                        change.consume()
+                        val s = swipe ?: return@detectVerticalDragGestures
+                        val level = (s.level - dy / (size.height * 0.8f)).coerceIn(0f, 1f)
+                        swipeLevels.set(s.side, level)
+                        swipe = s.copy(level = level)
+                    }
+                },
+            ),
         )
         if (look != null) {
             val up = controls && !locked
@@ -140,9 +165,10 @@ fun PhonePlayerScreen(
                     RoundIcon(WebIcons.Lock, t("Unlock controls"), actions.onLock, size = 20.dp, color = SeedyColors.White, bg = SeedyColors.Glass)
                 }
             }
-        } else if (controls) {
+        } else if (controls && shownSwipe == null) {
             Controls(state, seekBack, seekForward, actions)
         }
+        shownSwipe?.let { SwipeOverlay(it) }
         if (!controls && state.skip != null && !locked) {
             Box(Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 24.dp)) { SkipButton(state, actions.onSkip) }
         }
