@@ -77,7 +77,6 @@ class PlayerActions(
     val onNext: () -> Unit,
     val onLock: () -> Unit,
     val onPip: () -> Unit,
-    val onCast: () -> Unit,
     val onPanel: (PlayerPanel?) -> Unit,
 )
 
@@ -177,7 +176,7 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
             }
             RoundIcon(WebIcons.Lock, t("Lock controls"), actions.onLock, size = 20.dp, color = SeedyColors.Inverse)
             RoundIcon(PlayerIcons.Pip, t("Picture in picture"), actions.onPip, size = 20.dp, color = SeedyColors.Inverse)
-            RoundIcon(WebIcons.Cast, t("Cast to a device"), actions.onCast, size = 20.dp, color = SeedyColors.Inverse)
+            // The board's Cast button waits for video casting.
         }
         // Seek and pause: 128 px from the top of the board's 390 px, kept in that proportion on taller screens.
         Row(

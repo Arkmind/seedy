@@ -76,7 +76,7 @@ class PlayerShots {
         episodes = listOf(Samples.thePass),
     ).let { it.copy(skip = it.segments.first()) }
 
-    private val actions = PlayerActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+    private val actions = PlayerActions({}, {}, {}, {}, {}, {}, {}, {}, {})
 
     private fun shot(name: String, panel: @Composable () -> Unit = {}) {
         compose.setContent {

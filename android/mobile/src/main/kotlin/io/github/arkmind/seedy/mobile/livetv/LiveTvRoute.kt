@@ -103,7 +103,6 @@ fun LiveTvScreen(
                 HeaderButton(WebIcons.ArrowLeft, onBack, stroke = 2.2f)
                 SText(t("Live TV"), Modifier.weight(1f).padding(start = 6.dp), size = 22.sp, weight = 900, color = SeedyColors.White)
                 HeaderButton(AppIcons.ChannelNumber, onChannelNumber, stroke = 2.2f)
-                HeaderButton(WebIcons.Cast, {})
             }
             LiveTabs(view, state.recordingNow > 0, onView)
             Box(Modifier.weight(1f)) {

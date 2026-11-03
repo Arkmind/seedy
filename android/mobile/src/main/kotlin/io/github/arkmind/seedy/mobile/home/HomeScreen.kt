@@ -139,7 +139,6 @@ private fun Header(account: AccountActions, onSearch: () -> Unit, stuck: Boolean
     ) {
         BrandMark(viewer.brand, Modifier.weight(1f))
         HeaderButton(WebIcons.Search, onSearch, stroke = 2.2f)
-        HeaderButton(WebIcons.Cast, {})
         AccountButton(account)
     }
 }

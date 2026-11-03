@@ -140,7 +140,6 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null) {
             onPip = {
                 activity?.enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build())
             },
-            onCast = {},
             onPanel = { panel = it },
         ),
         onToggleControls = { controls = !controls; touched++ },
