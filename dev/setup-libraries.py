@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Adds the Music and Books libraries to the test Jellyfin (run `make dev-media` first), waits for the scan, then gives
-Alex some history so the music and book screens aren't empty: plays, favourites, playlists, reading positions and an
-audiobook half listened. Safe to run again: libraries and playlists that exist are kept, the rest is set, not added.
+"""Adds the Music, Books, Photos and Home videos libraries to the test Jellyfin (run `make dev-media` first), waits for the
+scan, then gives Alex some history so the music, book and photo screens aren't empty: plays, favourites, playlists,
+reading positions, an audiobook half listened and a few favourite photos. Safe to run again: libraries and playlists that exist are kept, the rest is set, not added.
 Prints nothing secret."""
 import json, time, urllib.parse, urllib.request, urllib.error
 from datetime import datetime, timedelta, timezone
@@ -47,6 +47,10 @@ LIBRARIES = [
         'TypeOptions': types(('MusicArtist', [], LOCAL), ('MusicAlbum', [], LOCAL), ('Audio', ['Image Extractor'], LOCAL))}),
     ('Books', 'books', ['/media/Books', '/media/Audiobooks', '/media/Comics'], {
         'TypeOptions': types(('Book', ['EPUB Metadata', 'Comic Book Archive Cover Extractor'], []), ('AudioBook', ['Image Extractor'], LOCAL))}),
+    # NASA photos (dev/make-photos.py): dates, cameras and places come from each file's EXIF. Jellyfin 12 has no "photos"
+    # library type any more: photos go in a "Home videos and photos" library.
+    ('Photos', 'homevideos', ['/media/Photos'], {'EnablePhotos': True, 'TypeOptions': []}),
+    ('Home videos', 'homevideos', ['/media/Home videos'], {'EnablePhotos': True, 'TypeOptions': []}),
 ]
 
 
@@ -77,7 +81,12 @@ s, folders = call('GET', '/Library/VirtualFolders')
 ok('list libraries', s)
 have = {f['Name']: f for f in folders}
 added, refresh = False, []
+# A library that already shows these folders under another name counts as this one.
+by_path = {loc: f for f in folders for loc in f.get('Locations', [])}
 for name, kind, paths, options in LIBRARIES:
+    if name not in have and paths[0] in by_path:
+        print(name, 'library already there, as', by_path[paths[0]]['Name'])
+        have[name] = by_path[paths[0]]
     if name in have:
         lib = have[name]
         if same(lib['LibraryOptions'], options):
@@ -103,7 +112,9 @@ if added or refresh:
     wait_scan()
 s, folders = call('GET', '/Library/VirtualFolders')
 libs = {f['Name']: f['ItemId'] for f in folders}
-print('libraries', {n: libs.get(n) for n in ('Music', 'Books')})
+for name, kind, paths, options in LIBRARIES:
+    libs.setdefault(name, next((f['ItemId'] for f in folders if paths[0] in f.get('Locations', [])), None))
+print('libraries', {n: libs.get(n) for n in ('Music', 'Books', 'Photos', 'Home videos')})
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -256,3 +267,10 @@ ok('reading The Glass Orchard', call('POST', f'/Seedy/Reading/{glass["Id"]}', {'
                                                                                   'chapterCount': 28, 'finished': False})[0])
 print('books: reading The Glass Orchard (46%), Kestrel No. 4 (page 12), listening to A Field Guide to Fog (58%);',
       'finished Halden, The Long Frost, Coldwater, Kestrel No. 1-3')
+
+# Photos: a few favourites (the heart on the tiles, the Favorites tab).
+photos = {p['Name']: p for p in items('Photo', libs['Photos'])}
+for name in ('DSC_0517', 'DSC_0706', 'Z6A_1244', 'PIA24485', 'Crab'):
+    if name in photos:
+        user_data(photos[name], IsFavorite=True)
+print('photos:', len(photos), 'in the library, 5 favourites')

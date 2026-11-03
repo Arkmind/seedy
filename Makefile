@@ -59,15 +59,18 @@ dev-logs: ## Follow the test Jellyfin's log
 dev-install: ## Build, install into the test server and restart it
 	./build.sh --install-dev
 
-dev-media: ## Fill the test library: open-licensed films and shows, made-up music, books, audiobooks and comics
+dev-media: ## Fill the test library: open-licensed films and shows, made-up music, books, audiobooks and comics, NASA photos
 	docker run --rm -v "$(CURDIR)/dev/make-media.sh:/make-media.sh:ro" -v "$(CURDIR)/dev/data/media:/media" \
 		--entrypoint /bin/sh $(JELLYFIN_IMAGE) /make-media.sh
 	docker run --rm -v "$(CURDIR)/dev/make-music-books.py:/gen.py:ro" -v "$(CURDIR)/dev/data/media:/media" \
 		-v "$(CURDIR)/android/ui/src/main/res/font/noto_sans.ttf:/font.ttf:ro" $(PYTHON_IMAGE) \
 		sh -c 'pip install -q --disable-pip-version-check --root-user-action=ignore pillow numpy && python /gen.py'
 	docker run --rm -v "$(CURDIR)/dev/data/media:/media" --entrypoint /bin/sh $(JELLYFIN_IMAGE) /media/.seedy-audio/encode.sh
+	docker run --rm -v "$(CURDIR)/dev/make-photos.py:/gen.py:ro" -v "$(CURDIR)/dev/data/media:/media" $(PYTHON_IMAGE) \
+		sh -c 'pip install -q --disable-pip-version-check --root-user-action=ignore pillow && python /gen.py'
+	docker run --rm -v "$(CURDIR)/dev/data/media:/media" --entrypoint /bin/sh $(JELLYFIN_IMAGE) /media/.seedy-photos/encode.sh
 
-dev-libraries: ## Add the Music and Books libraries, with plays, playlists and reading positions for Alex
+dev-libraries: ## Add the Music, Books, Photos and Home videos libraries, with plays, playlists, reading positions and favourite photos for Alex
 	cd dev && python3 setup-libraries.py
 
 dev-seerr: ## Connect the test Seerr to the test Jellyfin
