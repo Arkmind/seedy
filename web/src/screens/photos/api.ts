@@ -1,7 +1,7 @@
 import { SERVER_URL, get, getSession } from '../../api/client';
 import { getItems, type ItemsQuery } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
-import { locale, t, tn } from '../../lib/i18n';
+import { formatNumber, getLang, locale, t, tn } from '../../lib/i18n';
 
 /* Photos libraries (Photos boards). Jellyfin 12 keeps photos in "Home videos and photos" libraries (the old photos
    type still shows up on servers that were upgraded): Photo and Video items, in PhotoAlbum folders (a folder with
@@ -116,11 +116,12 @@ export function countsLabel(photos: number, videos: number): string {
 
 export function bytesLabel(n?: number): string {
   if (!n) return '';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  // French writes octets: "18,4 Mo".
+  const units = getLang() === 'fr' ? ['o', 'ko', 'Mo', 'Go', 'To'] : ['B', 'KB', 'MB', 'GB', 'TB'];
   let i = 0;
   let v = n;
   while (v >= 1000 && i < units.length - 1) { v /= 1000; i++; }
-  return `${v >= 100 || i === 0 ? Math.round(v) : v.toFixed(1)} ${units[i]}`;
+  return `${formatNumber(v >= 100 || i === 0 ? Math.round(v) : Math.round(v * 10) / 10)} ${units[i]}`;
 }
 
 /* "October 2026". */
