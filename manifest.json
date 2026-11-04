@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.3.1.0",
+        "changelog": "Seedy 0.3.1",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.3.1/seedy_0.3.1.0.zip",
+        "checksum": "823b61fb6927716775a52416c118b93e",
+        "timestamp": "2026-11-04T15:07:38Z"
+      },
+      {
         "version": "0.3.0.0",
         "changelog": "## What's Changed\n* Feature/back bar volume by @Arkmind in https://github.com/Arkmind/seedy/pull/70\n* Feature/media session by @Arkmind in https://github.com/Arkmind/seedy/pull/71\n* Feature/android music books by @Arkmind in https://github.com/Arkmind/seedy/pull/72\n\nYeeeeey music & books on android 😀 \n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.2.10...v0.3.0",
         "targetAbi": "12.0.0.0",
