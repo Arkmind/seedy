@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +25,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -48,6 +53,12 @@ import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import io.github.arkmind.seedy.core.settings.LibraryInfo
+import java.util.UUID
 
 private val Dragged = Color(0xFF262626)
 
@@ -55,13 +66,21 @@ private val Dragged = Color(0xFF262626)
 private val NextUpDays = listOf(7, 14, 30, 60, 90, 180, 365, 730, 0)
 
 /**
- * Board "Android · Settings · Home screen": the rows (hold one, then drag it), the libraries Home draws from, and Next
- * up. [dragging] shows a row picked up (screenshot tests).
+ * Board "Android · Settings · Home screen": the rows (hold one, then drag it), the libraries (the same: their order is
+ * the Libraries tab's, and turning one off hides it), and Next up. [dragging] shows a row picked up (screenshot
+ * tests); [focus] "libraries" opens the page on them (the Libraries tab's "Order and hide libraries").
  */
 @Composable
-fun HomeScreenPage(state: SettingsState, actions: SettingsActions, nav: SettingsNav, dragging: String? = null) {
+fun HomeScreenPage(state: SettingsState, actions: SettingsActions, nav: SettingsNav, dragging: String? = null, focus: String? = null) {
     val sheet = rememberSheet()
-    SettingsPage(t("Home screen"), t("Which rows you see and in what order. Follows your profile to every device."), nav.back, overlay = { SheetHost(sheet) }) {
+    val scroll = rememberScrollState()
+    var librariesTop by remember { mutableStateOf<Float?>(null) }
+    val topRoom = with(LocalDensity.current) { (WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 12.dp).toPx() }
+    LaunchedEffect(focus, librariesTop != null) {
+        val top = librariesTop
+        if (focus == "libraries" && top != null) scroll.animateScrollTo((top - topRoom).toInt().coerceAtLeast(0))
+    }
+    SettingsPage(t("Home screen"), t("Which rows you see and in what order. Follows your profile to every device."), nav.back, overlay = { SheetHost(sheet) }, scroll = scroll) {
         if (state.seedy) {
             SectionTitle(t("Rows"))
             CssColumn(Modifier.padding(horizontal = 16.dp)) {
@@ -81,9 +100,9 @@ fun HomeScreenPage(state: SettingsState, actions: SettingsActions, nav: Settings
 
         val libraries = state.libraries.orEmpty()
         if (libraries.isNotEmpty()) {
-            Section(t("Libraries on Home"), t("Turned-off libraries still show in Libraries.")) {
-                for (l in libraries) row { SwitchRow(l.name, state.libraryLine(l), state.onHome(l)) { actions.setLibraryOnHome(l.id, it) } }
-            }
+            SectionTitle(t("Libraries on Home"), Modifier.onGloballyPositioned { librariesTop = it.positionInParent().y })
+            LibraryList(state, actions, libraries)
+            SectionFoot(t("Turned-off libraries also leave Libraries."))
         }
 
         Section(t("Next up and Continue watching")) {
@@ -117,6 +136,72 @@ fun HomeScreenPage(state: SettingsState, actions: SettingsActions, nav: Settings
 }
 
 private fun daysLabel(n: Int): String = if (n == 0) t("Never") else t("{n} days", "n" to formatNumber(n))
+
+/**
+ * The libraries, in their order (the Libraries tab's and My media's): hold one, then drag it. Turning one off leaves it
+ * out of Home and of the Libraries tab (Jellyfin hides what's left out of My media).
+ */
+@Composable
+private fun LibraryList(state: SettingsState, actions: SettingsActions, libraries: List<LibraryInfo>) {
+    var order by remember { mutableStateOf<List<UUID>?>(null) }
+    var drag by remember { mutableStateOf<UUID?>(null) }
+    var offset by remember { mutableFloatStateOf(0f) }
+    val heights = remember { mutableStateMapOf<UUID, Int>() }
+    val shown = order?.mapNotNull { id -> libraries.firstOrNull { it.id == id } }?.takeIf { it.size == libraries.size } ?: libraries
+
+    fun move(dy: Float) {
+        val id = drag ?: return
+        val list = order?.toMutableList() ?: return
+        offset += dy
+        var i = list.indexOf(id)
+        while (i < list.lastIndex && offset > (heights[list[i + 1]] ?: 0) / 2f) {
+            offset -= heights[list[i + 1]] ?: 0
+            list.add(i + 1, list.removeAt(i)); i++
+        }
+        while (i > 0 && offset < -(heights[list[i - 1]] ?: 0) / 2f) {
+            offset += heights[list[i - 1]] ?: 0
+            list.add(i - 1, list.removeAt(i)); i--
+        }
+        order = list
+    }
+
+    fun end() {
+        val list = order
+        drag = null
+        offset = 0f
+        if (list != null && list != libraries.map { it.id }) actions.setLibraryOrder(list)
+        order = null
+    }
+
+    val shape = RoundedCornerShape(16.dp)
+    // Not clipped: the library being moved grows past the card's edges.
+    CssColumn(Modifier.padding(horizontal = 16.dp).fillMaxWidth().background(SeedyColors.Panel, RoundedCornerShape(18.dp))) {
+        // Keyed, so a row keeps its gesture while it moves past the others.
+        shown.forEachIndexed { i, l -> key(l.id) {
+            val lifted = l.id == drag
+            if (i > 0 && !lifted) RowLine()
+            SwitchRow(
+                l.name, state.libraryLine(l), state.onHome(l),
+                modifier = Modifier.onSizeChanged { heights[l.id] = it.height }
+                    .zIndex(if (lifted) 1f else 0f)
+                    .graphicsLayer {
+                        if (lifted) {
+                            translationY = offset
+                            scaleX = 1.02f
+                            scaleY = 1.02f
+                        }
+                    }
+                    .then(if (lifted) Modifier.boxShadow(Color.Black.copy(alpha = 0.6f), 30.dp, 14.dp, 16.dp).clip(shape).background(Dragged).border(1.dp, Color.White.copy(alpha = 0.08f), shape) else Modifier)
+                    .pointerInput(l.id) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { order = shown.map { it.id }; drag = l.id; offset = 0f },
+                            onDragEnd = ::end, onDragCancel = ::end,
+                        ) { c, d -> c.consume(); move(d.y) }
+                    },
+            ) { actions.setLibraryOnHome(l.id, it) }
+        } }
+    }
+}
 
 /** The rows, in order: hold one (or drag its grip) to move it; in automatic order a moved row is pinned there. */
 @Composable
@@ -167,7 +252,7 @@ private fun RowList(state: SettingsState, actions: SettingsActions, preview: Str
 
     // Not clipped: the row being moved grows past the list's edges.
     Column(Modifier.fillMaxWidth().background(SeedyColors.Panel, RoundedCornerShape(18.dp))) {
-        shown.forEachIndexed { i, r ->
+        shown.forEachIndexed { i, r -> key(r.kind) {
             val lifted = r.kind == (drag ?: preview)
             if (i > 0 && !lifted) RowLine()
             RowItem(
@@ -190,7 +275,7 @@ private fun RowList(state: SettingsState, actions: SettingsActions, preview: Str
             ) { on ->
                 actions.setRows(rows.map { HomeRowPref(it.kind, if (it.kind == r.kind) on else it.enabled, it.count, it.pinned) })
             }
-        }
+        } }
     }
 }
 

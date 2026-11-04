@@ -42,6 +42,12 @@ import io.github.arkmind.seedy.core.format.progress
 import io.github.arkmind.seedy.core.format.subtitleTrackLabel
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
+import io.github.arkmind.seedy.core.settings.SettingsActions
+import io.github.arkmind.seedy.core.settings.SettingsState
+import io.github.arkmind.seedy.mobile.settings.CssColumn
+import io.github.arkmind.seedy.mobile.settings.SheetHost
+import io.github.arkmind.seedy.mobile.settings.SubtitlesContent
+import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.player.PlayerState
 import io.github.arkmind.seedy.ui.components.Artwork
@@ -196,6 +202,34 @@ fun TracksPanel(
                     SIcon(WebIcons.ChevronRight, size = 14.dp, color = SeedyColors.White, stroke = 2.4f)
                 }
             }
+        }
+    }
+}
+
+/**
+ * Subtitle style, from the Subtitles and audio panel: the Subtitles settings page in the same frame, so the look
+ * changes without leaving the video. Back returns to the tracks; the page's lists open inside the panel.
+ */
+@Composable
+fun StylePanel(state: SettingsState, actions: SettingsActions, onBack: () -> Unit, onClose: () -> Unit) {
+    val sheet = rememberSheet()
+    PanelScrim(onClose) {
+        Box(Modifier.fillMaxHeight().padding(12.dp).width(580.dp).align(Alignment.TopEnd).panelCard()) {
+            Column(Modifier.fillMaxSize()) {
+                Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).tap(onClick = onBack), contentAlignment = Alignment.Center) {
+                        SIcon(WebIcons.ArrowLeft, size = 20.dp, color = SeedyColors.TextHero, stroke = 2.2f)
+                    }
+                    SText(t("Subtitle style"), Modifier.weight(1f).padding(start = 2.dp), size = 15.sp, weight = 800, color = SeedyColors.White)
+                    PanelClose(onClose)
+                }
+                Divider()
+                CssColumn(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
+                    SubtitlesContent(state, actions, sheet, player = true)
+                    Spacer(Modifier.height(20.dp))
+                }
+            }
+            SheetHost(sheet)
         }
     }
 }

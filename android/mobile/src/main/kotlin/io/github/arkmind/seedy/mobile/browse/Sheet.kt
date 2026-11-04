@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 
@@ -40,7 +41,7 @@ fun BottomSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Un
         AnimatedVisibility(shown, Modifier.align(Alignment.BottomCenter), enter = slideInVertically { it / 3 } + fadeIn()) {
             val shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
             Column(
-                Modifier.fillMaxWidth().heightIn(max = maxHeight - 150.dp).shadow(40.dp, shape).clip(shape).background(SeedyColors.Panel).tap {},
+                Modifier.fillMaxWidth().heightIn(max = maxHeight - 150.dp).shadow(40.dp, shape).clip(shape).background(SeedyColors.Panel).blockTaps(),
             ) {
                 Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp, bottom = 6.dp).size(36.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(SeedyColors.Stroke))
                 content()

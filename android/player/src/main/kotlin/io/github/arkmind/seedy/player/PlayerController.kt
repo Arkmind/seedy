@@ -26,6 +26,7 @@ import io.github.arkmind.seedy.core.format.Images
 import io.github.arkmind.seedy.core.format.TICKS_PER_SECOND
 import io.github.arkmind.seedy.core.format.episodeTag
 import io.github.arkmind.seedy.core.settings.ResolvedStyle
+import io.github.arkmind.seedy.core.settings.SystemCaptions
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -108,7 +109,8 @@ class PlayerController(private val context: Context, private val session: UserSe
         },
         pictureSubtitles = device.pictureSubtitles,
         burnIn = device.burnIn,
-        hevc = device.hevc, av1 = device.av1, hdr = device.hdr, dts = device.dts, truehd = device.truehd, mkv = device.mkv,
+        // TV · Match dynamic range off: HDR is tone-mapped to SDR, so the TV never switches mode (phones don't show it).
+        hevc = device.hevc, av1 = device.av1, hdr = device.hdr && device.matchDynamicRange, dts = device.dts, truehd = device.truehd, mkv = device.mkv,
         preferFmp4 = device.preferFmp4,
     )
 
@@ -143,6 +145,11 @@ class PlayerController(private val context: Context, private val session: UserSe
         .setSeekBackIncrementMs(seekBackSeconds * 1000L)
         .setSeekForwardIncrementMs(seekForwardSeconds * 1000L)
         .build()
+        .apply {
+            // Match frame rate: the display follows the video's rate when it can switch without going dark (Android TV's
+            // "Match content frame rate" setting can make that every time); off keeps the screen's rate.
+            videoChangeFrameRateStrategy = if (device.matchFrameRate) C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_ONLY_IF_SEAMLESS else C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF
+        }
 
     /**
      * The system's view of this player: headset and Bluetooth buttons, Google Assistant, Android TV's media controls.
@@ -156,6 +163,12 @@ class PlayerController(private val context: Context, private val session: UserSe
         override fun seekToNext() = playNext()
     }).setId("seedy-player-${UUID.randomUUID()}").build()
 
+    /** Bound to [VideoService] while this video may play on with the screen off. */
+    private val background = if (device.backgroundAudio) VideoService.start(context, mediaSession) else null
+
+    /** Settings · Playback › Keep the sound going with the screen off. */
+    val playsInBackground: Boolean get() = background != null
+
     private var item: BaseItemDto? = null
     private var stream: ActiveStream? = null
     private var text: TextSubtitles? = null
@@ -167,8 +180,14 @@ class PlayerController(private val context: Context, private val session: UserSe
     val seekBackSeconds: Int get() = device.seekBack ?: prefs?.seekBackSeconds ?: 10
     val seekForwardSeconds: Int get() = device.seekForward ?: prefs?.seekForwardSeconds ?: 30
 
-    /** Settings · Subtitles › how they look, here. */
-    val subtitleLook: ResolvedStyle get() = ResolvedStyle.of(device, session.seedy?.prefs?.subtitles)
+    /**
+     * Settings · Subtitles › how they look, here: [now] is this device's settings as they are now (the player's Subtitle
+     * style panel changes them while it plays). Android's caption style replaces Seedy's look when this device follows it.
+     */
+    fun subtitleLook(now: DeviceSettings = DevicePrefs.get(context).current): ResolvedStyle {
+        val base = ResolvedStyle.of(now, session.seedy?.prefs?.subtitles)
+        return if (now.systemCaptionStyle) SystemCaptions.look(context, base) else base
+    }
 
     /** Settings · Gestures and Remote. */
     val settings: DeviceSettings get() = device
@@ -204,11 +223,14 @@ class PlayerController(private val context: Context, private val session: UserSe
         })
     }
 
-    /** Starts [id] where the person left it (or from the start once watched). */
-    fun open(id: UUID) {
+    /**
+     * Starts [id] where the person left it (or from the start once watched), or at [startTicks] when given; [maxBitrate]
+     * is what Auto stands for this time (the mobile data prompt's pick).
+     */
+    fun open(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
         scope.launch {
             if (!placed) {
-                autoBitrate = Network.autoBitrate(device, Network.place(context, session), session.user.policy?.remoteClientBitrateLimit ?: 0)
+                autoBitrate = maxBitrate ?: Network.autoBitrate(device, Network.place(context, session), session.user.policy?.remoteClientBitrateLimit ?: 0)
                 placed = true
             }
             val loaded = runCatching {
@@ -220,17 +242,17 @@ class PlayerController(private val context: Context, private val session: UserSe
                 }
             }.getOrNull()
             if (loaded == null) return@launch _state.update { it.copy(loading = false, problem = "network") }
-            start(loaded)
+            start(loaded, startTicks)
             if (loaded.type == BaseItemKind.TV_CHANNEL) followProgram(loaded.id)
         }
     }
 
-    private suspend fun start(it: BaseItemDto) {
+    private suspend fun start(it: BaseItemDto, startTicks: Long? = null) {
         item = it
         started = false
         skipped.clear()
         _state.update { s -> PlayerState(item = it, quality = s.quality, speed = s.speed, subtitleOffsetMs = s.subtitleOffsetMs) }
-        val resumeTicks = if (it.userData?.played == true) 0L else it.userData?.playbackPositionTicks ?: 0L
+        val resumeTicks = startTicks ?: if (it.userData?.played == true) 0L else it.userData?.playbackPositionTicks ?: 0L
         val source = it.mediaSources?.firstOrNull()
         val (audio, subtitle) = keptPicks(it, source)
         val opts = StreamOptions(
@@ -608,6 +630,7 @@ class PlayerController(private val context: Context, private val session: UserSe
         val snapshot = Triple(item, stream, exo.currentPosition)
         val paused = !exo.playWhenReady
         val speed = exo.playbackParameters.speed
+        VideoService.stop(context, mediaSession, background)
         mediaSession.release()
         exo.release()
         val (it, s, pos) = snapshot

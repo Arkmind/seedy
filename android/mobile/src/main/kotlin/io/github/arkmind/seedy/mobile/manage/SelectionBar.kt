@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.admin.AdminIcons
+import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.boxShadow
 import io.github.arkmind.seedy.ui.icons.IconDef
@@ -64,7 +65,7 @@ fun SelectionBar(count: Int, total: Int?, actions: SelectionActions, modifier: M
     Column(
         modifier.padding(start = 12.dp, end = 12.dp, top = top).fillMaxWidth()
             .boxShadow(Color.Black.copy(alpha = 0.45f), blur = 40.dp, y = 16.dp, radius = 18.dp)
-            .clip(shape).background(SeedyColors.Surface).border(1.dp, Color.White.copy(alpha = 0.06f), shape).tap {}
+            .clip(shape).background(SeedyColors.Surface).border(1.dp, Color.White.copy(alpha = 0.06f), shape).blockTaps()
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

@@ -28,6 +28,13 @@ export const quickConnectState = (secret: string) =>
   request<{ Secret: string; Code: string; Authenticated: boolean }>('GET', '/QuickConnect/Connect', { query: { secret }, token: null });
 export const authenticateWithQuickConnect = (Secret: string) =>
   request<AuthResult>('POST', '/Users/AuthenticateWithQuickConnect', { body: { Secret }, token: null });
+/* Jellyfin's own password reset: ContactAdmin, PinCode (a PIN written to a file on the server, redeemed below; the
+   password then becomes that PIN) or InNetworkRequired (only from the server's network). */
+export interface ForgotPasswordResult { Action: 'ContactAdmin' | 'PinCode' | 'InNetworkRequired'; PinFile?: string; PinExpirationDate?: string }
+export const forgotPassword = (EnteredUsername: string) =>
+  request<ForgotPasswordResult>('POST', '/Users/ForgotPassword', { body: { EnteredUsername }, token: null });
+export const forgotPasswordPin = (Pin: string) =>
+  request<{ Success: boolean; UsersReset?: string[] }>('POST', '/Users/ForgotPassword/Pin', { body: { Pin }, token: null });
 export const getSystemInfo = () => get<{ Version: string; ServerName: string; Id: string; OperatingSystemDisplayName?: string }>('/System/Info');
 
 /* ── Library ── */

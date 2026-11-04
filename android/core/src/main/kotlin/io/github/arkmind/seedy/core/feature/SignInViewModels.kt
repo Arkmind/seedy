@@ -140,6 +140,21 @@ class PasswordViewModel(private val core: SeedyCore, val server: SavedServer, us
         /** The Quick Connect code to approve, once asked for. */
         val code: String? = null,
         val quickConnectError: String? = null,
+        /** "Forgot password?", while its sheet is open. */
+        val forgot: ForgotState? = null,
+    )
+
+    /**
+     * The forgot-password sheet: [answer] is null while the server is asked; [pin] is what's typed; [reset] once the PIN
+     * worked (the password field then holds it).
+     */
+    data class ForgotState(
+        val name: String,
+        val answer: SignIn.Forgot? = null,
+        val pin: String = "",
+        val busy: Boolean = false,
+        val error: String? = null,
+        val reset: Boolean = false,
     )
 
     private val _state = MutableStateFlow(State(userName = userName.orEmpty()))
@@ -178,6 +193,35 @@ class PasswordViewModel(private val core: SeedyCore, val server: SavedServer, us
             }
         }
     }
+
+    /** Asks the server how this person can reset their password. */
+    fun forgot() {
+        val name = _state.value.userName.trim()
+        if (name.isEmpty()) return _state.update { it.copy(error = t("Enter your username first.")) }
+        _state.update { it.copy(forgot = ForgotState(name), error = null) }
+        viewModelScope.launch {
+            val answer = core.signIn.forgotPassword(server, name)
+            _state.update { s -> s.copy(forgot = s.forgot?.copy(answer = answer)) }
+        }
+    }
+
+    fun setPin(v: String) = _state.update { s -> s.copy(forgot = s.forgot?.copy(pin = v, error = null)) }
+
+    fun redeemPin() {
+        val f = _state.value.forgot ?: return
+        val pin = f.pin.trim()
+        if (f.busy || pin.isEmpty()) return
+        _state.update { s -> s.copy(forgot = f.copy(busy = true, error = null)) }
+        viewModelScope.launch {
+            val reset = core.signIn.redeemPin(server, pin)
+            _state.update { s ->
+                if (reset == null) s.copy(forgot = s.forgot?.copy(busy = false, error = t("That PIN didn't work. Check it, or start again for a new one.")))
+                else s.copy(forgot = s.forgot?.copy(busy = false, reset = true), password = pin)
+            }
+        }
+    }
+
+    fun closeForgot() = _state.update { it.copy(forgot = null) }
 
     fun stopQuickConnect() {
         quickConnect?.cancel()

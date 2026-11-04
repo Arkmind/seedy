@@ -77,7 +77,7 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 @Composable
 fun topInset(): Dp = max(36.dp, WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 12.dp)
 
-/** Board "Android · Libraries" header: a 24 px title, then Search and Cast. */
+/** Board "Android · Libraries" header: a 24 px title, then Search (the board's Cast waits for video casting). */
 @Composable
 fun TabHeader(title: String, onSearch: () -> Unit, modifier: Modifier = Modifier, count: String? = null) {
     Row(
@@ -90,9 +90,6 @@ fun TabHeader(title: String, onSearch: () -> Unit, modifier: Modifier = Modifier
             if (!count.isNullOrEmpty()) SText(count, size = 13.sp, weight = 600, color = SeedyColors.Text3, maxLines = 1)
         }
         HeaderButton(WebIcons.Search, onSearch, stroke = 2.2f)
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).tap {}, contentAlignment = Alignment.Center) {
-            SIcon(WebIcons.Cast, size = 21.dp, color = SeedyColors.White)
-        }
     }
 }
 

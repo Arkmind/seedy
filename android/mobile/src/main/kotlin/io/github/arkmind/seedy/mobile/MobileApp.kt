@@ -62,6 +62,7 @@ import io.github.arkmind.seedy.mobile.livetv.LiveTvRoute
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.MobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
+import io.github.arkmind.seedy.mobile.player.MobileDataSheet
 import io.github.arkmind.seedy.mobile.player.PlayerRoute
 import io.github.arkmind.seedy.core.requests.TitlesKind
 import io.github.arkmind.seedy.core.seedy.libraryUuid
@@ -85,6 +86,7 @@ import io.github.arkmind.seedy.mobile.parts.pagePadding
 import io.github.arkmind.seedy.mobile.parts.tabBarHeight
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.signin.AddServerScreen
+import io.github.arkmind.seedy.mobile.signin.ForgotSheet
 import io.github.arkmind.seedy.mobile.signin.PasswordScreen
 import io.github.arkmind.seedy.mobile.signin.ProfilesScreen
 import io.github.arkmind.seedy.mobile.signin.QuickConnectSheet
@@ -181,9 +183,10 @@ private fun SignInFlow(core: SeedyCore, server: SavedServer) {
                     onPassword = vm::setPassword,
                     onRemember = vm::setRemember,
                     onSignIn = vm::signIn,
-                    onForgot = {},
+                    onForgot = vm::forgot,
                     onQuickConnect = { quickConnect = true },
                 )
+                state.forgot?.let { f -> ForgotSheet(f, vm::setPin, vm::redeemPin, vm::closeForgot) }
                 if (quickConnect) QuickConnect(core, server) { quickConnect = false }
             }
             entry<AddServerKey> { AddServerEntry(core, onBack = { stack.removeLastOrNull() }) }
@@ -234,6 +237,13 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
     val audio = remember { AudioEngine.get(context, core) }
     nav.audio = audio
     val tabs = if (viewer.requests) Tab.entries else Tab.entries - Tab.Requests
+    // Settings · Playback › Ask before using mobile data: a video asks for its quality first (board "Android · Mobile data prompt").
+    var asking by remember { mutableStateOf<Route.Player?>(null) }
+    nav.beforePlay = { r ->
+        val ask = r.maxBitrate == null && core.device.current.askMobileData && io.github.arkmind.seedy.player.Network.onMobileData(context)
+        if (ask) asking = r
+        ask
+    }
     val account = AccountActions(
         onSwitchProfile = { scope.launch { core.sessions.switchProfile() } },
         onSignOut = { scope.launch { core.sessions.signOut() } },
@@ -241,6 +251,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
     )
     CompositionLocalProvider(LocalViewer provides viewer, LocalSession provides session, LocalCore provides core, LocalMobileNav provides nav, LocalAudio provides audio) {
       AudioScope {
+       Box(Modifier.fillMaxSize()) {
         NavDisplay(
             backStack = stack,
             onBack = { nav.back() },
@@ -293,7 +304,8 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                 entry<Route.LiveTv> { LiveTvRoute() }
                 entry<Route.Settings> { WithTabBar(tabs, tab, nav, reserve = true) { SettingsRoute(appVersion) } }
                 entry<Route.SettingsPage> { SettingsPageRoute(it.page, appVersion) }
-                entry<Route.Player> { PlayerRoute(it.id) }
+                entry<Route.History> { WithTabBar(tabs, tab, nav, reserve = true) { io.github.arkmind.seedy.mobile.history.HistoryRoute() } }
+                entry<Route.Player> { PlayerRoute(it.id, it.startTicks, it.maxBitrate) }
                 entry<Route.SeerrTitle> { WithTabBar(tabs, tab, nav, reserve = true) { SeerrTitleRoute(it.mediaType, it.tmdbId) } }
                 entry<Route.SeerrTitles> { WithTabBar(tabs, tab, nav, reserve = true) { SeerrTitlesRoute(it.kind) } }
                 entry<Route.MediaRequestsSearch> { WithTabBar(tabs, tab, nav, reserve = true) { io.github.arkmind.seedy.mobile.requests.MediaSearchRoute(it.music) } }
@@ -301,6 +313,19 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                 entry<Route.Admin> { WithOverlay { AdminRoute(it.page, it.id) } }
             },
         )
+        asking?.let { r ->
+            val device by core.device.flow.collectAsStateWithLifecycle()
+            MobileDataSheet(
+                r.id, device,
+                onPlay = { choice, never ->
+                    if (never) core.device.update { it.copy(askMobileData = false, qualityMobile = choice.bitrate) }
+                    asking = null
+                    nav.go(r.copy(maxBitrate = choice.bitrate))
+                },
+                onWait = { asking = null },
+            )
+        }
+       }
       }
     }
 }

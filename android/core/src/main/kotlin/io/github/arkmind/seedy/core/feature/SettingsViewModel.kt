@@ -26,6 +26,7 @@ import io.github.arkmind.seedy.core.settings.ResolvedStyle
 import io.github.arkmind.seedy.core.settings.SettingsActions
 import io.github.arkmind.seedy.core.settings.SettingsState
 import io.github.arkmind.seedy.core.settings.SettingsState.Companion.Keys
+import io.github.arkmind.seedy.core.settings.SystemCaptions
 import io.github.arkmind.seedy.core.settings.CodeState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,7 +53,6 @@ import org.jellyfin.sdk.api.client.extensions.authenticationApi
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.localizationApi
-import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.api.client.extensions.userViewApi
 import org.jellyfin.sdk.model.FileInfo
@@ -105,6 +105,7 @@ class SettingsViewModel(
             serverAddress = session.server.address,
             serverVersion = session.server.version,
             deviceName = deviceName(),
+            captionStyle = if (device.systemCaptionStyle) SystemCaptions.look(core.context, ResolvedStyle.of(device, me?.prefs?.subtitles)) else null,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, SettingsState())
 
@@ -124,9 +125,9 @@ class SettingsViewModel(
         }
         if ("profile" in all) {
             session.seedyApi?.let { api -> io { api.passwordState().changedAt?.let { d -> extras.update { it.copy(passwordChanged = changedLabel(d)) } } } }
-            io {
-                val sessions = session.api.sessionApi.getSessions().content
-                val n = sessions.filter { it.userId == session.userId }.mapNotNull { it.deviceId }.distinct().size
+            // Jellyfin lets only admins list and remove devices; for everyone else the Devices row stays hidden.
+            if (session.seedy?.isAdmin ?: (session.user.policy?.isAdministrator == true)) io {
+                val n = io.github.arkmind.seedy.core.settings.myDevices(io.github.arkmind.seedy.core.admin.AdminHttp(session.api), session.userId.toString()).size
                 extras.update { it.copy(devices = n) }
             }
         }
@@ -260,6 +261,11 @@ class SettingsViewModel(
             myMediaExcludes = if (on) c.myMediaExcludes - id else c.myMediaExcludes - id + id,
             latestItemsExcludes = if (on) c.latestItemsExcludes - id else c.latestItemsExcludes - id + id,
         )
+    }
+
+    override fun setLibraryOrder(ids: List<UUID>) {
+        extras.update { x -> x.copy(libraries = x.libraries?.let { list -> ids.mapNotNull { id -> list.firstOrNull { it.id == id } } + list.filter { it.id !in ids } }) }
+        setConfig { it.copy(orderedViews = ids) }
     }
 
     /* ── This device ── */

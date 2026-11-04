@@ -125,14 +125,16 @@ fun ProfilePage(state: SettingsState, actions: SettingsActions, nav: SettingsNav
                 val p = state.prefs.privacy
                 row { SwitchRow(t("Personal recommendations"), t("Because you watched, genre rows and row order learn from your plays"), p.personalRecs) { actions.setPrivacy(it, p.countInTop10) } }
                 row { SwitchRow(t("Count my plays in the Top 10"), t("Others see totals only, never who watched"), p.countInTop10) { actions.setPrivacy(p.personalRecs, it) } }
-                // Viewing history has no page in the app yet.
-                if (state.historyEnabled) row { PickRow(t("Viewing history"), t("See, hide or clear what you watched"), t("Open")) {} }
+                if (state.historyEnabled) row { PickRow(t("Viewing history"), t("See, hide or clear what you watched"), t("Open"), onClick = nav.history) }
             }
         }
 
-        Section(t("Devices")) {
-            row {
-                PickRow(t("Signed in on"), t("Sign out the ones you don’t use any more"), state.devices?.let { tn(it, "{n} device", "{n} devices") } ?: "") {}
+        // Jellyfin lets only admins list and sign out devices.
+        if (state.isAdmin) {
+            Section(t("Devices")) {
+                row {
+                    PickRow(t("Signed in on"), t("Sign out the ones you don’t use any more"), state.devices?.let { tn(it, "{n} device", "{n} devices") } ?: "") { nav.open("devices") }
+                }
             }
         }
 

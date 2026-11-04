@@ -183,7 +183,6 @@ private fun TopButtons(actions: DetailsActions, onMore: (() -> Unit)?) {
     ) {
         GlassButton(WebIcons.ArrowLeft, 22.dp, actions.onBack)
         Spacer(Modifier.weight(1f))
-        GlassButton(WebIcons.Cast, 21.dp, {})
         if (onMore != null) GlassButton(AppIcons.MoreVertical, 22.dp, onMore)
     }
 }

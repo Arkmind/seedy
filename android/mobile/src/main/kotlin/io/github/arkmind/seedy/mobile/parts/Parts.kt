@@ -29,6 +29,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -67,6 +70,9 @@ fun pagePadding(top: Dp = 36.dp, side: Dp = 24.dp, bottom: Dp = 28.dp): PaddingV
 /** Click without the default grey press overlay; the boards' controls change colour themselves. */
 fun Modifier.tap(role: Role = Role.Button, enabled: Boolean = true, onClick: () -> Unit): Modifier =
     this.clickable(interactionSource = null, indication = null, enabled = enabled, role = role, onClick = onClick)
+
+/** Keeps taps from reaching what's under this (a sheet over its scrim, a bar over the page); nothing happens on a tap. */
+fun Modifier.blockTaps(): Modifier = this.pointerInput(Unit) { detectTapGestures { } }
 
 /** Widens the element by [h] on both sides, into the page margin (CSS `margin: 0 -8px`). */
 fun Modifier.bleed(h: Dp): Modifier = this.layout { measurable, constraints ->
@@ -133,6 +139,8 @@ fun SeedyField(
     keyboard: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction = ImeAction.Done,
     onDone: () -> Unit = {},
+    /** Takes the focus (and the keyboard) when asked. */
+    focus: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -166,7 +174,7 @@ fun SeedyField(
                     autoCorrectEnabled = false,
                 ),
                 keyboardActions = KeyboardActions(onDone = { onDone() }, onGo = { onDone() }),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().then(if (focus != null) Modifier.focusRequester(focus) else Modifier),
             )
         }
         if (password) {

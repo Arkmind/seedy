@@ -66,6 +66,7 @@ import io.github.arkmind.seedy.core.mediarequests.MusicRelease
 import io.github.arkmind.seedy.mobile.browse.Chip
 import io.github.arkmind.seedy.mobile.manage.BigButton
 import io.github.arkmind.seedy.mobile.parts.bleed
+import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.SeedySwitch
 import io.github.arkmind.seedy.ui.components.initialsOf
@@ -93,7 +94,7 @@ private fun RequestSheet(onDismiss: () -> Unit, footer: @Composable ColumnScope.
             Box(Modifier.fillMaxSize().background(Color(0xA8050505)).tap(onClick = onDismiss))
             AnimatedVisibility(shown, enter = slideInVertically { it / 3 } + fadeIn()) {
                 val shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
-                Column(Modifier.fillMaxSize().padding(top = 150.dp).shadow(40.dp, shape, ambientColor = Color.Black, spotColor = Color.Black).clip(shape).background(SeedyColors.Panel).tap {}) {
+                Column(Modifier.fillMaxSize().padding(top = 150.dp).shadow(40.dp, shape, ambientColor = Color.Black, spotColor = Color.Black).clip(shape).background(SeedyColors.Panel).blockTaps()) {
                     Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp, bottom = 6.dp).size(36.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(SeedyColors.Stroke))
                     Column(
                         Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 12.dp),

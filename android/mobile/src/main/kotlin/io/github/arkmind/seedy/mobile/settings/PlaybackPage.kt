@@ -35,12 +35,7 @@ fun PlaybackPage(state: SettingsState, actions: SettingsActions, nav: SettingsNa
                     sheet.open(t("On mobile data"), Choices.qualities(auto), d.qualityMobile) { v -> device { it.copy(qualityMobile = v) } }
                 }
             }
-            row {
-                val auto = t("Auto")
-                PickRow(t("When casting"), t("Chromecast and Google TV"), Choices.quality(d.qualityCast, auto, picture = false), device = true) {
-                    sheet.open(t("When casting"), Choices.qualities(auto, picture = false), d.qualityCast) { v -> device { it.copy(qualityCast = v) } }
-                }
-            }
+            // The board's "When casting" waits for video casting.
             row {
                 SwitchRow(t("Ask before using mobile data"), t("Before a video starts away from Wi-Fi"), d.askMobileData, device = true) { v -> device { it.copy(askMobileData = v) } }
             }

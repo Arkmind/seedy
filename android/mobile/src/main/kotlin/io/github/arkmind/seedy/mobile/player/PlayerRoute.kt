@@ -39,7 +39,9 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.compose.ContentFrame
+import io.github.arkmind.seedy.core.feature.SettingsViewModel
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.ui.theme.LocalCore
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.parts.PrimaryButton
 import io.github.arkmind.seedy.player.PlayerViewModel
@@ -53,13 +55,18 @@ import java.util.UUID
 
 /** Boards "Android · Player" and its panels: plays [id] full screen, sideways. */
 @Composable
-fun PlayerRoute(id: UUID) {
+fun PlayerRoute(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
     val session = currentSession()
     val context = LocalContext.current
     val nav = LocalMobileNav.current
-    val vm = viewModel { PlayerViewModel(context, session, id) }
+    val vm = viewModel { PlayerViewModel(context, session, id, startTicks, maxBitrate) }
     val player = vm.controller
     val state by player.state.collectAsStateWithLifecycle()
+    val core = checkNotNull(LocalCore.current)
+    // This phone's settings as they change: the Subtitle style panel changes the look while the video plays.
+    val device by core.device.flow.collectAsStateWithLifecycle()
+    val settings = viewModel { SettingsViewModel(core, session) }
+    val settingsState by settings.state.collectAsStateWithLifecycle()
     val activity = LocalActivity.current as? ComponentActivity
     val scope = rememberCoroutineScope()
 
@@ -72,8 +79,12 @@ fun PlayerRoute(id: UUID) {
     var seasonEpisodes by remember { mutableStateOf<List<BaseItemDto>?>(null) }
 
     FullScreenSideways(activity)
-    // Videos don't play in the background (a picture-in-picture window keeps the app started until it's closed).
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { player.pause() }
+    // Settings · Gestures › swipe for brightness and volume; the screen's own brightness comes back on leaving.
+    val swipeLevels = remember(activity) { if (player.settings.swipeControls) activity?.let(::PhoneSwipeLevels) else null }
+    DisposableEffect(swipeLevels) { onDispose { swipeLevels?.restore() } }
+    // Videos stop in the background (a picture-in-picture window keeps the app started until it's closed), unless
+    // Settings · Playback › Keep the sound going with the screen off is on.
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { if (!player.playsInBackground) player.pause() }
     // Settings · Playback › Picture in picture: going to the home screen while a video plays keeps it in a window.
     val autoPip = player.settings.pictureInPicture && state.playing
     DisposableEffect(activity, autoPip) {
@@ -107,6 +118,7 @@ fun PlayerRoute(id: UUID) {
     BackHandler {
         when {
             state.problem != null -> nav.back()
+            panel == PlayerPanel.Style -> panel = PlayerPanel.Tracks
             panel != null -> panel = null
             locked -> controls = true
             else -> nav.back()
@@ -127,8 +139,9 @@ fun PlayerRoute(id: UUID) {
             else -> 18.sp
         },
         lift = subtitlePrefs?.lift ?: true,
-        look = player.subtitleLook,
+        look = player.subtitleLook(device),
         doubleTapSeek = player.settings.doubleTapSeek,
+        swipeLevels = swipeLevels,
         actions = PlayerActions(
             onBack = { nav.back() },
             onPlayPause = { touched++; player.playPause() },
@@ -140,7 +153,6 @@ fun PlayerRoute(id: UUID) {
             onPip = {
                 activity?.enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build())
             },
-            onCast = {},
             onPanel = { panel = it },
         ),
         onToggleControls = { controls = !controls; touched++ },
@@ -163,10 +175,11 @@ fun PlayerRoute(id: UUID) {
                     onAudio = player::selectAudio,
                     onSubtitle = player::selectSubtitle,
                     onOffset = player::setSubtitleOffset,
-                    onStyle = {},
+                    onStyle = { settings.load("subtitles"); panel = PlayerPanel.Style },
                     onClose = { panel = null },
                 )
                 PlayerPanel.Speed -> SpeedPanel(state.speed, onSpeed = { player.setSpeed(it); panel = null }, onClose = { panel = null })
+                PlayerPanel.Style -> StylePanel(settingsState, settings, onBack = { panel = PlayerPanel.Tracks }, onClose = { panel = null })
                 null -> Unit
             }
         },

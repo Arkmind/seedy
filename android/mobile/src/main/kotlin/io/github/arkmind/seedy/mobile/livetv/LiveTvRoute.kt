@@ -20,6 +20,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
+import io.github.arkmind.seedy.mobile.parts.SeedyField
+import io.github.arkmind.seedy.mobile.settings.FormSheet
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
@@ -55,25 +61,55 @@ fun LiveTvRoute() {
     val state by vm.state.collectAsStateWithLifecycle()
     var view by rememberSaveable { mutableStateOf(LiveView.OnNow) }
     var selected by remember { mutableStateOf<Pair<LiveChannel, BaseItemDto>?>(null) }
+    var numbering by remember { mutableStateOf(false) }
     val watch: (LiveChannel) -> Unit = { c -> vm.watched(c.id); nav.go(Route.Player(c.id)) }
     LaunchedEffect(view) { if (view == LiveView.Recordings) vm.loadRecordings() }
 
-    LiveTvScreen(
-        state = state,
-        view = view,
-        selected = selected,
-        onView = { view = it },
-        onBack = { nav.back() },
-        onChannelNumber = {},
-        onFavoritesOnly = vm::setFavoritesOnly,
-        onDay = vm::setDay,
-        onSelect = { c, p -> selected = c to p },
-        onRecord = vm::toggleRecord,
-        onFavorite = vm::toggleFavorite,
-        onWatch = watch,
-        onPlayRecording = { nav.play(it) },
-        onTab = nav::toTab,
-    )
+    Box(Modifier.fillMaxSize()) {
+        LiveTvScreen(
+            state = state,
+            view = view,
+            selected = selected,
+            onView = { view = it },
+            onBack = { nav.back() },
+            onChannelNumber = { numbering = true },
+            onFavoritesOnly = vm::setFavoritesOnly,
+            onDay = vm::setDay,
+            onSelect = { c, p -> selected = c to p },
+            onRecord = vm::toggleRecord,
+            onFavorite = vm::toggleFavorite,
+            onWatch = watch,
+            onPlayRecording = { nav.play(it) },
+            onTab = nav::toTab,
+        )
+        if (numbering) ChannelNumberSheet(state.channels, onWatch = { numbering = false; watch(it) }, onDismiss = { numbering = false })
+    }
+}
+
+/**
+ * The header's # (the web's "Channel number" box): type a channel's number and it plays. Numbers match as typed, then
+ * as numbers ("7" finds "07").
+ */
+@Composable
+fun ChannelNumberSheet(channels: List<LiveChannel>, onWatch: (LiveChannel) -> Unit, onDismiss: () -> Unit, initial: String = "") {
+    var number by remember { mutableStateOf(initial) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    fun go() {
+        val n = number.trim()
+        if (n.isEmpty()) return
+        val ch = channels.firstOrNull { it.number == n } ?: n.toDoubleOrNull()?.let { v -> channels.firstOrNull { it.number.toDoubleOrNull() == v } }
+        if (ch == null) error = t("There is no channel {n}", "n" to n) else onWatch(ch)
+    }
+    FormSheet(t("Go to channel number"), null, onDismiss) {
+        SeedyField(
+            number, { v -> number = v.filter { it.isDigit() || it == '.' }; error = null }, placeholder = t("Channel number"),
+            keyboard = KeyboardType.Decimal, imeAction = ImeAction.Go, onDone = ::go, focus = focus,
+        )
+        error?.let { SText(it, size = 13.sp, weight = 600, color = SeedyColors.Danger) }
+        SheetButtons(t("Go"), ::go, onDismiss, Modifier.padding(top = 4.dp), enabled = number.isNotBlank())
+    }
 }
 
 /** The Live TV page: title bar, the views' pills, the view itself and the tab bar. */
@@ -103,7 +139,6 @@ fun LiveTvScreen(
                 HeaderButton(WebIcons.ArrowLeft, onBack, stroke = 2.2f)
                 SText(t("Live TV"), Modifier.weight(1f).padding(start = 6.dp), size = 22.sp, weight = 900, color = SeedyColors.White)
                 HeaderButton(AppIcons.ChannelNumber, onChannelNumber, stroke = 2.2f)
-                HeaderButton(WebIcons.Cast, {})
             }
             LiveTabs(view, state.recordingNow > 0, onView)
             Box(Modifier.weight(1f)) {

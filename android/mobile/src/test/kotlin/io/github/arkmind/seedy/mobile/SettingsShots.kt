@@ -95,6 +95,13 @@ class SettingsShots {
     @Test
     @Config(qualifiers = "w390dp-h1980dp-mdpi")
     fun subtitles() = shot("AndroidSettingsSubtitles") { SubtitlesPage(SettingsSamples.state, actions, nav) }
+
+    /** No board: Profile › Signed in on, the server Devices board's rows for one person. */
+    @Test
+    @Config(qualifiers = "w390dp-h844dp-mdpi")
+    fun devices() = shot("AndroidSettingsDevices") {
+        io.github.arkmind.seedy.mobile.settings.MyDevicesPage(SettingsSamples.devices, object : io.github.arkmind.seedy.core.settings.MyDevicesActions {}, nav)
+    }
 }
 
 /** The settings boards' profile: Arky, admin of Arky's server, on a Pixel 9. */
@@ -151,5 +158,17 @@ object SettingsSamples {
         openRequests = 3,
         serverSummary = "seedy-server · 3 playing · 2 plugin updates",
         code = CodeState("4F7Q2K"),
+    )
+
+    private fun device(id: String, name: String, kind: io.github.arkmind.seedy.core.admin.people.DeviceKind, app: String, last: String, mine: Boolean = false) =
+        io.github.arkmind.seedy.core.admin.people.DeviceRow(id, name, name, kind, app, null, "Arky", 0, null, last, mine = mine)
+
+    val devices = io.github.arkmind.seedy.core.settings.MyDevicesState(
+        devices = listOf(
+            device("1", "Pixel 9", io.github.arkmind.seedy.core.admin.people.DeviceKind.Phone, "Seedy 1.0", "Now", mine = true),
+            device("2", "Living room TV", io.github.arkmind.seedy.core.admin.people.DeviceKind.Tv, "Seedy 1.0", "Today, 21:14"),
+            device("3", "MacBook Air", io.github.arkmind.seedy.core.admin.people.DeviceKind.Computer, "Seedy 1.0 · Safari", "Yesterday, 18:05"),
+            device("4", "iPad", io.github.arkmind.seedy.core.admin.people.DeviceKind.Phone, "Swiftfin 1.6", "17 Oct"),
+        ),
     )
 }

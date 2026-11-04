@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { ApiError, SERVER_URL, request } from '../api/client';
-import { authenticateByName, authenticateWithQuickConnect, getPublicUsers, quickConnectEnabled, quickConnectInitiate, quickConnectState } from '../api/jellyfin';
+import { authenticateByName, authenticateWithQuickConnect, forgotPassword, forgotPasswordPin, getPublicUsers, quickConnectEnabled, quickConnectInitiate, quickConnectState, type ForgotPasswordResult } from '../api/jellyfin';
 import { userImageUrl } from '../api/images';
 import { signInBackdrops } from '../api/seedy';
 import type { AuthResult, User } from '../api/types';
@@ -17,7 +17,7 @@ import './sign-in.css';
    is fine for users without one (never guessed: failed tries count toward Jellyfin's lockout). A server that does
    report HasPassword false signs that user straight in. "Other" and Quick Connect cover everyone else. */
 
-type Step = { kind: 'pick' } | { kind: 'password'; user: User } | { kind: 'manual' } | { kind: 'quick' };
+type Step = { kind: 'pick' } | { kind: 'password'; user: User } | { kind: 'manual' } | { kind: 'quick' } | { kind: 'forgot'; name: string; back: Step };
 
 function absolute(u: string): string {
   return /^https?:/i.test(u) ? u : SERVER_URL + (u.startsWith('/') ? u : '/' + u);
@@ -89,7 +89,7 @@ export function SignIn() {
         )}
 
         {step?.kind === 'password' && (
-          <PasswordStep user={step.user} onBack={() => setStep({ kind: 'pick' })} onDone={finish} />
+          <PasswordStep user={step.user} onBack={() => setStep({ kind: 'pick' })} onDone={finish} onForgot={() => setStep({ kind: 'forgot', name: step.user.Name, back: step })} />
         )}
 
         {step?.kind === 'manual' && (
@@ -97,7 +97,12 @@ export function SignIn() {
             onDone={finish}
             onBack={users.length ? () => setStep({ kind: 'pick' }) : undefined}
             quickConnect={qcOn ? () => setStep({ kind: 'quick' }) : undefined}
+            onForgot={(name) => setStep({ kind: 'forgot', name, back: step })}
           />
+        )}
+
+        {step?.kind === 'forgot' && (
+          <ForgotStep name={step.name} onBack={() => setStep(step.back)} />
         )}
 
         {step?.kind === 'quick' && (
@@ -180,7 +185,7 @@ function PickStep({ users, onDone, onPassword, onOther, quickConnect }: {
   );
 }
 
-function PasswordStep({ user, onBack, onDone }: { user: User; onBack: () => void; onDone: (a: AuthResult) => Promise<void> }) {
+function PasswordStep({ user, onBack, onDone, onForgot }: { user: User; onBack: () => void; onDone: (a: AuthResult) => Promise<void>; onForgot: () => void }) {
   const [pw, setPw] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -221,6 +226,7 @@ function PasswordStep({ user, onBack, onDone }: { user: User; onBack: () => void
         {error && <p class="form-error signin-error" role="alert"><Icon name="alert" size={16} />{error}</p>}
         <button type="submit" class="btn btn-primary is-block" disabled={busy}>{busy ? t('Signing in…') : t('Sign in')}</button>
       </form>
+      <button type="button" class="signin-back" onClick={onForgot}>{t('Forgot password?')}</button>
     </section>
   );
 }
@@ -235,7 +241,7 @@ function PickSkeleton() {
   );
 }
 
-function ManualStep({ onDone, onBack, quickConnect }: { onDone: (a: AuthResult) => Promise<void>; onBack?: () => void; quickConnect?: () => void }) {
+function ManualStep({ onDone, onBack, quickConnect, onForgot }: { onDone: (a: AuthResult) => Promise<void>; onBack?: () => void; quickConnect?: () => void; onForgot: (name: string) => void }) {
   const [name, setName] = useState('');
   const [pw, setPw] = useState('');
   const [error, setError] = useState('');
@@ -288,12 +294,128 @@ function ManualStep({ onDone, onBack, quickConnect }: { onDone: (a: AuthResult) 
         {error && <p class="form-error signin-error" role="alert"><Icon name="alert" size={16} />{error}</p>}
         <button type="submit" class="btn btn-primary is-block" disabled={busy}>{busy ? t('Signing in…') : t('Sign in')}</button>
       </form>
+      <button
+        type="button"
+        class="signin-back"
+        onClick={() => {
+          if (!name.trim()) { setError(t('Enter your username first.')); nameRef.current?.focus(); return; }
+          onForgot(name.trim());
+        }}
+      >
+        {t('Forgot password?')}
+      </button>
       {quickConnect && (
         <button type="button" class="btn btn-ghost is-light signin-qc" onClick={quickConnect}>
           <Icon name="key" size={18} />
           {t('Use Quick Connect')}
         </button>
       )}
+    </section>
+  );
+}
+
+/* Jellyfin's "Forgot password": the server says whether to ask the admin, to come back on its network, or to read a
+   PIN it wrote to a file on its disk. Redeeming that PIN makes it the new password. */
+function ForgotStep({ name, onBack }: { name: string; onBack: () => void }) {
+  const [result, setResult] = useState<ForgotPasswordResult | 'error' | null>(null);
+  const [pin, setPin] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [reset, setReset] = useState<string[] | null>(null);
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let live = true;
+    forgotPassword(name).then((r) => { if (live) setResult(r); }, () => { if (live) setResult('error'); });
+    return () => { live = false; };
+  }, [name]);
+  useEffect(() => { if (result !== null && result !== 'error' && result.Action === 'PinCode') ref.current?.focus(); }, [result]);
+
+  const redeem = async (e: Event) => {
+    e.preventDefault();
+    if (!pin.trim()) { ref.current?.focus(); return; }
+    setBusy(true);
+    setError('');
+    try {
+      const r = await forgotPasswordPin(pin.trim());
+      if (r.Success) setReset(r.UsersReset ?? []);
+      else setError(t("That PIN didn't work. Check it, or start again for a new one."));
+    } catch {
+      setError(t("That PIN didn't work. Check it, or start again for a new one."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const until = result && result !== 'error' && result.PinExpirationDate ? new Date(result.PinExpirationDate) : null;
+  const time = until && !isNaN(until.getTime()) ? `${String(until.getHours()).padStart(2, '0')}:${String(until.getMinutes()).padStart(2, '0')}` : '';
+  let body;
+  if (result === null) {
+    body = (
+      <>
+        <h1 id="signin-h" class="signin-who">{t('Forgot password?')}</h1>
+        <p class="signin-text">{t('Asking the server…')}</p>
+      </>
+    );
+  } else if (reset) {
+    body = (
+      <>
+        <h1 id="signin-h" class="signin-who">{t('Password reset')}</h1>
+        <p class="signin-text">{t('Sign in with the PIN as your password, then change it in Settings › Profile and sign-in.')}</p>
+        <button type="button" class="btn btn-primary is-block" onClick={onBack}>{t('Back to sign in')}</button>
+      </>
+    );
+  } else if (result !== 'error' && result.Action === 'PinCode') {
+    body = (
+      <>
+        <h1 id="signin-h" class="signin-who">{t('Get the PIN from the server')}</h1>
+        <p class="signin-text">
+          {time
+            ? t('The server wrote a PIN to a file on its disk. Whoever runs the server can open it and read it to you. It works until {time}.', { time })
+            : t('The server wrote a PIN to a file on its disk. Whoever runs the server can open it and read it to you.')}
+        </p>
+        {result.PinFile && <p class="signin-file">{result.PinFile}</p>}
+        <form class="signin-form" onSubmit={redeem}>
+          <label class="signin-label">
+            <span>{t('PIN')}</span>
+            <input
+              ref={ref}
+              class="field signin-field"
+              type="text"
+              autoComplete="one-time-code"
+              autoCapitalize="none"
+              spellcheck={false}
+              value={pin}
+              aria-invalid={error ? 'true' : undefined}
+              onInput={(e) => setPin((e.currentTarget as HTMLInputElement).value)}
+            />
+          </label>
+          {error && <p class="form-error signin-error" role="alert"><Icon name="alert" size={16} />{error}</p>}
+          <button type="submit" class="btn btn-primary is-block" disabled={busy}>{busy ? t('Resetting…') : t('Reset password')}</button>
+        </form>
+        <p class="signin-hint">{t('Your new password is the PIN. Change it once you’re in.')}</p>
+      </>
+    );
+  } else if (result !== 'error' && result.Action === 'InNetworkRequired') {
+    body = (
+      <>
+        <h1 id="signin-h" class="signin-who">{t('Only from home')}</h1>
+        <p class="signin-text">{t('This server resets passwords only from its own network. Try again from home, or ask your server admin.')}</p>
+      </>
+    );
+  } else {
+    body = (
+      <>
+        <h1 id="signin-h" class="signin-who">{t('Ask your server admin')}</h1>
+        <p class="signin-text">{t('Your server admin can set a new password for {name} in the server’s user settings.', { name })}</p>
+      </>
+    );
+  }
+
+  return (
+    <section class="signin-step is-form" aria-labelledby="signin-h" aria-busy={result === null ? 'true' : undefined}>
+      <BackLink onClick={onBack} label={t('Sign in')} />
+      {body}
     </section>
   );
 }

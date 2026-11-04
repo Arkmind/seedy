@@ -65,6 +65,7 @@ import io.github.arkmind.seedy.mobile.audio.OutputChip
 import io.github.arkmind.seedy.mobile.audio.TrackCover
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.browse.topInset
+import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.player.audio.AudioState
 import io.github.arkmind.seedy.player.audio.AudioTime
@@ -247,7 +248,7 @@ fun LyricsPanel(title: String, sub: String, lyrics: Lyrics, position: Double, ti
     var hold by remember { mutableStateOf(0L) }
     LaunchedEffect(cur) { if (cur >= 0 && System.currentTimeMillis() > hold) list.animateScrollToItem((cur - 2).coerceAtLeast(0)) }
     Column(
-        Modifier.fillMaxSize().background(Color(0xFF121212)).cssGradient(180f, listOf(tint, Color(0xFF121212), Color(0xFF121212)), listOf(0f, 0.72f, 1f)).tap {},
+        Modifier.fillMaxSize().background(Color(0xFF121212)).cssGradient(180f, listOf(tint, Color(0xFF121212), Color(0xFF121212)), listOf(0f, 0.72f, 1f)).blockTaps(),
     ) {
         Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = topInset()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             IconButton44(MusicIcons.Down, onClose)

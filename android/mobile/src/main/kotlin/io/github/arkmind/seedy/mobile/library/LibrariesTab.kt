@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,13 +54,16 @@ fun LibrariesTab() {
     val nav = LocalMobileNav.current
     val vm = viewModel { LibrariesViewModel(session) }
     val state by vm.state.collectAsStateWithLifecycle()
+    val me by session.seedyFlow.collectAsStateWithLifecycle()
+    // Back from "Order and hide libraries": a new order or a hidden library shows at once.
+    val config = session.userFlow.collectAsStateWithLifecycle().value.configuration
+    LaunchedEffect(config?.orderedViews, config?.myMediaExcludes) { vm.follow(config?.orderedViews to config?.myMediaExcludes) }
     LibrariesScreen(
         state,
         onOpen = nav::openLibrary,
         onSearch = { nav.go(Route.Search) },
-        // Viewing history and "Order and hide libraries" are Settings pages the phone doesn't have yet.
-        onHistory = {},
-        onOrder = {},
+        onHistory = if (me?.historyEnabled == true) ({ nav.go(Route.History) }) else null,
+        onOrder = { nav.go(Route.SettingsPage("libraries")) },
         bottomPadding = tabBarHeight(),
     )
 }
@@ -69,7 +73,8 @@ fun LibrariesScreen(
     state: LibrariesViewModel.State,
     onOpen: (BaseItemDto) -> Unit,
     onSearch: () -> Unit,
-    onHistory: () -> Unit,
+    /** Null when the admin turned this profile's history page off. */
+    onHistory: (() -> Unit)?,
     onOrder: () -> Unit,
     bottomPadding: Dp,
 ) {
@@ -87,7 +92,7 @@ fun LibrariesScreen(
                 Modifier.padding(start = 12.dp, end = 12.dp, top = 4.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(SeedyColors.Panel).padding(6.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                LinkRow(AppIcons.History, t("Viewing history"), onHistory)
+                if (onHistory != null) LinkRow(AppIcons.History, t("Viewing history"), onHistory)
                 LinkRow(AppIcons.Reorder, t("Order and hide libraries"), onOrder)
             }
         }

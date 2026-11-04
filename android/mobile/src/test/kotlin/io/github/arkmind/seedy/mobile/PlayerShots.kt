@@ -1,5 +1,8 @@
 package io.github.arkmind.seedy.mobile
 
+import io.github.arkmind.seedy.mobile.player.SwipeSide
+import io.github.arkmind.seedy.mobile.player.Swipe
+import io.github.arkmind.seedy.mobile.player.StylePanel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -76,7 +79,7 @@ class PlayerShots {
         episodes = listOf(Samples.thePass),
     ).let { it.copy(skip = it.segments.first()) }
 
-    private val actions = PlayerActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+    private val actions = PlayerActions({}, {}, {}, {}, {}, {}, {}, {}, {})
 
     private fun shot(name: String, panel: @Composable () -> Unit = {}) {
         compose.setContent {
@@ -97,4 +100,21 @@ class PlayerShots {
     @Test fun speed() = shot("AndroidPlayerSpeed") { SpeedPanel(1f, {}, {}) }
 
     @Test fun episodes() = shot("AndroidPlayerEpisodes") { EpisodesPanel(state, state.episodes, state.seasons.first().id, {}, {}, {}) }
+
+    /** No board: Subtitle style, from the tracks panel (the Subtitles settings page in the panel's frame). */
+    @Test fun style() = shot("AndroidPlayerStyle") { StylePanel(SettingsSamples.state, object : io.github.arkmind.seedy.core.settings.SettingsActions {}, {}, {}) }
+
+    @Test
+    fun gestures() {
+        compose.setContent {
+            SeedyTheme {
+                PhonePlayerScreen(
+                    state = state, controls = false, locked = false, seekBack = 10, seekForward = 30, actions = actions, onToggleControls = {},
+                    video = { io.github.arkmind.seedy.ui.components.PassScene(Modifier.fillMaxSize()) {} },
+                    swiping = Swipe(SwipeSide.Brightness, 0.6f),
+                )
+            }
+        }
+        compose.onRoot().captureRoboImage("src/test/screenshots/AndroidPlayerGestures.png")
+    }
 }

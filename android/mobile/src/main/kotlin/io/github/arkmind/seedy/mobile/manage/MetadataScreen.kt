@@ -61,6 +61,7 @@ import io.github.arkmind.seedy.mobile.admin.TabPills
 import io.github.arkmind.seedy.mobile.admin.TextSheet
 import io.github.arkmind.seedy.mobile.admin.avatarColour
 import io.github.arkmind.seedy.mobile.parts.Toast
+import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
 import io.github.arkmind.seedy.mobile.settings.Card
@@ -308,7 +309,7 @@ private fun androidx.compose.foundation.layout.BoxScope.MetaFooter(state: Metada
     Row(
         Modifier.align(Alignment.BottomCenter).fillMaxWidth()
             .boxShadow(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f), blur = 30.dp, y = (-10).dp)
-            .background(SeedyColors.Row).tap {}
+            .background(SeedyColors.Row).blockTaps()
             .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = max(26.dp, nav + 12.dp)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),

@@ -147,6 +147,8 @@ data class ResolvedStyle(
     val background: String,
     val outline: String,
     val position: String,
+    /** Android's caption style, when this device follows it: its exact colours, edge, scale and typeface win. */
+    val system: SystemLook? = null,
 ) {
     companion object {
         private val SizeFromPrefs = mapOf("S" to "small", "M" to "normal", "L" to "large", "XL" to "xlarge")
@@ -170,6 +172,11 @@ data class ResolvedStyle(
         fun of(device: DeviceSettings, prefs: SubtitlePrefs?): ResolvedStyle = of(device.subtitleStyle, prefs)
     }
 
-    fun colorArgb(): Long = Choices.colors().firstOrNull { it.first.value == color }?.second ?: 0xFFFFFFFF
-    fun backgroundArgb(): Long = Choices.backgrounds().firstOrNull { it.first.value == background }?.second ?: 0
+    fun colorArgb(): Long = system?.color ?: Choices.colors().firstOrNull { it.first.value == color }?.second ?: 0xFFFFFFFF
+    fun backgroundArgb(): Long = system?.background ?: Choices.backgrounds().firstOrNull { it.first.value == background }?.second ?: 0
+    /** The outline's and the shadow's colour. */
+    fun edgeArgb(): Long = system?.edge ?: 0xFF000000
 }
+
+/** Settings › Accessibility › Caption preferences as Android gives them (ARGB colours, the text scale, the typeface). */
+data class SystemLook(val color: Long, val background: Long, val edge: Long, val scale: Float, val typeface: android.graphics.Typeface? = null)

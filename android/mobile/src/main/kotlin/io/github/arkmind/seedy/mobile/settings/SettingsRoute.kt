@@ -77,6 +77,7 @@ internal fun settingsNav(state: SettingsState, nav: io.github.arkmind.seedy.mobi
     open = { nav.go(Route.SettingsPage(it)) },
     requests = { nav.toTab(Tab.Requests) },
     admin = { nav.go(Route.Admin("server")) },
+    history = { nav.go(Route.History) },
 )
 
 @Composable
@@ -112,8 +113,9 @@ fun SettingsHomeScreen(state: SettingsState, appVersion: String, actions: Settin
                 }
             }
             Group(t("More")) {
-                // Viewing history has no page in the app yet.
-                item(t("Viewing history"), state.lastPlayed?.let { t("Last: {title}", "title" to it) } ?: t("See what you watched"), SettingsIcons.History) {}
+                if (state.historyEnabled) {
+                    item(t("Viewing history"), state.lastPlayed?.let { t("Last: {title}", "title" to it) } ?: t("See what you watched"), SettingsIcons.History, onClick = nav.history)
+                }
                 if (requests) {
                     item(t("My requests"), state.openRequests?.let { tn(it, "{n} open", "{n} open") } ?: t("What you asked for"), SettingsIcons.Requests, onClick = nav.requests)
                 }

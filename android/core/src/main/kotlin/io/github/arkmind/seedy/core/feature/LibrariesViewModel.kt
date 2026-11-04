@@ -47,6 +47,14 @@ class LibrariesViewModel(session: UserSession) : ViewModel() {
         load()
     }
 
+    private var shownFor: Any? = null
+
+    /** Loads again when [key] (the person's library order and hidden libraries) changed since the last time. */
+    fun follow(key: Any?) {
+        if (shownFor != null && shownFor != key) load()
+        shownFor = key
+    }
+
     fun load() {
         viewModelScope.launch {
             val views = runCatching { browse.libraries() }.getOrDefault(emptyList())

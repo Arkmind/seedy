@@ -131,5 +131,16 @@
  "{n} rows": "{n} rangées",
  "{n} settings": "{n} paramètres",
  "{rate} at home": "{rate} à la maison",
- "{size} and bold": "{size} et gras"
+ "{size} and bold": "{size} et gras",
+ "Apps signed in to your profile. Signing one out ends its session there; it needs your password to come back.": "Les applications connectées à votre profil. En déconnecter une met fin à sa session ; il faudra votre mot de passe pour y revenir.",
+ "Couldn’t load your devices.": "Impossible de charger vos appareils.",
+ "Couldn’t sign that device out.": "Impossible de déconnecter cet appareil.",
+ "No devices are signed in to your profile.": "Aucun appareil n’est connecté à votre profil.",
+ "Sign out {name}?": "Déconnecter {name} ?",
+ "To sign out this phone, use Sign out in Settings.": "Pour déconnecter ce téléphone, utilisez Se déconnecter dans les Paramètres.",
+ "Whoever uses it signs in again to keep watching.": "La personne qui l’utilise devra se reconnecter pour continuer à regarder.",
+ "{name} signed out": "{name} déconnecté",
+ "{n} device is signed out. This phone stays signed in.": "{n} appareil est déconnecté. Ce téléphone reste connecté.",
+ "{n} devices are signed out. This phone stays signed in.": "{n} appareils sont déconnectés. Ce téléphone reste connecté.",
+ "Turned-off libraries also leave Libraries.": "Les bibliothèques désactivées quittent aussi l’onglet Bibliothèques."
 }

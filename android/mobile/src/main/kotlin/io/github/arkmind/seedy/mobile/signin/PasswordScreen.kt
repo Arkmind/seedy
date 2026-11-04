@@ -30,6 +30,11 @@ import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.data.SavedServer
 import io.github.arkmind.seedy.core.feature.PasswordViewModel
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.session.SignIn
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.ui.text.font.FontFamily
+import io.github.arkmind.seedy.ui.theme.BaseText
+import java.time.format.DateTimeFormatter
 import io.github.arkmind.seedy.mobile.parts.ActionCard
 import io.github.arkmind.seedy.mobile.parts.bleed
 import io.github.arkmind.seedy.mobile.parts.FieldLabel
@@ -172,6 +177,78 @@ fun QuickConnectSheet(code: String?, error: String?, onRetry: () -> Unit, onDism
                 }
             }
             Spacer(Modifier.height(4.dp))
+        }
+    }
+}
+
+/**
+ * "Forgot password?", in a sheet like Quick Connect's: Jellyfin answers ask the admin, come back on the server's
+ * network, or read the PIN it wrote to a file on its disk (typing it here makes it the password, which the sign-in
+ * form then holds).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ForgotSheet(f: PasswordViewModel.ForgotState, onPin: (String) -> Unit, onRedeem: () -> Unit, onDismiss: () -> Unit) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = SeedyColors.Panel,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle = {
+            Box(Modifier.padding(top = 10.dp).size(36.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(SeedyColors.Stroke))
+        },
+    ) {
+        Column(
+            Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            val a = f.answer
+            @Composable fun Title(text: String) = SText(text, size = 20.sp, weight = 900, color = SeedyColors.White, align = TextAlign.Center)
+            @Composable fun Text(text: String) = SText(text, size = 14.sp, color = SeedyColors.Text2, align = TextAlign.Center, lineHeight = 1.45f)
+            when {
+                a == null -> {
+                    Title(t("Forgot password?"))
+                    Text(t("Asking the server…"))
+                }
+                f.reset -> {
+                    Title(t("Password reset"))
+                    Text(t("Sign in with the PIN as your password, then change it in Settings › Profile and sign-in."))
+                    PrimaryButton(t("Back to sign in"), onDismiss)
+                }
+                a is SignIn.Forgot.Pin -> {
+                    Title(t("Get the PIN from the server"))
+                    val until = a.until?.format(DateTimeFormatter.ofPattern("HH:mm"))
+                    Text(
+                        if (until != null) t("The server wrote a PIN to a file on its disk. Whoever runs the server can open it and read it to you. It works until {time}.", "time" to until)
+                        else t("The server wrote a PIN to a file on its disk. Whoever runs the server can open it and read it to you."),
+                    )
+                    a.file?.let { file ->
+                        BasicText(
+                            file,
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(SeedyColors.Row).padding(horizontal = 14.dp, vertical = 10.dp),
+                            style = BaseText.copy(fontSize = 12.sp, fontFamily = FontFamily.Monospace, color = SeedyColors.Text2, textAlign = TextAlign.Center),
+                        )
+                    }
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FieldLabel(t("PIN"))
+                        SeedyField(f.pin, onPin, imeAction = ImeAction.Go, onDone = onRedeem)
+                    }
+                    f.error?.let { SText(it, size = 13.sp, weight = 600, color = SeedyColors.Danger, align = TextAlign.Center) }
+                    PrimaryButton(if (f.busy) t("Resetting…") else t("Reset password"), onRedeem, enabled = !f.busy && f.pin.isNotBlank())
+                    SText(t("Your new password is the PIN. Change it once you’re in."), size = 12.sp, color = SeedyColors.Text3, align = TextAlign.Center)
+                }
+                a is SignIn.Forgot.InNetworkRequired -> {
+                    Title(t("Only from home"))
+                    Text(t("This server resets passwords only from its own network. Try again from home, or ask your server admin."))
+                    PrimaryButton(t("Back to sign in"), onDismiss)
+                }
+                else -> {
+                    Title(t("Ask your server admin"))
+                    Text(t("Your server admin can set a new password for {name} in the server’s user settings.", "name" to f.name))
+                    PrimaryButton(t("Back to sign in"), onDismiss)
+                }
+            }
         }
     }
 }
