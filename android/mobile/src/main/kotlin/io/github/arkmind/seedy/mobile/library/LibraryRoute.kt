@@ -97,10 +97,11 @@ fun LibraryRoute(id: UUID) {
     val vm = viewModel(key = "library:$id") { LibraryViewModel(session, id) }
     val bulk = viewModel(key = "library-bulk:$id") { BulkViewModel(session) }
     val state by vm.state.collectAsStateWithLifecycle()
-    // Opened by id alone (a home row's "See all"): music and books libraries have their own pages.
+    // Opened by id alone (a home row's "See all"): music, books and photos libraries have their own pages.
     when (state.view?.collectionType) {
         CollectionType.MUSIC -> return MusicRoute(id)
         CollectionType.BOOKS -> return BooksRoute(id)
+        CollectionType.HOMEVIDEOS, CollectionType.PHOTOS -> return io.github.arkmind.seedy.mobile.photos.PhotosRoute(id)
         else -> Unit
     }
     val bulkState by bulk.state.collectAsStateWithLifecycle()

@@ -68,6 +68,9 @@ tries hard not to make your server convert anything it doesn't have to.
   is saved on the server, so it follows you from device to device. Audiobooks have chapters, speed, a sleep timer, and
   open the matching EPUB at the same point. A folder of MP3s (one per chapter or per CD) is one audiobook, played
   file after file with your place kept across them.
+- **Photos**: a timeline by month and day with "On this day" memories and a rail to jump to a year or month, folders,
+  videos, favorites and photos by camera. A full-screen viewer with zoom, swipe, a slideshow, the date, camera,
+  exposure and place each photo was taken, and downloads of the originals (a folder comes down as one zip).
 - **The player**: chapters and seek previews on the scrubber, audio and subtitle tracks (styled ASS/SSA and PGS are
   drawn in the browser), Up next, a pause screen, picks at the end of a movie, Watch together (SyncPlay) and casting
   to other Jellyfin apps.
@@ -96,6 +99,8 @@ tries hard not to make your server convert anything it doesn't have to.
   with its controls in the notification shade and on the lock screen. Books, audiobooks and comics, with a reader for
   EPUB, comics and PDF that picks up where you left off on the web, and an audiobook player with chapters, speed, a
   sleep timer and bookmarks. Music and book requests are on the Requests tab.
+- **Photos on the phone**: the timeline, folders, videos, favorites and cameras, and a viewer with pinch zoom, swipe,
+  a slideshow and each photo's details.
 - **"Who's watching?"** profiles, several servers, servers found on your network, and Quick Connect, both to sign in
   and to approve another device from the app.
 - **Works without the plugin.** On a plain Jellyfin server you get your libraries, search, Live TV and the player.
@@ -254,8 +259,9 @@ make dev-up        # test Jellyfin 12.2 on :8096, Seerr on :5055, Sonarr :8989 (
 # open http://localhost:8096 and finish Jellyfin's setup wizard with an admin named Alex, password seedy
 # (the dev scripts sign in with it)
 make dev-media     # fill the library with open-licensed titles: Blender open movies and public-domain films, plus
-                   # made-up music, books, audiobooks and comics generated on the spot
-make dev-libraries # add the Music and Books libraries, with plays, playlists and reading positions for Alex
+                   # made-up music, books, audiobooks and comics generated on the spot, and public-domain NASA photos
+make dev-libraries # add the Music, Books, Photos and Home videos libraries, with plays, playlists, reading
+                   # positions and favourite photos for Alex
 make dev-seerr     # connect the test Seerr to the test Jellyfin
 make dev-arr       # give Seerr its Sonarr, 4K Sonarr and Radarr (quality profiles, folders, 4K requests)
 make dev-media-requests  # set up Lidarr, Shelfarr and Librarr, connect Seedy to them and add sample requests
@@ -300,6 +306,7 @@ web/                      Preact + TypeScript + Vite
   src/screens/livetv      Live TV: On now, Guide, Channels, Recordings
   src/screens/music       the music library, album and artist pages
   src/screens/books       the books library, book details and the reader (EPUB, comics, PDF)
+  src/screens/photos      photos libraries, photo folders and the photo viewer
   src/screens/requests    Requests: Discover, My requests, All requests (Seerr, Lidarr, Shelfarr, Librarr)
   src/screens/me          personal settings (/settings)
   src/screens/admin       Seedy's admin pages and the dashboard shell

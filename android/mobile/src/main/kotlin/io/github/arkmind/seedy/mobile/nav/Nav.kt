@@ -48,6 +48,12 @@ sealed interface Route {
     data class Reader(val id: UUID, val percent: Double? = null) : Route
     /** The full-screen audiobook player (board "Android · Audiobook"). */
     data object AudiobookPlayer : Route
+    /** A photos library, a Home videos and photos one (the web's Photos · Timeline board): Timeline, Folders, Videos, Favorites, Cameras. */
+    data class Photos(val id: UUID) : Route
+    /** A folder of photos (the web's Photos · Folder board); [photo] opens the viewer on that photo. */
+    data class PhotoFolder(val id: UUID, val photo: UUID? = null) : Route
+    /** The photo viewer over the list the page handed it ([io.github.arkmind.seedy.core.photos.PhotoQueue]); [play] starts the slideshow. */
+    data class PhotoViewer(val id: UUID, val play: Boolean = false) : Route
     /** Music or book requests' search: MusicBrainz artists and albums, or books. */
     data class MediaRequestsSearch(val music: Boolean) : Route
     /** A music or books Discover row's "See all" (a [io.github.arkmind.seedy.core.mediarequests.MusicRow] or BookRow key). */
@@ -88,14 +94,18 @@ class MobileNav(private val stack: SnapshotStateList<Any>, private val selectTab
         BaseItemKind.MUSIC_ARTIST -> go(Route.Artist(item.id))
         BaseItemKind.AUDIO -> item.albumId?.let { go(Route.Album(it)) } ?: Unit
         BaseItemKind.BOOK, BaseItemKind.AUDIO_BOOK -> go(Route.Book(item.id))
+        BaseItemKind.PHOTO_ALBUM -> go(Route.PhotoFolder(item.id))
+        // A photo opens in its folder's viewer.
+        BaseItemKind.PHOTO -> (item.albumId ?: item.parentId)?.let { go(Route.PhotoFolder(it, item.id)) } ?: go(Route.Details(item.id))
         else -> go(Route.Details(item.id))
     }
 
-    /** A library's page: music and books have their own, Live TV its guide, the rest the grid. */
+    /** A library's page: music, books and photos have their own, Live TV its guide, the rest the grid. */
     fun openLibrary(view: BaseItemDto) = when (view.collectionType) {
         CollectionType.MUSIC -> go(Route.Music(view.id))
         CollectionType.BOOKS -> go(Route.Books(view.id))
         CollectionType.LIVETV -> go(Route.LiveTv)
+        CollectionType.HOMEVIDEOS, CollectionType.PHOTOS -> go(Route.Photos(view.id))
         else -> go(Route.Library(view.id))
     }
 

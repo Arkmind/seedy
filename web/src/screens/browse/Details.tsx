@@ -14,7 +14,7 @@ import { Icon } from '../../ui/icons';
 import { MenuItem, toast } from '../../ui/overlay';
 import { playPath } from '../../ui/cards';
 import {
-  CardGrid, EmptyState, ErrorState, GridSkeleton, playRandom, resolvePlayable, seasonsLabel, toggleFavorite, togglePlayed,
+  CardGrid, EmptyState, ErrorState, GridSkeleton, findView, playRandom, resolvePlayable, seasonsLabel, toggleFavorite, togglePlayed,
   useItemList, yearOf
 } from './parts';
 import {
@@ -29,6 +29,9 @@ import { MusicArtistPage } from '../music/Artist';
 import { t, tn } from '../../lib/i18n';
 import { BookDetails } from '../books/BookDetails';
 import { asBook, getAudiobook, withPlace } from '../../audio/api';
+import { PhotoAlbumPage } from '../photos/Album';
+import { ancestorsOf, isPhotoLibrary } from '../photos/api';
+import { viewsStore } from '../../lib/app-state';
 
 /* An audiobook in several files opens as the book: its folder, or any of its files. */
 async function asAudiobook(item: BaseItem): Promise<BaseItem> {
@@ -80,11 +83,45 @@ export function Details({ id }: { id: string }) {
     case 'Episode': return <EpisodePage item={item} onChanged={changed} />;
     case 'Person': return <PersonPage item={item} />;
     case 'Playlist': return item.MediaType === 'Audio' ? <MusicAlbumPage item={item} playlist /> : <CollectionPage item={item} />;
-    case 'BoxSet': case 'Folder': case 'PhotoAlbum': return <CollectionPage item={item} />;
+    case 'PhotoAlbum': return <PhotoAlbumPage item={item} />;
+    case 'Photo': return <PhotoRedirect item={item} />;
+    case 'Folder': return <FolderPage item={item} />;
+    case 'BoxSet': return <CollectionPage item={item} />;
     case 'MusicAlbum': return <MusicAlbumPage item={item} />;
     case 'MusicArtist': return <MusicArtistPage item={item} />;
+    case 'Video': return <VideoPage item={item} />;
     default: return <MoviePage item={item} />;
   }
+}
+
+/* A photo opens in its folder's viewer (or its library's, when it isn't in a folder). */
+function PhotoRedirect({ item }: { item: BaseItem }) {
+  useEffect(() => {
+    const go = (to: string) => navigate(to, { replace: true });
+    if (item.AlbumId) { go(`/details/${item.AlbumId}?photo=${item.Id}`); return; }
+    // [library, its folder on disk, …, parent]: a subfolder's page, else the library's.
+    ancestorsOf(item.Id).then((a) => go(a.length > 2 ? `/details/${a[a.length - 1].Id}?photo=${item.Id}` : a[0] ? `/library/${a[0].Id}?photo=${item.Id}` : '/'), () => go('/'));
+  }, [item.Id]);
+  return <Shell><DetailsSkeleton /></Shell>;
+}
+
+/* A folder inside a photos library is a photo folder; anywhere else it lists what's in it. */
+function FolderPage({ item }: { item: BaseItem }) {
+  const views = useStore(viewsStore);
+  const [lib, setLib] = useState<BaseItem | null | undefined>(undefined);
+  useEffect(() => { findView(item.Id, views).then((v) => setLib(v ?? null), () => setLib(null)); }, [item.Id, views.length]);
+  if (lib === undefined) return <Shell><DetailsSkeleton /></Shell>;
+  return isPhotoLibrary(lib?.CollectionType) ? <PhotoAlbumPage item={item} /> : <CollectionPage item={item} />;
+}
+
+/* A video in a photos library plays from its folder's page; elsewhere it's a title like a movie. */
+function VideoPage({ item }: { item: BaseItem }) {
+  const views = useStore(viewsStore);
+  const [lib, setLib] = useState<BaseItem | null | undefined>(undefined);
+  useEffect(() => { findView(item.Id, views).then((v) => setLib(v ?? null), () => setLib(null)); }, [item.Id, views.length]);
+  if (lib === undefined) return <Shell><DetailsSkeleton /></Shell>;
+  if (isPhotoLibrary(lib?.CollectionType)) return <PhotoRedirect item={item} />;
+  return <MoviePage item={item} />;
 }
 
 function Shell({ children, viewId }: { children: preact.ComponentChildren; viewId?: string }) {
