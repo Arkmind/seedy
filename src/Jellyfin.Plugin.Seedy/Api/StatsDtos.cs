@@ -18,6 +18,7 @@ public sealed class StatsDto
     [JsonPropertyName("to")] public string To { get; set; } = string.Empty;
     [JsonPropertyName("today")] public string Today { get; set; } = string.Empty;
     [JsonPropertyName("retentionDays")] public int RetentionDays { get; set; }
+    [JsonPropertyName("firstPlay")] public string? FirstPlay { get; set; }
     [JsonPropertyName("kpis")] public StatsKpisDto Kpis { get; set; } = new();
     [JsonPropertyName("buckets")] public List<StatsBucketDto> Buckets { get; set; } = [];
     [JsonPropertyName("methods")] public Dictionary<string, int> Methods { get; set; } = [];
