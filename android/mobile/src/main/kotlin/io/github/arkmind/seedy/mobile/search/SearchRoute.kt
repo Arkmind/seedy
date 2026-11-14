@@ -22,6 +22,16 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.style.TextAlign
+import io.github.arkmind.seedy.core.i18n.tn
+import io.github.arkmind.seedy.core.seedy.tmdbImage
+import io.github.arkmind.seedy.ui.components.Artwork
+import io.github.arkmind.seedy.ui.components.Medu
+import io.github.arkmind.seedy.ui.components.MeduMood
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
@@ -264,28 +274,75 @@ private fun LazyListScope.seerr(state: SearchViewModel.State, actions: SearchAct
     }
 }
 
-/** Nothing in the library: say so, and Seerr's titles under it (the board behind "Request seasons"). */
+/**
+ * Board "Android · Search, nothing found": Medu, lost, says nothing in the libraries matched, and Seerr's titles sit
+ * under it with their Request buttons.
+ */
 private fun LazyListScope.empty(state: SearchViewModel.State, actions: SearchActions) {
     item(key = "none") {
-        Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
-            Note(
-                t("Nothing on the server for “{q}”", "q" to state.query),
-                if (state.seerrOn) t("Request it from Seerr below.") else t("No movies, shows, episodes or people match. Check the spelling, or try a shorter part of the title."),
+        Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 26.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Medu(MeduMood.Search, 150.dp, height = 198.dp, torch = false)
+            SText(
+                t("Not on Seedy yet"), Modifier.padding(top = 8.dp),
+                size = 24.sp, weight = 900, lineHeight = 1.08f, tracking = -.015f, color = SeedyColors.White, align = TextAlign.Center,
+            )
+            SText(
+                if (state.seerrOn) t("Medu checked every library for “{q}”. Want to ask for it?", "q" to state.query)
+                else t("Medu checked every library for “{q}”. Check the spelling, or try a shorter part of the title.", "q" to state.query),
+                Modifier.padding(top = 8.dp).widthIn(max = 300.dp),
+                size = 15.sp, lineHeight = 1.53f, color = Color(0xFFB4B4B4), align = TextAlign.Center,
             )
         }
     }
-    if (state.seerrOn) {
-        item(key = "seerr-head") { SText(t("Request it"), Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp), size = 16.sp, weight = 800, color = SeedyColors.White) }
+    if (!state.seerrOn) return
+    item(key = "seerr") {
         val s = state.seerr
-        when {
-            s == null || s.loading -> item { Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) { repeat(2) { Box(Modifier.weight(1f).aspectRatio(2f / 3f).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Surface)) } } }
-            s.error -> item { SText(t("Seerr didn't answer, so requests can't be made right now."), Modifier.padding(horizontal = 16.dp), size = 13.sp, color = SeedyColors.Text2) }
-            s.items.isEmpty() -> item { SText(t("Seerr doesn’t know “{q}” either. Check the spelling, or try the original title.", "q" to state.query), Modifier.padding(horizontal = 16.dp), size = 13.sp, color = SeedyColors.Text2) }
-            else -> items(s.items.chunked(2), key = { "s:${it.first().mediaType}${it.first().tmdbId}" }) { pair ->
-                Row(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    for (it in pair) SeerrPoster(it, { actions.onSeerrTitle(it) }, Modifier.weight(1f))
-                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+        Column(
+            Modifier.padding(start = 20.dp, end = 20.dp, top = 28.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            val label = if (s == null || s.loading || s.error) t("On Seerr") else tn(s.items.size, "On Seerr · {n} result", "On Seerr · {n} results")
+            SText(label, size = 12.sp, weight = 800, tracking = .1f, uppercase = true, color = SeedyColors.Text3)
+            when {
+                s == null || s.loading -> repeat(2) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(Modifier.size(46.dp, 68.dp).clip(RoundedCornerShape(9.dp)).background(SeedyColors.Surface))
+                        Box(Modifier.size(120.dp, 12.dp).clip(RoundedCornerShape(6.dp)).background(SeedyColors.Surface))
+                    }
                 }
+                s.error -> SText(t("Seerr didn't answer, so requests can't be made right now."), size = 13.sp, color = SeedyColors.Text2)
+                s.items.isEmpty() -> SText(t("Seerr doesn’t know “{q}” either. Check the spelling, or try the original title.", "q" to state.query), size = 13.sp, color = SeedyColors.Text2)
+                else -> s.items.forEachIndexed { i, item -> SeerrRow(item, i) { actions.onSeerrTitle(item) } }
+            }
+        }
+    }
+}
+
+/** The boards' stand-in posters (a dusk sky with a moon over a hill) while a Seerr poster loads, or when it has none. */
+private val PosterSkies = listOf(Color(0xFF2F2840) to Color(0xFFEFE6FB), Color(0xFF1F3A3C) to Color(0xFFDEF4F1))
+
+/** A Seerr title in the nothing-found card: its poster, "Movie · 2022", and Request (or where it's at). */
+@Composable
+private fun SeerrRow(item: SeerrItem, index: Int, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().tap(onClick = onClick), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        val (sky, moon) = PosterSkies[index % PosterSkies.size]
+        Box(Modifier.size(46.dp, 68.dp).clip(RoundedCornerShape(9.dp)).background(sky)) {
+            Box(Modifier.offset(9.dp, 12.dp).size(14.dp).background(moon, CircleShape))
+            Box(Modifier.align(Alignment.BottomCenter).offset(y = 14.dp).requiredSize(58.dp, 34.dp).background(Color.Black.copy(alpha = .35f), androidx.compose.foundation.shape.GenericShape { size, _ -> addOval(androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height)) }))
+            Artwork(tmdbImage(item.posterPath, "w185"), Modifier.matchParentSize(), placeholder = Color.Transparent)
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            SText(item.title, size = 14.sp, weight = 700, color = SeedyColors.White, maxLines = 1)
+            SText(join(if (item.mediaType == "tv") t("Series") else t("Movie"), item.year), size = 12.sp, color = SeedyColors.Text3, maxLines = 1)
+        }
+        when (item.status) {
+            "available", "partial" -> SText(t("On the server"), size = 12.sp, weight = 700, color = SeedyColors.Text3)
+            "pending", "processing" -> SText(t("Requested"), size = 12.sp, weight = 700, color = SeedyColors.Text3)
+            else -> Box(
+                Modifier.height(38.dp).clip(RoundedCornerShape(11.dp)).background(SeedyColors.Inverse).tap(onClick = onClick).padding(horizontal = 14.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                SText(t("Request"), size = 13.sp, weight = 800, color = SeedyColors.InkInverse)
             }
         }
     }
