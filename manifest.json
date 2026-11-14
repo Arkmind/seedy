@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.4.2.0",
+        "changelog": "## What's Changed\n\n🤫 \n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.4.1...v0.4.2",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.4.2/seedy_0.4.2.0.zip",
+        "checksum": "8b887bec2b89f43feb624e3540efaa5a",
+        "timestamp": "2026-11-14T15:14:02Z"
+      },
+      {
         "version": "0.4.1.0",
         "changelog": "## 🩹 Medu, back on its tentacles\n\nSeedy 0.4.0 for Android closed the moment you opened it, on phones and on Android TV. Sorry about that! The part that checks your requests in the background lost a piece in the release build, so the app couldn't start at all.\n\n### Fixed\n- **The Android app opens again** on phones and Android TV, with everything 0.4.0 brought: Medu, request notifications, pull to refresh, the sleep-timer sheet and the TV screensaver.\n\n### Updating\n- Install the Android APK attached below over 0.4.0. Your servers and profiles are kept.\n- Nothing changed in the Jellyfin plugin: updating it is optional.\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.4.0...v0.4.1",
         "targetAbi": "12.0.0.0",
