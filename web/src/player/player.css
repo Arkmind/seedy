@@ -381,10 +381,24 @@
 /* ── Errors ── */
 .pl-error {
   position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 16px;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(8, 8, 8, 0.72); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
 }
-.pl-error-box { width: 100%; max-width: 560px; box-shadow: 0 0 0 1px var(--seedy-hairline), 0 24px 64px rgba(0, 0, 0, 0.6); }
-.pl-error-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pl-error-box {
+  width: 560px; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; padding: 30px 34px 26px;
+  border-radius: 26px; background: #161616; box-shadow: 0 40px 90px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.pl-error-main { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.pl-error-title { margin: 0; font-size: 30px; line-height: 1.08; font-weight: 900; letter-spacing: -0.015em; color: #ffffff; }
+.pl-error-text { margin: 0; max-width: 440px; font-size: 16px; line-height: 1.55; color: #b4b4b4; }
+.pl-error-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 12px; }
+.pl-error-details { width: 100%; margin-top: 20px; padding-top: 14px; border-top: 1px solid #262626; }
+.pl-error-details summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--seedy-text-2); }
+.pl-error-details p { margin: 10px 0 0; font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--seedy-text-3); overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .pl-error-box { padding: 24px 20px 20px; }
+  .pl-error-title { font-size: 24px; }
+  .pl-error-main .medu { width: 120px; height: 158px; }
+}
 
 /* ── Small screens ── */
 @media (max-width: 720px) {
