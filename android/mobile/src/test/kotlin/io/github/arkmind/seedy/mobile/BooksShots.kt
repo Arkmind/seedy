@@ -19,6 +19,9 @@ import io.github.arkmind.seedy.mobile.audio.MiniBarActions
 import io.github.arkmind.seedy.mobile.audio.MiniBarSpace
 import io.github.arkmind.seedy.mobile.books.AudiobookActions
 import io.github.arkmind.seedy.mobile.books.AudiobookScreen
+import io.github.arkmind.seedy.mobile.books.SleptSheet
+import io.github.arkmind.seedy.player.audio.Slept
+import io.github.arkmind.seedy.player.audio.Sleep
 import io.github.arkmind.seedy.mobile.books.BookActions
 import io.github.arkmind.seedy.mobile.books.BookScreen
 import io.github.arkmind.seedy.mobile.books.BooksActions
@@ -79,6 +82,13 @@ class BooksShots {
     }
 
     /** No board: the audiobook player's Chapters sheet. */
+    /** Board "Android · Sleep timer": the timer paused the book at the end of chapter 7. */
+    @Test
+    fun sleepTimer() = shot("AndroidSleepTimer") {
+        AudiobookScreen(BooksSamples.playing, BooksSamples.playingTime, AudiobookActions(), output = "WH-1000XM5", volume = 0.7f, now = BooksSamples.now)
+        SleptSheet("A Field Guide to Fog", Slept(41 * 60 + 20.0, 6, Sleep.Chapter(6)), onResume = {}, onMore = {}, onOff = {}, onDismiss = {})
+    }
+
     @Test
     fun audiobookChapters() = shot("AndroidAudiobookChapters") {
         AudiobookScreen(BooksSamples.playing, BooksSamples.playingTime, AudiobookActions(), output = "WH-1000XM5", volume = 0.7f, now = BooksSamples.now)

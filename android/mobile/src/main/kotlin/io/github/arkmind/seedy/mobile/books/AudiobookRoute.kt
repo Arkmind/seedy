@@ -123,6 +123,18 @@ fun AudiobookRoute() {
             bookmarked = marks.bookmarks.any { abs(it.seconds - pos) < 30 },
         )
         val close = { sheet = null }
+        // The sleep timer paused the book: what next ("Medu fell asleep too").
+        state.slept?.let { slept ->
+            if (sheet == null) {
+                SleptSheet(
+                    book.name, slept,
+                    onResume = audio::resumeAfterSleep,
+                    onMore = { audio.setSleep(Sleep.Time(System.currentTimeMillis() + 15 * 60_000L, 15)); audio.play() },
+                    onOff = { audio.setSleep(null); audio.dismissSlept() },
+                    onDismiss = audio::dismissSlept,
+                )
+            }
+        }
         when (sheet) {
             "speed" -> SpeedSheet(state.speed, onPick = audio::setSpeed, onClose = close)
             "sleep" -> SleepSheet(state.sleep, chapterOf(book, pos), onPick = audio::setSleep, onClose = close)
