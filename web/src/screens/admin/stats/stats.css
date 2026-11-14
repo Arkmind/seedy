@@ -209,6 +209,8 @@ button.st-chip:hover { background: var(--seedy-surface-2); color: #ffffff; }
   color: #ffffff; font-size: 12px; font-weight: 700; overflow: hidden; transition: opacity var(--t-fast) var(--ease);
 }
 .st-tl-block span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.st-tl-block.is-tiny { padding: 0; }
+.st-tl-block.is-tiny span { display: none; }
 .st-tl-lane.is-streams { align-items: end; padding-top: 10px; }
 .st-tl-streams-label { font-size: 12px; font-weight: 700; color: var(--seedy-text-2); line-height: 1.3; cursor: default; }
 .st-tl-bars { position: relative; display: flex; align-items: flex-end; gap: 1px; height: 56px; }
@@ -232,6 +234,7 @@ button.st-chip:hover { background: var(--seedy-surface-2); color: #ffffff; }
 .st-plays-what { display: flex; align-items: center; gap: 10px; }
 .st-plays-bar { flex: none; width: 6px; height: 34px; border-radius: 3px; }
 .st-plays-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.st-plays-text .st-note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-plays-title { font-size: 14px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 a.st-plays-title:hover { text-decoration: underline; }
 .st-plays-device { font-size: 13px; color: var(--seedy-text-hero); overflow: hidden; text-overflow: ellipsis; }

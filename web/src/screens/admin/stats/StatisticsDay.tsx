@@ -188,6 +188,10 @@ function DayBody({ data, window }: { data: StatsDay; window: { from: number; to:
     livetv: ['{n} of them on Live TV', '{n} of them on Live TV'],
     other: ['{n} of them a video', '{n} of them videos']
   };
+  const allOfThem: Record<Kind, string> = {
+    music: 'All of them songs', show: 'All of them episodes', movie: 'All of them movies', book: 'All of them books',
+    livetv: 'All of them on Live TV', other: 'All of them videos'
+  };
 
   const avgNote = data.avgDayMs > 0 && watch > 0 ? (() => {
     const pct = Math.round(((watch - data.avgDayMs) / data.avgDayMs) * 100);
@@ -203,7 +207,7 @@ function DayBody({ data, window }: { data: StatsDay; window: { from: number; to:
     <div class="st-body">
       <div class="st-kpis is-4">
         <Kpi label={t('Watch time')} value={hoursValue(watch, 1)} unit={t('h')} note={avgNote} />
-        <Kpi label={t('Plays')} value={formatNumber(plays)} note={plays > 0 && lead.n > 0 ? <Trend dir="up">{lead.n === plays && lead.k !== 'music' ? t('All of them {kind}', { kind: kindLabel(lead.k).toLowerCase() }) : tn(lead.n, ofThem[lead.k][0], ofThem[lead.k][1])}</Trend> : <Trend>{t('Nothing played')}</Trend>} />
+        <Kpi label={t('Plays')} value={formatNumber(plays)} note={plays > 0 && lead.n > 0 ? <Trend dir="up">{lead.n === plays && plays > 1 ? t(allOfThem[lead.k]) : tn(lead.n, ofThem[lead.k][0], ofThem[lead.k][1])}</Trend> : <Trend>{t('Nothing played')}</Trend>} />
         <Kpi label={t('Viewers')} value={formatNumber(people.length)} unit={t('of {n}', { n: formatNumber(enabled) })} note={<Trend dir={people.length > 0 ? 'up' : undefined}>{peopleNote}</Trend>} />
         <Kpi
           label={t('Most at once')}
@@ -336,7 +340,7 @@ function Timeline({ data, spans, window, peak }: { data: StatsDay; spans: Span[]
                         <span
                           key={x.s.id}
                           title={`${title} · ${clock(new Date(x.s.start))}–${clock(new Date(x.s.end))}`}
-                          class="st-tl-block"
+                          class={'st-tl-block' + (w < 0.03 ? ' is-tiny' : '')}
                           style={{ left: `${l * 100}%`, width: `calc(${w * 100}% - 2px)`, background: KIND_COLOUR[x.s.kind], opacity: inWindow(x.a, x.b) ? 1 : 0.45 }}
                         >
                           <span>{title}</span>
@@ -392,9 +396,10 @@ function PlaysTable({ data, spans, window }: { data: StatsDay; spans: Span[]; wi
   const peak = window ? peakIn(spans, window.from, window.to) : peakIn(spans, 0, 2880);
   const hourEnd = window && (window.to >= 1440 ? '00:00' : hhmm(window.to));
   const title = window ? tn(count, '{n} play between {from} and {to}', '{n} plays between {from} and {to}', { from: hhmm(window.from), to: hourEnd! }) : tn(count, '{n} play', '{n} plays');
+  const peakTime = peak ? clock(new Date(startMs + peak.at * MIN)) : '';
   const peakText = peak && (peak.bitrate > 0
-    ? t('peak of {n} streams at {time}, {mbps} Mbps going out', { n: peak.streams, time: clock(new Date(startMs + peak.at * MIN)), mbps: mbps(peak.bitrate) })
-    : t('peak of {n} streams at {time}', { n: peak.streams, time: clock(new Date(startMs + peak.at * MIN)) }));
+    ? tn(peak.streams, 'peak of {n} stream at {time}, {mbps} Mbps going out', 'peak of {n} streams at {time}, {mbps} Mbps going out', { time: peakTime, mbps: mbps(peak.bitrate) })
+    : tn(peak.streams, 'peak of {n} stream at {time}', 'peak of {n} streams at {time}', { time: peakTime }));
   const isHour = window && window.to - window.from === 60 && window.from % 60 === 0;
   const watchedText = t(isHour ? '{time} watched inside that hour' : window ? '{time} watched inside that time' : '{time} watched', { time: shortDuration(watched) });
   const users = new Map(data.users.map((u) => [u.userId, u]));

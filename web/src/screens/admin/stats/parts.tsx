@@ -25,6 +25,7 @@ const HOUR = 3_600_000;
 
 /* "412", "14.1", "0.6": whole hours from 10 up, one decimal below. */
 export function hoursValue(ms: number, decimals?: number): string {
+  if (ms <= 0) return formatNumber(0);
   const h = ms / HOUR;
   const d = decimals ?? (h >= 10 ? 0 : 1);
   return formatNumber(h, { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -32,6 +33,7 @@ export function hoursValue(ms: number, decimals?: number): string {
 
 /* "189 h", "4.5 h", "35 min". */
 export function hoursText(ms: number, decimals?: number): string {
+  if (ms <= 0) return t('{n} h', { n: formatNumber(0) });
   if (decimals === undefined && ms > 0 && ms < HOUR / 10) return t('{n} min', { n: formatNumber(Math.max(1, Math.round(ms / 60000))) });
   return t('{n} h', { n: hoursValue(ms, decimals) });
 }

@@ -124,9 +124,9 @@ for back in range(DAYS, -1, -1):
     day = (datetime.now(tz) - timedelta(days=back)).replace(second=0, microsecond=0)
     busy = 1.6 if day.weekday() >= 4 else 1.0
     for user, devs, weight, taste in profiles:
-        if weight == 0 or random.random() > 0.75 * weight * busy:
+        if weight == 0 or random.random() > min(0.95, 0.8 * weight * busy):
             continue
-        sessions = random.choices([1, 2, 3], weights=[5, 3, 1])[0]
+        sessions = random.choices([1, 2, 3, 4], weights=[3, 4, 2, 1])[0]
         for _ in range(sessions):
             kind = random.choices(list(taste), weights=list(taste.values()))[0]
             dev = random.choice(devs)
@@ -139,7 +139,7 @@ for back in range(DAYS, -1, -1):
                 ep = random.choice(episodes)
                 for k in range(random.choice([1, 1, 2, 3])):
                     e = episodes[(episodes.index(ep) + k) % len(episodes)]
-                    run = e.get('RunTimeTicks') or 30 * 60 * 10_000_000
+                    run = random.choice([24, 42, 52]) * 60 * 10_000_000  # the test files are short clips: pretend a real length
                     full = random.random() < 0.8
                     watched = run / 10_000_000 * (1 if full else random.uniform(0.2, 0.8))
                     vcodec = 'hevc' if method == 'Transcode' and 'Video' in (reasons or '') else 'h264'
@@ -148,7 +148,7 @@ for back in range(DAYS, -1, -1):
                                 random.choice([4, 8, 12, 20]) * 1_000_000, vcodec, 'pgssub' if 'Subtitle' in (reasons or '') else None) + timedelta(minutes=random.randint(1, 6))
             elif kind == 'movie' and movies:
                 m = random.choice(movies)
-                run = m.get('RunTimeTicks') or 100 * 60 * 10_000_000
+                run = random.randint(85, 140) * 60 * 10_000_000
                 full = random.random() < 0.7
                 watched = run / 10_000_000 * (1 if full else random.uniform(0.15, 0.7))
                 add(user, m, 'movie', start, watched, dev, m['Id'], m['Name'], 'Movie', run, int(run if full else watched * 10_000_000), full, lib(m),
@@ -157,7 +157,7 @@ for back in range(DAYS, -1, -1):
                 first = random.randrange(len(songs))
                 for k in range(random.randint(4, 14)):
                     sng = songs[(first + k) % len(songs)]
-                    run = sng.get('RunTimeTicks') or 200 * 10_000_000
+                    run = random.randint(150, 330) * 10_000_000
                     start = add(user, sng, 'music', start, run / 10_000_000, dev, sng.get('AlbumId') or sng['Id'], sng.get('Album') or sng['Name'], 'Audio', run, run, True, lib(sng), 'DirectPlay', None, 320_000) + timedelta(seconds=random.randint(0, 20))
             elif kind == 'livetv' and channels:
                 c = random.choice(channels)
@@ -165,7 +165,7 @@ for back in range(DAYS, -1, -1):
             elif kind == 'book' and (audiobooks or books):
                 if audiobooks and (not books or random.random() < 0.6):
                     b = random.choice(audiobooks)
-                    run = b.get('RunTimeTicks') or 3600 * 10_000_000
+                    run = random.randint(3, 9) * 3600 * 10_000_000
                     watched = min(run / 10_000_000, random.randint(20, 70) * 60)
                     add(user, b, 'book', start, watched, dev, b.get('ParentId') or b['Id'], b.get('Album') or b['Name'], 'AudioBook', run, int(watched * 10_000_000), False, lib(b), 'DirectPlay', None, 128_000)
                 else:

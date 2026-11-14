@@ -605,7 +605,7 @@ function DevicesPanel({ data }: { data: Stats }) {
       {total === 0 ? <p class="st-empty">{t('Nothing played in this period.')}</p> : (
         <>
           <div class="st-devices">
-            {data.devices.slice(0, 6).map((d) => (
+            {data.devices.filter((d) => d.watchMs / total >= 0.005).slice(0, 6).map((d) => (
               <div key={d.key} class="st-device">
                 <span class="st-meter-head is-14">
                   <span><b>{d.key.startsWith('app:') ? d.name : t(d.name)}</b>{d.apps.length > 0 && <span class="st-device-apps"> · {listText(d.apps)}</span>}</span>
