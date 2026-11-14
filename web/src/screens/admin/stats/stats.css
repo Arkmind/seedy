@@ -146,6 +146,12 @@
 .st-viewer { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--seedy-line); color: var(--seedy-text); }
 .st-viewer.is-first { border-top: 0; }
 .st-viewer:hover .st-viewer-name { text-decoration: underline; }
+.st-more {
+  align-self: flex-start; height: 32px; margin-top: -4px; padding: 0 10px; border: 0; border-radius: var(--r-sm); background: var(--seedy-surface);
+  color: var(--seedy-text-hero); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.st-more:hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
 .st-viewer-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .st-viewer-name { font-weight: 700; color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-avatar {
@@ -155,13 +161,14 @@
 .st-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
 /* ── Devices and apps ── */
-.st-devices { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; padding-top: 4px; }
+/* Rows keep the board's spacing; a taller neighbouring column leaves room under them instead of spreading them out. */
+.st-devices { display: flex; flex-direction: column; gap: 22px; padding-top: 4px; }
 .st-device .st-meter-head > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-device .st-meter-head span b { font-weight: 700; color: #ffffff; }
 .st-device-apps { font-size: 12px; color: var(--seedy-text-3); }
 
 /* ── Most watched ── */
-.st-top { list-style: none; margin: 0; padding: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+.st-top { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .st-top li { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--seedy-line); }
 .st-top li.is-first { border-top: 0; }
 .st-top-rank { width: 14px; flex: none; font-size: 13px; font-weight: 800; color: var(--seedy-text-3); }

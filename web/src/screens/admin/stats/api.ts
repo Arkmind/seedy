@@ -17,6 +17,8 @@ export interface Stats {
   to: string;
   today: string;
   retentionDays: number;
+  /* The day of the oldest play in the log. */
+  firstPlay?: string | null;
   kpis: {
     watchMs: number; prevWatchMs?: number | null;
     plays: number; prevPlays?: number | null;
