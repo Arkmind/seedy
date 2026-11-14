@@ -131,11 +131,10 @@ export function getItems(q: ItemsQuery, signal?: AbortSignal) {
   } as Query, signal);
 }
 
+/* Continue watching: Jellyfin's resume list, minus the episodes a person moved past (a later one of the show played
+   since) and anything left in its credits, which Seedy marks watched. Pass a show or season to get where it stands. */
 export const getResume = (limit = 16, parentId?: string) =>
-  get<ItemsResult>('/UserItems/Resume', {
-    userId: uid(), limit, parentId, mediaTypes: 'Video', enableUserData: true, imageTypeLimit: 1,
-    enableImageTypes: 'Primary,Backdrop,Thumb,Logo', fields: CARD_FIELDS.join(','), enableTotalRecordCount: false
-  });
+  get<ItemsResult>('/Seedy/Home/Continue', { limit, parentId, fields: CARD_FIELDS.join(',') });
 
 export const getNextUp = (limit = 16, seriesId?: string, parentId?: string) =>
   get<ItemsResult>('/Shows/NextUp', {
@@ -176,6 +175,11 @@ export const setFavorite = (id: string, on: boolean) =>
   on
     ? post<{ IsFavorite: boolean }>(`/UserFavoriteItems/${id}`, undefined, { userId: uid() })
     : del<{ IsFavorite: boolean }>(`/UserFavoriteItems/${id}`, { userId: uid() });
+
+/* Drops the resume point without marking the title watched: it leaves Continue watching, and an episode comes back
+   as Next up. */
+export const clearResume = (id: string) =>
+  post<unknown>(`/UserItems/${id}/UserData`, { PlaybackPositionTicks: 0 }, { userId: uid() });
 
 export const setPlayed = (id: string, on: boolean) =>
   on
