@@ -3,6 +3,9 @@ package io.github.arkmind.seedy.mobile
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -52,5 +55,32 @@ class HomeShots {
             }
         }
         compose.onRoot().captureRoboImage("src/test/screenshots/AndroidHome.png")
+    }
+
+    /** Board "Android · Pull to refresh": pulled far enough, "Release to refresh". */
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test
+    fun pullToRefresh() {
+        val state = HomeViewModel.State(
+            loading = false,
+            featured = List(5) { FeaturedEntry(Samples.northbound, reason = "New episode Friday", play = Samples.thePass) },
+            rows = listOf(
+                HomeViewModel.Row(HomeRow("continue", "continue"), "Continue watching", listOf(Samples.thePass, Samples.paperLanterns, Samples.glassHarbor)),
+            ),
+        )
+        compose.setContent {
+            SeedyTheme {
+                CompositionLocalProvider(LocalViewer provides Viewer(name = "Arky")) {
+                    val pull = rememberPullToRefreshState()
+                    LaunchedEffect(Unit) { pull.snapTo(1f) }
+                    Box(Modifier.fillMaxSize()) {
+                        HomeScreen(state, AccountActions({}, {}), onOpen = {}, onPlay = {}, onSearch = {}, onSeeAll = {}, bottomPadding = tabBarHeight(), onRefresh = {}, pull = pull)
+                        TabBar(Tab.entries, Tab.Home, {}, Modifier.align(Alignment.BottomCenter))
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("src/test/screenshots/AndroidPullRefresh.png")
     }
 }
