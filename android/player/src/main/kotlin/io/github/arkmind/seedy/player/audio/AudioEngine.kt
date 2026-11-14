@@ -170,7 +170,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
     private val listener = object : Player.Listener {
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
             if (!playWhenReady && (switching || exo.playbackState == Player.STATE_ENDED)) return
-            set { copy(playing = playWhenReady) }
+            set { copy(playing = playWhenReady, slept = if (playWhenReady) null else slept) }
             if (playWhenReady) {
                 startTicking()
             } else {
@@ -346,7 +346,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
             // Done: back to the start of the book, paused.
             place(now = true, finished = true)
             val first = if (s.book?.parts != null) s.context.firstOrNull() else null
-            set { copy(playing = false, sleep = null, pos = if (first != null) 0 else pos, current = first ?: current) }
+            set { copy(playing = false, sleep = null, slept = null, pos = if (first != null) 0 else pos, current = first ?: current) }
             _time.value = AudioTime(0.0, durationOf(s.current))
             save(true)
             syncSession()
@@ -574,6 +574,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
     fun play() {
         val s = _state.value
         val cur = s.current ?: return
+        if (s.slept != null) set { copy(slept = null) }
         if (stream == null) return load(cur, _time.value.position - partStart(), autoplay = true)
         ensureService()
         exo.playWhenReady = true
@@ -697,7 +698,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
                 delay((sleep.at - System.currentTimeMillis()).coerceAtLeast(0))
                 if (_state.value.sleep == sleep) {
                     pause()
-                    set { copy(sleep = null) }
+                    set { copy(sleep = null, slept = if (isBook) Slept(_time.value.position, null, sleep) else null) }
                 }
             }
         }
@@ -706,12 +707,25 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
     private fun checkSleep(pos: Double) {
         val s = _state.value
         val sleep = s.sleep as? Sleep.Chapter ?: return
-        val c = s.book?.chapters?.getOrNull(sleep.index) ?: return
+        val chapters = s.book?.chapters ?: return
+        val c = chapters.getOrNull(sleep.index) ?: return
         if (pos >= c.end - 0.4) {
             pause()
-            set { copy(sleep = null) }
+            // Still set to the end of the chapter: the next one now.
+            val next = (sleep.index + 1).takeIf { it < chapters.size }?.let { Sleep.Chapter(it) }
+            set { copy(sleep = next, slept = Slept(pos, sleep.index, sleep)) }
         }
     }
+
+    /** "Resume from 41:20" once the sleep timer paused the book: plays on, a timer set to a time running as long again. */
+    fun resumeAfterSleep() {
+        val slept = _state.value.slept ?: return
+        (slept.sleep as? Sleep.Time)?.let { setSleep(Sleep.Time(System.currentTimeMillis() + it.minutes * 60_000L, it.minutes)) }
+        play()
+    }
+
+    /** Closes "Medu fell asleep too" without playing. */
+    fun dismissSlept() = set { copy(slept = null) }
 
     /** Saves the place in the book with Seedy (every 15 s while playing, and on pause, close and the end). */
     private fun place(now: Boolean = false, finished: Boolean = false) {
@@ -782,7 +796,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
         set {
             copy(
                 mode = AudioMode.Music, context = entries, original = original, pos = pos, fromAdded = false, source = opts.source, shuffle = opts.shuffle,
-                added = if (s.mode == AudioMode.Music) s.added else emptyList(), book = null, sleep = null,
+                added = if (s.mode == AudioMode.Music) s.added else emptyList(), book = null, sleep = null, slept = null,
             )
         }
         sleepJob?.cancel()
@@ -843,7 +857,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
         set {
             copy(
                 mode = AudioMode.Audiobook, current = entry, context = context, original = null, pos = pos, added = emptyList(), fromAdded = false,
-                source = Source(SourceKind.Audiobook, item.id.toString(), book.name), shuffle = false, repeat = Repeat.Off, book = book, sleep = null,
+                source = Source(SourceKind.Audiobook, item.id.toString(), book.name), shuffle = false, repeat = Repeat.Off, book = book, sleep = null, slept = null,
             )
         }
         load(entry, start - (book.parts?.getOrNull(pos)?.start ?: 0.0), autoplay = true)

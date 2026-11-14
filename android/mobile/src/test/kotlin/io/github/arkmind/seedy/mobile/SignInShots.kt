@@ -12,6 +12,7 @@ import io.github.arkmind.seedy.mobile.signin.AddServerScreen
 import io.github.arkmind.seedy.mobile.signin.PasswordScreen
 import io.github.arkmind.seedy.mobile.signin.ProfilesScreen
 import io.github.arkmind.seedy.mobile.signin.SignInFor
+import io.github.arkmind.seedy.mobile.signin.UnreachableScreen
 import io.github.arkmind.seedy.ui.theme.SeedyTheme
 import org.junit.Rule
 import org.junit.Test
@@ -63,10 +64,15 @@ class SignInShots {
     }
 
     @Test
-    fun addServer() = shot("AndroidAddServer") {
+    fun serverFind() = shot("AndroidServerFind") {
         AddServerScreen(
-            state = AddServerViewModel.State(found = listOf(AddServerViewModel.Found("Arky's server", "http://192.168.1.20:8096")), searching = false),
-            onAdd = {}, onSearch = {}, onBack = null,
+            state = AddServerViewModel.State(found = listOf(AddServerViewModel.Found("Arky’s server", "http://192.168.1.20:8096", "12.0.1", seedy = true))),
+            onAdd = {}, onSearch = {}, onBack = null, onQuickConnect = {},
         )
+    }
+
+    @Test
+    fun serverUnreachable() = shot("AndroidServerUnreachable") {
+        UnreachableScreen(server.copy(name = "Arky’s server"), retryIn = 12, onRetry = {}, onChooseServer = {})
     }
 }

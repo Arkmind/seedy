@@ -3,6 +3,7 @@ package io.github.arkmind.seedy
 import android.app.UiModeManager
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,9 +15,14 @@ import androidx.lifecycle.repeatOnLifecycle
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.session.SessionState
 import io.github.arkmind.seedy.mobile.MobileApp
+import io.github.arkmind.seedy.mobile.notify.RequestAlerts
+import io.github.arkmind.seedy.mobile.notify.RequestLinks
 import io.github.arkmind.seedy.tv.TvApp
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -34,6 +40,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val core = (application as SeedyApp).core
         val tv = isTelevision()
+        if (!tv) RequestLinks.take(this, intent)
 
         lifecycleScope.launch {
             // The language this device showed last, so the first screen is already in it; then the session.
@@ -42,6 +49,8 @@ class MainActivity : ComponentActivity() {
             ready = true
             if (core.sessions.state.value == SessionState.Starting) core.sessions.start()
         }
+
+        if (!tv) watchRequests(core)
 
         // The profile's language (Settings · Display) wins once someone is signed in with Seedy; without the plugin,
         // the one chosen on this device. A change reloads the activity into it.
@@ -61,6 +70,34 @@ class MainActivity : ComponentActivity() {
                         I18n.load(this@MainActivity, lang)
                         recreate()
                     }
+                }
+            }
+        }
+    }
+
+    /** Phones: a request notification tapped while the app is open. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        RequestLinks.take(this, intent)
+    }
+
+    /**
+     * Phones, "Tell me when a request is ready": a 15-minute check per profile signed in here (kept in step with the
+     * setting and the profiles), and a look whenever the app comes back.
+     */
+    private fun watchRequests(core: io.github.arkmind.seedy.core.SeedyCore) {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                combine(core.store.data, core.device.flow.map { it.notifyRequests }) { data, on ->
+                    data.servers.map { s -> s.id to s.accounts.filter { it.token != null }.map { it.userId } } to on
+                }.distinctUntilChanged().collect { (_, on) -> RequestAlerts.schedule(this@MainActivity, core.store.current(), on) }
+            }
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                val session = core.sessions.state.filterIsInstance<SessionState.SignedIn>().first().session
+                if (core.device.current.notifyRequests) {
+                    runCatching { RequestAlerts.check(this@MainActivity, core, session.server, session.account.userId, session.api) }
                 }
             }
         }

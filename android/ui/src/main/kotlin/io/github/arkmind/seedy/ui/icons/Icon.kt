@@ -71,6 +71,10 @@ object AppIcons {
         "M5 4h14a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z",
         "M5 13h14a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2Z", "M7 7.5h.01", "M7 16.5h.01",
     )
+    /** "Resume from 41:20": a small solid play triangle. */
+    val Resume = IconDef(0f, listOf(IconPart("M8 5v14l11-7z", filled = true)))
+    /** The server finder's: two stacked boxes. */
+    val ServerStack = IconDef(2.2f, "M4 4h16v6H4z", "M4 14h16v6H4z", "M8 7h.01", "M8 17h.01")
     val Mic = IconDef(2f, "M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Z", "M5 11a7 7 0 0 0 14 0", "M12 18v3")
     val MoreVertical = IconDef(
         0f,

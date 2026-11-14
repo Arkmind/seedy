@@ -1,6 +1,21 @@
 package io.github.arkmind.seedy.tv.signin
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import io.github.arkmind.seedy.tv.parts.TvBigButton
+import io.github.arkmind.seedy.ui.components.DeepScenes
+import io.github.arkmind.seedy.ui.components.DeepSea
+import io.github.arkmind.seedy.ui.components.Medu
+import io.github.arkmind.seedy.ui.components.MeduMood
+import io.github.arkmind.seedy.ui.components.Spinner
+import io.github.arkmind.seedy.ui.components.boxShadow
+import io.github.arkmind.seedy.ui.icons.SIcon
+import io.github.arkmind.seedy.ui.icons.WebIcons
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -75,8 +90,8 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 
 /** The TV boards' header mark: 50 px square, 36 px name. */
 @Composable
-private fun TvBrand(name: String) {
-    BrandMark(name, markSize = 50.bp, radius = 14.bp, letterSize = 26.bsp, wordSize = 36.bsp, gap = 16.bp)
+private fun TvBrand(name: String, modifier: Modifier = Modifier) {
+    BrandMark(name, modifier, markSize = 50.bp, radius = 14.bp, letterSize = 26.bsp, wordSize = 36.bsp, gap = 16.bp)
 }
 
 /**
@@ -86,17 +101,25 @@ private fun TvBrand(name: String) {
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Frame(brand: String, title: String, bottom: @Composable () -> Unit = {}, content: @Composable () -> Unit) {
+private fun Frame(brand: String, title: String, mascot: MeduMood? = null, bottom: @Composable () -> Unit = {}, content: @Composable () -> Unit) {
     val typing = WindowInsets.isImeVisible
     Column(
         Modifier.fillMaxSize().background(SeedyColors.Bg).padding(start = 96.bp, end = 96.bp, top = if (typing) 48.bp else 96.bp, bottom = 72.bp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (!typing) TvBrand(brand)
-        SText(
-            title, Modifier.padding(top = if (typing) 0.bp else 120.bp),
-            size = if (typing) 36.bsp else 56.bsp, weight = 900, tracking = -0.02f, lineHeight = 1f, color = SeedyColors.White,
-        )
+        if (mascot != null && !typing) {
+            // Board "Android TV · Who is watching": Medu by the heading, which tucks 4 px into its glow.
+            Row(Modifier.padding(top = 56.bp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy((-4).bp)) {
+                Medu(mascot, 130.bp, height = 172.bp)
+                SText(title, size = 56.bsp, weight = 900, tracking = -0.02f, lineHeight = 1f, color = SeedyColors.White)
+            }
+        } else {
+            SText(
+                title, Modifier.padding(top = if (typing) 0.bp else 120.bp),
+                size = if (typing) 36.bsp else 56.bsp, weight = 900, tracking = -0.02f, lineHeight = 1f, color = SeedyColors.White,
+            )
+        }
         CompositionLocalProvider(LocalTyping provides typing) { content() }
         Spacer(Modifier.weight(1f))
         if (!typing) bottom()
@@ -119,7 +142,7 @@ fun TvProfilesScreen(
     var focusedName by remember { mutableStateOf<ProfilesViewModel.Profile?>(null) }
     val first = remember { FocusRequester() }
     Frame(
-        brand, t("Who's watching?"),
+        brand, t("Who's watching?"), mascot = MeduMood.Wave,
         bottom = {
             Row(horizontalArrangement = Arrangement.spacedBy(24.bp)) {
                 if (state.quickConnect) TvButton(t("Sign in with Quick Connect"), onQuickConnect, icon = AppIcons.Phone)
@@ -299,36 +322,166 @@ private fun QuickConnectCode(code: String) {
     }
 }
 
-/** "Add your server" on the TV: servers found on the network, or an address typed with the remote. */
+/**
+ * Board "Android TV · Server find": Medu sweeps the network with a torch; servers that answer are listed with what
+ * they run. "Enter an address" opens the address field; "Use Quick Connect" picks the server found and opens its code.
+ * While the system keyboard is up, only the field and its heading stay (above it).
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TvAddServerScreen(state: AddServerViewModel.State, onAdd: (String) -> Unit, onSearch: () -> Unit) {
+fun TvAddServerScreen(
+    state: AddServerViewModel.State,
+    onAdd: (String) -> Unit,
+    onSearch: () -> Unit,
+    onQuickConnect: ((AddServerViewModel.Found) -> Unit)? = null,
+) {
     var address by rememberSaveable { mutableStateOf("") }
+    var typing by rememberSaveable { mutableStateOf(false) }
     val first = remember { FocusRequester() }
-    Frame("Seedy", t("Add your server"), bottom = {
-        SText(t("Seedy plays from your Jellyfin server."), size = 19.bsp, color = SeedyColors.Text3)
-    }) {
-        Column(Modifier.padding(top = if (LocalTyping.current) 28.bp else 72.bp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.bp)) {
-            if (state.found.isNotEmpty() && !LocalTyping.current) {
-                Row(horizontalArrangement = Arrangement.spacedBy(24.bp)) {
-                    state.found.forEachIndexed { i, s ->
-                        TvButton(s.name, { onAdd(s.address) }, if (i == 0) Modifier.focusRequester(first) else Modifier, icon = AppIcons.Server)
+    val field = remember { FocusRequester() }
+    val ime = WindowInsets.isImeVisible
+    Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
+        DeepSea(DeepScenes.TvFind)
+        if (!ime) {
+            TvBrand("Seedy", Modifier.padding(start = 96.bp, top = 64.bp))
+            Medu(MeduMood.Search, 300.bp, Modifier.offset(190.bp, 300.bp), height = 396.bp)
+        }
+        Column(Modifier.offset(980.bp, if (ime) 48.bp else 230.bp).width(780.bp)) {
+            SText(t("Looking for servers"), size = 62.bsp, weight = 900, tracking = -0.02f, color = SeedyColors.White)
+            if (!ime) {
+                SText(
+                    t("Medu is searching your network for Jellyfin servers with Seedy."),
+                    Modifier.padding(top = 14.bp), size = 27.bsp, lineHeight = 1.45f, color = DeepText,
+                )
+                if (state.found.isNotEmpty()) {
+                    SText(
+                        t("Found on this network"), Modifier.padding(top = 46.bp, bottom = 18.bp),
+                        size = 20.bsp, weight = 800, tracking = .1f, uppercase = true, color = SeedyColors.Text3,
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(16.bp)) {
+                        state.found.forEachIndexed { i, s ->
+                            FoundServer(s, if (i == 0) Modifier.focusRequester(first) else Modifier) { onAdd(s.address) }
+                        }
+                    }
+                } else if (!state.searching) {
+                    SText(t("No server answered on this network."), Modifier.padding(top = 46.bp), size = 22.bsp, color = SeedyColors.Text2)
+                }
+                if (state.searching) {
+                    Row(Modifier.padding(horizontal = 6.bp, vertical = 26.bp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.bp)) {
+                        Spinner(24.bp, SeedyColors.Text3)
+                        SText(t("Still looking…"), size = 22.bsp, color = SeedyColors.Text3)
+                    }
+                } else {
+                    TvPressable(onSearch, Modifier.padding(vertical = 14.bp)) { focused ->
+                        Row(
+                            Modifier.focusRing(focused, radius = 14.bp, gap = 2.bp, ring = 4.bp).padding(horizontal = 6.bp, vertical = 12.bp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.bp),
+                        ) {
+                            SIcon(WebIcons.Refetch, size = 24.bp, color = SeedyColors.Text2, stroke = 2.6f)
+                            SText(t("Look again"), size = 22.bsp, weight = 700, color = if (focused) SeedyColors.White else SeedyColors.Text2)
+                        }
                     }
                 }
-                SText(t("or type its address"), size = 20.bsp, color = SeedyColors.Text3)
-            } else {
-                SText(if (state.searching) t("Looking for servers on this network…") else t("No server answered on this network."), size = 22.bsp, color = SeedyColors.Text2)
             }
-            TvField(
-                address, { address = it }, "192.168.1.20:8096",
-                if (state.found.isEmpty()) Modifier.focusRequester(first) else Modifier,
-                keyboard = KeyboardType.Uri, onDone = { onAdd(address) },
-            )
-            state.error?.let { SText(it, size = 20.bsp, weight = 600, color = SeedyColors.Danger) }
-            Row(horizontalArrangement = Arrangement.spacedBy(24.bp)) {
-                TvButton(if (state.busy) t("Connecting…") else t("Connect"), { onAdd(address) }, primary = true)
-                if (!state.searching) TvButton(t("Look again"), onSearch)
+            if (typing) {
+                Column(Modifier.padding(top = if (ime) 28.bp else 0.bp), verticalArrangement = Arrangement.spacedBy(24.bp)) {
+                    TvField(address, { address = it }, "192.168.1.20:8096", Modifier.focusRequester(field), keyboard = KeyboardType.Uri, onDone = { onAdd(address) })
+                    state.error?.let { SText(it, size = 20.bsp, weight = 600, color = SeedyColors.Danger) }
+                    if (!ime) TvBigButton(if (state.busy) t("Connecting…") else t("Connect"), { onAdd(address) }, primary = true)
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(20.bp)) {
+                    TvBigButton(t("Enter an address"), { typing = true }, if (state.found.isEmpty()) Modifier.focusRequester(first) else Modifier)
+                    val found = state.found.firstOrNull()
+                    if (onQuickConnect != null && found != null) TvBigButton(t("Use Quick Connect"), { onQuickConnect(found) })
+                }
+                state.error?.let { SText(it, Modifier.padding(top = 20.bp), size = 20.bsp, weight = 600, color = SeedyColors.Danger) }
             }
         }
     }
-    LaunchedEffect(state.found.isNotEmpty()) { first.focusSoon() }
+    LaunchedEffect(state.found.isNotEmpty(), typing) { if (typing) field.focusSoon() else first.focusSoon() }
+}
+
+/** The finder's body text on the deep-sea boards. */
+private val DeepText = Color(0xFFB4B4B4)
+
+/** A server that answered: light and lifted while the remote is on it. */
+@Composable
+private fun FoundServer(server: AddServerViewModel.Found, modifier: Modifier, onClick: () -> Unit) {
+    TvPressable(onClick, modifier) { focused ->
+        val ink = if (focused) SeedyColors.InkInverse else SeedyColors.White
+        Row(
+            Modifier.focusScale(focused, 1.04f)
+                .then(if (focused) Modifier.boxShadow(Color.Black.copy(alpha = .55f), 56.bp, 24.bp, 26.bp) else Modifier)
+                .fillMaxWidth().clip(RoundedCornerShape(26.bp)).background(if (focused) SeedyColors.Inverse else Color.White.copy(alpha = 0.1f))
+                .padding(horizontal = 28.bp, vertical = 24.bp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(22.bp),
+        ) {
+            Box(
+                Modifier.size(68.bp).clip(RoundedCornerShape(18.bp)).background(if (focused) SeedyColors.InkInverse else Color.White.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                SIcon(AppIcons.ServerStack, size = 34.bp, color = SeedyColors.White)
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.bp)) {
+                SText(server.name, size = 30.bsp, weight = 900, color = ink, maxLines = 1)
+                SText(server.detail, size = 21.bsp, color = if (focused) Color(0xFF4A4A4A) else SeedyColors.Text2, maxLines = 1)
+            }
+            SIcon(AppIcons.Chevron, size = 34.bp, color = ink, stroke = 2.2f)
+        }
+    }
+}
+
+/** "192.168.1.20:8096": a server's address as the unreachable page prints it. */
+private fun hostOf(server: SavedServer): String = server.address.substringAfter("://").trimEnd('/')
+
+/**
+ * Board "Android TV · Server unreachable": Medu dropped the cable. Try again (the remote starts there), or pick another
+ * server; Seedy tries by itself every few seconds ([retryIn] seconds left, null while a try runs).
+ */
+@Composable
+fun TvUnreachableScreen(server: SavedServer, retryIn: Int?, onRetry: () -> Unit, onChooseServer: () -> Unit) {
+    val retry = remember { FocusRequester() }
+    Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
+        DeepSea(DeepScenes.TvUnreachable)
+        TvBrand(server.seedy?.name ?: "Seedy", Modifier.padding(start = 96.bp, top = 64.bp))
+        Column(Modifier.fillMaxWidth().padding(top = 150.bp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Medu(MeduMood.Oops, 300.bp, height = 396.bp)
+            SText(
+                t("Can’t reach your server"), Modifier.padding(top = 16.bp),
+                size = 66.bsp, weight = 900, lineHeight = 1.08f, tracking = -.015f, color = SeedyColors.White, align = TextAlign.Center,
+            )
+            SText(
+                t("Medu dropped the cable. Check that {server} is switched on and connected, then try again.", "server" to server.name),
+                Modifier.padding(top = 16.bp).widthIn(max = 900.bp),
+                size = 28.bsp, lineHeight = 1.55f, color = DeepText, align = TextAlign.Center,
+            )
+            Row(Modifier.padding(top = 42.bp), horizontalArrangement = Arrangement.spacedBy(24.bp)) {
+                TvBigButton(t("Try again"), onRetry, Modifier.focusRequester(retry), icon = WebIcons.Refetch, primary = true)
+                TvBigButton(t("Choose another server"), onChooseServer)
+            }
+            Row(
+                Modifier.padding(top = 56.bp).clip(CircleShape).background(SeedyColors.Bg.copy(alpha = .7f)).padding(horizontal = 26.bp, vertical = 16.bp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(28.bp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.bp)) {
+                    Box(Modifier.size(12.bp).background(SeedyColors.Danger, CircleShape))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        SText("${server.name} · ", size = 21.bsp, color = SeedyColors.Text2, maxLines = 1)
+                        BasicText(hostOf(server), style = BaseText.copy(fontFamily = FontFamily.Monospace, fontSize = 21.bsp, color = SeedyColors.Text2), maxLines = 1)
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.bp)) {
+                    Spinner(22.bp, SeedyColors.Text)
+                    SText(
+                        if (retryIn != null) t("Trying again in {n} s", "n" to retryIn) else t("Trying again…"),
+                        size = 21.bsp, color = SeedyColors.Text2, maxLines = 1,
+                    )
+                }
+            }
+        }
+    }
+    LaunchedEffect(Unit) { retry.focusSoon() }
 }

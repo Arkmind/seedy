@@ -47,6 +47,12 @@ sealed interface Sleep {
     data class Chapter(val index: Int) : Sleep
 }
 
+/**
+ * The sleep timer just paused the book ("Medu fell asleep too"): at [position] (book seconds), at the end of [chapter]
+ * when it was set to the chapter, and how it was set (Resume sets a time again).
+ */
+data class Slept(val position: Double, val chapter: Int?, val sleep: Sleep)
+
 /** How the current file reaches this phone, and its quality ("FLAC 24-bit 96 kHz"). */
 data class StreamInfo(val method: PlayMethod, val quality: String)
 
@@ -71,6 +77,8 @@ data class AudioState(
     /** Audiobooks only. */
     val speed: Float = 1f,
     val sleep: Sleep? = null,
+    /** The sleep timer paused the book and nobody has said what next yet. */
+    val slept: Slept? = null,
     val book: BookInfo? = null,
     val stream: StreamInfo? = null,
 ) {

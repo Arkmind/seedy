@@ -11,6 +11,7 @@ import io.github.arkmind.seedy.core.feature.FavoritesViewModel
 import io.github.arkmind.seedy.core.feature.LibraryViewModel
 import io.github.arkmind.seedy.core.feature.RequestSeasonsViewModel
 import io.github.arkmind.seedy.core.feature.SearchViewModel
+import io.github.arkmind.seedy.core.seedy.SeerrItem
 import io.github.arkmind.seedy.core.feature.SeasonsTarget
 import io.github.arkmind.seedy.core.seedy.RequestAdvanced
 import io.github.arkmind.seedy.core.seedy.RequestOptions
@@ -140,6 +141,14 @@ object TvBrowseSamples {
         currentProgram = BaseItemDto(id = id("The Glass House"), type = BaseItemKind.PROGRAM, name = "The Glass House"),
     )
     private val ines = BaseItemDto(id = id("Ines Northey"), type = BaseItemKind.PERSON, name = "Ines Northey")
+
+    /** Board "Android TV · Search, nothing found". */
+    val searchMoonf = SearchViewModel.State(
+        text = "moonf", query = "moonf",
+        results = SearchResults(q = "moonf", best = null, titles = emptyList(), episodes = emptyList(), people = emptyList()),
+        seerrOn = true,
+        seerr = SearchViewModel.Seerr(loading = false, items = listOf(SeerrItem(2, "movie", "Moonfall", "2022"))),
+    )
 
     val search = SearchViewModel.State(
         text = "north", query = "north",
