@@ -83,6 +83,14 @@ public sealed class ContinueWatching : IHostedService
     /// <param name="options">Fields for the items.</param>
     /// <returns>The titles.</returns>
     public async Task<QueryResult<BaseItemDto>> ListAsync(User user, Guid parentId, int limit, DtoOptions options)
+        => new(_dto.GetBaseItemDtos(await ItemsAsync(user, parentId, limit).ConfigureAwait(false), options, user));
+
+    /// <summary>Gets what the person is in the middle of, most recent first, as library items.</summary>
+    /// <param name="user">The person.</param>
+    /// <param name="parentId">Only titles under this library, show or season (empty: everywhere).</param>
+    /// <param name="limit">How many to return.</param>
+    /// <returns>The titles.</returns>
+    public async Task<List<BaseItem>> ItemsAsync(User user, Guid parentId, int limit)
     {
         var candidates = _library.GetItemList(new InternalItemsQuery(user)
         {
@@ -133,7 +141,7 @@ public sealed class ContinueWatching : IHostedService
             picked.Add(item);
         }
 
-        return new QueryResult<BaseItemDto>(_dto.GetBaseItemDtos(picked, options, user));
+        return picked;
     }
 
     // The libraries the person shows in Continue watching: Jellyfin's resume list leaves out the ones they hid from
