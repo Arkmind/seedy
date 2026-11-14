@@ -340,10 +340,10 @@ public class SeedyController : ControllerBase
     /// <summary>The hero rotation.</summary>
     /// <returns>Entries.</returns>
     [HttpGet("Home/Featured")]
-    public ActionResult<List<FeaturedEntryDto>> GetFeatured()
+    public async Task<ActionResult<List<FeaturedEntryDto>>> GetFeatured()
     {
         var user = User.GetUser(_users);
-        return user is null ? Unauthorized() : _home.Featured(user);
+        return user is null ? Unauthorized() : await _home.FeaturedAsync(user).ConfigureAwait(false);
     }
 
     /// <summary>The Top 10 this period.</summary>

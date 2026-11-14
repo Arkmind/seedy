@@ -2,7 +2,9 @@ package io.github.arkmind.seedy.mobile.home
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,8 +47,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -65,7 +69,10 @@ import io.github.arkmind.seedy.core.format.yearRange
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.seedy.FeaturedEntry
+import io.github.arkmind.seedy.mobile.manage.ItemMenuSheet
+import io.github.arkmind.seedy.mobile.manage.MenuEntry
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
+import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.requests.SeerrTitleCard
 import io.github.arkmind.seedy.ui.components.Artwork
@@ -98,7 +105,11 @@ fun HomeScreen(
     bottomPadding: Dp,
     listState: LazyListState = rememberLazyListState(),
     onSeerr: (SeerrTitle) -> Unit = {},
+    /** A Continue watching card's menu (long press): mark watched (true) or take out of the row (false); says whether it worked. */
+    onFinish: ((BaseItemDto, Boolean, (Boolean) -> Unit) -> Unit)? = null,
 ) {
+    var menuFor by remember { mutableStateOf<BaseItemDto?>(null) }
+    var message by remember { mutableStateOf<String?>(null) }
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
         LazyColumn(
             Modifier.fillMaxSize(),
@@ -114,14 +125,34 @@ fun HomeScreen(
                 }
             }
             for (row in state.visibleRows) {
-                item(key = row.row.id) { HomeRowView(row, onOpen, onSeeAll, onSeerr) }
+                val onMenu: ((BaseItemDto) -> Unit)? = if (row.row.kind == "continue" && onFinish != null) { item -> menuFor = item } else null
+                item(key = row.row.id) { HomeRowView(row, onOpen, onSeeAll, onSeerr, onMenu) }
             }
         }
         // The header stays put (as the web's): clear over the banner, on the page's colour once the page moves.
         val stuck by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 } }
         Header(account, onSearch, stuck)
+        menuFor?.let { item ->
+            ItemMenuSheet(item.cardTitle, continueEntries(item) { watched ->
+                onFinish?.invoke(item, watched) { ok ->
+                    message = when {
+                        !ok && watched -> t("Couldn’t mark it as watched")
+                        !ok -> t("Couldn’t remove it")
+                        watched -> t("Marked as watched")
+                        else -> t("Removed from Continue watching")
+                    }
+                }
+            }) { menuFor = null }
+        }
+        Toast(message, { message = null }, Modifier.align(Alignment.BottomCenter).padding(bottom = bottomPadding))
     }
 }
+
+/** A Continue watching card's menu: mark the title watched, or take it out of the row without marking it. */
+private fun continueEntries(item: BaseItemDto, finish: (Boolean) -> Unit): List<MenuEntry> = listOf(
+    MenuEntry(WebIcons.Check, t("Mark as watched"), run = { finish(true) }),
+    MenuEntry(WebIcons.Close, t("Remove from Continue watching"), sub = t("Starts from the beginning next time"), run = { finish(false) }),
+)
 
 @Composable
 private fun Header(account: AccountActions, onSearch: () -> Unit, stuck: Boolean) {
@@ -258,7 +289,13 @@ private fun heroTitleSize(title: String, maxWidth: Dp): TextUnit {
 }
 
 @Composable
-private fun HomeRowView(row: HomeViewModel.Row, onOpen: (BaseItemDto) -> Unit, onSeeAll: (HomeViewModel.Row) -> Unit, onSeerr: (SeerrTitle) -> Unit) {
+private fun HomeRowView(
+    row: HomeViewModel.Row,
+    onOpen: (BaseItemDto) -> Unit,
+    onSeeAll: (HomeViewModel.Row) -> Unit,
+    onSeerr: (SeerrTitle) -> Unit,
+    onMenu: ((BaseItemDto) -> Unit)? = null,
+) {
     Column(Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
             SText(row.title, Modifier.weight(1f), size = 16.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
@@ -283,18 +320,28 @@ private fun HomeRowView(row: HomeViewModel.Row, onOpen: (BaseItemDto) -> Unit, o
             if (items == null) {
                 items(3) { Box(Modifier.width(232.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Surface)) }
             } else {
-                items(items, key = { it.id }) { item -> LandscapeCard(item, row.row.kind, onOpen) }
+                items(items, key = { it.id }) { item -> LandscapeCard(item, row.row.kind, onOpen, onMenu) }
             }
         }
     }
 }
 
-/** The board's 232 px landscape card: art with a tag and a progress bar, the title and a line under it. */
+/** The board's 232 px landscape card: art with a tag and a progress bar, the title and a line under it. [onMenu]: a long press. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun LandscapeCard(item: BaseItemDto, kind: String, onOpen: (BaseItemDto) -> Unit) {
+private fun LandscapeCard(item: BaseItemDto, kind: String, onOpen: (BaseItemDto) -> Unit, onMenu: ((BaseItemDto) -> Unit)? = null) {
     val viewer = LocalViewer.current
     val progress = item.progress
-    Column(Modifier.width(232.dp).tap { onOpen(item) }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val haptics = LocalHapticFeedback.current
+    val press = if (onMenu != null) {
+        Modifier.combinedClickable(
+            interactionSource = null, indication = null, onClick = { onOpen(item) },
+            onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onMenu(item) },
+        )
+    } else {
+        Modifier.tap { onOpen(item) }
+    }
+    Column(Modifier.width(232.dp).then(press), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp))) {
             Artwork(viewer.images?.landscape(item, 480, viewer.episodeImages), Modifier.matchParentSize())
             val tag = cardTag(item)

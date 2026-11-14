@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.core.home
 
+import io.github.arkmind.seedy.core.browse.continueWatching
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.requests.RequestsApi
 import io.github.arkmind.seedy.core.requests.SeerrTitle
@@ -83,10 +84,7 @@ class Home(private val session: UserSession) {
     /** A row's titles (empty rows are hidden by the screens). */
     suspend fun items(row: HomeRow, libraries: List<BaseItemDto>): List<BaseItemDto> = io {
         when (row.kind) {
-            "continue" -> api.libraryApi.getResumeItems(
-                userId = userId, limit = 16, mediaTypes = listOf(MediaType.VIDEO), enableUserData = true, imageTypeLimit = 1,
-                enableImageTypes = CardImages, fields = CardFields, enableTotalRecordCount = false,
-            ).content.items
+            "continue" -> session.continueWatching(limit = 16, fields = CardFields)
             "nextup" -> nextUp(limit = 16)
             "because" -> libraryUuid(row.seedId)?.let { seed ->
                 api.libraryApi.getSimilarItems(itemId = seed, userId = userId, limit = 16, fields = CardFields).content.items

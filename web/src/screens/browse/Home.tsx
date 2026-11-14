@@ -19,7 +19,7 @@ import { Icon } from '../../ui/icons';
 import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { Row } from '../../ui/Row';
 import {
-  Lazy, NextUpCard, ResumeCard, RowSkeleton, groupUpcoming, join, resolvePlayable, seasonsLabel, tileView, toggleFavorite,
+  Lazy, NextUpCard, ResumeCard, RowSkeleton, groupUpcoming, join, resolvePlayable, seasonsLabel, tileView, toggleFavorite, watchChanged,
   togglePlayed, typeLabel, useRequests, yearOf
 } from './parts';
 import { TrailerLayer, useHeroTrailer } from './trailer';
@@ -349,7 +349,8 @@ function useRowData<T>(fn: () => Promise<T[]>, deps: unknown[] = []) {
 
 function ContinueRow({ row }: { row: HomeRow }) {
   const title = row.title ?? t('Continue watching');
-  const { items, pending } = useRowData(() => getResume(16).then((r) => r.Items));
+  const changed = useStore(watchChanged);
+  const { items, pending } = useRowData(() => getResume(16).then((r) => r.Items), [changed]);
   if (pending) return <RowSkeleton title={title} width={340} />;
   if (!items.length) return null;
   return (
@@ -362,7 +363,8 @@ function ContinueRow({ row }: { row: HomeRow }) {
 function NextUpRow({ row }: { row: HomeRow }) {
   const title = row.title ?? t('Next up');
   // Next up follows Settings · Home screen: drop shows after N days, include rewatches.
-  const { items, pending } = useRowData(() => getNextUpForMe(16).then((r) => r.Items));
+  const changed = useStore(watchChanged);
+  const { items, pending } = useRowData(() => getNextUpForMe(16).then((r) => r.Items), [changed]);
   if (pending) return <RowSkeleton title={title} width={340} />;
   if (!items.length) return null;
   return (

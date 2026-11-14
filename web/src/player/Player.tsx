@@ -775,9 +775,19 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
     back('/');
   };
+  /* In the credits (an Outro segment in the second half) or, without one, the last seconds where Up next opens. */
+  const inEndZone = () => {
+    if (duration <= 0) return false;
+    const outro = segments.find((s) => s.Type === 'Outro' && ticksToSeconds(s.StartTicks) >= duration / 2);
+    const from = outro ? ticksToSeconds(outro.StartTicks) : duration - Math.min(25, duration * 0.15);
+    return (sess()?.position() ?? 0) >= from - 2;
+  };
   const goNext = (fromStart: boolean) => {
     if (!nextPath || !next) return;
     if (inGroup()) { void requestQueue(next.Id, 0); return; }
+    /* Moving on from the credits (Up next, its countdown, Next episode) finishes this one, so it doesn't stay in
+       Continue watching with the credits left. Earlier on, it keeps its place. */
+    if (inEndZone()) sess()?.stop({ ended: true });
     navigate(nextPath + (fromStart ? (nextPath.includes('?') ? '&' : '?') + 'restart=1' : ''), { replace: true });
   };
   /* Auto-play, unless it's time to ask whether anyone is still there. */

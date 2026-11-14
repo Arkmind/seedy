@@ -43,6 +43,7 @@ public sealed class HomeService
     private readonly SeedyDatabase _db;
     private readonly PrefsService _prefs;
     private readonly IUserManager _users;
+    private readonly ContinueWatching _continue;
     private readonly ILogger<HomeService> _logger;
 
     /// <summary>
@@ -56,10 +57,13 @@ public sealed class HomeService
     /// <param name="views">User view manager.</param>
     /// <param name="db">Database.</param>
     /// <param name="prefs">Preferences.</param>
+    /// <param name="users">User manager.</param>
+    /// <param name="continueWatching">Continue watching.</param>
     /// <param name="logger">Logger.</param>
-    public HomeService(ILibraryManager library, IUserDataManager userData, IDtoService dto, ITVSeriesManager tv, ISimilarItemsManager similar, IUserViewManager views, SeedyDatabase db, PrefsService prefs, IUserManager users, ILogger<HomeService> logger)
+    public HomeService(ILibraryManager library, IUserDataManager userData, IDtoService dto, ITVSeriesManager tv, ISimilarItemsManager similar, IUserViewManager views, SeedyDatabase db, PrefsService prefs, IUserManager users, ContinueWatching continueWatching, ILogger<HomeService> logger)
     {
         _users = users;
+        _continue = continueWatching;
         _library = library;
         _userData = userData;
         _dto = dto;
@@ -479,7 +483,7 @@ public sealed class HomeService
     /// <summary>Gets the hero rotation: the admin's picks, then new seasons, things in progress and recent additions.</summary>
     /// <param name="user">The person.</param>
     /// <returns>Up to five entries.</returns>
-    public List<FeaturedEntryDto> Featured(User user)
+    public async Task<List<FeaturedEntryDto>> FeaturedAsync(User user)
     {
         var c = ConfigMapper.Current;
         var picked = new List<(BaseItem Item, string Reason)>();
@@ -537,19 +541,13 @@ public sealed class HomeService
                 }
             }
 
-            // Something already in progress.
-            var resumable = _library.GetItemList(new InternalItemsQuery(user)
+            // Something already in progress, as Continue watching shows it (not an episode the person moved past).
+            foreach (var r in await _continue.ItemsAsync(user, Guid.Empty, 2).ConfigureAwait(false))
             {
-                IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode],
-                IsResumable = true,
-                Recursive = true,
-                OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
-                Limit = 6,
-                DtoOptions = new DtoOptions(false)
-            });
-            foreach (var r in resumable.Take(2))
-            {
-                Add(r is Episode e ? _library.GetItemById<Series>(e.SeriesId, user) : r, "Continue watching");
+                if (r is Movie or Episode)
+                {
+                    Add(r is Episode e ? _library.GetItemById<Series>(e.SeriesId, user) : r, "Continue watching");
+                }
             }
 
             // Recently added titles.
@@ -594,7 +592,7 @@ public sealed class HomeService
         var list = new List<FeaturedEntryDto>();
         for (var i = 0; i < picked.Count; i++)
         {
-            var play = PlayTarget(user, picked[i].Item);
+            var play = await PlayTargetAsync(user, picked[i].Item).ConfigureAwait(false);
             list.Add(new FeaturedEntryDto
             {
                 Item = dtos[i],
@@ -608,12 +606,21 @@ public sealed class HomeService
 
     private static bool HasBackdrop(BaseItem item) => item.GetImageInfo(ImageType.Backdrop, 0) is not null;
 
-    /// <summary>What the hero's Play button plays: the next episode for a series, the title itself otherwise.</summary>
-    private BaseItem? PlayTarget(User user, BaseItem item)
+    /// <summary>
+    /// What the hero's Play button plays: for a series, the episode in progress (as its details page resumes it), else
+    /// the next one; the title itself otherwise.
+    /// </summary>
+    private async Task<BaseItem?> PlayTargetAsync(User user, BaseItem item)
     {
         if (item is not Series series)
         {
             return item;
+        }
+
+        var resume = (await _continue.ItemsAsync(user, series.Id, 1).ConfigureAwait(false)).FirstOrDefault();
+        if (resume is not null)
+        {
+            return resume;
         }
 
         var next = _tv.GetNextUp(

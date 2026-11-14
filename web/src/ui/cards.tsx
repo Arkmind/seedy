@@ -116,6 +116,7 @@ export interface ItemCardProps {
   origin?: string;
   titleSize?: 15 | 14;
   titleWeight?: 700 | 600;
+  /* Buttons over the art (the Continue watching card's ⋯). */
   hoverTools?: ComponentChildren;
   grid?: boolean;
   artWidth?: number;
@@ -151,8 +152,8 @@ export function ItemCard(p: ItemCardProps) {
         {canPlay && <span class="card-hover" aria-hidden="true" />}
         {canPlay && <CardPlay item={item} label={playLabel(item, name)} origin={p.origin} onPlay={p.onOpen} />}
         {p.progress !== undefined && p.progress > 0 && <Progress fraction={p.progress} size={p.barSize ?? 8} class="card-bar" />}
+        {p.hoverTools}
       </div>
-      {p.hoverTools}
       <Link to={target} class="card-text" tabIndex={-1} onClick={() => p.onOpen?.()}>
         <span class={titleCls}>{title}</span>
         {p.meta && <span class="card-meta">{p.meta}</span>}

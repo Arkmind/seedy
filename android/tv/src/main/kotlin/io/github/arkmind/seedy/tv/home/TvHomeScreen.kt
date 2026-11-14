@@ -6,7 +6,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +25,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -40,26 +41,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.arkmind.seedy.core.feature.HomeViewModel
-import io.github.arkmind.seedy.core.requests.SeerrTitle
-import io.github.arkmind.seedy.tv.requests.titleAction
-import io.github.arkmind.seedy.tv.requests.TitleCard
 import io.github.arkmind.seedy.core.format.cardTitle
 import io.github.arkmind.seedy.core.format.episodeShort
 import io.github.arkmind.seedy.core.format.join
@@ -70,13 +68,19 @@ import io.github.arkmind.seedy.core.format.timeLeft
 import io.github.arkmind.seedy.core.format.year
 import io.github.arkmind.seedy.core.format.yearRange
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.requests.SeerrTitle
+import io.github.arkmind.seedy.tv.browse.TvChoice
+import io.github.arkmind.seedy.tv.browse.TvSidePanel
 import io.github.arkmind.seedy.tv.parts.TvPressable
 import io.github.arkmind.seedy.tv.parts.bp
-import io.github.arkmind.seedy.tv.parts.focusSoon
 import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusRing
+import io.github.arkmind.seedy.tv.parts.focusSoon
+import io.github.arkmind.seedy.tv.requests.TitleCard
+import io.github.arkmind.seedy.tv.requests.titleAction
 import io.github.arkmind.seedy.tv.shell.RailInset
 import io.github.arkmind.seedy.ui.components.Artwork
+import io.github.arkmind.seedy.ui.components.Overlay
 import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.LocalViewer
@@ -85,6 +89,7 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import java.util.UUID
 import kotlin.math.min
 
 /** Space kept around a card row so the focused card's ring isn't clipped (ring 9 px, plus the focused card's growth). */
@@ -95,6 +100,9 @@ private val RingRoom = 12.bp
 private object NoFocusScroll : BringIntoViewSpec {
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
 }
+
+/** No card to go back to (the row emptied): the remote goes to the first row's first card. */
+private val NoCard = UUID(0, 0)
 
 /** What the hero shows: a title and why it's there (the focused card's row, or Seedy's featured reason). */
 private data class HeroPick(val item: BaseItemDto, val reason: String)
@@ -111,8 +119,14 @@ fun TvHomeScreen(
     onPlay: (BaseItemDto) -> Unit = {},
     firstCard: FocusRequester = remember { FocusRequester() },
     onSeerr: (SeerrTitle) -> Unit = {},
+    /** A Continue watching card's menu (hold OK, or the Menu key): mark watched (true) or take out of the row (false). */
+    onFinish: ((BaseItemDto, Boolean, (Boolean) -> Unit) -> Unit)? = null,
 ) {
     val rows = state.visibleRows
+    // The Continue watching card whose menu is open, and the card the remote goes back to once it closes.
+    var menuFor by remember { mutableStateOf<BaseItemDto?>(null) }
+    var refocus by remember { mutableStateOf<UUID?>(null) }
+    val cardFocus = remember { mutableMapOf<UUID, FocusRequester>() }
     var pick by remember { mutableStateOf<HeroPick?>(null) }
     var focusedRow by remember { mutableIntStateOf(0) }
     val featured = state.featured?.firstOrNull()?.let { HeroPick(it.item, it.reason) }
@@ -148,11 +162,35 @@ fun TvHomeScreen(
                         onPlay = onPlay,
                         onSeerr = onSeerr,
                         cardScroll = cardRows,
+                        onMenu = if (row.row.kind == "continue" && onFinish != null) { item -> menuFor = item } else null,
+                        focusFor = { id -> if (row.row.kind == "continue") cardFocus.getOrPut(id) { FocusRequester() } else null },
                     )
                 }
             }
             }
         }
+    }
+    menuFor?.let { item ->
+        Overlay {
+            TvSidePanel(item.cardTitle, onDismiss = { menuFor = null; refocus = item.id }) { first ->
+                fun finish(watched: Boolean) {
+                    // The card goes: the remote moves to the one after it (or before it, at the end of the row).
+                    val row = rows.firstOrNull { it.row.kind == "continue" }?.items.orEmpty()
+                    val at = row.indexOfFirst { it.id == item.id }
+                    val neighbour = row.getOrNull(at + 1) ?: row.getOrNull(at - 1)
+                    menuFor = null
+                    refocus = item.id
+                    onFinish?.invoke(item, watched) { ok -> if (ok) refocus = neighbour?.id ?: NoCard }
+                }
+                TvChoice(t("Mark as watched"), false, { finish(true) }, Modifier.focusRequester(first))
+                TvChoice(t("Remove from Continue watching"), false, { finish(false) }, sub = t("Starts from the beginning next time"))
+            }
+        }
+    }
+    LaunchedEffect(refocus) {
+        val id = refocus ?: return@LaunchedEffect
+        if (cardFocus[id]?.focusSoon() != true) firstCard.focusSoon()
+        refocus = null
     }
     LaunchedEffect(firstLoaded != null) { if (firstLoaded != null) firstCard.focusSoon() }
 }
@@ -240,6 +278,8 @@ private fun TvRow(
     onPlay: (BaseItemDto) -> Unit,
     onSeerr: (SeerrTitle) -> Unit,
     cardScroll: BringIntoViewSpec,
+    onMenu: ((BaseItemDto) -> Unit)? = null,
+    focusFor: (UUID) -> FocusRequester? = { null },
 ) {
     Column(Modifier.padding(top = RingRoom), verticalArrangement = Arrangement.spacedBy(18.bp - RingRoom)) {
         SText(row.title, size = 24.bsp, weight = 800, color = if (active) SeedyColors.White else SeedyColors.TextHero, maxLines = 1)
@@ -269,10 +309,12 @@ private fun TvRow(
                 TvCard(
                     item = item,
                     kind = row.row.kind,
-                    modifier = if (i == 0 && firstCard != null) Modifier.focusRequester(firstCard) else Modifier,
+                    modifier = (if (i == 0 && firstCard != null) Modifier.focusRequester(firstCard) else Modifier)
+                        .then(focusFor(item.id)?.let { Modifier.focusRequester(it) } ?: Modifier),
                     onFocus = { onFocus(item) },
                     onClick = { onOpen(item) },
                     onPlay = { onPlay(item) },
+                    onMenu = onMenu?.let { { it(item) } },
                 )
             }
         }
@@ -280,16 +322,39 @@ private fun TvRow(
     }
 }
 
-/** The board's 384 px landscape card; the focused one widens to 420 px inside the white ring. */
+/**
+ * The board's 384 px landscape card; the focused one widens to 420 px inside the white ring. [onMenu]: holding OK, or
+ * the remote's Menu key.
+ */
 @Composable
-private fun TvCard(item: BaseItemDto, kind: String, onFocus: () -> Unit, onClick: () -> Unit, onPlay: () -> Unit, modifier: Modifier = Modifier) {
+private fun TvCard(
+    item: BaseItemDto,
+    kind: String,
+    onFocus: () -> Unit,
+    onClick: () -> Unit,
+    onPlay: () -> Unit,
+    modifier: Modifier = Modifier,
+    onMenu: (() -> Unit)? = null,
+) {
     val viewer = LocalViewer.current
     // The remote's Play key starts the title straight away; OK opens its page.
     val playable = item.type in setOf(BaseItemKind.MOVIE, BaseItemKind.EPISODE, BaseItemKind.VIDEO, BaseItemKind.TV_CHANNEL)
     val keys = Modifier.onKeyEvent { e ->
         if (playable && e.type == KeyEventType.KeyDown && (e.key == Key.MediaPlay || e.key == Key.MediaPlayPause)) { onPlay(); true } else false
     }
-    TvPressable(onClick, modifier.onFocusChanged { if (it.isFocused) onFocus() }.then(keys)) { focused ->
+    // Held OK opens the menu instead of the page (the click comes on release, so the release is kept from it).
+    var held by remember { mutableStateOf(false) }
+    val hold = if (onMenu == null) Modifier else Modifier.onPreviewKeyEvent { e ->
+        val center = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
+        when {
+            e.key == Key.Menu && e.type == KeyEventType.KeyUp -> { onMenu(); true }
+            center && e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 1 -> { held = true; onMenu(); true }
+            center && e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount > 1 -> true
+            center && e.type == KeyEventType.KeyUp && held -> { held = false; true }
+            else -> false
+        }
+    }
+    TvPressable(onClick, modifier.onFocusChanged { if (it.isFocused) onFocus() }.then(keys).then(hold)) { focused ->
         val width by animateDpAsState(if (focused) 420.bp else 384.bp, label = "card")
         Box(
             Modifier.width(width).height(width * 9f / 16f).focusRing(focused, radius = 18.bp, gap = 4.bp, ring = 5.bp)

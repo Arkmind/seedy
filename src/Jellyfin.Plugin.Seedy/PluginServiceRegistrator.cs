@@ -22,6 +22,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<HomeService>();
         serviceCollection.AddSingleton<PlaybackRecorder>();
         serviceCollection.AddSingleton<Statistics>();
+        serviceCollection.AddSingleton<ContinueWatching>();
         serviceCollection.AddSingleton<Services.Media.ServiceHttp>();
         serviceCollection.AddSingleton<Services.Media.LidarrClient>();
         serviceCollection.AddSingleton<Services.Media.ShelfarrClient>();
@@ -34,6 +35,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<Services.Media.MediaDiscoverService>();
         serviceCollection.AddHostedService<Services.Media.MediaSyncService>();
         serviceCollection.AddHostedService(sp => sp.GetRequiredService<PlaybackRecorder>());
+        serviceCollection.AddHostedService(sp => sp.GetRequiredService<ContinueWatching>());
         serviceCollection.AddTransient<IStartupFilter, RootRedirectStartupFilter>();
     }
 }

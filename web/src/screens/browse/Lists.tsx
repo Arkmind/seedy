@@ -12,7 +12,7 @@ import { PosterCard, UpcomingCard, seerrPath } from '../../ui/cards';
 import { Header, type HeaderActive } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import {
-  CardGrid, EmptyState, ErrorState, GridSkeleton, ItemGrid, NextUpCard, PageHead, ResumeCard, SeerrGrid, Sentinel, groupUpcoming,
+  CardGrid, EmptyState, ErrorState, GridSkeleton, ItemGrid, NextUpCard, PageHead, ResumeCard, SeerrGrid, Sentinel, groupUpcoming, watchChanged,
   useItemList, usePaged, useRequests, useSeerrPages
 } from './parts';
 import './lists.css';
@@ -71,7 +71,8 @@ const countOf = (data?: unknown[]) => (data ? plural(data.length, 'title') : und
 /* ───────── Continue watching / Next up ───────── */
 
 function ContinueList() {
-  const state = useAsync(() => getResume(100).then((r) => r.Items), []);
+  const changed = useStore(watchChanged);
+  const state = useAsync(() => getResume(100).then((r) => r.Items), [changed]);
   return (
     <ListFrame title={t('Continue watching')} count={countOf(state.data)}>
       <Body state={state} empty={<EmptyState icon="clock" title={t('Nothing in progress')} text={t('Titles you start will wait for you here.')} />}>
@@ -82,7 +83,8 @@ function ContinueList() {
 }
 
 function NextUpList() {
-  const state = useAsync(() => getNextUpForMe(100).then((r) => r.Items), []);
+  const changed = useStore(watchChanged);
+  const state = useAsync(() => getNextUpForMe(100).then((r) => r.Items), [changed]);
   return (
     <ListFrame title={t('Next up')} count={state.data ? plural(state.data.length, 'show') : undefined}>
       <Body state={state} empty={<EmptyState icon="tv" title={t('You\'re all caught up')} text={t('When a show you watch has a next episode, it shows up here.')} />}>
