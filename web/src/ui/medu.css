@@ -1,0 +1,59 @@
+/* Medu's motion (Brand · Mascot board: float 3.2 s, pulse in step, tentacles 2.4 s ±5°, blink every 5 s, one loop per mood). */
+.medu { display: block; flex: none; overflow: visible; }
+.medu .m-float{animation:medu-bob 3.2s ease-in-out infinite}
+.medu .m-bell{transform-box:fill-box;transform-origin:50% 100%;animation:medu-pulse 3.2s ease-in-out infinite}
+.medu .m-t{transform-box:fill-box;transform-origin:50% 0%;animation:medu-wiggle 2.4s ease-in-out infinite}
+.medu .m-d1{animation-delay:-.4s}.medu .m-d2{animation-delay:-.8s}.medu .m-d3{animation-delay:-1.2s}.medu .m-d4{animation-delay:-1.6s}.medu .m-d5{animation-delay:-2s}
+.medu .m-eyes{transform-box:fill-box;transform-origin:50% 50%;animation:medu-blink 5s infinite}
+.medu .m-look{animation:medu-look 3.4s ease-in-out infinite}
+.medu .m-bub{animation:medu-bubble 4.5s ease-in infinite}
+.medu .m-wave{transform-box:fill-box;transform-origin:0% 100%;animation:medu-wave 1.1s ease-in-out infinite}
+.medu .m-q{transform-box:fill-box;transform-origin:50% 100%;animation:medu-tilt 2.2s ease-in-out infinite}
+.medu .m-z{transform-box:fill-box;transform-origin:50% 50%;animation:medu-z 3.6s ease-out infinite}
+.medu .m-spark{transform-box:fill-box;transform-origin:50% 50%;animation:medu-spark 1.5s ease-in-out infinite}
+.medu .m-dot{animation:medu-dot 1.2s ease-in-out infinite}
+.medu .m-beam{transform-box:fill-box;transform-origin:0% 50%;animation:medu-sweep 6s ease-in-out infinite}
+.medu .m-plug{transform-box:fill-box;transform-origin:50% 0%;animation:medu-swing 2.6s ease-in-out infinite}
+.medu.m-slow .m-float,.medu.m-slow .m-bell{animation-duration:5.5s}
+.medu.m-slow .m-t{animation-duration:4s}
+.medu.m-fast .m-float,.medu.m-fast .m-bell{animation-duration:1.6s}
+.medu.m-fast .m-t{animation-duration:1.2s}
+@keyframes medu-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes medu-pulse{0%,100%{transform:scale(1,1)}40%{transform:scale(1.05,.94)}65%{transform:scale(.98,1.03)}}
+@keyframes medu-wiggle{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+@keyframes medu-blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@keyframes medu-look{0%,18%{transform:translateX(-4px)}42%,64%{transform:translateX(4px)}88%,100%{transform:translateX(-4px)}}
+@keyframes medu-bubble{0%{transform:translateY(0);opacity:0}20%{opacity:.75}100%{transform:translateY(-110px);opacity:0}}
+@keyframes medu-wave{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(16deg)}}
+@keyframes medu-tilt{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(12deg) translateY(-4px)}}
+@keyframes medu-z{0%{transform:translate(0,0) scale(.5);opacity:0}25%{opacity:1}100%{transform:translate(16px,-38px) scale(1.15);opacity:0}}
+@keyframes medu-spark{0%,100%{transform:scale(.35) rotate(0deg);opacity:.25}50%{transform:scale(1) rotate(20deg);opacity:1}}
+@keyframes medu-dot{0%,100%{transform:translateY(0);opacity:.35}35%{transform:translateY(-7px);opacity:1}}
+@keyframes medu-sweep{0%,100%{transform:rotate(-16deg)}50%{transform:rotate(14deg)}}
+@keyframes medu-swing{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+@media (prefers-reduced-motion: reduce) { .medu * { animation: none !important; } }
+
+/* ── Medu with a message (Empty pages, My requests empty) ── */
+.medu-state { display: flex; justify-content: center; padding: 48px 32px 56px; border-radius: 24px; background: var(--seedy-panel); }
+.medu-state.is-large { padding: 64px 32px 72px; }
+.medu-state.is-bare { padding: 10px 0 6px; border-radius: 0; background: none; }
+.medu-state-body { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; min-width: 0; }
+.medu-state.is-large .medu-state-body { gap: 14px; }
+.medu-state-title { margin: 0; font-size: 24px; line-height: 1.08; font-weight: 900; letter-spacing: -0.015em; color: #ffffff; overflow-wrap: anywhere; }
+.medu-state.is-large .medu-state-title { font-size: 30px; }
+.medu-state-text { margin: 0; max-width: 420px; font-size: 15px; line-height: 1.55; color: #b4b4b4; }
+.medu-state.is-large .medu-state-text { max-width: 540px; font-size: 16px; }
+.medu-state-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+.medu-state.is-large .medu-state-actions { margin-top: 10px; }
+/* The boards' 48 px buttons: light primary, dark secondary. */
+.medu-actions-btn.btn { height: 48px; padding: 0 22px; font-size: 15px; }
+.medu-actions-btn.btn-primary { font-weight: 800; }
+.medu-actions-btn.btn-secondary { font-weight: 700; color: #ffffff; }
+.medu-actions-btn svg { flex: none; }
+/* A new library's scan, under its message. */
+.medu-scan { width: 320px; max-width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.medu-scan-track { height: 6px; border-radius: 3px; background: var(--seedy-surface); overflow: hidden; }
+.medu-scan-fill { height: 100%; border-radius: 3px; background: var(--seedy-inverse); transition: width var(--t-lift) var(--ease); }
+.medu-scan-meta { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--seedy-text-3); }
+.medu-scan-meta span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.medu-scan-meta span:last-child { font-variant-numeric: tabular-nums; }
