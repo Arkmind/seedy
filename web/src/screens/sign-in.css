@@ -1,9 +1,13 @@
-/* Sign-in: brand, "Who's watching?" and the profile picker, centred over library backdrops or the plain ground. */
+/* Sign-in: brand, "Who's watching?" and the profile picker, centred over library backdrops or the deep sea
+   (Who's watching board). */
 
 .signin {
   position: relative; min-height: 100vh; min-height: 100dvh; overflow: hidden; background: var(--seedy-bg);
   display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px var(--gutter);
 }
+.signin.sea-scene { background: radial-gradient(ellipse 70% 55% at 50% 0%, rgba(159, 200, 255, 0.07), rgba(159, 200, 255, 0) 70%), linear-gradient(180deg, #0e0e0e 0%, #0d1016 52%, #0b0d12 100%); }
+/* The picker sits from the top like the board: brand at 70 px, the question 70 px under it. */
+.signin.is-pick { justify-content: flex-start; padding-top: 70px; }
 
 .signin-bg { position: absolute; inset: 0; }
 .signin-bg-img {
@@ -18,7 +22,7 @@
     linear-gradient(180deg, rgba(14, 14, 14, 0.4) 0%, rgba(14, 14, 14, 0) 30%, rgba(14, 14, 14, 0) 70%, rgba(14, 14, 14, 0.7) 100%);
 }
 
-.signin-body { position: relative; z-index: 1; width: 100%; max-width: 980px; display: flex; flex-direction: column; align-items: center; gap: 40px; }
+.signin-body { position: relative; z-index: 2; width: 100%; max-width: 980px; display: flex; flex-direction: column; align-items: center; gap: 40px; }
 
 .signin-brand { display: flex; align-items: center; gap: 16px; color: #ffffff; }
 .signin-brand .brand-mark { border-radius: 18px; }
@@ -50,13 +54,36 @@
 }
 .signin-face img { width: 100%; height: 100%; object-fit: cover; }
 /* A face without a picture shows the initial on the light fill, like the navbar's account button. */
-.signin-face:not(.is-other):not(.skel) { background: var(--seedy-inverse); }
+.signin-face:not(.is-other):not(.skel):not([class*='is-c']) { background: var(--seedy-inverse); }
 .signin-face.skel { background-size: 200% 100%; }
 .signin-face.is-other {
   background: transparent; color: var(--seedy-text-2); border: 2px dashed var(--seedy-stroke);
   transition: box-shadow var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
 }
 .signin-name { max-width: 100%; font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color var(--t-fast) var(--ease); }
+
+/* ── Who's watching board ── */
+.signin.is-pick .signin-body { gap: 0; }
+.signin.is-pick .signin-brand { gap: 12px; }
+.signin.is-pick .signin-brand-name { font-size: 28px; }
+.signin-step.is-pick { gap: 0; margin-top: 70px; }
+.signin-hello { display: flex; align-items: center; gap: 4px; }
+.signin-step.is-pick .signin-title { margin: 0 0 0 -6px; font-size: 56px; line-height: 1.2; text-transform: none; text-align: left; }
+.signin-step.is-pick .signin-grid { gap: 28px 44px; margin-top: 50px; }
+.signin-step.is-pick .signin-tile { width: 150px; }
+.signin-step.is-pick .signin-face { width: 150px; height: 150px; border-radius: 38px; font-size: 60px; font-weight: 900; }
+.signin-step.is-pick .signin-face.is-other { border: 3px dashed #333333; color: var(--seedy-text-3); }
+.signin-step.is-pick .signin-name { font-size: 18px; color: var(--seedy-text); }
+.signin-step.is-pick .signin-tile.is-add .signin-name { color: var(--seedy-text-2); }
+.signin-step.is-pick .signin-error { margin-top: 24px; }
+.signin-step.is-pick .signin-qc { margin-top: 56px; }
+.signin-face.is-c0 { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.signin-face.is-c1 { background: #3b6fd8; color: #ffffff; }
+.signin-face.is-c2 { background: #2f7d3f; color: #ffffff; }
+.signin-face.is-c3 { background: #c9842f; color: var(--seedy-ink-inverse); }
+.signin-server { display: flex; align-items: center; gap: 8px; margin-top: 40px; font-size: 13px; color: var(--seedy-text-3); }
+.signin-server-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--seedy-ok); }
+.signin.is-pick:not(:has(.signin-qc)) .signin-server { margin-top: 56px; }
 
 /* Hover: a light ring around the face (surfaces invert); keyboard focus: the accent ring. */
 .signin-tile:not(:disabled):hover .signin-face { box-shadow: 0 0 0 4px var(--seedy-bg), 0 0 0 7px var(--seedy-inverse); }
@@ -113,4 +140,13 @@
   .signin-tile { width: 104px; gap: 10px; }
   .signin-face { width: 96px; height: 96px; font-size: 38px; }
   .signin-code { font-size: 40px; min-height: 80px; }
+  .signin.is-pick { padding-top: 40px; }
+  .signin-step.is-pick { margin-top: 40px; }
+  .signin-hello .signin-medu { width: 76px; height: 100px; }
+  .signin-step.is-pick .signin-title { font-size: 30px; }
+  .signin-step.is-pick .signin-grid { gap: 24px 28px; margin-top: 32px; }
+  .signin-step.is-pick .signin-tile { width: 104px; }
+  .signin-step.is-pick .signin-face { width: 104px; height: 104px; border-radius: 28px; font-size: 44px; }
+  .signin-step.is-pick .signin-name { font-size: 16px; }
+  .signin-step.is-pick .signin-qc { margin-top: 36px; }
 }
