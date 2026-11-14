@@ -7,7 +7,7 @@ SHELL := /usr/bin/env bash
 JELLYFIN_IMAGE := $(shell sed -n 's/^ *image: \(jellyfin\/jellyfin:.*\)/\1/p' dev/docker-compose.yml)
 PYTHON_IMAGE := python:3.12-slim
 
-.PHONY: help build typecheck clean web web-mock android android-shared android-test android-shots dev-up dev-down dev-logs dev-install dev-media dev-libraries dev-seerr dev-arr dev-media-requests
+.PHONY: help build typecheck clean web web-mock android android-shared android-test android-shots dev-up dev-down dev-logs dev-install dev-media dev-libraries dev-seerr dev-arr dev-media-requests dev-plays
 
 help:
 	@awk 'BEGIN { FS = ":.*## " } /^## / { printf "\n%s\n", substr($$0, 4) } /^[a-z-]+:.*## / { printf "  \033[1m%-19s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -81,6 +81,9 @@ dev-arr: ## Connect the test Sonarr, Sonarr 4K and Radarr to the test Seerr (aft
 
 dev-media-requests: ## Set up the test Lidarr, Shelfarr and Librarr, connect Seedy to them, add sample requests (after dev-install)
 	cd dev && python3 setup-media-requests.py && python3 setup-seedy-requests.py
+
+dev-plays: ## Fill the play log with two months of made-up plays for the Statistics pages (after dev-install; DAYS=60)
+	cd dev && python3 seed-plays.py
 
 # Personal targets (a deploy to your own server, say) can go in local.mk, which git ignores.
 -include local.mk
