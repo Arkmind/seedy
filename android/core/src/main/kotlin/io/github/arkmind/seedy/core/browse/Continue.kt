@@ -26,7 +26,13 @@ suspend fun UserSession.continueWatching(limit: Int, parentId: UUID? = null, fie
     ).content.items
 }
 
-/** Takes a title out of Continue watching without marking it watched: its resume point goes, so it starts over. */
+/**
+ * Takes a title out of Continue watching without marking it watched: its resume point goes, so it starts over. The
+ * plugin also clears the show's other episodes in progress (hidden behind this one, they'd take its place).
+ */
 suspend fun UserSession.clearResume(itemId: UUID) {
+    seedyApi?.let { seedy ->
+        if (runCatching { seedy.removeFromContinue(itemId) }.isSuccess) return
+    }
     api.userDataApi.updateItemUserData(itemId, userId, UpdateUserItemDataDto(playbackPositionTicks = 0))
 }

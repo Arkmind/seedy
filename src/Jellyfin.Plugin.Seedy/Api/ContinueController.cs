@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Seedy.Services;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Querying;
@@ -18,16 +19,19 @@ namespace Jellyfin.Plugin.Seedy.Api;
 public class ContinueController : ControllerBase
 {
     private readonly IUserManager _users;
+    private readonly ILibraryManager _library;
     private readonly ContinueWatching _continue;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContinueController"/> class.
     /// </summary>
     /// <param name="users">User manager.</param>
+    /// <param name="library">Library manager.</param>
     /// <param name="continueWatching">Continue watching.</param>
-    public ContinueController(IUserManager users, ContinueWatching continueWatching)
+    public ContinueController(IUserManager users, ILibraryManager library, ContinueWatching continueWatching)
     {
         _users = users;
+        _library = library;
         _continue = continueWatching;
     }
 
@@ -51,5 +55,27 @@ public class ContinueController : ControllerBase
             .OfType<ItemFields>();
         options.Fields = [.. options.Fields.Union(extra)];
         return await _continue.ListAsync(user, parentId ?? Guid.Empty, Math.Clamp(limit, 1, 200), options).ConfigureAwait(false);
+    }
+
+    /// <summary>Takes a title out of Continue watching without marking it watched (an episode takes its show's others along).</summary>
+    /// <param name="itemId">The title.</param>
+    /// <returns>No content.</returns>
+    [HttpDelete("Home/Continue/{itemId}")]
+    public ActionResult RemoveContinue([FromRoute] Guid itemId)
+    {
+        var user = User.GetUser(_users);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var item = _library.GetItemById<BaseItem>(itemId, user);
+        if (item is null)
+        {
+            return NotFound();
+        }
+
+        _continue.Remove(user, item);
+        return NoContent();
     }
 }

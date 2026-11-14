@@ -142,31 +142,31 @@ public sealed class ContinueWatching : IHostedService
             .ToArray();
     }
 
-    // Episodes the person moved past: one with a later episode of the same show played after it, or, for a show
-    // with several in progress, all but the one played last. Their resume points stay; they just don't show.
-    // Specials don't count as moving on, and are moved past by anything played after them.
-    // "Played" means started at all: an episode taken out of Continue watching still counts, so taking out the one
-    // you're on doesn't bring back the one before it.
+    // Episodes the person moved past: one with a later episode of the same show watched or in progress since, or, for
+    // a show with several in progress, all but the one played last. Their resume points stay; they just don't show.
+    // Specials don't count as moving on, and are moved past by anything played after them. A later episode only
+    // opened for a moment (no resume point, not watched) doesn't count: the show would drop out of Continue watching
+    // and Next up both.
     private HashSet<Guid> MovedPast(User user, IReadOnlyList<BaseItem> candidates, Dictionary<Guid, UserItemData> data)
     {
         var hidden = new HashSet<Guid>();
         foreach (var show in candidates.OfType<Episode>().Where(e => e.SeriesId != Guid.Empty).GroupBy(e => e.SeriesId))
         {
             var inProgress = show.ToList();
-            // Never-played episodes sort last.
-            var recent = _library.GetItemList(new InternalItemsQuery(user)
+            var watched = _library.GetItemList(new InternalItemsQuery(user)
             {
                 AncestorIds = [show.Key],
                 IncludeItemTypes = [BaseItemKind.Episode],
+                IsPlayed = true,
                 IsVirtualItem = false,
                 Recursive = true,
                 OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
                 Limit = ShowHistory,
                 DtoOptions = new DtoOptions(false)
-            }).OfType<Episode>().Where(r => inProgress.All(e => e.Id != r.Id)).ToList();
-            var recentData = _userData.GetUserDataBatch(recent, user);
+            }).OfType<Episode>().Where(w => inProgress.All(e => e.Id != w.Id)).ToList();
+            var watchedData = _userData.GetUserDataBatch(watched, user);
             var history = inProgress.Select(e => (Ep: e, At: LastPlayed(data, e)))
-                .Concat(recent.Select(e => (Ep: e, At: LastPlayed(recentData, e))).Where(h => h.At > DateTime.MinValue))
+                .Concat(watched.Select(e => (Ep: e, At: LastPlayed(watchedData, e))))
                 .ToList();
 
             foreach (var ep in inProgress)
@@ -193,6 +193,42 @@ public sealed class ContinueWatching : IHostedService
     private static bool IsSpecial(Episode ep) => ep.ParentIndexNumber == 0;
 
     private static (int Season, int Episode) Order(Episode ep) => (ep.ParentIndexNumber ?? 0, ep.IndexNumber ?? 0);
+
+    /// <summary>
+    /// Takes a title out of Continue watching without marking it watched: its resume point goes. For an episode, the
+    /// show's other episodes in progress go too: they were hidden behind it, and would otherwise take its place.
+    /// </summary>
+    /// <param name="user">The person.</param>
+    /// <param name="item">The title.</param>
+    public void Remove(User user, BaseItem item)
+    {
+        var titles = new List<BaseItem> { item };
+        if (item is Episode { SeriesId: var seriesId } && seriesId != Guid.Empty)
+        {
+            titles.AddRange(_library.GetItemList(new InternalItemsQuery(user)
+            {
+                AncestorIds = [seriesId],
+                IncludeItemTypes = [BaseItemKind.Episode],
+                IsResumable = true,
+                Recursive = true,
+                DtoOptions = new DtoOptions(false)
+            }).Where(e => e.Id != item.Id));
+        }
+
+        foreach (var title in titles)
+        {
+            // Through the server's cached copy, as in Finish.
+            var target = _library.GetItemById(title.Id) ?? title;
+            var data = _userData.GetUserData(user, target);
+            if (data is null || data.PlaybackPositionTicks <= 0)
+            {
+                continue;
+            }
+
+            data.PlaybackPositionTicks = 0;
+            _userData.SaveUserData(user, target, data, UserDataSaveReason.UpdateUserData, CancellationToken.None);
+        }
+    }
 
     // ── Credits ──
 

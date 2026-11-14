@@ -176,10 +176,9 @@ export const setFavorite = (id: string, on: boolean) =>
     ? post<{ IsFavorite: boolean }>(`/UserFavoriteItems/${id}`, undefined, { userId: uid() })
     : del<{ IsFavorite: boolean }>(`/UserFavoriteItems/${id}`, { userId: uid() });
 
-/* Drops the resume point without marking the title watched: it leaves Continue watching, and an episode comes back
-   as Next up. */
-export const clearResume = (id: string) =>
-  post<unknown>(`/UserItems/${id}/UserData`, { PlaybackPositionTicks: 0 }, { userId: uid() });
+/* Takes a title out of Continue watching without marking it watched: its resume point goes (for an episode, those
+   of the show's other episodes in progress too), and the show comes back as Next up. */
+export const clearResume = (id: string) => del<void>(`/Seedy/Home/Continue/${id}`);
 
 export const setPlayed = (id: string, on: boolean) =>
   on

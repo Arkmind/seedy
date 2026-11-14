@@ -3,6 +3,7 @@ package io.github.arkmind.seedy.core.seedy
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.exception.ApiClientException
 import org.jellyfin.sdk.api.client.exception.InvalidStatusException
+import org.jellyfin.sdk.api.client.extensions.delete
 import org.jellyfin.sdk.api.client.extensions.get
 import org.jellyfin.sdk.api.client.extensions.post
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -35,6 +36,11 @@ class SeedyApi(private val api: ApiClient) {
             "/Seedy/Home/Continue",
             queryParameters = mapOf("limit" to limit, "parentId" to parentId?.toString(), "fields" to fields.joinToString(",") { it.serialName }),
         ).content.items
+
+    /** Takes a title out of Continue watching (see core/browse/Continue.kt). */
+    suspend fun removeFromContinue(id: UUID) {
+        api.delete<Unit>("/Seedy/Home/Continue/{id}", mapOf("id" to id))
+    }
 
     companion object {
         /**
