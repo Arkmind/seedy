@@ -131,8 +131,9 @@ export function getItems(q: ItemsQuery, signal?: AbortSignal) {
   } as Query, signal);
 }
 
-/* Continue watching: Jellyfin's resume list, minus the episodes a person moved past (a later one of the show played
-   since) and anything left in its credits, which Seedy marks watched. Pass a show or season to get where it stands. */
+/* Continue watching: Jellyfin's resume list, minus the episodes a person moved past (a later one of the show watched or
+   in progress since) and anything left in its credits, which Seedy marks watched. Pass a show or season to get where
+   it stands. */
 export const getResume = (limit = 16, parentId?: string) =>
   get<ItemsResult>('/Seedy/Home/Continue', { limit, parentId, fields: CARD_FIELDS.join(',') });
 
