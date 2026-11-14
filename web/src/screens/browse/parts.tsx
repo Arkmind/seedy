@@ -2,12 +2,12 @@ import { Fragment, type ComponentChildren, type RefObject } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { get, getSession, type Query } from '../../api/client';
 import {
-  CARD_FIELDS, getEpisodes, getItems, getNextUp, getResume, setFavorite, setPlayed, type ItemsQuery
+  CARD_FIELDS, clearResume, getEpisodes, getItems, getNextUp, getResume, setFavorite, setPlayed, type ItemsQuery
 } from '../../api/jellyfin';
 import { seriesPosterUrl } from '../../api/images';
 import { seerrRequest, type SeerrItem, type SeerrStatus } from '../../api/seedy';
 import { meStore } from '../../lib/app-state';
-import { useStore } from '../../lib/store';
+import { createStore, useStore } from '../../lib/store';
 import type { BaseItem, ItemsResult, UserItemData } from '../../api/types';
 import {
   daysFromToday, episodeCode, episodeTag, fmtDate, fmtDayMonth, plural, progressFraction, remainingSeconds,
@@ -16,7 +16,7 @@ import { Link, navigate } from '../../lib/router';
 import { ItemCard, LibraryCard, SkeletonCards, WatchedCheck, Progress, Art, detailsPath, playPath } from '../../ui/cards';
 import { cardArt, primaryUrl } from '../../api/images';
 import { Icon, type IconName } from '../../ui/icons';
-import { toast } from '../../ui/overlay';
+import { MenuItem, Popover, toast } from '../../ui/overlay';
 import { withEpisodeArt } from '../me/prefs';
 import './browse.css';
 import { t } from '../../lib/i18n';
@@ -517,6 +517,9 @@ export function ListRow({ item, onReplace }: { item: BaseItem; onReplace: (next:
 
 /* ───────── Small shared bits ───────── */
 
+/* Bumped when a card's menu marks a title watched or drops its resume point: Continue watching and Next up reload. */
+export const watchChanged = createStore(0);
+
 /* Continue-watching card, as on Home (tag, 8 px bar). Its play disc resumes; the card opens the details page.
    Episodes use the show's art when the person turned off "Use episode pictures" (Settings · Home screen). */
 export function ResumeCard({ item, width, origin, onOpen }: { item: BaseItem; width?: number; origin?: string; onOpen?: () => void }) {
@@ -529,7 +532,52 @@ export function ResumeCard({ item, width, origin, onOpen }: { item: BaseItem; wi
       meta={resumeMeta(item)}
       origin={origin}
       onOpen={onOpen}
+      hoverTools={<ResumeMenu item={item} />}
     />
+  );
+}
+
+/* The card's ⋯ button, top right of the art (on hover and focus, always on touch screens; a right-click or long press
+   on the card opens it too): mark the title watched, or drop it from Continue watching without marking it. */
+function ResumeMenu({ item }: { item: BaseItem }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
+  const name = item.Type === 'Episode' && item.SeriesName ? `${item.SeriesName}, ${item.Name ?? ''}` : item.Name ?? '';
+  useEffect(() => {
+    const card = ref.current?.closest('.card');
+    if (!card) return;
+    const onMenu = (e: Event) => { e.preventDefault(); setOpen(true); };
+    card.addEventListener('contextmenu', onMenu);
+    return () => card.removeEventListener('contextmenu', onMenu);
+  }, []);
+  const act = async (run: () => Promise<unknown>, done: string, failed: string) => {
+    close();
+    try {
+      await run();
+      watchChanged.set((n) => n + 1);
+      toast(done);
+    } catch {
+      toast(failed, 'error');
+    }
+  };
+  return (
+    <>
+      <button
+        ref={ref} type="button" class={'card-tool' + (open ? ' is-open' : '')} aria-label={t('More actions for {name}', { name })}
+        aria-haspopup="menu" aria-expanded={open ? 'true' : 'false'} onClick={() => setOpen((o) => !o)}
+      >
+        <Icon name="more" size={18} />
+      </button>
+      <Popover anchor={ref as RefObject<HTMLElement>} open={open} onClose={close} align="end" width={300}>
+        <div class="menu" role="menu" aria-label={t('More actions for {name}', { name })}>
+          <MenuItem icon="check" label={t('Mark as watched')}
+            onSelect={() => void act(() => setPlayed(item.Id, true), t('Marked as watched'), t('Couldn’t mark it as watched'))} />
+          <MenuItem icon="close" label={t('Remove from Continue watching')} sub={t('Starts from the beginning next time')}
+            onSelect={() => void act(() => clearResume(item.Id), t('Removed from Continue watching'), t('Couldn’t remove it'))} />
+        </div>
+      </Popover>
+    </>
   );
 }
 

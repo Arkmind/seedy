@@ -20,6 +20,19 @@
 .card-media .card-hover, .card-media .card-bar { pointer-events: none; }
 .card-media:focus-within .card-hover, .top10:hover .card-hover, .top10-link:focus-visible ~ .top10-card .card-hover { opacity: 1; }
 
+/* Continue watching card: a ⋯ button in the art's top-right corner, like the library's tools, on hover and focus.
+   Touch screens always show it; TV layouts leave it out of the remote's path. */
+.card-tool {
+  position: absolute; top: 10px; right: 10px; z-index: 3; width: 34px; height: 34px; padding: 0; border: 0;
+  display: flex; align-items: center; justify-content: center; border-radius: var(--r-ctl);
+  background: var(--seedy-scrim); color: #ffffff; cursor: pointer; opacity: 0;
+  transition: opacity var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.card:hover .card-tool, .card-media:focus-within .card-tool, .card-tool.is-open { opacity: 1; }
+.card-tool:hover, .card-tool.is-open { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+@media (hover: none) { :root:not(.seedy-tv) .card-tool { opacity: 1; } }
+html.seedy-tv .card-tool { display: none; }
+
 /* Library grid: hover / focus reveals tools over a 48% scrim; the play disc sits in the middle. */
 .lib-hover {
   position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 10px;
