@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.arkmind.seedy.ui.components.boxShadow
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.theme.SText
@@ -116,4 +117,27 @@ suspend fun FocusRequester.focusSoon(): Boolean {
         if (runCatching { requestFocus() }.getOrDefault(false)) return true
     }
     return false
+}
+
+/**
+ * The Medu pages' 80 px button (22 px corners, 27 px label): translucent at rest, light when [primary]; focused it's
+ * light, lifts 6 % and casts the boards' shadow.
+ */
+@Composable
+fun TvBigButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: IconDef? = null, iconSize: Dp = 30.bp, primary: Boolean = false) {
+    TvPressable(onClick, modifier) { focused ->
+        val light = focused || primary
+        val ink = if (light) SeedyColors.InkInverse else SeedyColors.Text
+        Row(
+            Modifier.focusScale(focused, 1.06f)
+                .then(if (focused) Modifier.boxShadow(Color.Black.copy(alpha = .55f), 44.bp, 20.bp, 22.bp) else Modifier)
+                .height(80.bp).clip(RoundedCornerShape(22.bp)).background(if (light) SeedyColors.Inverse else Color.White.copy(alpha = 0.1f))
+                .padding(horizontal = 42.bp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.bp),
+        ) {
+            if (icon != null) SIcon(icon, size = iconSize, color = ink, stroke = 2.2f)
+            SText(label, size = 27.bsp, weight = 800, color = ink, maxLines = 1)
+        }
+    }
 }

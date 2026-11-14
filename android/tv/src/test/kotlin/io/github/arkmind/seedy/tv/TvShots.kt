@@ -18,6 +18,11 @@ import io.github.arkmind.seedy.tv.home.TvHomeScreen
 import io.github.arkmind.seedy.tv.shell.TvPlace
 import io.github.arkmind.seedy.tv.shell.TvRail
 import io.github.arkmind.seedy.tv.signin.TvProfilesScreen
+import io.github.arkmind.seedy.tv.signin.TvAddServerScreen
+import io.github.arkmind.seedy.tv.signin.TvUnreachableScreen
+import io.github.arkmind.seedy.tv.player.TvScreensaver
+import io.github.arkmind.seedy.core.data.SavedServer
+import io.github.arkmind.seedy.core.feature.AddServerViewModel
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.SeedyTheme
 import io.github.arkmind.seedy.ui.theme.Viewer
@@ -60,6 +65,29 @@ class TvShots {
                 quickConnect = true,
             ),
             onProfile = {}, onAddAccount = {}, onQuickConnect = {}, onChangeServer = {},
+        )
+    }
+
+    private val arky = SavedServer(id = "s", name = "Arky’s server", address = "http://192.168.1.20:8096")
+
+    @Test
+    fun serverFind() = shot("TVServerFind") {
+        TvAddServerScreen(
+            AddServerViewModel.State(found = listOf(AddServerViewModel.Found("Arky’s server", "http://192.168.1.20:8096", "12.0.1", seedy = true))),
+            onAdd = {}, onSearch = {}, onQuickConnect = {},
+        )
+    }
+
+    @Test
+    fun serverUnreachable() = shot("TVServerUnreachable") {
+        TvUnreachableScreen(arky, retryIn = 12, onRetry = {}, onChooseServer = {})
+    }
+
+    @Test
+    fun screensaver() = shot("TVScreensaver") {
+        TvScreensaver(
+            Samples.thePass.copy(runTimeTicks = 52 * 60 * 10_000_000L), positionMs = 18 * 60_000L + 12_000L, durationMs = 52 * 60_000L,
+            now = java.time.LocalDateTime.of(2026, 11, 14, 21, 47),
         )
     }
 

@@ -67,6 +67,8 @@ import io.github.arkmind.seedy.ui.components.OverlayHost
 import io.github.arkmind.seedy.tv.signin.TvAddServerScreen
 import io.github.arkmind.seedy.tv.signin.TvPasswordScreen
 import io.github.arkmind.seedy.tv.signin.TvProfilesScreen
+import io.github.arkmind.seedy.tv.signin.TvUnreachableScreen
+import io.github.arkmind.seedy.ui.theme.rememberRetryClock
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.core.seedy.logoUrl
 import io.github.arkmind.seedy.ui.components.LocalBrandLogo
@@ -94,14 +96,17 @@ fun TvApp(core: SeedyCore, appVersion: String = "") {
         is SessionState.SignedOut -> s.server.seedy?.logoUrl(s.server.address)
         else -> null
     }
+    // The server finder's "Use Quick Connect": the server's sign-in opens on Quick Connect's code.
+    var quickConnectNext by rememberSaveable { mutableStateOf(false) }
+    val finderQuickConnect = { quickConnectNext = true }
     SeedyTheme(accent = accent ?: SeedyColors.Accent) {
         CompositionLocalProvider(LocalBrandLogo provides logo) {
             Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
                 when (val s = state) {
                     SessionState.Starting -> Unit
-                    SessionState.NoServer -> AddServerEntry(core)
-                    is SessionState.SignedOut -> SignInFlow(core, s.server)
-                    is SessionState.Unreachable -> Unreachable(core, s.server)
+                    SessionState.NoServer -> AddServerEntry(core, finderQuickConnect)
+                    is SessionState.SignedOut -> SignInFlow(core, s.server, quickConnectNext, finderQuickConnect) { quickConnectNext = false }
+                    is SessionState.Unreachable -> Unreachable(core, s.server, finderQuickConnect)
                     is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
                 }
             }
@@ -110,10 +115,10 @@ fun TvApp(core: SeedyCore, appVersion: String = "") {
 }
 
 @Composable
-private fun AddServerEntry(core: SeedyCore) {
+private fun AddServerEntry(core: SeedyCore, onQuickConnect: () -> Unit) {
     val vm = viewModel { AddServerViewModel(core) }
     val state by vm.state.collectAsStateWithLifecycle()
-    TvAddServerScreen(state, onAdd = vm::add, onSearch = vm::search)
+    TvAddServerScreen(state, onAdd = vm::add, onSearch = vm::search, onQuickConnect = { found -> onQuickConnect(); vm.add(found.address) })
 }
 
 private data object ProfilesKey
@@ -122,8 +127,11 @@ private data class PasswordKey(val profile: ProfilesViewModel.Profile?, val quic
 private data object AddServerKey
 
 @Composable
-private fun SignInFlow(core: SeedyCore, server: SavedServer) {
-    val stack = remember(server.id) { mutableStateListOf<Any>(ProfilesKey) }
+private fun SignInFlow(core: SeedyCore, server: SavedServer, quickConnectFirst: Boolean, onFinderQuickConnect: () -> Unit, onQuickConnectOpened: () -> Unit) {
+    val stack = remember(server.id) {
+        mutableStateListOf<Any>(ProfilesKey).apply { if (quickConnectFirst) add(PasswordKey(null, quickConnect = true)) }
+    }
+    LaunchedEffect(server.id) { if (quickConnectFirst) onQuickConnectOpened() }
     val brand = server.seedy?.name ?: "Seedy"
     NavDisplay(
         backStack = stack,
@@ -159,28 +167,22 @@ private fun SignInFlow(core: SeedyCore, server: SavedServer) {
                     onQuickConnect = vm::startQuickConnect,
                 )
             }
-            entry<AddServerKey> { AddServerEntry(core) }
+            entry<AddServerKey> { AddServerEntry(core, onFinderQuickConnect) }
         },
     )
 }
 
+/** Board "Android TV · Server unreachable": tries again by itself every 15 s; "Choose another server" opens the finder. */
 @Composable
-private fun Unreachable(core: SeedyCore, server: SavedServer) {
-    val scope = rememberCoroutineScope()
-    val retry = remember { FocusRequester() }
-    Column(
-        Modifier.fillMaxSize().padding(96.bp),
-        verticalArrangement = Arrangement.spacedBy(28.bp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        SText(t("Can’t reach {server}", "server" to server.name), size = 48.bsp, weight = 900, color = SeedyColors.White)
-        SText(t("Check that this TV is online and the server is running."), size = 22.bsp, color = SeedyColors.Text2)
-        Row(horizontalArrangement = Arrangement.spacedBy(24.bp)) {
-            TvButton(t("Try again"), { scope.launch { core.sessions.start() } }, Modifier.focusRequester(retry), primary = true)
-            TvButton(t("Switch profile"), { scope.launch { core.sessions.switchProfile() } })
-        }
+private fun Unreachable(core: SeedyCore, server: SavedServer, onFinderQuickConnect: () -> Unit) {
+    var choosing by rememberSaveable { mutableStateOf(false) }
+    if (choosing) {
+        BackHandler { choosing = false }
+        AddServerEntry(core, onFinderQuickConnect)
+        return
     }
-    LaunchedEffect(Unit) { retry.focusSoon() }
+    val retry = rememberRetryClock { core.sessions.start() }
+    TvUnreachableScreen(server, retryIn = if (retry.running) null else retry.left, onRetry = retry::now, onChooseServer = { choosing = true })
 }
 
 private data object PlacesKey
