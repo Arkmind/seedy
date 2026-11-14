@@ -205,7 +205,8 @@ export function RequestsMine({ scope }: { scope: 'mine' | 'all' }) {
       <div class="reqs-bar">
         <ViewTabs service={null} tab={everyone ? 'all' : 'my'} />
       </div>
-      <div class="reqs-pad reqs-mine-filters">
+      {/* Nothing requested at all (My requests, empty board): straight to Medu, no filters to pick from. */}
+      {!(services.length && !loading && !items.length && show === 'all' && !type) && <div class="reqs-pad reqs-mine-filters">
         <nav aria-label={t('Show requests for')} class="tab-row hscroll">
           {chips.length > 2 && chips.map((c) => (
             <Link
@@ -232,7 +233,7 @@ export function RequestsMine({ scope }: { scope: 'mine' | 'all' }) {
             <MenuItem key={s.value} label={t(s.label)} pressed={s.value === show} onSelect={() => { close(); setQuery({ show: s.value === 'all' ? undefined : s.value }); }} />
           ))}
         </MenuButton>
-      </div>
+      </div>}
       <div class="reqs-pad">{body}</div>
     </Shell>
   );

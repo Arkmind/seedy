@@ -59,13 +59,15 @@
   .nf-picks-grid > :nth-child(n + 4) { display: none; }
 }
 @media (max-width: 640px) {
-  .nf-sea { height: auto; min-height: 640px; padding: 40px 0 120px; }
+  .nf-sea { height: auto; min-height: 640px; padding: 40px 0 150px; }
   .nf-digit { font-size: 120px; }
   .nf-medu { margin: 16px -10px 0; }
   .nf-medu .medu { width: 120px; height: 158px; }
   .nf-title { font-size: 32px; }
   .nf-text { font-size: 15px; }
-  .nf-admin { flex-wrap: wrap; white-space: normal; bottom: 16px; }
+  .nf-admin { position: relative; z-index: 4; left: auto; bottom: auto; transform: none; margin: 28px 16px 0; flex-wrap: wrap; white-space: normal; }
+  .nf-admin-line { white-space: normal; overflow-wrap: anywhere; }
+  .nf-kbd { display: none; }
   .nf-picks-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .nf-picks-grid > :nth-child(n + 3) { display: none; }
 }
