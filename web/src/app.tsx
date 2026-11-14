@@ -22,6 +22,8 @@ import { AdminHome } from './screens/admin/HomeScreen';
 import { AdminRequests } from './screens/admin/Requests';
 import { AdminMediaRequests } from './screens/admin/MediaRequests';
 import { AdminPlayLog } from './screens/admin/PlayLog';
+import { AdminStatistics } from './screens/admin/stats/Statistics';
+import { AdminStatisticsDay } from './screens/admin/stats/StatisticsDay';
 import { MeProfile } from './screens/me/Profile';
 import { MeHome } from './screens/me/HomeScreen';
 import { MePlayback } from './screens/me/Playback';
@@ -120,6 +122,8 @@ const ROUTES: Route[] = [
   { pattern: '/admin/home', render: () => <AdminHome />, admin: true },
   { pattern: '/admin/requests', render: () => <AdminRequests />, admin: true },
   { pattern: '/admin/media-requests', render: () => <AdminMediaRequests />, admin: true },
+  { pattern: '/admin/statistics', render: () => <AdminStatistics />, admin: true },
+  { pattern: '/admin/statistics/:date', render: (p) => <AdminStatisticsDay date={p.date} />, admin: true },
   { pattern: '/admin/playlog', render: () => <AdminPlayLog />, admin: true },
   { pattern: '/admin/server', render: () => <ServerOverview />, admin: true },
   { pattern: '/admin/settings', render: () => <ServerSettings />, admin: true },

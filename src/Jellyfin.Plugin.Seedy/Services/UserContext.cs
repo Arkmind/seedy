@@ -23,6 +23,18 @@ public static class UserContext
         return Guid.TryParse(value, out var id) ? id : Guid.Empty;
     }
 
+    /// <summary>Gets the device name the request's client signed in with.</summary>
+    /// <param name="principal">The request user.</param>
+    /// <returns>Device name, or null.</returns>
+    public static string? GetDeviceName(this ClaimsPrincipal principal)
+        => principal.Claims.FirstOrDefault(c => c.Type == "Jellyfin-Device")?.Value;
+
+    /// <summary>Gets the app the request comes from.</summary>
+    /// <param name="principal">The request user.</param>
+    /// <returns>App name, or null.</returns>
+    public static string? GetClientName(this ClaimsPrincipal principal)
+        => principal.Claims.FirstOrDefault(c => c.Type == "Jellyfin-Client")?.Value;
+
     /// <summary>Gets the signed-in user.</summary>
     /// <param name="principal">The request user.</param>
     /// <param name="users">User manager.</param>

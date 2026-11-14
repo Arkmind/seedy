@@ -77,14 +77,15 @@ tries hard not to make your server convert anything it doesn't have to.
 - **An experimental player** (Settings › Playback › Advanced) that decodes HEVC and other formats the browser can't
   play on its own, instead of the server converting them. When the device can't keep up, it hands the video back to
   the server.
-- **A play log** behind the Top 10, the viewing history page, row order and genre rows. Jellyfin itself only keeps
-  the last play of each title.
+- **A play log** behind the Top 10, the viewing history page, row order, genre rows and the admin Statistics. Jellyfin
+  itself only keeps the last play of each title.
 - **Personal settings** at `/settings`: profile and sign-in, home screen, playback, subtitles, display (accent,
   language, dates, screensaver, TV layout, custom CSS) and controls.
-- **A full admin dashboard** at `/admin` that replaces Jellyfin's: branding, home screen, requests and the play log,
-  plus the server itself (settings, users, libraries, playback, networking, Live TV, devices, activity, plugins,
-  scheduled tasks, backups with a weekly automatic one, logs and API keys), and the space left on each disk with a
-  warning when one fills up.
+- **A full admin dashboard** at `/admin` that replaces Jellyfin's: branding, home screen, requests, the play log and
+  statistics (watch time per day, who watches what and when, devices, how often the server transcodes and why, and a
+  timeline of any single day), plus the server itself (settings, users, libraries, playback, networking, Live TV,
+  devices, activity, plugins, scheduled tasks, backups with a weekly automatic one, logs and API keys), and the space
+  left on each disk with a warning when one fills up.
 
 ### On Android phones and TVs
 
