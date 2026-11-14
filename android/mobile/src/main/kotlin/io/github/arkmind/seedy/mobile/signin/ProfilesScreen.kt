@@ -39,6 +39,8 @@ import io.github.arkmind.seedy.mobile.parts.pagePadding
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.AddProfileSquare
 import io.github.arkmind.seedy.ui.components.BrandMark
+import io.github.arkmind.seedy.ui.components.Medu
+import io.github.arkmind.seedy.ui.components.MeduMood
 import io.github.arkmind.seedy.ui.components.ProfileSquare
 import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -68,11 +70,11 @@ fun ProfilesScreen(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            SText(
-                t("Who's watching?"),
-                Modifier.padding(top = 64.dp),
-                size = 26.sp, weight = 900, color = SeedyColors.White, lineHeight = 1.2f, align = TextAlign.Center,
-            )
+            // Medu waves beside the heading, which tucks 4 px into its glow.
+            Row(Modifier.padding(top = 30.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy((-4).dp)) {
+                Medu(MeduMood.Wave, 76.dp, height = 100.dp)
+                SText(t("Who's watching?"), size = 26.sp, weight = 900, color = SeedyColors.White, lineHeight = 1.2f, align = TextAlign.Center)
+            }
             FlowRow(
                 Modifier.padding(top = 36.dp, bottom = 24.dp).width(128.dp * 2 + 28.dp),
                 horizontalArrangement = Arrangement.spacedBy(28.dp),

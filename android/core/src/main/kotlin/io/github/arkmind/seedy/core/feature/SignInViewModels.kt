@@ -19,7 +19,16 @@ import java.util.UUID
 
 /** "Add a server": servers found on this network, or an address typed in. */
 class AddServerViewModel(private val core: SeedyCore) : ViewModel() {
-    data class Found(val name: String, val address: String)
+    /** A server that answered on this network; [version] and [seedy] once it has said what it runs. */
+    data class Found(val name: String, val address: String, val version: String? = null, val seedy: Boolean = false) {
+        /** "192.168.1.20 · Jellyfin 12.0 · Seedy", as the server rows read. */
+        val detail: String
+            get() = listOfNotNull(
+                address.substringAfter("://").substringBefore("/").substringBefore(":"),
+                version?.split(".")?.take(2)?.joinToString(".")?.let { "Jellyfin $it" },
+                "Seedy".takeIf { seedy },
+            ).joinToString(" · ")
+    }
 
     data class State(
         val found: List<Found> = emptyList(),
@@ -41,7 +50,12 @@ class AddServerViewModel(private val core: SeedyCore) : ViewModel() {
             runCatching {
                 core.servers.discover().collect { info ->
                     val address = info.address ?: return@collect
-                    _state.update { s -> if (s.found.any { it.address == address }) s else s.copy(found = s.found + Found(info.name ?: address, address)) }
+                    if (_state.value.found.any { it.address == address }) return@collect
+                    _state.update { s -> s.copy(found = s.found + Found(info.name ?: address, address)) }
+                    launch {
+                        val (version, seedy) = runCatching { core.servers.describe(address) }.getOrNull() ?: return@launch
+                        _state.update { s -> s.copy(found = s.found.map { if (it.address == address) it.copy(version = version, seedy = seedy) else it }) }
+                    }
                 }
             }
             _state.update { it.copy(searching = false) }

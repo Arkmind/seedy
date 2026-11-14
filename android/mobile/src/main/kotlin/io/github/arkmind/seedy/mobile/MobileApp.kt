@@ -91,6 +91,10 @@ import io.github.arkmind.seedy.mobile.signin.PasswordScreen
 import io.github.arkmind.seedy.mobile.signin.ProfilesScreen
 import io.github.arkmind.seedy.mobile.signin.QuickConnectSheet
 import io.github.arkmind.seedy.mobile.signin.SignInFor
+import io.github.arkmind.seedy.mobile.signin.UnreachableScreen
+import io.github.arkmind.seedy.ui.theme.rememberRetryClock
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.LaunchedEffect
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.core.seedy.logoUrl
 import io.github.arkmind.seedy.ui.components.LocalBrandLogo
@@ -118,14 +122,17 @@ fun MobileApp(core: SeedyCore, appVersion: String = "") {
         is SessionState.SignedOut -> s.server.seedy?.logoUrl(s.server.address)
         else -> null
     }
+    // The server finder's "Sign in with Quick Connect": the server's sign-in opens on Quick Connect's code.
+    var quickConnectNext by rememberSaveable { mutableStateOf(false) }
+    val finderQuickConnect = { quickConnectNext = true }
     SeedyTheme(accent = accent ?: SeedyColors.Accent) {
         CompositionLocalProvider(LocalBrandLogo provides logo) {
             Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
                 when (val s = state) {
                     SessionState.Starting -> Unit
-                    SessionState.NoServer -> AddServerEntry(core, onBack = null)
-                    is SessionState.SignedOut -> SignInFlow(core, s.server)
-                    is SessionState.Unreachable -> Unreachable(core, s.server)
+                    SessionState.NoServer -> AddServerEntry(core, onBack = null, onQuickConnect = finderQuickConnect)
+                    is SessionState.SignedOut -> SignInFlow(core, s.server, quickConnectNext, finderQuickConnect) { quickConnectNext = false }
+                    is SessionState.Unreachable -> Unreachable(core, s.server, finderQuickConnect)
                     is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
                 }
             }
@@ -134,10 +141,10 @@ fun MobileApp(core: SeedyCore, appVersion: String = "") {
 }
 
 @Composable
-private fun AddServerEntry(core: SeedyCore, onBack: (() -> Unit)?) {
+private fun AddServerEntry(core: SeedyCore, onBack: (() -> Unit)?, onQuickConnect: () -> Unit) {
     val vm = viewModel { AddServerViewModel(core) }
     val state by vm.state.collectAsStateWithLifecycle()
-    AddServerScreen(state, onAdd = vm::add, onSearch = vm::search, onBack = onBack)
+    AddServerScreen(state, onAdd = vm::add, onSearch = vm::search, onBack = onBack, onQuickConnect = { found -> onQuickConnect(); vm.add(found.address) })
 }
 
 private data object ProfilesKey
@@ -145,7 +152,7 @@ private data class PasswordKey(val profile: ProfilesViewModel.Profile?)
 private data object AddServerKey
 
 @Composable
-private fun SignInFlow(core: SeedyCore, server: SavedServer) {
+private fun SignInFlow(core: SeedyCore, server: SavedServer, quickConnectFirst: Boolean, onFinderQuickConnect: () -> Unit, onQuickConnectOpened: () -> Unit) {
     val stack = remember(server.id) { mutableStateListOf<Any>(ProfilesKey) }
     val brand = server.seedy?.name ?: "Seedy"
     NavDisplay(
@@ -156,7 +163,8 @@ private fun SignInFlow(core: SeedyCore, server: SavedServer) {
             entry<ProfilesKey> {
                 val vm = viewModel { ProfilesViewModel(core, server) }
                 val state by vm.state.collectAsStateWithLifecycle()
-                var quickConnect by remember { mutableStateOf(false) }
+                var quickConnect by remember { mutableStateOf(quickConnectFirst) }
+                LaunchedEffect(Unit) { if (quickConnectFirst) onQuickConnectOpened() }
                 ProfilesScreen(
                     brand = brand,
                     server = server,
@@ -189,7 +197,7 @@ private fun SignInFlow(core: SeedyCore, server: SavedServer) {
                 state.forgot?.let { f -> ForgotSheet(f, vm::setPin, vm::redeemPin, vm::closeForgot) }
                 if (quickConnect) QuickConnect(core, server) { quickConnect = false }
             }
-            entry<AddServerKey> { AddServerEntry(core, onBack = { stack.removeLastOrNull() }) }
+            entry<AddServerKey> { AddServerEntry(core, onBack = { stack.removeLastOrNull() }, onQuickConnect = onFinderQuickConnect) }
         },
     )
 }
@@ -206,19 +214,17 @@ private fun QuickConnect(core: SeedyCore, server: SavedServer, onClose: () -> Un
     QuickConnectSheet(state.code, state.quickConnectError, onRetry = vm::startQuickConnect, onDismiss = onClose)
 }
 
+/** Board "Android · Server unreachable": tries again by itself every 15 s; "Choose another server" opens the finder. */
 @Composable
-private fun Unreachable(core: SeedyCore, server: SavedServer) {
-    val scope = rememberCoroutineScope()
-    Column(
-        Modifier.fillMaxSize().padding(pagePadding()),
-        verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        SText(t("Can’t reach {server}", "server" to server.name), size = 22.sp, weight = 900, color = SeedyColors.White, align = TextAlign.Center)
-        SText(t("Check that this phone is online and the server is running."), size = 14.sp, color = SeedyColors.Text2, align = TextAlign.Center)
-        PrimaryButton(t("Try again"), { scope.launch { core.sessions.start() } })
-        SText(t("Switch profile"), Modifier.tap { scope.launch { core.sessions.switchProfile() } }.padding(10.dp), size = 13.sp, weight = 600, color = SeedyColors.Text2)
+private fun Unreachable(core: SeedyCore, server: SavedServer, onFinderQuickConnect: () -> Unit) {
+    var choosing by rememberSaveable { mutableStateOf(false) }
+    if (choosing) {
+        BackHandler { choosing = false }
+        AddServerEntry(core, onBack = { choosing = false }, onQuickConnect = onFinderQuickConnect)
+        return
     }
+    val retry = rememberRetryClock { core.sessions.start() }
+    UnreachableScreen(server, retryIn = if (retry.running) null else retry.left, onRetry = retry::now, onChooseServer = { choosing = true })
 }
 
 private data object TabsKey
@@ -278,6 +284,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                                     onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
                                     bottomPadding = tabBarHeight(),
                                     onFinish = vm::finishWatching,
+                                    onRefresh = vm::refresh,
                                 )
                             }
                             Tab.Libraries -> LibrariesTab()
