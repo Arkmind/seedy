@@ -92,9 +92,13 @@ import io.github.arkmind.seedy.mobile.signin.ProfilesScreen
 import io.github.arkmind.seedy.mobile.signin.QuickConnectSheet
 import io.github.arkmind.seedy.mobile.signin.SignInFor
 import io.github.arkmind.seedy.mobile.signin.UnreachableScreen
+import io.github.arkmind.seedy.mobile.notify.RequestLink
+import io.github.arkmind.seedy.mobile.notify.RequestLinks
 import io.github.arkmind.seedy.ui.theme.rememberRetryClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.flow.filterNotNull
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.core.seedy.logoUrl
 import io.github.arkmind.seedy.ui.components.LocalBrandLogo
@@ -255,6 +259,23 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
         onSignOut = { scope.launch { core.sessions.signOut() } },
         onSettings = { nav.go(Route.Settings) },
     )
+    // A request notification was tapped (board "Android · Notification shade"): its title, its episode, or Requests.
+    val requestsTab by rememberUpdatedState(viewer.requests)
+    LaunchedEffect(session) {
+        RequestLinks.pending.filterNotNull().collect { l ->
+            RequestLinks.clear()
+            if (l.server != session.server.id || l.user != session.account.userId) return@collect
+            val item = libraryUuid(l.itemId)?.let { id -> runCatching { io.github.arkmind.seedy.core.browse.Browse(session).item(id) }.getOrNull() }
+            when (l.action) {
+                RequestLink.Requests -> if (requestsTab) nav.toTab(Tab.Requests)
+                RequestLink.Play -> item?.let(nav::play)
+                else -> when {
+                    item != null -> nav.open(item)
+                    l.tmdbId != null -> nav.go(Route.SeerrTitle(l.mediaType ?: "movie", l.tmdbId))
+                }
+            }
+        }
+    }
     CompositionLocalProvider(LocalViewer provides viewer, LocalSession provides session, LocalCore provides core, LocalMobileNav provides nav, LocalAudio provides audio) {
       AudioScope {
        Box(Modifier.fillMaxSize()) {

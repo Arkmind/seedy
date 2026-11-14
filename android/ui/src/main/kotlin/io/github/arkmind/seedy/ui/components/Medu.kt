@@ -25,6 +25,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -145,6 +149,29 @@ fun Medu(
 
 private class MeduTexts(val question: TextLayoutResult, val z: List<TextLayoutResult>)
 
+/**
+ * Medu in its rest pose as a bitmap of [width] × [height] pixels, for where Compose doesn't draw (a notification's
+ * large icon). The question mark and z's need text, so Search and Sleepy come without them.
+ */
+fun meduBitmap(
+    mood: MeduMood,
+    width: Int,
+    height: Int,
+    accent: Color,
+    small: Boolean = false,
+    glow: Boolean = false,
+    torch: Boolean = false,
+): ImageBitmap {
+    val bitmap = ImageBitmap(width, height)
+    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, androidx.compose.ui.graphics.Canvas(bitmap), Size(width.toFloat(), height.toFloat())) {
+        val s = min(size.width / 200f, size.height / 264f)
+        translate((size.width - 200f * s) / 2f, (size.height - 264f * s) / 2f + 24f * s) {
+            scale(s, s, Offset.Zero) { drawMedu(mood, null, accent, small, glow, torch, false, null) }
+        }
+    }
+    return bitmap
+}
+
 // ---- Drawing, in the SVG's own units --------------------------------------------------------------------------
 
 private val Body = Color(0xFFEFDFF3)
@@ -257,7 +284,7 @@ private fun DrawScope.drawMedu(
     glow: Boolean,
     torch: Boolean,
     bubbles: Boolean,
-    texts: MeduTexts,
+    texts: MeduTexts?,
 ) {
     // m-slow / m-fast: Sleepy floats at half speed, Yay at double.
     val (floatDur, tentDur) = when (mood) {
@@ -414,10 +441,11 @@ private fun DrawScope.drawBell(mood: MeduMood, t: Double?, floatDur: Double, acc
 }
 
 /** What floats beside Medu rather than with it: the question mark and tear, z's, sparkles, the thinking dots. */
-private fun DrawScope.drawExtras(mood: MeduMood, t: Double?, accent: Color, texts: MeduTexts) {
+private fun DrawScope.drawExtras(mood: MeduMood, t: Double?, accent: Color, texts: MeduTexts?) {
     when (mood) {
         MeduMood.Search -> {
-            val q = texts.question
+            drawPath(Art.tear, Tear.copy(alpha = .9f))
+            val q = texts?.question ?: return
             val w = q.getLineRight(0)
             // Tilts from the bottom centre of its text box (font ascent and descent around the baseline at y 22).
             val origin = Offset(164f, 22f - q.firstBaseline + q.getLineBottom(0))
@@ -427,9 +455,9 @@ private fun DrawScope.drawExtras(mood: MeduMood, t: Double?, accent: Color, text
             withTransform({ rotate(angle, origin); translate(0f, lift) }) {
                 drawText(q, accent, Offset(164f - w / 2f, 22f - q.firstBaseline))
             }
-            drawPath(Art.tear, Tear.copy(alpha = .9f))
         }
         MeduMood.Sleepy -> {
+            if (texts == null) return
             val spots = listOf(Triple(148f, 40f, 0.0), Triple(166f, 18f, -1.2), Triple(186f, -6f, -2.4))
             spots.forEachIndexed { i, (x, y, delay) ->
                 val z = texts.z[i]

@@ -96,6 +96,8 @@ class SeerrTitleActions(
 @Composable
 fun SeerrTitleRoute(mediaType: String, tmdbId: Int) {
     val session = currentSession()
+    val ask = io.github.arkmind.seedy.mobile.notify.rememberNotificationAsk()
+    androidx.compose.runtime.LaunchedEffect(Unit) { ask(false) }
     val nav = LocalMobileNav.current
     val context = LocalContext.current
     val vm = viewModel(key = "seerr:$mediaType:$tmdbId") { SeerrTitleViewModel(session, mediaType, tmdbId) }
