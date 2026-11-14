@@ -277,6 +277,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                                     },
                                     onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
                                     bottomPadding = tabBarHeight(),
+                                    onFinish = vm::finishWatching,
                                 )
                             }
                             Tab.Libraries -> LibrariesTab()

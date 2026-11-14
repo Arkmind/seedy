@@ -211,7 +211,10 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                         when (place) {
                             TvPlace.Home -> {
                                 val state by home.state.collectAsStateWithLifecycle()
-                                TvHomeScreen(state, onOpen = nav::open, onPlay = nav::play, onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) })
+                                TvHomeScreen(
+                                    state, onOpen = nav::open, onPlay = nav::play, onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
+                                    onFinish = home::finishWatching,
+                                )
                             }
                             TvPlace.Search -> TvSearchPlace()
                             TvPlace.Movies -> LibraryPlace(home, CollectionType.MOVIES)

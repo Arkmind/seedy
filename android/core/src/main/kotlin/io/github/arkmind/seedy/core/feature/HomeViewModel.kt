@@ -2,20 +2,24 @@ package io.github.arkmind.seedy.core.feature
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.arkmind.seedy.core.browse.Browse
+import io.github.arkmind.seedy.core.browse.clearResume
 import io.github.arkmind.seedy.core.home.Home
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.seedy.FeaturedEntry
 import io.github.arkmind.seedy.core.seedy.HomeRow
 import io.github.arkmind.seedy.core.session.UserSession
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.model.api.BaseItemDto
 
 /** Home for both screen sets: the hero's titles and the rows, each filling in as its titles arrive. */
-class HomeViewModel(session: UserSession) : ViewModel() {
+class HomeViewModel(private val session: UserSession) : ViewModel() {
     private val home = Home(session)
 
     data class Row(
@@ -62,6 +66,25 @@ class HomeViewModel(session: UserSession) : ViewModel() {
                 _state.update { it.copy(featured = featured) }
             }
             for (row in list) launch { fill(row, libraries) }
+        }
+    }
+
+    /**
+     * A Continue watching card's menu: marks the title watched ([watched]), or takes it out of the row without
+     * marking it (its resume point goes, so it starts over). The card leaves at once, then Continue watching and Next
+     * up fill again. [done] says whether it worked.
+     */
+    fun finishWatching(item: BaseItemDto, watched: Boolean, done: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val ok = runCatching {
+                withContext(Dispatchers.IO) { if (watched) Browse(session).setPlayed(item.id, true) else session.clearResume(item.id) }
+            }.isSuccess
+            if (ok) {
+                _state.update { s -> s.copy(rows = s.rows.map { r -> if (r.row.kind == "continue") r.copy(items = r.items?.filter { it.id != item.id }) else r }) }
+                val libraries = _state.value.libraries
+                for (r in _state.value.rows.filter { it.row.kind == "continue" || it.row.kind == "nextup" }) launch { fill(r.row, libraries) }
+            }
+            done(ok)
         }
     }
 
