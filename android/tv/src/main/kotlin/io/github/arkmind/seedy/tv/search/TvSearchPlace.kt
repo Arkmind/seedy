@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -163,10 +164,13 @@ fun TvSearchScreen(state: SearchViewModel.State, actions: TvSearchActions, first
     var seerrList by remember(state.query) { mutableStateOf(false) }
     val firstPoster = remember { FocusRequester() }
     val r = state.results?.takeIf { !state.idle }
+    val nothing = r != null && r.isEmpty && !seerrList
+    // Medu's buttons sit level with the keyboard's lower rows: Right from the keyboard's edge goes straight to them.
+    val firstButton = remember { FocusRequester() }
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
-        Keyboard(state.text, actions, firstKey, focusKey, Modifier.padding(start = RailInset, top = 96.bp).width(520.bp))
-        if (r != null && r.isEmpty && !seerrList) {
-            NothingFound(state, actions, onSeerr = { seerrList = true })
+        Keyboard(state.text, actions, firstKey, focusKey, Modifier.padding(start = RailInset, top = 96.bp).width(520.bp), rightOut = firstButton.takeIf { nothing })
+        if (nothing) {
+            NothingFound(state, actions, onSeerr = { seerrList = true }, first = firstButton)
         } else {
             Column(
                 Modifier.padding(start = 780.bp, end = 96.bp, top = 96.bp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 96.bp),
@@ -187,7 +191,8 @@ fun TvSearchScreen(state: SearchViewModel.State, actions: TvSearchActions, first
 }
 
 @Composable
-private fun Keyboard(text: String, actions: TvSearchActions, firstKey: FocusRequester, focusKey: Char, modifier: Modifier) {
+private fun Keyboard(text: String, actions: TvSearchActions, firstKey: FocusRequester, focusKey: Char, modifier: Modifier, rightOut: FocusRequester? = null) {
+    val edge = if (rightOut != null) Modifier.focusProperties { right = rightOut } else Modifier
     val accent = LocalAccent.current
     Column(modifier, verticalArrangement = Arrangement.spacedBy(18.bp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.bp)) {
@@ -213,13 +218,16 @@ private fun Keyboard(text: String, actions: TvSearchActions, firstKey: FocusRequ
         Column(Modifier.padding(top = 8.bp), verticalArrangement = Arrangement.spacedBy(10.bp)) {
             for (row in Keys.chunked(6)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.bp)) {
-                    for (c in row) Key(c.toString(), 76.bp, 24.bsp, { actions.onText(text + c) }, if (c == focusKey) Modifier.focusRequester(firstKey) else Modifier)
+                    for (c in row) {
+                        val base = if (c == focusKey) Modifier.focusRequester(firstKey) else Modifier
+                        Key(c.toString(), 76.bp, 24.bsp, { actions.onText(text + c) }, if (c == row.last()) base.then(edge) else base)
+                    }
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.bp)) {
                 Key(t("Space"), 162.bp, 19.bsp, { if (text.isNotEmpty() && !text.endsWith(" ")) actions.onText("$text ") })
                 Key(t("Delete"), 162.bp, 19.bsp, { actions.onText(text.dropLast(1)) })
-                Key(t("Clear"), 162.bp, 19.bsp, { actions.onText("") })
+                Key(t("Clear"), 162.bp, 19.bsp, { actions.onText("") }, edge)
             }
         }
     }
@@ -384,7 +392,7 @@ private fun SmallCard(hit: Hit, actions: TvSearchActions) {
  * clear the search.
  */
 @Composable
-private fun NothingFound(state: SearchViewModel.State, actions: TvSearchActions, onSeerr: () -> Unit) {
+private fun NothingFound(state: SearchViewModel.State, actions: TvSearchActions, onSeerr: () -> Unit, first: FocusRequester) {
     Box(Modifier.fillMaxSize().padding(start = 780.bp, end = 96.bp, top = 96.bp, bottom = 96.bp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Medu(MeduMood.Search, 250.bp, height = 330.bp)
@@ -399,8 +407,8 @@ private fun NothingFound(state: SearchViewModel.State, actions: TvSearchActions,
                 size = 26.bsp, lineHeight = 1.55f, color = Color(0xFFB4B4B4), align = TextAlign.Center,
             )
             Row(Modifier.padding(top = 36.bp), horizontalArrangement = Arrangement.spacedBy(20.bp)) {
-                if (state.seerrOn) TvBigButton(t("Request it on Seerr"), { if (state.seerr == null) actions.onSeerr(); onSeerr() }, icon = AppIcons.Requests, iconSize = 28.bp, primary = true)
-                TvBigButton(t("Clear search"), { actions.onText("") })
+                if (state.seerrOn) TvBigButton(t("Request it on Seerr"), { if (state.seerr == null) actions.onSeerr(); onSeerr() }, Modifier.focusRequester(first), icon = AppIcons.Requests, iconSize = 28.bp, primary = true)
+                TvBigButton(t("Clear search"), { actions.onText("") }, if (state.seerrOn) Modifier else Modifier.focusRequester(first))
             }
         }
     }
