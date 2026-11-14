@@ -10,6 +10,7 @@ import { useStore } from '../../lib/store';
 import { CastCard, ItemCard, PosterCard } from '../../ui/cards';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
+import { Medu } from '../../ui/medu';
 import { toast } from '../../ui/overlay';
 import { rowMeta, search, type Results } from '../../ui/search/engine';
 import { SearchIdle } from '../../ui/search/parts';
@@ -150,14 +151,14 @@ function LibraryResults({ q }: { q: string }) {
     return (
       <>
         <section aria-label={t('Library results')} class="empty search-empty">
-          <span class="empty-icon" aria-hidden="true"><Icon name="searchX" size={26} /></span>
+          <span class="search-empty-medu" aria-hidden="true"><Medu mood="search" size={92} /></span>
           <div class="empty-body">
             <h1 class="empty-title">{t('Nothing in your library for “{q}”', { q })}</h1>
             <p class="empty-text">
               {wantSeerr
                 ? me.requests.canRequest
-                  ? t('No movies, shows, episodes or people match. It may not be on the server yet: request it below.') : t('No movies, shows, episodes or people match. It may not be on the server yet: here is what Seerr knows about it.')
-                : t('No movies, shows, episodes or people match. Check the spelling, or try a shorter part of the title.')}
+                  ? t('Medu checked every library: no movies, shows, episodes or people match. It may not be on the server yet, so request it below.') : t('Medu checked every library: no movies, shows, episodes or people match. It may not be on the server yet: here is what Seerr knows about it.')
+                : t('Medu checked every library: no movies, shows, episodes or people match. Check the spelling, or try a shorter part of the title.')}
             </p>
           </div>
         </section>

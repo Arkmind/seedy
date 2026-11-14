@@ -4,13 +4,15 @@ import { get, post, JELLYFIN_WEB } from '../../api/client';
 import { CARD_FIELDS, getGenres, getItem, getItems, getSimilar, type ItemsQuery } from '../../api/jellyfin';
 import { backdropUrl, cardArt } from '../../api/images';
 import type { BaseItem, ItemsResult } from '../../api/types';
-import { meStore, viewsStore } from '../../lib/app-state';
+import { isAdmin, meStore, viewsStore } from '../../lib/app-state';
 import { pct, plural } from '../../lib/format';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { safeLocal, saveLocal, useAsync, useStore } from '../../lib/store';
 import { ItemCard, playPath } from '../../ui/cards';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
+import { MeduState } from '../../ui/medu';
+import { getVirtualFolders } from '../server/api';
 import { MenuButton, MenuItem, Sheet, toast } from '../../ui/overlay';
 import { Row } from '../../ui/Row';
 import {
@@ -451,6 +453,44 @@ function SortButton({ sort, order, onChange }: { sort: SortId; order: 'asc' | 'd
   );
 }
 
+/* ───────── A library with nothing in it yet ───────── */
+
+/* Empty pages board: while the server scans a new library Medu waits with the scan's progress (admins can read it
+   from /Library/VirtualFolders), and new titles show as the scan reaches them. Otherwise Medu naps. */
+function EmptyLibrary({ view, onFound }: { view: BaseItem; onFound: () => void }) {
+  const [scan, setScan] = useState<{ progress: number; path?: string } | null>(null);
+  useEffect(() => {
+    if (!isAdmin()) return;
+    const ctl = new AbortController();
+    let timer = 0;
+    let polls = 0;
+    let was = false;
+    // Every 3 s during a scan (looking for new titles every 9 s and once at the end), every 15 s otherwise.
+    const poll = async () => {
+      const folder = (await getVirtualFolders(ctl.signal).catch(() => undefined))?.find((f) => f.ItemId === view.Id);
+      if (ctl.signal.aborted) return;
+      const active = folder?.RefreshStatus === 'Active' || folder?.RefreshProgress != null;
+      setScan(active ? { progress: Math.max(0, Math.min(100, folder?.RefreshProgress ?? 0)), path: folder?.Locations[0] } : null);
+      if ((active && ++polls % 3 === 0) || (was && !active)) onFound();
+      was = active;
+      timer = window.setTimeout(poll, active ? 3000 : 15000);
+    };
+    void poll();
+    return () => { ctl.abort(); window.clearTimeout(timer); };
+  }, [view.Id]);
+  const name = view.Name ?? '';
+  if (!scan) return <MeduState title={t('{name} is empty', { name })} text={t('Once the server finds media in this library it will show up here.')} />;
+  const done = Math.round(scan.progress);
+  return (
+    <MeduState mood="think" title={t('Medu is scanning {name}', { name })} text={t('Nothing found yet. New titles appear here as soon as the scan reaches them.')}>
+      <div class="medu-scan" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={done} aria-label={t('Scan progress')}>
+        <div class="medu-scan-track"><div class="medu-scan-fill" style={{ width: `${done}%` }} /></div>
+        <div class="medu-scan-meta"><span>{scan.path ? t('Scanning {path}', { path: scan.path }) : t('Scanning')}</span><span>{done}%</span></div>
+      </div>
+    </MeduState>
+  );
+}
+
 /* ───────── Grid / list with A–Z rail and infinite scroll ───────── */
 
 function GridBody({ view, tab, paged, layout, query, sort, order, hasFilters, onClear, select }: {
@@ -530,7 +570,7 @@ function GridBody({ view, tab, paged, layout, query, sort, order, hasFilters, on
     if (hasFilters) return <EmptyState icon="filters" title={t('Nothing matches these filters')} text={t('Try removing a filter or two.')} action={<button type="button" class="btn btn-primary is-sm" onClick={onClear}>{t('Clear all')}</button>} />;
     if (tab === 'favorites') return <EmptyState icon="heart" title={`No favorites in ${view.Name} yet`} text={t('Tap the heart on any title and it will show up here.')} />;
     if (tab === 'collections') return <EmptyState icon="folder" title={t('No collections yet')} text={t('Collections group related titles, like a film series. Create them in Jellyfin and they\'ll show up here.')} />;
-    return <EmptyState icon="film" title={`${view.Name} is empty`} text={t('Once the server finds media in this library it will show up here.')} />;
+    return <EmptyLibrary view={view} onFound={paged.reload} />;
   }
 
   const showRail = paged.total > 1;

@@ -8,6 +8,8 @@ import { t, tx } from '../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { seerrTarget } from '../../ui/cards';
 import { Icon } from '../../ui/icons';
+import { MeduState } from '../../ui/medu';
+import { openSearch } from '../../ui/search/SearchBox';
 import { MenuButton, MenuItem } from '../../ui/overlay';
 import { EmptyState, ErrorState } from '../browse/parts';
 import { seasonList } from '../browse/request-seasons';
@@ -169,7 +171,18 @@ export function RequestsMine({ scope }: { scope: 'mine' | 'all' }) {
   else if (!visible.length) {
     body = show !== 'all' || type
       ? <EmptyState icon="inbox" title={t('No requests here')} text={t('Nothing matches what you picked.')} action={<button type="button" class="btn btn-secondary" onClick={() => setQuery({ show: undefined, type: undefined })}>{t('Show everything')}</button>} />
-      : <EmptyState icon="inbox" title={everyone ? t('No requests yet') : t('You haven’t requested anything yet')} text={everyone ? t('Requests from everyone on the server show up here.') : t('What you request shows up here, with where it is on its way to the server.')} action={<Link to="/requests" class="btn btn-secondary">{t('Find something to request')}</Link>} />;
+      : (
+        <MeduState
+          large
+          size={170}
+          title={everyone ? t('No requests yet') : t('Nothing requested yet')}
+          text={everyone ? t('Requests from everyone on the server show up here.') : t('Ask for a movie, show, album or book and it waits here with its progress until it’s ready to watch, listen to or read.')}
+          actions={<>
+            <Link to="/requests" class="btn btn-primary medu-actions-btn"><Icon name="download" size={18} />{t('Discover something')}</Link>
+            {!everyone && <button type="button" class="btn btn-secondary medu-actions-btn" onClick={openSearch}><Icon name="search" size={18} />{t('Search Seerr')}</button>}
+          </>}
+        />
+      );
   } else {
     body = (
       <div class="reqs-mine-list">

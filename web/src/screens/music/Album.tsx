@@ -11,7 +11,7 @@ import { useAsync, useStore } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
 import { Header } from '../../ui/navbar/Header';
 import { MenuItem, toast } from '../../ui/overlay';
-import { EmptyState } from '../browse/parts';
+import { EmptyPlaylist, EmptyState } from '../browse/parts';
 import { toggleFavorite } from '../browse/parts';
 import { MoreActions, useView } from '../browse/details-parts';
 import { manageChanged } from '../browse/manage/host';
@@ -177,7 +177,7 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
       <main class="mu-page-main">
         <div>
           {tracks.loading && !tracks.data ? <TracksSkeleton rows={10} />
-            : !list.length ? <EmptyState icon="music" title={playlist ? t('This playlist is empty') : t('No songs')} text={playlist ? t('Add songs from their ⋯ menu, or drag them onto the playlist in the library.') : t('This album has no playable songs on the server.')} />
+            : !list.length ? (playlist ? <EmptyPlaylist /> : <EmptyState icon="music" title={t('No songs')} text={t('This album has no playable songs on the server.')} />)
             : (
               <TrackTable tracks={list} cols={playlist ? 'list' : 'album'} source={source} discs={!playlist} numbers={playlist ? 'position' : 'index'} pageId={item.Id}
                 extra={playlist ? (tk) => (close) => (

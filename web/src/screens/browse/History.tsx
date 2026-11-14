@@ -10,6 +10,7 @@ import { Art, Progress, WatchedCheck, playPath } from '../../ui/cards';
 import { Switch } from '../../ui/controls';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
+import { MeduState } from '../../ui/medu';
 import { MenuButton, MenuItem, confirm, toast } from '../../ui/overlay';
 import './history.css';
 import { t } from '../../lib/i18n';
@@ -257,7 +258,15 @@ export function History() {
           </div>
         )}
 
-        {!busy && status !== 'error' && items.length === 0 && (
+        {!busy && status !== 'error' && items.length === 0 && !search && !filtered && (
+          <MeduState
+            title={t('No history yet')}
+            text={t('What you watch, listen to and read shows up here, newest first.')}
+            actions={<Link to="/" class="btn btn-primary medu-actions-btn"><Icon name="home" size={18} />{t('Go to Home')}</Link>}
+          />
+        )}
+
+        {!busy && status !== 'error' && items.length === 0 && (search || filtered) && (
           <div class="empty">
             <span class="empty-icon" aria-hidden="true"><Icon name={filtered ? 'searchX' : 'history'} size={26} /></span>
             <div class="empty-body">
@@ -266,19 +275,13 @@ export function History() {
                   <h2 class="empty-title">{t('Nothing in your history for “{search}”', { search })}</h2>
                   <p class="empty-text">{showHidden ? t('Try another title, or switch to All.') : t('Try another title, or switch to All and turn on Show hidden.')}</p>
                 </>
-              ) : filtered ? (
+              ) : (
                 <>
                   <h2 class="empty-title">{filter === 'movies' ? t('No movies played yet') : t('No shows played yet')}</h2>
                   <p class="empty-text">{filter === 'movies' ? t('Movies you play on this profile show up here, newest first.') : t('Episodes you play on this profile show up here, newest first.')}</p>
                 </>
-              ) : (
-                <>
-                  <h2 class="empty-title">{t('Nothing played yet')}</h2>
-                  <p class="empty-text">{t('Every movie and episode you play on this profile shows up here, newest first.')}</p>
-                </>
               )}
             </div>
-            {!search && !filtered && <Link to="/" class="btn btn-primary is-sm">{t('Find something to watch')}</Link>}
           </div>
         )}
 

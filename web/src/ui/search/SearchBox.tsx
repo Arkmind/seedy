@@ -31,7 +31,10 @@ const editable = (el: Element | null) =>
   !!el && (el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement || (el as HTMLElement).isContentEditable
     || (el instanceof HTMLInputElement && !['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color', 'file'].includes(el.type)));
 
-/* "/" (not while typing elsewhere) or Ctrl/Cmd K. Dialogs keep their keys. */
+/** Opens the header's search, like pressing "/" (the empty pages' "Find something to add"). */
+export const openSearch = () => window.dispatchEvent(new Event('seedy:open-search'));
+
+/* "/" (not while typing elsewhere) or Ctrl/Cmd K. Dialogs keep their keys. openSearch() does the same. */
 function useShortcut(run: () => void, input: { current: HTMLInputElement | null }) {
   const runRef = useRef(run);
   runRef.current = run;
@@ -48,8 +51,10 @@ function useShortcut(run: () => void, input: { current: HTMLInputElement | null 
       e.preventDefault();
       runRef.current();
     };
+    const onOpen = () => runRef.current();
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('seedy:open-search', onOpen);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('seedy:open-search', onOpen); };
   }, []);
 }
 

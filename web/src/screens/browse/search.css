@@ -19,6 +19,8 @@
 .search-posters { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 200px)); gap: 28px 20px; }
 
 .search-empty .empty-title { overflow-wrap: anywhere; }
+/* Search board: Medu (92 px, lost) overhangs the banner a little, like the board's -18/-10 px margins. */
+.search-empty-medu { flex: none; margin: -18px 0 -10px; }
 
 /* Nothing typed: the bar's "search opened" panel, laid out as page sections. */
 .search-idle { display: flex; flex-direction: column; gap: 32px; max-width: 760px; }
