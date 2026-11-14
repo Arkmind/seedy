@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.3.3.0",
+        "changelog": "## What's Changed\n* Fix/statistics by @Arkmind in https://github.com/Arkmind/seedy/pull/77\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.3.2...v0.3.3",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.3.3/seedy_0.3.3.0.zip",
+        "checksum": "380287289dd5442b68559287cfb179ee",
+        "timestamp": "2026-11-14T07:23:10Z"
+      },
+      {
         "version": "0.3.2.0",
         "changelog": "## What's Changed\n* Feature/statistics by @Arkmind in https://github.com/Arkmind/seedy/pull/75\n* Fix/continue watching by @Arkmind in https://github.com/Arkmind/seedy/pull/76\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.3.1...v0.3.2",
         "targetAbi": "12.0.0.0",
