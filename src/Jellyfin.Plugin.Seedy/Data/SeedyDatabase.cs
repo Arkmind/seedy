@@ -58,6 +58,27 @@ public sealed class PlayRecord
 
     /// <summary>Gets or sets the home row the play started from.</summary>
     public string? Origin { get; set; }
+
+    /// <summary>Gets or sets how long it actually played, pauses left out (null for plays recorded before Seedy counted it).</summary>
+    public long? WatchedMs { get; set; }
+
+    /// <summary>Gets or sets how it played: DirectPlay, DirectStream or Transcode (the heaviest seen during the play).</summary>
+    public string? PlayMethod { get; set; }
+
+    /// <summary>Gets or sets Jellyfin's transcode reasons, comma separated.</summary>
+    public string? TranscodeReasons { get; set; }
+
+    /// <summary>Gets or sets the bitrate sent to the device, in bits per second.</summary>
+    public long? Bitrate { get; set; }
+
+    /// <summary>Gets or sets the library the item is in ("N"); null for Live TV.</summary>
+    public string? LibraryId { get; set; }
+
+    /// <summary>Gets or sets the source's video codec.</summary>
+    public string? VideoCodec { get; set; }
+
+    /// <summary>Gets or sets the codec of the subtitles shown, if any.</summary>
+    public string? SubtitleCodec { get; set; }
 }
 
 /// <summary>Plays per title, for the Top 10.</summary>
@@ -152,6 +173,7 @@ public sealed partial class SeedyDatabase : IDisposable
         cmd.ExecuteNonQuery();
         MigrateReading(c);
         MigrateRequests(c);
+        MigrateStats(c);
     }
 
     private static long Ms(DateTime d) => new DateTimeOffset(DateTime.SpecifyKind(d, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
@@ -196,17 +218,32 @@ public sealed partial class SeedyDatabase : IDisposable
         DeviceName = r.IsDBNull(12) ? null : r.GetString(12),
         Client = r.IsDBNull(13) ? null : r.GetString(13),
         PlaySessionId = r.IsDBNull(14) ? null : r.GetString(14),
-        Origin = r.IsDBNull(15) ? null : r.GetString(15)
+        Origin = r.IsDBNull(15) ? null : r.GetString(15),
+        WatchedMs = r.IsDBNull(16) ? null : r.GetInt64(16),
+        PlayMethod = r.IsDBNull(17) ? null : r.GetString(17),
+        TranscodeReasons = r.IsDBNull(18) ? null : r.GetString(18),
+        Bitrate = r.IsDBNull(19) ? null : r.GetInt64(19),
+        LibraryId = r.IsDBNull(20) ? null : r.GetString(20),
+        VideoCodec = r.IsDBNull(21) ? null : r.GetString(21),
+        SubtitleCodec = r.IsDBNull(22) ? null : r.GetString(22)
     };
 
-    private const string PlayColumns = "id, user_id, item_id, title_id, item_type, title_name, item_name, started_at, stopped_at, position_ticks, runtime_ticks, finished, device_name, client, play_session_id, origin";
+    private const string PlayColumns = "id, user_id, item_id, title_id, item_type, title_name, item_name, started_at, stopped_at, position_ticks, runtime_ticks, finished, device_name, client, play_session_id, origin, watched_ms, play_method, transcode_reasons, bitrate, library_id, video_codec, subtitle_codec";
+
+    // The same columns on the "p" alias, for joins; ReadPlay reads them by position, so extra columns go after them.
+    private static readonly string PlayColumnsP = "p." + PlayColumns.Replace(", ", ", p.", StringComparison.Ordinal);
+
+    private const int PlayColumnCount = 23;
+
+    // Plays that are watching something: music, audiobooks, books and Live TV stay out of viewing history and recommendations.
+    private const string WatchingOnly = "item_type NOT IN ('Audio', 'AudioBook', 'Book', 'TvChannel')";
 
     /// <summary>Inserts a play.</summary>
     /// <param name="p">The play.</param>
     public void InsertPlay(PlayRecord p) => Write(c =>
     {
         using var cmd = c.CreateCommand();
-        cmd.CommandText = $"INSERT INTO plays ({PlayColumns}) VALUES ($id, $user, $item, $title, $type, $tname, $iname, $started, $stopped, $pos, $run, $fin, $dev, $client, $session, $origin)";
+        cmd.CommandText = $"INSERT INTO plays ({PlayColumns}) VALUES ($id, $user, $item, $title, $type, $tname, $iname, $started, $stopped, $pos, $run, $fin, $dev, $client, $session, $origin, $watched, $method, $reasons, $bitrate, $library, $vcodec, $scodec)";
         Bind(cmd, "$id", p.Id);
         Bind(cmd, "$user", p.UserId);
         Bind(cmd, "$item", p.ItemId);
@@ -223,15 +260,31 @@ public sealed partial class SeedyDatabase : IDisposable
         Bind(cmd, "$client", p.Client);
         Bind(cmd, "$session", p.PlaySessionId);
         Bind(cmd, "$origin", p.Origin);
+        BindStats(cmd, p);
+        Bind(cmd, "$library", p.LibraryId);
         cmd.ExecuteNonQuery();
     });
+
+    private static void BindStats(SqliteCommand cmd, PlayRecord p)
+    {
+        Bind(cmd, "$watched", p.WatchedMs);
+        Bind(cmd, "$method", p.PlayMethod);
+        Bind(cmd, "$reasons", p.TranscodeReasons);
+        Bind(cmd, "$bitrate", p.Bitrate);
+        Bind(cmd, "$vcodec", p.VideoCodec);
+        Bind(cmd, "$scodec", p.SubtitleCodec);
+    }
 
     /// <summary>Updates a play's position, stop time and completion.</summary>
     /// <param name="p">The play.</param>
     public void UpdatePlay(PlayRecord p) => Write(c =>
     {
         using var cmd = c.CreateCommand();
-        cmd.CommandText = "UPDATE plays SET stopped_at = $stopped, position_ticks = $pos, runtime_ticks = $run, finished = $fin, origin = COALESCE(origin, $origin), play_session_id = $session WHERE id = $id";
+        cmd.CommandText = """
+            UPDATE plays SET stopped_at = $stopped, position_ticks = $pos, runtime_ticks = $run, finished = $fin, origin = COALESCE(origin, $origin), play_session_id = $session,
+                watched_ms = $watched, play_method = $method, transcode_reasons = $reasons, bitrate = $bitrate, video_codec = $vcodec, subtitle_codec = $scodec
+            WHERE id = $id
+            """;
         Bind(cmd, "$id", p.Id);
         Bind(cmd, "$stopped", p.StoppedAt is null ? null : Ms(p.StoppedAt.Value));
         Bind(cmd, "$pos", p.PositionTicks);
@@ -239,6 +292,7 @@ public sealed partial class SeedyDatabase : IDisposable
         Bind(cmd, "$fin", p.Finished ? 1 : 0);
         Bind(cmd, "$origin", p.Origin);
         Bind(cmd, "$session", p.PlaySessionId);
+        BindStats(cmd, p);
         cmd.ExecuteNonQuery();
     });
 
@@ -282,7 +336,7 @@ public sealed partial class SeedyDatabase : IDisposable
     public List<(PlayRecord Play, bool Hidden)> History(string userId, IReadOnlyList<string> types, string? search, bool includeHidden, int skip, int take, out int total)
     {
         using var c = Open();
-        var where = "p.user_id = $user";
+        var where = "p.user_id = $user AND p." + WatchingOnly;
         if (types.Count > 0)
         {
             var names = new List<string>();
@@ -328,7 +382,7 @@ public sealed partial class SeedyDatabase : IDisposable
         }
 
         using var cmd = c.CreateCommand();
-        cmd.CommandText = $"SELECT p.id, p.user_id, p.item_id, p.title_id, p.item_type, p.title_name, p.item_name, p.started_at, p.stopped_at, p.position_ticks, p.runtime_ticks, p.finished, p.device_name, p.client, p.play_session_id, p.origin, h.title_id IS NOT NULL {Join} WHERE {where} ORDER BY p.started_at DESC LIMIT $take OFFSET $skip";
+        cmd.CommandText = $"SELECT {PlayColumnsP}, h.title_id IS NOT NULL {Join} WHERE {where} ORDER BY p.started_at DESC LIMIT $take OFFSET $skip";
         BindAll(cmd);
         Bind(cmd, "$take", take);
         Bind(cmd, "$skip", skip);
@@ -336,7 +390,7 @@ public sealed partial class SeedyDatabase : IDisposable
         using var r = cmd.ExecuteReader();
         while (r.Read())
         {
-            list.Add((ReadPlay(r), r.GetInt64(16) != 0));
+            list.Add((ReadPlay(r), r.GetInt64(PlayColumnCount) != 0));
         }
 
         return list;
@@ -384,7 +438,7 @@ public sealed partial class SeedyDatabase : IDisposable
         using var c = Open();
         using var cmd = c.CreateCommand();
         var exclude = BuildIn(cmd, "$x", excludedUsers);
-        cmd.CommandText = $"SELECT COUNT(DISTINCT user_id) FROM plays WHERE started_at >= $since {(exclude.Length > 0 ? $"AND user_id NOT IN ({exclude})" : string.Empty)}";
+        cmd.CommandText = $"SELECT COUNT(DISTINCT user_id) FROM plays WHERE started_at >= $since AND {WatchingOnly} {(exclude.Length > 0 ? $"AND user_id NOT IN ({exclude})" : string.Empty)}";
         Bind(cmd, "$since", Ms(since));
         return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
     }
@@ -422,7 +476,7 @@ public sealed partial class SeedyDatabase : IDisposable
         var watched = halfCounts ? "(finished = 1 OR (runtime_ticks > 0 AND position_ticks * 2 >= runtime_ticks))" : "finished = 1";
         cmd.CommandText = $"""
             SELECT title_id, MAX(started_at) AS last FROM plays
-            WHERE user_id = $user AND {watched} {(since is null ? string.Empty : "AND started_at >= $since")}
+            WHERE user_id = $user AND {watched} AND {WatchingOnly} {(since is null ? string.Empty : "AND started_at >= $since")}
               AND title_id NOT IN (SELECT title_id FROM hidden_titles WHERE user_id = $user)
             GROUP BY title_id ORDER BY last DESC LIMIT 100
             """;

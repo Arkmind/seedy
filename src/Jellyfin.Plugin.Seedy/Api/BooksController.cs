@@ -31,6 +31,7 @@ public class BooksController : ControllerBase
     private readonly IUserDataManager _userData;
     private readonly SeedyDatabase _db;
     private readonly BookFiles _files;
+    private readonly PlaybackRecorder _recorder;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BooksController"/> class.
@@ -40,8 +41,10 @@ public class BooksController : ControllerBase
     /// <param name="userData">User data manager.</param>
     /// <param name="db">Seedy database.</param>
     /// <param name="files">Book file reader.</param>
-    public BooksController(IUserManager users, ILibraryManager library, IUserDataManager userData, SeedyDatabase db, BookFiles files)
+    /// <param name="recorder">Play log recorder, for reading time.</param>
+    public BooksController(IUserManager users, ILibraryManager library, IUserDataManager userData, SeedyDatabase db, BookFiles files, PlaybackRecorder recorder)
     {
+        _recorder = recorder;
         _users = users;
         _library = library;
         _userData = userData;
@@ -158,6 +161,12 @@ public class BooksController : ControllerBase
         };
         _db.SaveReading(user.Id.N(), rec);
         MarkPlayed(user, item, rec.Finished, ct);
+        if (item is MediaBrowser.Controller.Entities.Book)
+        {
+            // Audiobooks save their place here too, but their time is logged as they play.
+            _recorder.NoteReading(user, item, User.GetDeviceName(), User.GetClientName(), rec.Percent, rec.Finished);
+        }
+
         return ReadingDto.From(_db.GetReading(user.Id.N(), id.N()) ?? rec);
     }
 
