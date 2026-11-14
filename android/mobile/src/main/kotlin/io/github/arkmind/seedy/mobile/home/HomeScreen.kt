@@ -1,5 +1,12 @@
 package io.github.arkmind.seedy.mobile.home
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
+import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.ui.graphics.graphicsLayer
+import io.github.arkmind.seedy.ui.components.Medu
+import io.github.arkmind.seedy.ui.components.MeduMood
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -94,6 +101,7 @@ import kotlin.math.min
 data class AccountActions(val onSwitchProfile: () -> Unit, val onSignOut: () -> Unit, val onSettings: () -> Unit = {})
 
 /** Board "Android · Home": the featured hero (swipe for the next title), then the home rows. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     state: HomeViewModel.State,
@@ -107,10 +115,20 @@ fun HomeScreen(
     onSeerr: (SeerrTitle) -> Unit = {},
     /** A Continue watching card's menu (long press): mark watched (true) or take out of the row (false); says whether it worked. */
     onFinish: ((BaseItemDto, Boolean, (Boolean) -> Unit) -> Unit)? = null,
+    /** Pull to refresh (board "Android · Pull to refresh"); null turns it off. */
+    onRefresh: (() -> Unit)? = null,
+    pull: PullToRefreshState = rememberPullToRefreshState(),
 ) {
     var menuFor by remember { mutableStateOf<BaseItemDto?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
-    Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
+    val threshold = PullThreshold
+    Box(
+        Modifier.fillMaxSize().background(SeedyColors.Bg)
+            .pullToRefresh(state.refreshing, pull, enabled = onRefresh != null, threshold = threshold) { onRefresh?.invoke() },
+    ) {
+        PullMedu(pull, state.refreshing, threshold)
+        // The page (header included) comes down with the pull; the tab bar stays.
+        Box(Modifier.fillMaxSize().graphicsLayer { translationY = pull.distanceFraction.coerceAtLeast(0f) * threshold.toPx() }) {
         LazyColumn(
             Modifier.fillMaxSize(),
             state = listState,
@@ -132,6 +150,7 @@ fun HomeScreen(
         // The header stays put (as the web's): clear over the banner, on the page's colour once the page moves.
         val stuck by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 } }
         Header(account, onSearch, stuck)
+        }
         menuFor?.let { item ->
             ItemMenuSheet(item.cardTitle, continueEntries(item) { watched ->
                 onFinish?.invoke(item, watched) { ok ->
@@ -145,6 +164,38 @@ fun HomeScreen(
             }) { menuFor = null }
         }
         Toast(message, { message = null }, Modifier.align(Alignment.BottomCenter).padding(bottom = bottomPadding))
+    }
+}
+
+/** How far the page comes down before letting go refreshes it: room for Medu and its line. */
+private val PullThreshold = 112.dp
+
+/**
+ * Small Medu over the gap the pull opens, sliding down with it: "Pull to refresh", "Release to refresh" once far
+ * enough, then "Refreshing…" while the rows come in again.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PullMedu(pull: PullToRefreshState, refreshing: Boolean, threshold: Dp) {
+    val fraction = pull.distanceFraction
+    if (fraction <= 0f && !refreshing) return
+    Column(
+        Modifier.fillMaxWidth().graphicsLayer {
+            translationY = (threshold * fraction.coerceAtLeast(0f) - 98.dp).toPx()
+            alpha = fraction.coerceIn(0f, 1f)
+        },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Medu(MeduMood.Idle, 60.dp, height = 79.dp, small = true)
+        SText(
+            when {
+                refreshing -> t("Refreshing…")
+                fraction >= 1f -> t("Release to refresh")
+                else -> t("Pull to refresh")
+            },
+            size = 12.sp, weight = 700, color = SeedyColors.Text2,
+        )
     }
 }
 

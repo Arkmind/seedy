@@ -16,6 +16,8 @@ import { Link, navigate } from '../../lib/router';
 import { ItemCard, LibraryCard, SkeletonCards, WatchedCheck, Progress, Art, detailsPath, playPath } from '../../ui/cards';
 import { cardArt, primaryUrl } from '../../api/images';
 import { Icon, type IconName } from '../../ui/icons';
+import { MeduState } from '../../ui/medu';
+import { openSearch } from '../../ui/search/open';
 import { MenuItem, Popover, toast } from '../../ui/overlay';
 import { withEpisodeArt } from '../me/prefs';
 import './browse.css';
@@ -380,6 +382,18 @@ export function EmptyState({ icon = 'film', title, text, action }: { icon?: Icon
       </div>
       {action}
     </div>
+  );
+}
+
+/** A playlist with nothing in it yet (Empty pages board): Medu waves and points at search. */
+export function EmptyPlaylist() {
+  return (
+    <MeduState
+      mood="wave"
+      title={t('This playlist is empty')}
+      text={t('Add songs, episodes or movies from their More menu, or drag them in here.')}
+      actions={<button type="button" class="btn btn-primary medu-actions-btn" onClick={openSearch}><Icon name="search" size={18} />{t('Find something to add')}</button>}
+    />
   );
 }
 

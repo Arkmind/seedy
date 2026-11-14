@@ -7,6 +7,13 @@ import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextAlign
+import io.github.arkmind.seedy.tv.parts.TvBigButton
+import io.github.arkmind.seedy.ui.components.Medu
+import io.github.arkmind.seedy.ui.components.MeduMood
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -152,30 +160,39 @@ private val Keys = "abcdefghijklmnopqrstuvwxyz0123456789".toList()
  */
 @Composable
 fun TvSearchScreen(state: SearchViewModel.State, actions: TvSearchActions, firstKey: FocusRequester = remember { FocusRequester() }, focusKey: Char = 'a') {
+    // Nothing found: Medu says so; "Request it on Seerr" swaps in Seerr's titles.
+    var seerrList by remember(state.query) { mutableStateOf(false) }
+    val firstPoster = remember { FocusRequester() }
+    val r = state.results?.takeIf { !state.idle }
+    val nothing = r != null && r.isEmpty && !seerrList
+    // Medu's buttons sit level with the keyboard's lower rows: Right from the keyboard's edge goes straight to them.
+    val firstButton = remember { FocusRequester() }
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
-        Keyboard(state.text, actions, firstKey, focusKey, Modifier.padding(start = RailInset, top = 96.bp).width(520.bp))
-        Column(
-            Modifier.padding(start = 780.bp, end = 96.bp, top = 96.bp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 96.bp),
-            verticalArrangement = Arrangement.spacedBy(22.bp),
-        ) {
-            val r = state.results?.takeIf { !state.idle }
-            when {
-                state.idle -> Idle(state, actions)
-                state.error -> SText(t("Search didn't work"), size = 22.bsp, weight = 700, color = SeedyColors.Text2)
-                r == null -> SText(t("Searching…"), size = 22.bsp, weight = 700, color = SeedyColors.Text2)
-                r.isEmpty -> {
-                    SText(t("Nothing on the server for “{q}”", "q" to state.query), size = 22.bsp, weight = 700, color = SeedyColors.Text2)
-                    Seerr(state, actions)
+        Keyboard(state.text, actions, firstKey, focusKey, Modifier.padding(start = RailInset, top = 96.bp).width(520.bp), rightOut = firstButton.takeIf { nothing })
+        if (nothing) {
+            NothingFound(state, actions, onSeerr = { seerrList = true }, first = firstButton)
+        } else {
+            Column(
+                Modifier.padding(start = 780.bp, end = 96.bp, top = 96.bp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 96.bp),
+                verticalArrangement = Arrangement.spacedBy(22.bp),
+            ) {
+                when {
+                    state.idle -> Idle(state, actions)
+                    state.error -> SText(t("Search didn't work"), size = 22.bsp, weight = 700, color = SeedyColors.Text2)
+                    r == null -> SText(t("Searching…"), size = 22.bsp, weight = 700, color = SeedyColors.Text2)
+                    r.isEmpty -> Seerr(state, actions, firstPoster)
+                    else -> Results(state, actions)
                 }
-                else -> Results(state, actions)
             }
         }
     }
+    LaunchedEffect(seerrList, state.seerr?.items?.size) { if (seerrList) firstPoster.focusSoon() }
     LaunchedEffect(Unit) { firstKey.focusSoon() }
 }
 
 @Composable
-private fun Keyboard(text: String, actions: TvSearchActions, firstKey: FocusRequester, focusKey: Char, modifier: Modifier) {
+private fun Keyboard(text: String, actions: TvSearchActions, firstKey: FocusRequester, focusKey: Char, modifier: Modifier, rightOut: FocusRequester? = null) {
+    val edge = if (rightOut != null) Modifier.focusProperties { right = rightOut } else Modifier
     val accent = LocalAccent.current
     Column(modifier, verticalArrangement = Arrangement.spacedBy(18.bp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.bp)) {
@@ -201,13 +218,16 @@ private fun Keyboard(text: String, actions: TvSearchActions, firstKey: FocusRequ
         Column(Modifier.padding(top = 8.bp), verticalArrangement = Arrangement.spacedBy(10.bp)) {
             for (row in Keys.chunked(6)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.bp)) {
-                    for (c in row) Key(c.toString(), 76.bp, 24.bsp, { actions.onText(text + c) }, if (c == focusKey) Modifier.focusRequester(firstKey) else Modifier)
+                    for (c in row) {
+                        val base = if (c == focusKey) Modifier.focusRequester(firstKey) else Modifier
+                        Key(c.toString(), 76.bp, 24.bsp, { actions.onText(text + c) }, if (c == row.last()) base.then(edge) else base)
+                    }
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.bp)) {
                 Key(t("Space"), 162.bp, 19.bsp, { if (text.isNotEmpty() && !text.endsWith(" ")) actions.onText("$text ") })
                 Key(t("Delete"), 162.bp, 19.bsp, { actions.onText(text.dropLast(1)) })
-                Key(t("Clear"), 162.bp, 19.bsp, { actions.onText("") })
+                Key(t("Clear"), 162.bp, 19.bsp, { actions.onText("") }, edge)
             }
         }
     }
@@ -367,9 +387,36 @@ private fun SmallCard(hit: Hit, actions: TvSearchActions) {
     }
 }
 
+/**
+ * Board "Android TV · Search, nothing found": Medu, lost, sweeps the empty results with a torch; ask Seerr for it or
+ * clear the search.
+ */
+@Composable
+private fun NothingFound(state: SearchViewModel.State, actions: TvSearchActions, onSeerr: () -> Unit, first: FocusRequester) {
+    Box(Modifier.fillMaxSize().padding(start = 780.bp, end = 96.bp, top = 96.bp, bottom = 96.bp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Medu(MeduMood.Search, 250.bp, height = 330.bp)
+            SText(
+                t("Not on Seedy yet"), Modifier.padding(top = 14.bp),
+                size = 54.bsp, weight = 900, lineHeight = 1.08f, tracking = -.015f, color = SeedyColors.White, align = TextAlign.Center,
+            )
+            SText(
+                if (state.seerrOn) t("Medu searched every library for “{q}”. Want to ask for it?", "q" to state.query)
+                else t("Medu searched every library for “{q}”. Check the spelling, or try a shorter part of the title.", "q" to state.query),
+                Modifier.padding(top = 14.bp).widthIn(max = 760.bp),
+                size = 26.bsp, lineHeight = 1.55f, color = Color(0xFFB4B4B4), align = TextAlign.Center,
+            )
+            Row(Modifier.padding(top = 36.bp), horizontalArrangement = Arrangement.spacedBy(20.bp)) {
+                if (state.seerrOn) TvBigButton(t("Request it on Seerr"), { if (state.seerr == null) actions.onSeerr(); onSeerr() }, Modifier.focusRequester(first), icon = AppIcons.Requests, iconSize = 28.bp, primary = true)
+                TvBigButton(t("Clear search"), { actions.onText("") }, if (state.seerrOn) Modifier else Modifier.focusRequester(first))
+            }
+        }
+    }
+}
+
 /** "Not here? Find it on Seerr", then Seerr's titles once asked (straight away when the library has nothing). */
 @Composable
-private fun Seerr(state: SearchViewModel.State, actions: TvSearchActions) {
+private fun Seerr(state: SearchViewModel.State, actions: TvSearchActions, firstPoster: FocusRequester? = null) {
     if (!state.seerrOn) return
     val s = state.seerr
     if (s == null) {
@@ -399,15 +446,18 @@ private fun Seerr(state: SearchViewModel.State, actions: TvSearchActions) {
             Modifier.fillMaxWidth().ringRoom(10.bp), contentPadding = PaddingValues(10.bp),
             horizontalArrangement = Arrangement.spacedBy(24.bp),
         ) {
-            items(s.items, key = { "${it.mediaType}:${it.tmdbId}" }) { item -> Poster(item) { actions.onSeerrTitle(item) } }
+            items(s.items, key = { "${it.mediaType}:${it.tmdbId}" }) { item ->
+                val first = firstPoster != null && item == s.items.first()
+                Poster(item, if (first) Modifier.focusRequester(firstPoster) else Modifier) { actions.onSeerrTitle(item) }
+            }
         }
     }
 }
 
 /** A Seerr title: the 2:3 poster with its type, the name and year. */
 @Composable
-private fun Poster(item: SeerrItem, onClick: () -> Unit) {
-    TvPressable(onClick, Modifier.width(196.bp)) { focused ->
+private fun Poster(item: SeerrItem, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    TvPressable(onClick, modifier.width(196.bp)) { focused ->
         Column(verticalArrangement = Arrangement.spacedBy(10.bp)) {
             Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).focusRing(focused, radius = 16.bp, gap = 4.bp, ring = 5.bp).clip(RoundedCornerShape(16.bp))) {
                 Artwork(tmdbImage(item.posterPath, "w342"), Modifier.matchParentSize())

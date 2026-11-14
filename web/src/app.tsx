@@ -1,7 +1,6 @@
 import type { ComponentType } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { boot, bootState, meStore } from './lib/app-state';
-import { BrandMark } from './ui/navbar/Header';
+import { bootState, meStore } from './lib/app-state';
 import { match, useLocation } from './lib/router';
 import { useStore } from './lib/store';
 import { ConfirmHost, ToastHost } from './ui/overlay';
@@ -17,6 +16,9 @@ import { SeerrDetails } from './screens/browse/SeerrDetails';
 import { ListScreen } from './screens/browse/Lists';
 import { SignIn } from './screens/SignIn';
 import { NotFound } from './screens/NotFound';
+import { Unreachable } from './screens/Unreachable';
+import { startReadyWatch } from './screens/requests/ready';
+import { MeduToastHost } from './ui/medu-toast';
 import { AdminGeneral } from './screens/admin/General';
 import { AdminHome } from './screens/admin/HomeScreen';
 import { AdminRequests } from './screens/admin/Requests';
@@ -54,7 +56,6 @@ import { LiveOnNow } from './screens/livetv/OnNow';
 import { LiveGuide } from './screens/livetv/Guide';
 import { LiveChannels } from './screens/livetv/Channels';
 import { LiveRecordings } from './screens/livetv/Recordings';
-import { t } from './lib/i18n';
 
 /* The player pulls in hls.js, so it loads on first play. */
 function LazyPlayer(props: { id: string }) {
@@ -146,20 +147,11 @@ export function App() {
   const state = useStore(bootState);
   const loc = useLocation();
   const me = useStore(meStore);
+  useEffect(() => { if (state === 'ready') startReadyWatch(); }, [state]);
 
   if (state === 'booting') return <div class="boot"><div class="spinner" /></div>;
   if (state === 'signedOut') return <><SignIn /><ToastHost /></>;
-  if (state === 'offline')
-    return (
-      <div class="boot">
-        <div class="error-box" style={{ maxWidth: '440px', alignItems: 'center', textAlign: 'center' }}>
-          <BrandMark size={48} />
-          <h2>{t("Can't reach the server")}</h2>
-          <p>{t("It may be restarting after an update. You're still signed in.")}</p>
-          <button type="button" class="btn btn-primary is-sm" onClick={() => boot()}>{t('Try again')}</button>
-        </div>
-      </div>
-    );
+  if (state === 'offline') return <><Unreachable /><ToastHost /></>;
 
   let view: preact.JSX.Element = <NotFound />;
   for (const r of ROUTES) {
@@ -174,6 +166,7 @@ export function App() {
       <div key={loc.path}>{view}</div>
       <ConfirmHost />
       <ToastHost />
+      <MeduToastHost />
       <PersonalHost />
       <ManageHost />
       <AudioHost />

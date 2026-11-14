@@ -113,8 +113,10 @@ fun ProfilePage(state: SettingsState, actions: SettingsActions, nav: SettingsNav
                     PickRow(t("Seerr account"), help, (account?.name ?: state.name).lowercase(), onClick = nav.requests)
                 }
                 row {
+                    val ask = io.github.arkmind.seedy.mobile.notify.rememberNotificationAsk()
                     SwitchRow(t("Tell me when a request is ready"), t("A notification on this phone when something you asked for arrives"), state.device.notifyRequests, device = true) { on ->
                         actions.setDevice { it.copy(notifyRequests = on) }
+                        if (on) ask(true)
                     }
                 }
             }

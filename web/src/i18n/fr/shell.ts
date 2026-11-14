@@ -52,7 +52,18 @@ const fr: Record<string, string> = {
   "Couldn't save. Check the server log.": 'Enregistrement impossible. Consultez le journal du serveur.',
   'All changes saved': 'Toutes les modifications sont enregistrées',
   'Scroll left': 'Défiler vers la gauche',
-  'Scroll right': 'Défiler vers la droite'
+  'Scroll right': 'Défiler vers la droite',
+
+  // Medu
+  "Who’s watching?": "Qui regarde ?",
+  "Add profile": "Ajouter un profil",
+  "Can’t reach your server": "Impossible de joindre votre serveur",
+  "Medu dropped the cable. Check that {server} is switched on and connected to the network, then try again.": "Medu a fait tomber le câble. Vérifiez que {server} est allumé et connecté au réseau, puis réessayez.",
+  "your server": "votre serveur",
+  "Last seen {when}": "Vu {when}",
+  "Trying again in {n} s": "Nouvel essai dans {n} s",
+  "Trying again…": "Nouvel essai…",
+  "Dismiss": "Fermer"
 };
 
 export default fr;

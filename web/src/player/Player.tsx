@@ -20,6 +20,7 @@ import { back, navigate, useLocation } from '../lib/router';
 import { safeLocal, saveLocal, useStore } from '../lib/store';
 import { t as tr } from '../lib/i18n';
 import { Icon, SeekIcon } from '../ui/icons';
+import { Medu } from '../ui/medu';
 import { toast } from '../ui/overlay';
 import { parseAss } from './ass';
 import { closestTrack, lastTracks, trackSig } from './carry';
@@ -161,7 +162,7 @@ export function Player({ id }: { id: string }) {
       : { title: tr('Nothing to play here'), text: tr('Pick an episode or a movie to start watching.') };
     return (
       <div class="pl-root">
-        <ErrorPanel {...copy} onRetry={() => setAttempt((a) => a + 1)} onBack={() => back('/')} />
+        <ErrorPanel {...copy} onRetry={() => setAttempt((a) => a + 1)} onBack={() => back('/')} backLabel={tr('Back')} />
       </div>
     );
   }
@@ -201,19 +202,34 @@ function BackButton({ onClick, label }: { onClick: () => void; label?: string })
   );
 }
 
-function ErrorPanel({ title, text, onRetry, onBack }: { title: string; text: string; onRetry: () => void; onBack: () => void }) {
+/* Playback failed board: Medu has dropped the cable, a plain sentence, the ways out, and what went wrong for whoever
+   wants to know. Also used when the title itself can't be loaded. */
+interface Fatal { title: string; text: string; details?: string[] }
+
+function ErrorPanel({ title, text, details, onRetry, onBack, backLabel, onOtherVersion }: Fatal & {
+  onRetry: () => void; onBack: () => void; backLabel?: string; onOtherVersion?: () => void;
+}) {
+  const retryRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => { retryRef.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions); }, []);
   return (
-    <div class="pl-error" role="alert">
-      <div class="empty pl-error-box">
-        <span class="empty-icon"><Icon name="alert" size={26} /></span>
-        <div class="empty-body">
-          <span class="empty-title">{title}</span>
-          <span class="empty-text">{text}</span>
+    <div class="pl-error">
+      <div class="pl-error-box" role="alertdialog" aria-modal="true" aria-labelledby="pl-error-h" aria-describedby="pl-error-text">
+        <div class="pl-error-main">
+          <Medu mood="oops" size={150} />
+          <h2 id="pl-error-h" class="pl-error-title">{title}</h2>
+          <p id="pl-error-text" class="pl-error-text">{text}</p>
           <div class="pl-error-actions">
-            <button type="button" class="btn btn-primary is-sm" onClick={onRetry}><Icon name="refresh" size={18} />{tr('Try again')}</button>
-            <button type="button" class="btn btn-ghost is-light" onClick={onBack}>{tr('Back')}</button>
+            <button ref={retryRef} type="button" class="btn btn-primary medu-actions-btn" onClick={onRetry}><Icon name="refresh" size={18} />{tr('Try again')}</button>
+            {onOtherVersion && <button type="button" class="btn btn-secondary medu-actions-btn" onClick={onOtherVersion}>{tr('Play another version')}</button>}
+            <button type="button" class="btn btn-secondary medu-actions-btn" onClick={onBack}>{backLabel ?? tr('Close')}</button>
           </div>
         </div>
+        {details && details.length > 0 && (
+          <details class="pl-error-details">
+            <summary>{tr('Technical details')}</summary>
+            <p>{details.map((line, i) => <>{i > 0 && <br />}{line}</>)}</p>
+          </details>
+        )}
       </div>
     </div>
   );
@@ -418,7 +434,11 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const lastPos = useRef(startSeconds);
   const [attempt, setAttempt] = useState(0);
   const [stream, setStream] = useState<ActiveStream | null>(null);
-  const [fatal, setFatal] = useState<{ title: string; text: string } | null>(null);
+  const [fatal, setFatal] = useState<Fatal | null>(null);
+  /* How many times the server was asked to convert further before giving up ("Medu tried twice"). */
+  const tries = useRef(0);
+  /* "Play another version": the version the next start uses. */
+  const nextSource = useRef<MediaSource | null>(null);
   const [busy, setBusy] = useState(false);
   /* Whether playback should be running (the element pauses by itself on errors and stream switches). */
   const wantPlay = useRef(true);
@@ -528,12 +548,13 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     /* A stream the browser said it could play but couldn't: the server converts it, a step further each time. */
     const fallback = code === 'media' ? nextAttempt(s.opts, st.method, part) : null;
     if (fallback) {
+      tries.current++;
       s.change(fallback).then((ns) => { if (ns && wantPlay.current && !inGroup()) s.play(); }, fail);
       return;
     }
     if (skipBrokenPreroll()) return;
     s.stop({ failed: true });
-    setFatal(errorCopy(code));
+    setFatal(failure(code, st, part, me));
   };
   const onFatalRef = useRef(onFatal);
   onFatalRef.current = onFatal;
@@ -550,6 +571,13 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     const start = (loc: NetworkLocation) => {
       if (cancelled) return;
       const d = deviceStore.get();
+      const other = nextSource.current;
+      nextSource.current = null;
+      if (other) {
+        // Another version starts over: its own default tracks, nothing converted yet.
+        const { forceTranscode: _f, convertVideo: _v, convertAudio: _a, ...rest } = optsRef.current;
+        optsRef.current = { ...rest, mediaSourceId: other.Id, audioIndex: other.DefaultAudioStreamIndex ?? undefined, subtitleIndex: other.DefaultSubtitleStreamIndex ?? -1 };
+      }
       const opts: StreamOptions = {
         ...optsRef.current,
         startSeconds: lastPos.current,
@@ -606,10 +634,37 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   }
 
   const retry = () => {
+    tries.current = 0;
     setFatal(null);
     setStream(null);
     setAttempt((a) => a + 1);
   };
+  const failedSourceId = stream?.source.Id ?? optsRef.current.mediaSourceId ?? ms0?.Id;
+  const otherVersion = (item.MediaSources?.length ?? 0) > 1 ? item.MediaSources!.find((x) => x.Id !== failedSourceId) : undefined;
+  const playOtherVersion = otherVersion && (() => { nextSource.current = otherVersion; retry(); });
+
+  /* The board's sentence and technical lines for a stream that failed for good. */
+  function failure(code: string, st: ActiveStream, part?: FailedPart, me?: MediaError | null): Fatal {
+    const copy = errorCopy(code);
+    const name = [item.Type === 'Episode' ? item.SeriesName : '', item.Type === 'Episode' ? episodeTag(item) : '', item.Name].filter(Boolean).join(' · ');
+    const converting = code === 'media' || code === 'NoCompatibleStream';
+    const v = videoStream(st.source);
+    const res = resLabel(v?.Width, v?.Height);
+    const target = resLabel(undefined, Math.min(v?.Height ?? 0, 1080)) || res;
+    return {
+      title: converting ? tr('This one won’t play') : copy.title,
+      text: converting
+        ? (tries.current >= 2 ? tr('The server couldn’t convert {name} for this browser. Medu tried twice.', { name })
+          : tr('The server couldn’t convert {name} for this browser.', { name }))
+        : copy.text,
+      details: [
+        [st.kind === 'Transcoding' ? tr('Transcode failed') : st.kind === 'Direct stream' ? tr('Direct stream failed') : tr('Direct play failed'),
+          me?.message || (part ? tr('the browser couldn’t decode the {part}', { part: part === 'audio' ? tr('sound') : part === 'video' ? tr('picture') : tr('file') }) : code)].join(' · '),
+        [v ? [v.Codec?.toUpperCase(), v.Profile].filter(Boolean).join(' ') + (st.kind === 'Transcoding' ? ' → H.264' : '') : '',
+          res ? (st.kind === 'Transcoding' && target !== res ? `${res} → ${target}` : res) : '', new Date().toTimeString().slice(0, 8)].filter(Boolean).join(' · ')
+      ]
+    };
+  }
 
   /* ── Media element → state, reports, SyncPlay readiness ── */
   const endedRef = useRef<() => void>(() => undefined);
@@ -1564,7 +1619,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
         />
       )}
 
-      {fatal && <ErrorPanel {...fatal} onRetry={retry} onBack={exit} />}
+      {fatal && <ErrorPanel {...fatal} onRetry={retry} onBack={exit} onOtherVersion={playOtherVersion} />}
       <span class="sr-only" aria-live="polite">{m.paused && stream ? tr('Paused') : ''}</span>
       {!stream && !fatal && <span class="sr-only">{tr('Loading {title}', { title: item.Name ?? '' })}</span>}
     </div>

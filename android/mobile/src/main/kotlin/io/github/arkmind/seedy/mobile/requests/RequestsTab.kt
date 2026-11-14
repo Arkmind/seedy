@@ -78,6 +78,9 @@ class RequestsActions(
 @Composable
 fun RequestsTab() {
     val session = currentSession()
+    // Opening the requests is when "Tell me when a request is ready" may ask Android for notifications.
+    val ask = io.github.arkmind.seedy.mobile.notify.rememberNotificationAsk()
+    androidx.compose.runtime.LaunchedEffect(Unit) { ask(false) }
     val me by session.seedyFlow.collectAsStateWithLifecycle()
     val media = me?.media
     val services = buildList {

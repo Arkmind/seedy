@@ -148,6 +148,14 @@ object BrowseSamples {
         seerrOn = true,
     )
 
+    /** Board "Android · Search, nothing found". */
+    val searchMoonfall = SearchViewModel.State(
+        text = "moonfall", query = "moonfall",
+        results = SearchResults(q = "moonfall", best = null, titles = emptyList(), episodes = emptyList(), people = emptyList()),
+        seerrOn = true,
+        seerr = SearchViewModel.Seerr(loading = false, items = listOf(SeerrItem(2, "movie", "Moonfall", "2022"), SeerrItem(78, "tv", "Moonfall Express", "2025"))),
+    )
+
     val searchNothing = SearchViewModel.State(
         text = "Harrowgate", query = "Harrowgate",
         results = SearchResults(q = "Harrowgate", best = null, titles = emptyList(), episodes = emptyList(), people = emptyList()),

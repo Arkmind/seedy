@@ -16,6 +16,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
+import android.text.format.DateFormat
+import java.time.LocalDateTime
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -84,6 +87,15 @@ fun TvPlayerRoute(id: UUID) {
         activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose { activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
+    // Board "Android TV · Screensaver": paused and untouched a while; any key brings the player back.
+    var saver by remember { mutableStateOf(false) }
+    LaunchedEffect(state.playing, touched, state.problem, state.item?.id) {
+        saver = false
+        if (!state.playing && state.item != null && state.problem == null && !state.live) {
+            delay(ScreensaverAfterMs)
+            saver = true
+        }
+    }
     // The controls fade after 5 s of playing untouched.
     LaunchedEffect(controls, state.playing, tool, touched) {
         if (controls && state.playing && tool == null) {
@@ -111,6 +123,7 @@ fun TvPlayerRoute(id: UUID) {
 
     BackHandler {
         when {
+            saver -> touched++
             state.problem != null -> nav.back()
             // A settings page goes back to the settings list; Chapters opened from its own button just closes.
             tool == TvTool.Settings && page != SettingsPage.Main -> page = SettingsPage.Main
@@ -131,6 +144,11 @@ fun TvPlayerRoute(id: UUID) {
     Box(
         Modifier.fillMaxSize()
             .onPreviewKeyEvent { e ->
+                if (saver) {
+                    // The key only wakes the player up (its key-up is swallowed too).
+                    if (e.type == KeyEventType.KeyDown) touched++
+                    return@onPreviewKeyEvent true
+                }
                 if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 touched++
                 when (e.key) {
@@ -211,6 +229,15 @@ fun TvPlayerRoute(id: UUID) {
             },
         )
         state.problem?.let { Problem(it, onBack = { nav.back() }) }
+        if (saver) state.item?.let { item ->
+            val now by produceState(LocalDateTime.now()) {
+                while (true) {
+                    delay(10_000)
+                    value = LocalDateTime.now()
+                }
+            }
+            TvScreensaver(item, state.positionMs, state.durationMs, now, DateFormat.is24HourFormat(context))
+        }
     }
 }
 

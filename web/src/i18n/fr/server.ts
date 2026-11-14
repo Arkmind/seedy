@@ -1399,6 +1399,22 @@ const fr: Record<string, string> = {
   "Folders on the same disk share its space. A warning shows at the top of this page when a disk passes 85%.": "Les dossiers d’un même disque partagent son espace. Une alerte s’affiche en haut de cette page quand un disque dépasse 85 %.",
   "{n} disk": "{n} disque",
   "{n} disks": "{n} disques",
+
+  // Medu
+  "All quiet": "Tout est calme",
+  "Nobody is watching right now. Medu is napping until someone presses play.": "Personne ne regarde en ce moment. Medu fait la sieste jusqu’à ce que quelqu’un lance la lecture.",
+  "First scan finished": "Première analyse terminée",
+  "Medu found {list} in {time}.": "Medu a trouvé {list} en {time}.",
+  "Medu went through every library in {time}.": "Medu a parcouru toutes les bibliothèques en {time}.",
+  "See what’s new": "Voir les nouveautés",
+  "Invite people": "Inviter du monde",
+  "Backup finished": "Sauvegarde terminée",
+  "settings, users and metadata": "paramètres, utilisateurs et métadonnées",
+  "{n} failed": "{n} en échec",
+  "It stopped at {time}: {error}. Check the log, then run it again.": "Elle s’est arrêtée à {time} : {error}. Consultez le journal, puis relancez-la.",
+  "It stopped at {time}. Check the log, then run it again.": "Elle s’est arrêtée à {time}. Consultez le journal, puis relancez-la.",
+  "Run again": "Relancer",
+  "View log": "Voir le journal"
 };
 
 export default fr;

@@ -209,7 +209,20 @@ const fr: Record<string, string> = {
   'Print (serif)': 'Imprimé (serif)',
   'Typewriter': 'Machine à écrire',
   'Console': 'Console',
-  'Small capitals': 'Petites capitales'
+  'Small capitals': 'Petites capitales',
+
+  // Medu
+  "This one won’t play": "Celui-ci ne veut pas se lancer",
+  "The server couldn’t convert {name} for this browser.": "Le serveur n’a pas pu convertir {name} pour ce navigateur.",
+  "The server couldn’t convert {name} for this browser. Medu tried twice.": "Le serveur n’a pas pu convertir {name} pour ce navigateur. Medu a essayé deux fois.",
+  "Play another version": "Lire une autre version",
+  "Technical details": "Détails techniques",
+  "Transcode failed": "Échec du transcodage",
+  "Direct stream failed": "Échec du flux direct",
+  "Direct play failed": "Échec de la lecture directe",
+  "the browser couldn’t decode the {part}": "le navigateur n’a pas pu décoder {part}",
+  "picture": "l’image",
+  "sound": "le son"
 };
 
 export default fr;

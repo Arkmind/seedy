@@ -319,3 +319,12 @@ a.adv-notice:hover .adv-notice-link { color: var(--seedy-accent); }
   .adv-add-trigger .seg { flex-wrap: nowrap; align-self: stretch; }
   .adv-add-trigger .seg-btn { flex: 1 1 auto; padding: 0 8px; }
 }
+
+/* Scheduled tasks board: the latest failure, with Medu. */
+.adv-tfail { display: flex; align-items: center; gap: 16px; padding: 8px 20px 8px 6px; border-radius: var(--r-panel); background: #1a1414; box-shadow: inset 0 0 0 1px rgba(255, 138, 138, 0.28); }
+.adv-tfail-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 10px 0; }
+.adv-tfail-title { margin: 0; font-size: 16px; font-weight: 800; color: #ffffff; }
+.adv-tfail-text { font-size: 14px; line-height: 1.5; color: var(--seedy-text-hero); overflow-wrap: anywhere; }
+.adv-tfail-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.adv-tfail-actions .medu-actions-btn.btn { height: 40px; padding: 0 16px; font-size: 14px; }
+@media (max-width: 560px) { .adv-tfail .medu { width: 64px; height: 84px; } }

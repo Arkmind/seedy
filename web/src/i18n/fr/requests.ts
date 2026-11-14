@@ -94,7 +94,18 @@ const fr: Record<string, string> = {
   'Requests from everyone on the server show up here.': 'Les demandes de tout le monde sur le serveur apparaissent ici.',
   'No requests here': 'Aucune demande ici',
   'Nothing matches “{filter}”. Try All.': 'Rien ne correspond à « {filter} ». Essayez Tout.',
-  'Show all': 'Tout afficher'
+  'Show all': 'Tout afficher',
+
+  // Medu
+  "Nothing requested yet": "Rien de demandé pour l’instant",
+  "Ask for a movie, show, album or book and it waits here with its progress until it’s ready to watch, listen to or read.": "Demandez un film, une série, un album ou un livre : il attend ici avec sa progression jusqu’à ce qu’il soit prêt à être regardé, écouté ou lu.",
+  "Discover something": "Découvrir quelque chose",
+  "Search Seerr": "Rechercher dans Seerr",
+  "Ready to watch": "Prêt à regarder",
+  "Play S{s} E1": "Lire S{s} É1",
+  "Your request was added to {library} just now.": "Votre demande vient d’être ajoutée à {library}.",
+  "Your request was added to {library} {when}.": "Votre demande a été ajoutée à {library} {when}.",
+  "Your request is on the server now.": "Votre demande est maintenant sur le serveur."
 };
 
 export default fr;

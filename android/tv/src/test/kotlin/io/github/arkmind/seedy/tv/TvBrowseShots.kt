@@ -92,6 +92,12 @@ class TvBrowseShots {
         TvLibraryScreen(TvBrowseSamples.moviesLibrary, TvLibraryActions(), initialFocus = 1)
     }
 
+    /** Board "Android TV · Search, nothing found". */
+    @Test
+    fun searchEmpty() = shot("TVSearchEmpty", TvPlace.Search) {
+        TvSearchScreen(TvBrowseSamples.searchMoonf, TvSearchActions(), focusKey = 'h')
+    }
+
     @Test
     fun search() = shot("TVSearch", TvPlace.Search) {
         TvSearchScreen(TvBrowseSamples.search, TvSearchActions(), focusKey = 'h')

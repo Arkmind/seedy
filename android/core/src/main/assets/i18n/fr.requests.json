@@ -16,5 +16,21 @@
   "Search Seerr": "Rechercher sur Seerr",
   "OK to open": "OK pour ouvrir",
   "OK for details": "OK pour les détails",
-  "{n} searching": "{n} en recherche"
+  "{n} searching": "{n} en recherche",
+  "Request approved": "Demande approuvée",
+  "{title} · {what}. {service} is looking for it now.": "{title} · {what}. {service} le cherche en ce moment.",
+  "{title}. {service} is looking for it now.": "{title}. {service} le cherche en ce moment.",
+  "{title} is ready": "{title} est arrivé",
+  "{title} is ready to watch": "{title} est prêt à regarder",
+  "The movie you asked for is on the server.": "Le film que vous avez demandé est sur le serveur.",
+  "Season {n}, which you asked for, is in {library} now.": "La saison {n}, que vous avez demandée, est maintenant dans {library}.",
+  "{seasons}, which you asked for, are in {library} now.": "{seasons}, que vous avez demandées, sont maintenant dans {library}.",
+  "The show you asked for is on the server.": "La série que vous avez demandée est sur le serveur.",
+  "Play {episode}": "Lire {episode}",
+  "See request": "Voir la demande",
+  "whole discography": "toute la discographie",
+  "new releases": "nouvelles sorties",
+  "The music you asked for is on the server.": "La musique que vous avez demandée est sur le serveur.",
+  "The book you asked for is on the server.": "Le livre que vous avez demandé est sur le serveur.",
+  "When something you asked for is approved or arrives": "Quand une de vos demandes est approuvée ou arrive"
 }

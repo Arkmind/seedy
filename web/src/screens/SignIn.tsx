@@ -4,10 +4,12 @@ import { authenticateByName, authenticateWithQuickConnect, forgotPassword, forgo
 import { userImageUrl } from '../api/images';
 import { signInBackdrops } from '../api/seedy';
 import type { AuthResult, User } from '../api/types';
-import { brandingStore, completeSignIn } from '../lib/app-state';
+import { brandingStore, completeSignIn, loadServerName, serverNameStore } from '../lib/app-state';
 import { useStore } from '../lib/store';
 import { BrandMark } from '../ui/navbar/Header';
 import { Icon } from '../ui/icons';
+import { Medu } from '../ui/medu';
+import { Sea, type Bubble, type Flake, type Ray } from '../ui/sea';
 import { t } from '../lib/i18n';
 import './sign-in.css';
 
@@ -15,7 +17,12 @@ import './sign-in.css';
    server lists on its sign-in screen (Jellyfin's "Hide this user from login screens" leaves one out); picking one asks
    for the password. Jellyfin 12 reports every user as having one, so the step always shows and an empty password
    is fine for users without one (never guessed: failed tries count toward Jellyfin's lockout). A server that does
-   report HasPassword false signs that user straight in. "Other" and Quick Connect cover everyone else. */
+   report HasPassword false signs that user straight in. "Add profile" (a name and password) and Quick Connect cover
+   everyone else. Without backdrops the page is the deep sea of the Who's watching board, with Medu waving hello. */
+
+const RAYS: Ray[] = [[88, 175, -5.7], [718, 114, -7.1], [1349, 152, -4.5]];
+const SNOW: Flake[] = [[534, 421, 1.5, 0.16, 17.3, -13.7], [60, 718, 1.9, 0.30, 17.3, -15.1], [473, 358, 1.6, 0.17, 22.6, -21.5], [1177, 89, 1.8, 0.34, 19.2, -8.7], [697, 134, 2.1, 0.15, 21.7, -18.8], [300, 697, 2.8, 0.34, 17.3, -13.0], [1050, 88, 2.5, 0.24, 24.7, -20.4], [1278, 294, 3.1, 0.22, 16.8, -7.6], [556, 19, 3.2, 0.16, 19.4, -13.9], [707, 396, 2.3, 0.30, 27.9, -6.2], [896, 130, 2.4, 0.18, 22.5, -7.8], [860, 220, 2.1, 0.16, 27.0, -1.8], [539, 492, 2.8, 0.29, 25.4, -22.8], [1424, 692, 2.2, 0.27, 27.4, -24.2], [355, 630, 2.1, 0.18, 20.9, -1.4], [695, 602, 2.8, 0.15, 25.3, -6.5], [245, 50, 2.2, 0.21, 18.1, -16.2], [689, 181, 2.8, 0.35, 27.8, -14.6], [305, 603, 1.5, 0.31, 24.2, -21.3], [836, 611, 2.2, 0.21, 22.4, -12.0], [14, 493, 2.8, 0.35, 17.9, -0.4], [1226, 420, 2.6, 0.20, 22.3, -9.0]];
+const BUBBLES: Bubble[] = [[245, 47, 12, 11.6, -1.1], [1090, 45, 6, 10.6, -1.3], [770, 65, 8, 8.5, -4.2], [307, 108, 7, 10.5, -2.1]];
 
 type Step = { kind: 'pick' } | { kind: 'password'; user: User } | { kind: 'manual' } | { kind: 'quick' } | { kind: 'forgot'; name: string; back: Step };
 
@@ -67,12 +74,13 @@ export function SignIn() {
     await completeSignIn(auth);
   };
 
+  const sea = brand.signInBackground !== 'backdrops';
   return (
-    <div class="signin">
-      <Backdrops plain={brand.signInBackground !== 'backdrops'} />
+    <div class={'signin' + (sea ? ' sea-scene' : '') + (step?.kind === 'pick' ? ' is-pick' : '')}>
+      {sea ? <Sea rays={RAYS} snow={SNOW} bubbles={BUBBLES} fish={[]} rise={460} rayHeight={1100} /> : <Backdrops plain={false} />}
       <div class="signin-body">
         <div class="signin-brand">
-          <BrandMark size={64} />
+          <BrandMark size={step?.kind === 'pick' ? 36 : 64} />
           <span class="signin-brand-name">{brand.name || 'Seedy'}</span>
         </div>
 
@@ -108,6 +116,8 @@ export function SignIn() {
         {step?.kind === 'quick' && (
           <QuickConnectStep onBack={() => setStep(users.length ? { kind: 'pick' } : { kind: 'manual' })} backLabel={users.length ? t("Who's watching?") : t('Username and password')} onDone={finish} />
         )}
+
+        {step?.kind === 'pick' && <ServerLine />}
       </div>
       {disclaimer && <p class="signin-disclaimer">{disclaimer}</p>}
     </div>
@@ -123,11 +133,12 @@ function BackLink({ onClick, label }: { onClick: () => void; label: string }) {
   );
 }
 
-function Face({ user }: { user: User }) {
-  const img = userImageUrl(user, 240);
+/* Profiles without a picture take the board's four colours in turn (light, blue, green, orange). */
+function Face({ user, colour = 0 }: { user: User; colour?: number }) {
+  const img = userImageUrl(user, 300);
   const [ok, setOk] = useState(true);
   return (
-    <span class="signin-face" aria-hidden="true">
+    <span class={'signin-face ' + (img && ok ? 'has-img' : `is-c${colour % 4}`)} aria-hidden="true">
       {img && ok ? <img src={img} alt="" onError={() => setOk(false)} /> : user.Name.trim().charAt(0).toUpperCase()}
     </span>
   );
@@ -142,6 +153,9 @@ function PickStep({ users, onDone, onPassword, onOther, quickConnect }: {
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
+  /* The first profile starts focused, so Enter (or a remote's OK) picks it. */
+  const first = useRef<HTMLButtonElement>(null);
+  useEffect(() => { first.current?.focus({ preventScroll: true }); }, []);
   const pick = async (u: User) => {
     if (u.HasPassword !== false) { onPassword(u); return; }
     setBusy(u.Id);
@@ -156,32 +170,47 @@ function PickStep({ users, onDone, onPassword, onOther, quickConnect }: {
     }
   };
   return (
-    <section class="signin-step" aria-labelledby="signin-h">
-      <h1 id="signin-h" class="signin-title">{t("Who's watching?")}</h1>
+    <section class="signin-step is-pick" aria-labelledby="signin-h">
+      <div class="signin-hello">
+        <Medu mood="wave" size={120} class="signin-medu" />
+        <h1 id="signin-h" class="signin-title">{t('Who’s watching?')}</h1>
+      </div>
       <ul class="signin-grid">
-        {users.map((u) => (
+        {users.map((u, i) => (
           <li key={u.Id}>
-            <button type="button" class="signin-tile" disabled={busy !== null} aria-busy={busy === u.Id ? 'true' : undefined} onClick={() => pick(u)}>
-              <Face user={u} />
+            <button ref={i === 0 ? first : undefined} type="button" class="signin-tile" disabled={busy !== null} aria-busy={busy === u.Id ? 'true' : undefined} onClick={() => pick(u)}>
+              <Face user={u} colour={i} />
               <span class="signin-name">{u.Name}</span>
             </button>
           </li>
         ))}
         <li>
-          <button type="button" class="signin-tile" disabled={busy !== null} onClick={onOther}>
-            <span class="signin-face is-other" aria-hidden="true"><Icon name="plus" size={40} stroke={2.2} /></span>
-            <span class="signin-name">{t('Other')}</span>
+          <button type="button" class="signin-tile is-add" disabled={busy !== null} onClick={onOther}>
+            <span class="signin-face is-other" aria-hidden="true"><Icon name="plus" size={44} stroke={2.2} /></span>
+            <span class="signin-name">{t('Add profile')}</span>
           </button>
         </li>
       </ul>
       {error && <p class="form-error signin-error" role="alert"><Icon name="alert" size={16} />{error}</p>}
       {quickConnect && (
-        <button type="button" class="btn btn-ghost is-light signin-qc" onClick={quickConnect}>
+        <button type="button" class="btn btn-secondary medu-actions-btn signin-qc" onClick={quickConnect}>
           <Icon name="key" size={18} />
           {t('Use Quick Connect')}
         </button>
       )}
     </section>
+  );
+}
+
+/* "● Arky's server · 192.168.1.20": which server these profiles are on. */
+function ServerLine() {
+  const name = useStore(serverNameStore);
+  useEffect(() => { void loadServerName(); }, []);
+  return (
+    <span class="signin-server">
+      <span class="signin-server-dot" aria-hidden="true" />
+      {[name, new URL(SERVER_URL).hostname].filter(Boolean).join(' · ')}
+    </span>
   );
 }
 

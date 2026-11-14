@@ -6,15 +6,16 @@ import type { BaseItem } from '../../api/types';
 import { seerrDetails, type SeerrDetails } from '../../api/seedy';
 import { meStore } from '../../lib/app-state';
 import { episodeTag, fmtDate, plural, progressFraction, remainingSeconds, runtime, timeLeft, yearRange, dayOf } from '../../lib/format';
-import { Link, back, navigate, setQuery, useLocation } from '../../lib/router';
+import { back, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { manageChanged } from './manage/host';
+import { NotFound } from '../NotFound';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { MenuItem, toast } from '../../ui/overlay';
 import { playPath } from '../../ui/cards';
 import {
-  CardGrid, EmptyState, ErrorState, GridSkeleton, findView, playRandom, resolvePlayable, seasonsLabel, toggleFavorite, togglePlayed,
+  CardGrid, EmptyPlaylist, EmptyState, ErrorState, GridSkeleton, findView, playRandom, resolvePlayable, seasonsLabel, toggleFavorite, togglePlayed,
   useItemList, yearOf
 } from './parts';
 import {
@@ -63,13 +64,12 @@ export function Details({ id }: { id: string }) {
   if (!item) {
     if (loading) return <Shell><DetailsSkeleton /></Shell>;
     const missing = (error as { status?: number } | undefined)?.status === 404 || (error as { status?: number } | undefined)?.status === 400;
+    if (missing) return <NotFound title />;
     return (
       <div class="page">
         <Header active={null} />
         <main class="page-main">
-          {missing
-            ? <EmptyState icon="searchX" title={t('This title isn\'t here')} text={t('It may have been removed from the server, or it\'s outside what this profile can see.')} action={<Link to="/" class="btn btn-primary is-sm">{t('Back to home')}</Link>} />
-            : <ErrorState error={error} retry={reload} title={t('Couldn\'t load this title')} />}
+          <ErrorState error={error} retry={reload} title={t('Couldn\'t load this title')} />
         </main>
       </div>
     );
@@ -598,6 +598,7 @@ function CollectionPage({ item: initial }: { item: BaseItem }) {
           {kids.loading && !kids.data ? <GridSkeleton count={8} />
             : kids.error && !kids.data ? <ErrorState error={kids.error} retry={kids.reload} />
             : items.length ? <CardGrid items={items} onReplace={replace} />
+            : item.Type === 'Playlist' ? <EmptyPlaylist />
             : <EmptyState icon="folder" title={t('Nothing here yet')} text={t('Titles added to this collection will show up here.')} />}
         </section>
       </main>

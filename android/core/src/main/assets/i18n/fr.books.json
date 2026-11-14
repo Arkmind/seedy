@@ -13,5 +13,11 @@
   "No bookmarks yet": "Pas encore de signets",
   "Downloading {name}": "Téléchargement de {name}",
   "Couldn’t download {name}": "Impossible de télécharger {name}",
-  "Start over": "Recommencer"
+  "Start over": "Recommencer",
+  "Medu fell asleep too": "Medu s’est endormi aussi",
+  "The sleep timer paused {title} at {time}, at the end of chapter {n}.": "Le minuteur de veille a mis {title} en pause à {time}, à la fin du chapitre {n}.",
+  "The sleep timer paused {title} at {time}.": "Le minuteur de veille a mis {title} en pause à {time}.",
+  "Resume from {time}": "Reprendre à {time}",
+  "Add 15 minutes": "Ajouter 15 minutes",
+  "Turn off the sleep timer": "Désactiver le minuteur de veille"
 }

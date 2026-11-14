@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -41,6 +44,8 @@ class HomeViewModel(private val session: UserSession) : ViewModel() {
         val featured: List<FeaturedEntry>? = null,
         val rows: List<Row> = emptyList(),
         val libraries: List<BaseItemDto> = emptyList(),
+        /** Pull to refresh is fetching everything again (the rows on screen stay until it's done). */
+        val refreshing: Boolean = false,
     ) {
         /** Rows with titles to show (still-loading rows included, empty ones dropped). */
         val visibleRows: List<Row>
@@ -69,6 +74,28 @@ class HomeViewModel(private val session: UserSession) : ViewModel() {
         }
     }
 
+    /** Pull to refresh: the rows and the hero again, swapped in all at once when they're in. */
+    fun refresh() {
+        if (_state.value.refreshing) return
+        _state.update { it.copy(refreshing = true) }
+        viewModelScope.launch {
+            val libraries = runCatching { home.libraries() }.getOrDefault(_state.value.libraries)
+            val rows = runCatching { home.rows(libraries) }.getOrNull()
+            if (rows == null) {
+                _state.update { it.copy(refreshing = false) }
+                return@launch
+            }
+            val hasHero = rows.any { it.kind == "featured" }
+            val list = rows.filter { it.kind != "featured" }
+            val (featured, filled) = coroutineScope {
+                val featured = async { if (hasHero) runCatching { home.featured() }.getOrDefault(emptyList()) else null }
+                val filled = list.map { r -> async { rowFor(r, libraries) } }
+                featured.await() to filled.awaitAll()
+            }
+            _state.update { State(loading = false, hasHero = hasHero, featured = featured, rows = filled, libraries = libraries) }
+        }
+    }
+
     /**
      * A Continue watching card's menu: marks the title watched ([watched]), or takes it out of the row without
      * marking it (its resume point goes, so it starts over). The card leaves at once, then Continue watching and Next
@@ -89,7 +116,13 @@ class HomeViewModel(private val session: UserSession) : ViewModel() {
     }
 
     private suspend fun fill(row: HomeRow, libraries: List<BaseItemDto>) {
-        val filled = if (row.kind == "top10") {
+        val filled = rowFor(row, libraries)
+        _state.update { s -> s.copy(rows = s.rows.map { if (it.row.id == row.id) filled else it }) }
+    }
+
+    /** A row with its titles (empty when they can't be had). */
+    private suspend fun rowFor(row: HomeRow, libraries: List<BaseItemDto>): Row =
+        if (row.kind == "top10") {
             val entries = runCatching { home.top10() }.getOrDefault(emptyList())
             Row(row, Home.title(row), entries.map { it.item }, entries.map { it.profiles })
         } else if (row.kind in Home.SeerrKinds) {
@@ -97,6 +130,4 @@ class HomeViewModel(private val session: UserSession) : ViewModel() {
         } else {
             Row(row, Home.title(row), runCatching { home.items(row, libraries) }.getOrDefault(emptyList()))
         }
-        _state.update { s -> s.copy(rows = s.rows.map { if (it.row.id == row.id) filled else it }) }
-    }
 }

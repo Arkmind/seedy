@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { cardArt } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { userStore } from '../../lib/app-state';
@@ -8,11 +8,13 @@ import { Link, href, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { Art } from '../../ui/cards';
 import { Icon } from '../../ui/icons';
+import { Medu } from '../../ui/medu';
+import { meduToast } from '../../ui/medu-toast';
 import { Sheet, confirm, toast } from '../../ui/overlay';
 import { AdminLayout } from '../admin/AdminLayout';
-import { type ActivityEntry, errText, type FullUser, getActivity, getItemCounts, getPackages, getPlugins, getSessions, getStorage, getSystemInfo, getTasks, getUsers, type ItemCounts, type PackageInfo, type PluginInfo, restartingStore, restartServer, sameId, scanAllLibraries, sendSessionMessage, type Session, shutdownServer, stopSession, type SystemInfo, type TaskInfo } from './api';
+import { type ActivityEntry, errText, type FullUser, getActivity, getItemCounts, getPackages, getPlugins, getSessions, getStorage, getSystemInfo, getTasks, getUsers, type ItemCounts, type PackageInfo, type PluginInfo, restartingStore, restartServer, sameId, scanAllLibraries, seedyBackups, sendSessionMessage, type Session, shutdownServer, stopSession, type SystemInfo, type TaskInfo } from './api';
 import { InlineError, Notice, usePoll, UserAvatar } from './parts';
-import { activityWhen, dayDiff, hhmm, majorMinor, platformLabel, playDetail, playMethod, shortDate, uptime } from './format';
+import { activityWhen, dayDiff, fmtSize, hhmm, majorMinor, platformLabel, playDetail, playMethod, shortDate, uptime } from './format';
 import { countPluginUpdates, pluginTargetAbi } from './plugins';
 import { sentenceCase, serverStartFromTasks } from './tasks';
 import { pluginUpdatesStore } from './status';
@@ -59,6 +61,8 @@ export function ServerOverview() {
   useEffect(() => {
     if (plugins.data && packages && serverVersion) countPluginUpdates(plugins.data, packages, serverVersion);
   }, [plugins.data, packages, serverVersion]);
+
+  useBackupToast(tasks.data);
 
   const since = started ?? (tasks.data ? serverStartFromTasks(tasks.data) : undefined);
   const scanTask = tasks.data?.find((x) => x.Key === 'RefreshLibrary');
@@ -109,6 +113,7 @@ export function ServerOverview() {
   return (
     <AdminLayout
       page="overview"
+      banner={<FirstScan scan={scanTask} counts={counts.data} serverId={info.data?.Id} />}
       title={t('Overview')}
       lede={<span class="srv-lede">{lede}</span>}
       wide
@@ -135,11 +140,11 @@ export function ServerOverview() {
         ) : !sessions.data ? (
           <div class="srv-now-grid" aria-busy="true">{[0, 1, 2].map((i) => <div key={i} class="srv-now-card"><span class="skel srv-now-art" /><span class="skel skel-line" style={{ width: '70%' }} /><span class="skel skel-line" style={{ width: '45%' }} /></div>)}</div>
         ) : playing.length === 0 ? (
-          <div class="empty srv-empty">
-            <span class="empty-icon"><Icon name="tv" size={26} /></span>
-            <div class="empty-body">
-              <span class="empty-title">{t('Nothing playing')}</span>
-              <span class="empty-text">{t('When someone starts watching, it shows up here with how it’s playing on their device.')}</span>
+          <div class="srv-quiet">
+            <Medu mood="sleepy" size={96} />
+            <div class="srv-quiet-body">
+              <span class="srv-quiet-title">{t('All quiet')}</span>
+              <span class="srv-quiet-text">{t('Nobody is watching right now. Medu is napping until someone presses play.')}</span>
             </div>
           </div>
         ) : (
@@ -534,3 +539,74 @@ function ActivityPanel({ activity }: { activity: Data<{ Items: ActivityEntry[] }
   );
 }
 
+
+/* ───────── New server board: the first scan's results, and Medu's toast when a backup finishes ───────── */
+
+const DAY = 86_400_000;
+
+/* "Medu found 248 movies, 61 shows (2,914 episodes), 1,204 albums and 86 books in 41 minutes." A server is new when
+   its activity log starts with this scan (the oldest entry is less than two days older). Closed once, it's gone. */
+function FirstScan({ scan, counts, serverId }: { scan?: TaskInfo; counts?: ItemCounts; serverId?: string }) {
+  const done = scan?.LastExecutionResult?.Status === 'Completed' ? scan.LastExecutionResult : undefined;
+  const key = `seedy.firstScan.${serverId ?? ''}`;
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (!done || !serverId) return;
+    const started = Date.parse(done.StartTimeUtc);
+    const ended = Date.parse(done.EndTimeUtc);
+    try { if (window.localStorage.getItem(key)) return; } catch { return; }
+    if (!Number.isFinite(ended) || Date.now() - ended > 7 * DAY) return;
+    let alive = true;
+    (async () => {
+      const total = (await getActivity({ startIndex: 0, limit: 1 })).TotalRecordCount;
+      const oldest = (await getActivity({ startIndex: Math.max(0, total - 1), limit: 1 })).Items[0];
+      if (alive && oldest && started - Date.parse(oldest.Date) < 2 * DAY) setShow(true);
+    })().catch(() => undefined);
+    return () => { alive = false; };
+  }, [done?.EndTimeUtc, serverId]);
+  if (!show || !done || !counts) return null;
+  const close = () => { setShow(false); try { window.localStorage.setItem(key, done.EndTimeUtc); } catch { /* private window */ } };
+  const found = [
+    counts.MovieCount ? tn(counts.MovieCount, '{n} movie', '{n} movies') : '',
+    counts.SeriesCount ? tn(counts.SeriesCount, '{n} show', '{n} shows') + (counts.EpisodeCount ? ` (${tn(counts.EpisodeCount, '{n} episode', '{n} episodes')})` : '') : '',
+    counts.AlbumCount ? tn(counts.AlbumCount, '{n} album', '{n} albums') : '',
+    counts.BookCount ? tn(counts.BookCount, '{n} book', '{n} books') : ''
+  ].filter(Boolean);
+  const list = found.length > 1 ? t('{list} and {last}', { list: found.slice(0, -1).join(', '), last: found[found.length - 1] }) : found[0] ?? '';
+  const minutes = Math.max(1, Math.round((Date.parse(done.EndTimeUtc) - Date.parse(done.StartTimeUtc)) / 60_000));
+  const took = minutes < 60 ? tn(minutes, '{n} minute', '{n} minutes')
+    : t('{h} h {m} min', { h: Math.floor(minutes / 60), m: minutes % 60 });
+  return (
+    <section class="srv-firstscan" aria-labelledby="srv-firstscan-h">
+      <Medu mood="yay" size={120} />
+      <div class="srv-firstscan-body">
+        <h2 id="srv-firstscan-h" class="srv-firstscan-title">{t('First scan finished')}</h2>
+        <p class="srv-firstscan-text">{list ? t('Medu found {list} in {time}.', { list, time: took }) : t('Medu went through every library in {time}.', { time: took })}</p>
+        <div class="srv-firstscan-actions">
+          <Link to="/" class="btn btn-primary medu-actions-btn" onClick={close}>{t('See what’s new')}</Link>
+          <Link to="/admin/users" class="btn btn-secondary medu-actions-btn" onClick={close}>{t('Invite people')}</Link>
+        </div>
+      </div>
+      <button type="button" class="srv-firstscan-close" aria-label={t('Dismiss')} onClick={close}><Icon name="close" size={18} /></button>
+    </section>
+  );
+}
+
+/* A backup task (Seedy's weekly one, or Jellyfin's) that finishes while this page is open: Medu says so. */
+function useBackupToast(tasks?: TaskInfo[]) {
+  const running = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!tasks) return;
+    const backups = tasks.filter((x) => /backup/i.test(x.Key) || /backup/i.test(x.Name));
+    for (const task of backups) {
+      if (task.State === 'Running') { running.current.add(task.Id); continue; }
+      if (!running.current.delete(task.Id) || task.LastExecutionResult?.Status !== 'Completed') continue;
+      seedyBackups().then((files) => files[0], () => undefined).then((file) => meduToast({
+        mood: 'yay',
+        title: t('Backup finished'),
+        text: [file ? fmtSize(file.size) : '', t('settings, users and metadata')].filter(Boolean).join(' · '),
+        actions: [{ label: t('View'), onClick: () => navigate('/admin/backups') }]
+      }));
+    }
+  }, [tasks]);
+}

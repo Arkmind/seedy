@@ -3,11 +3,13 @@ import { getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { episodeTag, plural } from '../../lib/format';
 import { Link, setQuery, useLocation } from '../../lib/router';
-import { useAsync } from '../../lib/store';
+import { useAsync, useStore } from '../../lib/store';
 import { CastCard, ItemCard } from '../../ui/cards';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
-import { CardGrid, EmptyState, ErrorState, GridSkeleton, PageHead, getPersonsList, join, toggleFavorite } from './parts';
+import { MeduState } from '../../ui/medu';
+import { viewsStore } from '../../lib/app-state';
+import { CardGrid, ErrorState, GridSkeleton, PageHead, getPersonsList, join, toggleFavorite } from './parts';
 import './lists.css';
 import { t } from '../../lib/i18n';
 
@@ -41,6 +43,8 @@ export function Favorites() {
   useEffect(() => { if (data) setLists(data.map((r) => r.Items)); }, [data]);
 
   const present = GROUPS.map((g, i) => ({ ...g, items: lists[i] ?? [] })).filter((g) => g.items.length > 0);
+  // The empty page offers the first movie library, like the board’s “Browse Movies”.
+  const movies = useStore(viewsStore).find((v) => v.CollectionType === 'movies');
   const total = present.reduce((n, g) => n + g.items.length, 0);
   const only = loc.query.get('type') as GroupId | null;
   const shown = only && present.some((g) => g.id === only) ? present.filter((g) => g.id === only) : present;
@@ -51,7 +55,7 @@ export function Favorites() {
     <div class="page">
       <Header active="favorites" />
       <main class="page-main">
-        <PageHead title={t('Favorites')} count={data ? plural(total, 'favorite') : undefined} />
+        <PageHead title={t('Favorites')} count={data && total ? plural(total, 'favorite') : undefined} />
         {present.length > 1 && (
           <nav aria-label={t('Favorite types')} class="tab-row hscroll">
             <Link to="/favorites" replace class="tab" aria-current={!only ? 'page' : undefined}>{t('All')}</Link>
@@ -70,11 +74,12 @@ export function Favorites() {
         ) : error && !data ? (
           <ErrorState error={error} retry={reload} />
         ) : !present.length ? (
-          <EmptyState
-            icon="heart"
-            title={t('No favorites yet')}
-            text={t('Tap the heart on any title, episode or person and it will be kept here.')}
-            action={<Link to="/" class="btn btn-primary is-sm">{t('Browse home')}</Link>}
+          <MeduState
+            title={t('Nothing here yet')}
+            text={t('Tap the heart on anything you love and it’ll wait for you here.')}
+            actions={movies
+              ? <Link to={`/library/${movies.Id}`} class="btn btn-primary medu-actions-btn"><Icon name="heart" size={18} />{t('Browse {name}', { name: movies.Name ?? '' })}</Link>
+              : <Link to="/" class="btn btn-primary medu-actions-btn"><Icon name="home" size={18} />{t('Go to Home')}</Link>}
           />
         ) : (
           shown.map((g) => {

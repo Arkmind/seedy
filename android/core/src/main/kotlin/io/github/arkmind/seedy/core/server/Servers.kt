@@ -26,6 +26,13 @@ class Servers(private val jellyfin: Jellyfin, private val store: AppStore) {
     /** Servers answering Jellyfin's discovery broadcast on this network (a few seconds, then the flow ends). */
     fun discover(): Flow<ServerDiscoveryInfo> = jellyfin.discovery.discoverLocalServers()
 
+    /** What a server found on the network runs: its Jellyfin version and whether Seedy is installed (null when it doesn't answer). */
+    suspend fun describe(address: String): Pair<String?, Boolean>? = withContext(Dispatchers.IO) {
+        val api = jellyfin.createApi(baseUrl = address)
+        val info = runCatching { api.systemApi.getPublicSystemInfo().content }.getOrNull() ?: return@withContext null
+        info.version to (SeedyApi.probe(api) != null)
+    }
+
     /** Tries the address as typed ("192.168.1.20", "media.example.org/jellyfin"…), with and without https and the default ports. */
     suspend fun add(input: String): AddResult = withContext(Dispatchers.IO) {
         val found = jellyfin.discovery.getRecommendedServers(input.trim())

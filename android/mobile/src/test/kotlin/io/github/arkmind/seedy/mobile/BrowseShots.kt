@@ -100,6 +100,11 @@ class BrowseShots {
     }
 
     @Test
+    fun searchEmpty() = shot("AndroidSearchEmpty") {
+        SearchScreen(BrowseSamples.searchMoonfall, SearchActions(), bottomPadding = 0.dp)
+    }
+
+    @Test
     fun search() = shot("AndroidSearch") {
         SearchScreen(BrowseSamples.search, SearchActions(), bottomPadding = 0.dp)
     }

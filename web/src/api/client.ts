@@ -154,6 +154,19 @@ export function url(path: string, query?: Query): string {
   return SERVER_URL + path + qs(query);
 }
 
+/* When the server last answered, kept for the "Can't reach your server" page ("Last seen 4 min ago"). */
+const SEEN_KEY = 'seedy.lastSeen';
+let seenAt = 0;
+function markSeen() {
+  const now = Date.now();
+  if (now - seenAt < 30_000) return;
+  seenAt = now;
+  try { window.localStorage.setItem(SEEN_KEY, String(now)); } catch { /* see readStore */ }
+}
+export function lastSeen(): number | null {
+  try { return Number(window.localStorage.getItem(SEEN_KEY)) || null; } catch { return seenAt || null; }
+}
+
 let onUnauthorized: ((token: string | null | undefined) => void) | null = null;
 export function setUnauthorizedHandler(fn: (token: string | null | undefined) => void) {
   onUnauthorized = fn;
@@ -179,6 +192,7 @@ export async function request<T>(
     body = JSON.stringify(opts.body);
   }
   const res = await fetch(url(path, opts.query), { method, headers, body, signal: opts.signal });
+  if (res.status < 500) markSeen();
   if (res.status === 401 && opts.token === undefined) onUnauthorized?.(session?.token);
   if (!res.ok) {
     let detail: unknown;

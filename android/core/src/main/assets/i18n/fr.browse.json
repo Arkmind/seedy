@@ -47,5 +47,14 @@
   "Clear": "Effacer",
   "Type a title, a person or a genre": "Tapez un titre, une personne ou un genre",
   "Results for “{q}”": "Résultats pour « {q} »",
-  "Episodes and channels": "Épisodes et chaînes"
+  "Episodes and channels": "Épisodes et chaînes",
+  "Not on Seedy yet": "Pas encore sur Seedy",
+  "Medu checked every library for “{q}”. Want to ask for it?": "Medu a fouillé chaque bibliothèque pour « {q} ». Vous voulez le demander ?",
+  "Medu checked every library for “{q}”. Check the spelling, or try a shorter part of the title.": "Medu a fouillé chaque bibliothèque pour « {q} ». Vérifiez l’orthographe, ou essayez une partie plus courte du titre.",
+  "Medu searched every library for “{q}”. Want to ask for it?": "Medu a fouillé chaque bibliothèque pour « {q} ». Vous voulez le demander ?",
+  "Medu searched every library for “{q}”. Check the spelling, or try a shorter part of the title.": "Medu a fouillé chaque bibliothèque pour « {q} ». Vérifiez l’orthographe, ou essayez une partie plus courte du titre.",
+  "On Seerr": "Sur Seerr",
+  "On Seerr · {n} result": "Sur Seerr · {n} résultat",
+  "On Seerr · {n} results": "Sur Seerr · {n} résultats",
+  "Request it on Seerr": "Le demander sur Seerr"
 }

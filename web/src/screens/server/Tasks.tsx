@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { href, navigate } from '../../lib/router';
+import { Link, href, navigate } from '../../lib/router';
+import { clock } from '../../lib/format';
 import { useStore } from '../../lib/store';
 import { formatNumber, t } from '../../lib/i18n';
 import { Icon } from '../../ui/icons';
+import { Medu } from '../../ui/medu';
 import { toast } from '../../ui/overlay';
 import { AdminLayout } from '../admin/AdminLayout';
 import { getTasks, reasonText, startTask, stopTask, type TaskInfo } from './api';
@@ -114,8 +116,10 @@ export function ServerTasks() {
       .map((x) => ({ task: x, at: nextRun(x, now, offset) }))
       .filter((x): x is { task: TaskInfo; at: Date } => !!x.at)
       .sort((a, b) => a.at.getTime() - b.at.getTime())[0];
+    const failed = tasks.filter(recentFailure).length;
     lede = [
       running ? t('{n} running', { n: running }) : t('Nothing running'),
+      failed ? t('{n} failed', { n: failed }) : null,
       next ? t('next: {task} {when}', { task: taskName(next.task), when: nextText(next.at) }) : null
     ].filter(Boolean).join(' · ');
   } else if (error) lede = t('Couldn’t read the server’s tasks.');
@@ -127,7 +131,9 @@ export function ServerTasks() {
       ) : !tasks ? (
         <TasksSkeleton />
       ) : (
-        groups.map((g) => (
+        <>
+        <FailedTask tasks={tasks} onRun={run} />
+        {groups.map((g) => (
           <section key={g.label} class="adv-group" aria-label={t(g.label)}>
             <h2 class="adv-group-label">{t(g.label)}</h2>
             <div class="adv-list">
@@ -136,10 +142,41 @@ export function ServerTasks() {
               ))}
             </div>
           </section>
-        ))
+        ))}
+        </>
       )}
       <ScheduleSheet task={editing} onClose={() => setEditing(null)} onSaved={(saved) => { setTasks((list) => list?.map((x) => (x.Id === saved.Id ? saved : x)) ?? list); void poll(); }} />
     </AdminLayout>
+  );
+}
+
+/* A task that failed in the last three days and hasn't run since. */
+const recentFailure = (x: TaskInfo) => x.State === 'Idle' && x.LastExecutionResult?.Status === 'Failed'
+  && Date.now() - Date.parse(x.LastExecutionResult.EndTimeUtc) < 3 * 86_400_000;
+
+/* Scheduled tasks board: the latest failure on top, Medu holding the unplugged cable. */
+function FailedTask({ tasks, onRun }: { tasks: TaskInfo[]; onRun: (task: TaskInfo) => void }) {
+  const task = tasks.filter(recentFailure).sort((a, b) => Date.parse(b.LastExecutionResult!.EndTimeUtc) - Date.parse(a.LastExecutionResult!.EndTimeUtc))[0];
+  if (!task) return null;
+  const r = task.LastExecutionResult!;
+  const end = new Date(r.EndTimeUtc);
+  const time = clock(end);
+  const error = r.ErrorMessage?.trim().replace(/\.$/, '');
+  const log = '/admin/logs?file=' + encodeURIComponent(logNameFor(end)) + '&q=' + encodeURIComponent(task.Name);
+  return (
+    <section class="adv-tfail" aria-labelledby="adv-tfail-h">
+      <Medu mood="oops" size={92} glow={false} />
+      <div class="adv-tfail-body">
+        <h2 id="adv-tfail-h" class="adv-tfail-title">{t('{task} failed', { task: taskName(task) })}</h2>
+        <span class="adv-tfail-text">
+          {error ? t('It stopped at {time}: {error}. Check the log, then run it again.', { time, error }) : t('It stopped at {time}. Check the log, then run it again.', { time })}
+        </span>
+        <div class="adv-tfail-actions">
+          <button type="button" class="btn btn-primary medu-actions-btn" onClick={() => onRun(task)}>{t('Run again')}</button>
+          <Link to={log} class="btn btn-secondary medu-actions-btn">{t('View log')}</Link>
+        </div>
+      </div>
+    </section>
   );
 }
 

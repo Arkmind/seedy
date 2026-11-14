@@ -875,3 +875,27 @@ button.srv-tile.is-alert:hover, button.srv-tile.is-alert[aria-pressed='true'] { 
 }
 .srv-sheet-grid.is-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 560px) { .srv-sheet-grid.is-2 { grid-template-columns: minmax(0, 1fr); } }
+
+/* ── New server board: first scan banner and "All quiet" ── */
+.srv-firstscan {
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: 22px; padding: 18px 26px 18px 14px; border-radius: 20px;
+  background: linear-gradient(100deg, #24192a 0%, #171418 60%, #141414 100%);
+}
+.srv-firstscan-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.srv-firstscan-title { margin: 0; font-size: 22px; font-weight: 900; color: #ffffff; }
+.srv-firstscan-text { margin: 0; font-size: 15px; line-height: 1.5; color: var(--seedy-text-hero); }
+.srv-firstscan-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.srv-firstscan-close {
+  position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: var(--r-ctl); background: transparent; color: var(--seedy-text-3); cursor: pointer;
+}
+.srv-firstscan-close:hover { color: #ffffff; background: rgba(255, 255, 255, 0.06); }
+.srv-quiet { display: flex; align-items: center; gap: 18px; padding: 10px 24px 10px 12px; border-radius: var(--r-panel); background: var(--seedy-panel); }
+.srv-quiet-body { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.srv-quiet-title { font-size: 18px; font-weight: 800; color: #ffffff; }
+.srv-quiet-text { font-size: 14px; line-height: 1.5; color: var(--seedy-text-2); }
+@media (max-width: 720px) {
+  .srv-firstscan { flex-direction: column; align-items: flex-start; padding: 18px; }
+  .srv-firstscan .medu { width: 84px; height: 111px; }
+  .srv-quiet .medu { width: 72px; height: 95px; }
+}

@@ -77,7 +77,7 @@ function guardLinks(e: MouseEvent) {
   canLeave().then((ok) => { if (ok) navigate(path + url.search, { force: true }); });
 }
 
-export function AdminLayout({ page, title, lede, children, wide, actions, overline }: {
+export function AdminLayout({ page, title, lede, children, wide, actions, overline, banner }: {
   page: AdminPage;
   title: ComponentChildren;
   lede?: ComponentChildren;
@@ -88,6 +88,8 @@ export function AdminLayout({ page, title, lede, children, wide, actions, overli
   actions?: ComponentChildren;
   /* A back link above the title ("‹ Users"). */
   overline?: ComponentChildren;
+  /* News above the title (Overview's "First scan finished"). */
+  banner?: ComponentChildren;
 }) {
   const nav = useRef<HTMLElement>(null);
   const header = useStickyHeader<HTMLElement>();
@@ -129,6 +131,7 @@ export function AdminLayout({ page, title, lede, children, wide, actions, overli
         </nav>
 
         <main class="admin-main">
+          {banner}
           <div class="admin-title-row">
             <div class="admin-title">
               {overline}

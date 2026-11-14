@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- "Tell me when a request is ready": asked for when it's useful (Settings, Requests), never at launch. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+</manifest>
