@@ -12,7 +12,7 @@ const fr: Record<string, string> = {
   'COMBO': 'COMBO',
   'MAX COMBO': 'COMBO MAX',
   'LIVES': 'VIES',
-  '+30, as tradition demands': '+30, comme le veut la tradition',
+  '+30, as tradition demands': '+30, tradition oblige',
   'READY?': 'PRÊT ?',
   'PERFECT!!': 'PARFAIT !!',
   'GREAT!': 'SUPER !',
