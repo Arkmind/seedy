@@ -21,6 +21,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<Audiobooks>();
         serviceCollection.AddSingleton<HomeService>();
         serviceCollection.AddSingleton<PlaybackRecorder>();
+        serviceCollection.AddSingleton<Statistics>();
         serviceCollection.AddSingleton<Services.Media.ServiceHttp>();
         serviceCollection.AddSingleton<Services.Media.LidarrClient>();
         serviceCollection.AddSingleton<Services.Media.ShelfarrClient>();

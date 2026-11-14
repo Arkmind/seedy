@@ -1,7 +1,7 @@
 import { get, request } from '../../../api/client';
 import type { BaseItem } from '../../../api/types';
 
-/* /Seedy/Admin/Statistics: the play log added up. Times are UTC ISO strings; dates ("2026-11-08") are local to the
+/* /Seedy/Admin/Stats: the play log added up. Times are UTC ISO strings; dates ("2026-11-08") are local to the
    time zone the page sends. */
 
 export type Range = '7d' | '30d' | '12m' | 'all';
@@ -63,12 +63,12 @@ export const timeZone = () => {
 
 const query = (f: StatsFilters) => ({ range: f.range, tz: timeZone(), userId: f.userId, libraryId: f.libraryId, device: f.device });
 
-export const getStats = (f: StatsFilters, signal?: AbortSignal) => get<Stats>('/Seedy/Admin/Statistics', query(f), signal);
+export const getStats = (f: StatsFilters, signal?: AbortSignal) => get<Stats>('/Seedy/Admin/Stats', query(f), signal);
 
-export const getStatsDay = (date: string, signal?: AbortSignal) => get<StatsDay>('/Seedy/Admin/Statistics/Day', { date, tz: timeZone() }, signal);
+export const getStatsDay = (date: string, signal?: AbortSignal) => get<StatsDay>('/Seedy/Admin/Stats/Day', { date, tz: timeZone() }, signal);
 
 export async function exportStats(f: StatsFilters) {
-  const res = await request<Response>('GET', '/Seedy/Admin/Statistics/Export', { query: query(f), raw: true });
+  const res = await request<Response>('GET', '/Seedy/Admin/Stats/Export', { query: query(f), raw: true });
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
