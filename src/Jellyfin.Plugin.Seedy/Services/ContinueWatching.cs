@@ -98,7 +98,9 @@ public sealed class ContinueWatching : IHostedService
             DtoOptions = new DtoOptions(false)
         });
         var data = _userData.GetUserDataBatch(candidates, user);
-        var hidden = MovedPast(user, candidates, data);
+        var shows = candidates.OfType<Episode>().Where(e => e.SeriesId != Guid.Empty).ToLookup(e => e.SeriesId);
+        // Each show is looked at once, when the list reaches it (a short row never queries the rest).
+        var hiddenByShow = new Dictionary<Guid, HashSet<Guid>>();
 
         var picked = new List<BaseItem>();
         foreach (var item in candidates)
@@ -108,9 +110,17 @@ public sealed class ContinueWatching : IHostedService
                 break;
             }
 
-            if (hidden.Contains(item.Id))
+            if (item is Episode { SeriesId: var seriesId } && seriesId != Guid.Empty)
             {
-                continue;
+                if (!hiddenByShow.TryGetValue(seriesId, out var hidden))
+                {
+                    hiddenByShow[seriesId] = hidden = MovedPast(user, seriesId, shows[seriesId].ToList(), data);
+                }
+
+                if (hidden.Contains(item.Id))
+                {
+                    continue;
+                }
             }
 
             // Left in the credits before this rule existed, or before the credits were found: finished.
@@ -147,41 +157,37 @@ public sealed class ContinueWatching : IHostedService
     // Specials don't count as moving on, and are moved past by anything played after them. A later episode only
     // opened for a moment (no resume point, not watched) doesn't count: the show would drop out of Continue watching
     // and Next up both.
-    private HashSet<Guid> MovedPast(User user, IReadOnlyList<BaseItem> candidates, Dictionary<Guid, UserItemData> data)
+    private HashSet<Guid> MovedPast(User user, Guid seriesId, List<Episode> inProgress, Dictionary<Guid, UserItemData> data)
     {
         var hidden = new HashSet<Guid>();
-        foreach (var show in candidates.OfType<Episode>().Where(e => e.SeriesId != Guid.Empty).GroupBy(e => e.SeriesId))
+        var watched = _library.GetItemList(new InternalItemsQuery(user)
         {
-            var inProgress = show.ToList();
-            var watched = _library.GetItemList(new InternalItemsQuery(user)
-            {
-                AncestorIds = [show.Key],
-                IncludeItemTypes = [BaseItemKind.Episode],
-                IsPlayed = true,
-                IsVirtualItem = false,
-                Recursive = true,
-                OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
-                Limit = ShowHistory,
-                DtoOptions = new DtoOptions(false)
-            }).OfType<Episode>().Where(w => inProgress.All(e => e.Id != w.Id)).ToList();
-            var watchedData = _userData.GetUserDataBatch(watched, user);
-            var history = inProgress.Select(e => (Ep: e, At: LastPlayed(data, e)))
-                .Concat(watched.Select(e => (Ep: e, At: LastPlayed(watchedData, e))))
-                .ToList();
+            AncestorIds = [seriesId],
+            IncludeItemTypes = [BaseItemKind.Episode],
+            IsPlayed = true,
+            IsVirtualItem = false,
+            Recursive = true,
+            OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
+            Limit = ShowHistory,
+            DtoOptions = new DtoOptions(false)
+        }).OfType<Episode>().Where(w => inProgress.All(e => e.Id != w.Id)).ToList();
+        var watchedData = _userData.GetUserDataBatch(watched, user);
+        var history = inProgress.Select(e => (Ep: e, At: LastPlayed(data, e)))
+            .Concat(watched.Select(e => (Ep: e, At: LastPlayed(watchedData, e))))
+            .ToList();
 
-            foreach (var ep in inProgress)
-            {
-                var at = LastPlayed(data, ep);
-                if (history.Any(h => h.Ep.Id != ep.Id && h.At > at && !IsSpecial(h.Ep) && (IsSpecial(ep) || Order(h.Ep).CompareTo(Order(ep)) > 0)))
-                {
-                    hidden.Add(ep.Id);
-                }
-            }
-
-            foreach (var ep in inProgress.Where(e => !hidden.Contains(e.Id)).OrderByDescending(e => LastPlayed(data, e)).Skip(1))
+        foreach (var ep in inProgress)
+        {
+            var at = LastPlayed(data, ep);
+            if (history.Any(h => h.Ep.Id != ep.Id && h.At > at && !IsSpecial(h.Ep) && (IsSpecial(ep) || Order(h.Ep).CompareTo(Order(ep)) > 0)))
             {
                 hidden.Add(ep.Id);
             }
+        }
+
+        foreach (var ep in inProgress.Where(e => !hidden.Contains(e.Id)).OrderByDescending(e => LastPlayed(data, e)).Skip(1))
+        {
+            hidden.Add(ep.Id);
         }
 
         return hidden;
