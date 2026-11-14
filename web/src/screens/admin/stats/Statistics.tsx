@@ -173,7 +173,11 @@ function Kpis({ data, filters }: { data: Stats; filters: StatsFilters }) {
       : <Trend dir="down">{k.missing.length <= 2
         ? tn(k.missing.length, '{names} hasn’t watched', '{names} haven’t watched', { names: listText(k.missing) })
         : tn(k.missing.length, '{n} person hasn’t watched', '{n} people haven’t watched')}</Trend>;
-  const since = data.range === 'all' && <Trend>{t('Since {date}', { date: fmtDate(parseDay(data.from), { day: 'numeric', month: 'short', year: 'numeric' }) })}</Trend>;
+  // No change to show when the log doesn't reach back over the period before: say since when it counts instead.
+  const start = data.firstPlay && data.firstPlay > data.from ? data.firstPlay : data.from;
+  const since = (data.range === 'all' || (data.firstPlay && data.firstPlay > data.from))
+    ? <Trend>{t('Since {date}', { date: fmtDate(parseDay(start), { day: 'numeric', month: 'short', year: 'numeric' }) })}</Trend>
+    : k.prevWatchMs === null || k.prevWatchMs === undefined ? <Trend>{t('Not enough history to compare')}</Trend> : null;
   return (
     <div class="st-kpis">
       <Kpi
@@ -247,7 +251,11 @@ function bucketLabel(data: Stats, start: string, long: boolean): string {
 function WatchTime({ data }: { data: Stats }) {
   const [asTable, setAsTable] = useState(false);
   const buckets = data.buckets;
-  const avg = buckets.length ? buckets.reduce((s, b) => s + b.watchMs, 0) / buckets.length : 0;
+  // The average leaves out the days before the log began.
+  let first = 0;
+  buckets.forEach((b, i) => { if (data.firstPlay && b.start <= data.firstPlay) first = i; });
+  const counted = buckets.slice(first);
+  const avg = counted.length ? counted.reduce((s, b) => s + b.watchMs, 0) / counted.length : 0;
   const per = data.bucket === 'month' ? t('Watch time per month') : data.bucket === 'week' ? t('Watch time per week') : t('Watch time per day');
   const avgText = data.bucket === 'month' ? t('Average {h} a month', { h: hoursText(avg, 1) })
     : data.bucket === 'week' ? t('Average {h} a week', { h: hoursText(avg, 1) }) : t('Average {h} a day', { h: hoursText(avg, 1) });
@@ -570,13 +578,17 @@ function WhenPeopleWatch({ data }: { data: Stats }) {
 
 /* ── Viewers ── */
 
+const VIEWERS_SHOWN = 8;
+
 function Viewers({ data, filters }: { data: Stats; filters: StatsFilters }) {
+  const [all, setAll] = useState(false);
   const max = Math.max(...data.viewers.map((v) => v.watchMs), 1);
+  const list = all ? data.viewers : data.viewers.slice(0, VIEWERS_SHOWN);
   const period = data.range === '7d' ? t('No plays in 7 days') : data.range === '30d' ? t('No plays in 30 days') : data.range === '12m' ? t('No plays in 12 months') : t('No plays yet');
   return (
     <Panel id="st-vw" title={t('Viewers')} aside={<Link to="/admin/users" class="st-head-link">{t('Users')}</Link>}>
       <div class="st-viewers">
-        {data.viewers.map((v, i) => (
+        {list.map((v, i) => (
           <Link key={v.userId} to={statsLink(filters, { userId: filters.userId === v.userId ? undefined : v.userId })} class={'st-viewer' + (i === 0 ? ' is-first' : '')}>
             <Avatar userId={v.userId} name={v.name} imageTag={v.imageTag} index={v.index} size={34} grey={v.plays === 0} />
             <span class="st-viewer-body">
@@ -591,6 +603,11 @@ function Viewers({ data, filters }: { data: Stats; filters: StatsFilters }) {
           </Link>
         ))}
       </div>
+      {data.viewers.length > VIEWERS_SHOWN && (
+        <button type="button" class="st-more" aria-expanded={all} onClick={() => setAll((v) => !v)}>
+          {all ? t('Show fewer') : tn(data.viewers.length, 'Show the {n} profile', 'Show all {n} profiles')}
+        </button>
+      )}
     </Panel>
   );
 }

@@ -33,6 +33,9 @@ public sealed partial class Statistics
     /// <summary>Plays shorter than this are left out.</summary>
     public static readonly TimeSpan MinPlay = TimeSpan.FromMinutes(2);
 
+    // How long a play may have been paused on top of what it played, at least.
+    private static readonly TimeSpan PauseRoom = TimeSpan.FromMinutes(15);
+
     // Songs played back to back on one device make one listening session on the day page.
     private static readonly TimeSpan SongGap = TimeSpan.FromMinutes(3);
 
@@ -125,16 +128,14 @@ public sealed partial class Statistics
         return p.RuntimeTicks > 0 ? Math.Min(span, p.RuntimeTicks / TimeSpan.TicksPerMillisecond) : span;
     }
 
+    // A play the client never stopped is only closed when its session times out, hours later. Its stream is taken to
+    // end once it had played what it played, plus room for pauses, so it doesn't stay open all night.
     private static Row ToRow(PlayRecord p)
     {
         var watched = Math.Max(0, WatchedOf(p));
-        var end = p.StoppedAt ?? p.StartedAt.AddMilliseconds(watched);
-        if (end < p.StartedAt)
-        {
-            end = p.StartedAt;
-        }
-
-        return new Row(p, KindOf(p.ItemType), watched, p.StartedAt, end);
+        var span = p.StoppedAt is { } stop ? Math.Max(0, (stop - p.StartedAt).TotalMilliseconds) : watched;
+        var open = Math.Min(span, watched + Math.Max(PauseRoom.TotalMilliseconds, watched / 2.0));
+        return new Row(p, KindOf(p.ItemType), watched, p.StartedAt, p.StartedAt.AddMilliseconds(open));
     }
 
     private List<Row> Load(DateTime from, DateTime to, StatsQuery? q)
@@ -209,7 +210,9 @@ public sealed partial class Statistics
         var toUtc = UtcOf(today.AddDays(1), zone);
         var all = Load(fromUtc, toUtc, null);
         var rows = all.Where(r => Matches(r, q)).ToList();
-        var prev = prevFrom is { } pf ? Load(UtcOf(pf, zone), fromUtc, q) : null;
+        // Compare with the period before only when the log already covered all of it.
+        var firstPlay = _db.FirstPlayAt() is { } fp ? LocalOf(fp, zone).Date : (DateTime?)null;
+        var prev = prevFrom is { } pf && firstPlay <= pf ? Load(UtcOf(pf, zone), fromUtc, q) : null;
 
         var profiles = Profiles();
         var index = profiles.Select((u, i) => (u, i)).ToDictionary(x => x.u.Id.ToString("N"), x => x.i, StringComparer.OrdinalIgnoreCase);
@@ -223,7 +226,8 @@ public sealed partial class Statistics
             From = Day(from),
             To = Day(today),
             Today = Day(today),
-            RetentionDays = Plugin.Instance?.Configuration.PlayLogRetentionDays ?? 365
+            RetentionDays = Plugin.Instance?.Configuration.PlayLogRetentionDays ?? 365,
+            FirstPlay = firstPlay is { } f ? Day(f) : null
         };
 
         // ── Headline numbers ──
@@ -510,6 +514,9 @@ public sealed partial class Statistics
     [GeneratedRegex(@"\b(TV|Shield|AFT\w*|Fire ?TV|BRAVIA|Chromecast|Google TV|MiBOX|Android TV)\b", RegexOptions.IgnoreCase)]
     private static partial Regex TvDevice();
 
+    [GeneratedRegex(@"\b(Smart ?TV|webOS|Tizen|Roku|Hisense|Vizio)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SmartTv();
+
     /// <summary>The kind of device and app a play came from, as the Devices and apps panel groups them.</summary>
     /// <param name="client">App name.</param>
     /// <param name="device">Device name.</param>
@@ -523,6 +530,12 @@ public sealed partial class Statistics
         if ((c == "Seedy" || Has("Web")) && browser.Success)
         {
             return ("web", "Web", browser.Groups[1].Value);
+        }
+
+        // Jellyfin's LG and Samsung apps wrap its web app and call themselves "Jellyfin Web".
+        if (!Has("Android") && (Has("webOS") || Has("Tizen") || Has("Roku") || SmartTv().IsMatch(d)))
+        {
+            return ("smarttv", "Smart TVs", d.Length > 0 ? d : c);
         }
 
         if (Has("Web"))
