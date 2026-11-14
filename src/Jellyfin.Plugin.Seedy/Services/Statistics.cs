@@ -10,6 +10,7 @@ using Jellyfin.Database.Implementations.Enums;
 using Jellyfin.Plugin.Seedy.Api;
 using Jellyfin.Plugin.Seedy.Data;
 using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Devices;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Controller.Library;
@@ -64,6 +65,7 @@ public sealed partial class Statistics
     private readonly ILibraryManager _library;
     private readonly IServerConfigurationManager _config;
     private readonly HomeService _home;
+    private readonly IDeviceManager _devices;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Statistics"/> class.
@@ -73,8 +75,10 @@ public sealed partial class Statistics
     /// <param name="library">Library manager.</param>
     /// <param name="config">Server configuration.</param>
     /// <param name="home">Home service, for item DTOs.</param>
-    public Statistics(SeedyDatabase db, IUserManager users, ILibraryManager library, IServerConfigurationManager config, HomeService home)
+    /// <param name="devices">Jellyfin's devices, for the app each one runs now.</param>
+    public Statistics(SeedyDatabase db, IUserManager users, ILibraryManager library, IServerConfigurationManager config, HomeService home, IDeviceManager devices)
     {
+        _devices = devices;
         _db = db;
         _users = users;
         _library = library;
@@ -323,8 +327,9 @@ public sealed partial class Statistics
             .ToList();
 
         // ── Devices and apps ──
+        var apps = AppsByDevice();
         dto.Devices = rows
-            .Select(r => (Row: r, Family: Family(r.Play.Client, r.Play.DeviceName)))
+            .Select(r => (Row: r, Family: Family(r.Play.Client, r.Play.DeviceName, apps)))
             .GroupBy(x => x.Family.Key, StringComparer.Ordinal)
             .Select(g => new StatsFamilyDto
             {
@@ -517,13 +522,51 @@ public sealed partial class Statistics
     [GeneratedRegex(@"\b(Smart ?TV|webOS|Tizen|Roku|Hisense|Vizio)\b", RegexOptions.IgnoreCase)]
     private static partial Regex SmartTv();
 
+    // Older Android apps (TV and phone alike) reported themselves as "Seedy", like the web app. A device that has since played
+    // with a newer app (in the log), or that Jellyfin lists with a newer app name, tells which one its older plays came from.
+    private Dictionary<string, string> AppsByDevice()
+    {
+        var apps = new Dictionary<string, string>(StringComparer.Ordinal);
+        try
+        {
+            foreach (var d in _devices.GetDevicesForUser(null).Items.OrderBy(d => d.DateLastActivity))
+            {
+                if (!string.IsNullOrEmpty(d.Name) && d.AppName is { } app && app.StartsWith("Seedy for ", StringComparison.Ordinal))
+                {
+                    apps[d.Name] = app;
+                }
+            }
+        }
+#pragma warning disable CA1031 // Without Jellyfin's device list, the play log alone decides.
+        catch (Exception)
+#pragma warning restore CA1031
+        {
+        }
+
+        foreach (var (device, client) in _db.DeviceApps())
+        {
+            if (client.StartsWith("Seedy for ", StringComparison.Ordinal))
+            {
+                apps[device] = client;
+            }
+        }
+
+        return apps;
+    }
+
     /// <summary>The kind of device and app a play came from, as the Devices and apps panel groups them.</summary>
     /// <param name="client">App name.</param>
     /// <param name="device">Device name.</param>
+    /// <param name="apps">The Seedy app each device is known to run now, by device name.</param>
     /// <returns>Group key, English name and the app's name.</returns>
-    public static (string Key, string Name, string App) Family(string? client, string? device)
+    public static (string Key, string Name, string App) Family(string? client, string? device, IReadOnlyDictionary<string, string>? apps = null)
     {
         var c = client ?? string.Empty;
+        if (c == "Seedy" && device is not null && apps?.GetValueOrDefault(device) is { } known && !BrowserDevice().IsMatch(device))
+        {
+            c = known;
+        }
+
         var d = device ?? string.Empty;
         bool Has(string s) => c.Contains(s, StringComparison.OrdinalIgnoreCase);
         var browser = BrowserDevice().Match(d);
@@ -558,9 +601,15 @@ public sealed partial class Statistics
             return ("ios", "iPhone and iPad", c);
         }
 
-        if (Has("Android") || Has("Findroid") || c == "Seedy")
+        if (c == "Seedy")
         {
-            return ("android", "Android phones", c == "Seedy" ? "Seedy for Android" : c);
+            // An older Android app on a device not seen with a newer one since: a phone or a TV.
+            return ("android-any", "Android", "Seedy");
+        }
+
+        if (Has("Android") || Has("Findroid"))
+        {
+            return ("android", "Android phones", c);
         }
 
         return c.Length == 0 ? ("other", "Other", d) : ("app:" + c.ToLowerInvariant(), c, c);

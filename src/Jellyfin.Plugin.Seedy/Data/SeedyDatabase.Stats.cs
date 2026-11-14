@@ -65,6 +65,23 @@ public sealed partial class SeedyDatabase
         return list;
     }
 
+    /// <summary>The app each device played with last, by device name.</summary>
+    /// <returns>Device name and app, oldest first, so later entries win.</returns>
+    public List<(string Device, string Client)> DeviceApps()
+    {
+        using var c = Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT device_name, client, MAX(started_at) AS last FROM plays WHERE device_name IS NOT NULL AND client IS NOT NULL GROUP BY device_name, client ORDER BY last";
+        var list = new List<(string, string)>();
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+        {
+            list.Add((r.GetString(0), r.GetString(1)));
+        }
+
+        return list;
+    }
+
     /// <summary>When the oldest play in the log started.</summary>
     /// <returns>Start time (UTC), or null when the log is empty.</returns>
     public DateTime? FirstPlayAt()
