@@ -17,6 +17,8 @@ import { ListScreen } from './screens/browse/Lists';
 import { SignIn } from './screens/SignIn';
 import { NotFound } from './screens/NotFound';
 import { Unreachable } from './screens/Unreachable';
+import { startReadyWatch } from './screens/requests/ready';
+import { MeduToastHost } from './ui/medu-toast';
 import { AdminGeneral } from './screens/admin/General';
 import { AdminHome } from './screens/admin/HomeScreen';
 import { AdminRequests } from './screens/admin/Requests';
@@ -145,6 +147,7 @@ export function App() {
   const state = useStore(bootState);
   const loc = useLocation();
   const me = useStore(meStore);
+  useEffect(() => { if (state === 'ready') startReadyWatch(); }, [state]);
 
   if (state === 'booting') return <div class="boot"><div class="spinner" /></div>;
   if (state === 'signedOut') return <><SignIn /><ToastHost /></>;
@@ -163,6 +166,7 @@ export function App() {
       <div key={loc.path}>{view}</div>
       <ConfirmHost />
       <ToastHost />
+      <MeduToastHost />
       <PersonalHost />
       <ManageHost />
       <AudioHost />
