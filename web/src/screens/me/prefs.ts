@@ -15,6 +15,8 @@ import { createStore, safeLocal, saveLocal, useStore } from '../../lib/store';
 /* ── Keys in prefs.custom (owned by these pages; documented in the round report) ── */
 export const CUSTOM = {
   accent: 'display.accent',
+  /* Disco accent (party/disco.ts): unset until the Konami code unlocks it, then 'on' or 'off'. */
+  disco: 'display.disco',
   language: 'display.language',
   dateLocale: 'display.dateLocale',
   backdrops: 'display.backdrops',
@@ -30,6 +32,7 @@ export const CUSTOM = {
 
 export const CUSTOM_DEFAULTS = {
   [CUSTOM.accent]: null as string | null,
+  [CUSTOM.disco]: null as string | null,
   [CUSTOM.language]: 'auto',
   [CUSTOM.dateLocale]: 'auto',
   [CUSTOM.backdrops]: true,

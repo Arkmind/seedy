@@ -177,6 +177,7 @@ body.me-dragging, body.me-dragging * { cursor: grabbing !important; user-select:
 .me-swatch[aria-checked='true'] { box-shadow: 0 0 0 3px var(--seedy-panel), 0 0 0 5px #ffffff; }
 .me-swatch[aria-checked='false']:hover { box-shadow: 0 0 0 3px var(--seedy-panel), 0 0 0 5px var(--seedy-stroke); }
 .me-swatch:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 7px; }
+.me-swatch.is-disco { background: conic-gradient(#ff9fff, #ffc98a, #fff59f, #9fe0b0, #9fd3ff, #c9a8ff, #ff9fff); }
 
 .me-css { gap: 12px; }
 .me-css-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }

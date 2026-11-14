@@ -78,7 +78,8 @@ public class WebController : ControllerBase
                 ? "public, max-age=31536000, immutable"
                 : "public, max-age=3600";
             Response.Headers.XContentTypeOptions = "nosniff";
-            return File(stream, ContentType(path));
+            // Ranges let the party's song (and any other media asset) seek.
+            return File(stream, ContentType(path), enableRangeProcessing: true);
         }
 
         // Unknown files under assets/ are a stale build reference, not an app route.

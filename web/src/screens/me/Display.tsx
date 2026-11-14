@@ -19,6 +19,7 @@ const SWATCHES: { label: string; color: string | null }[] = [
   { label: 'Lilac', color: '#c9b8ff' },
   { label: 'White', color: '#f0f0f0' }
 ];
+const DISCO = { label: 'Disco', color: null };
 
 export function MeDisplay() {
   const device = useStore(deviceStore);
@@ -113,18 +114,23 @@ export function MeDisplay() {
   );
 }
 
-/* Counts, focus ring and selections: the server's colour or one of five personal ones. */
+/* Counts, focus ring and selections: the server's colour or one of five personal ones, plus Disco once the Konami
+   code has unlocked it (it cycles through every colour; picking another swatch turns it off). */
 function AccentSection() {
   const branding = useStore(brandingStore);
   const accent = useCustom(CUSTOM.accent);
+  const disco = useCustom(CUSTOM.disco);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
-  const current = Math.max(0, SWATCHES.findIndex((s) => s.color === (accent?.toLowerCase() ?? null)));
-  const pick = (i: number) => saveCustom({ [CUSTOM.accent]: SWATCHES[i].color });
+  const swatches = disco ? [...SWATCHES, DISCO] : SWATCHES;
+  const current = disco === 'on' ? SWATCHES.length : Math.max(0, SWATCHES.findIndex((s) => s.color === (accent?.toLowerCase() ?? null)));
+  const pick = (i: number) => saveCustom(i === SWATCHES.length
+    ? { [CUSTOM.disco]: 'on' }
+    : { [CUSTOM.accent]: SWATCHES[i].color, ...(disco === 'on' ? { [CUSTOM.disco]: 'off' } : {}) });
   const onKey = (e: KeyboardEvent, i: number) => {
     const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
     if (!d) return;
     e.preventDefault();
-    const n = (i + d + SWATCHES.length) % SWATCHES.length;
+    const n = (i + d + swatches.length) % swatches.length;
     pick(n);
     refs.current[n]?.focus();
   };
@@ -135,18 +141,18 @@ function AccentSection() {
         <p class="me-section-help">{t('Counts, focus ring and selections. Starts as your server’s colour.')}</p>
       </div>
       <div role="radiogroup" aria-label={t('Accent colour')} class="me-swatches">
-        {SWATCHES.map((s, i) => (
+        {swatches.map((s, i) => (
           <button
             key={s.label}
             ref={(el) => { refs.current[i] = el; }}
             type="button"
             role="radio"
-            class="me-swatch"
+            class={'me-swatch' + (s === DISCO ? ' is-disco' : '')}
             aria-checked={i === current ? 'true' : 'false'}
             aria-label={t(s.label)}
             title={t(s.label)}
             tabIndex={i === current ? 0 : -1}
-            style={{ background: s.color ?? branding.accent }}
+            style={s === DISCO ? undefined : { background: s.color ?? branding.accent }}
             onClick={() => pick(i)}
             onKeyDown={(e) => onKey(e as unknown as KeyboardEvent, i)}
           />

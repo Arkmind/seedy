@@ -1,0 +1,186 @@
+/* Medu Dance Revolution (Konami code board). Sizes are the board's pixels: .party-stage is scaled to fit. */
+
+.party {
+  position: fixed; inset: 0; z-index: 1000; overflow: hidden; isolation: isolate; outline: none;
+  color: #e0e0e0; font-family: inherit;
+  background: radial-gradient(ellipse 80% 70% at 50% 40%, #1c1024 0%, #0c0912 60%, #07060a 100%);
+}
+.party-stage { position: absolute; left: 0; top: 0; overflow: hidden; transform-origin: 0 0; }
+.party button { font-family: inherit; cursor: pointer; }
+.party button:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 3px; }
+.party kbd { font-family: inherit; }
+
+/* ── Backdrop ── */
+
+.party-beam {
+  position: absolute; top: -60px; width: 520px; height: 1100px; margin-left: -260px; opacity: 0.22;
+  transform-origin: 50% 0; clip-path: polygon(47% 0, 53% 0, 100% 100%, 0 100%); mix-blend-mode: screen; filter: blur(8px);
+  animation: party-sweep 7s ease-in-out infinite alternate;
+}
+@keyframes party-sweep { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
+.party-specks { position: absolute; inset: 0; transform-origin: 50% 104px; animation: party-spin 24s linear infinite; }
+.party-specks span { position: absolute; border-radius: 50%; background: #ffffff; }
+@keyframes party-spin { to { transform: rotate(360deg); } }
+
+.party-floor { position: absolute; left: 0; right: 0; bottom: 0; height: 300px; perspective: 700px; overflow: hidden; }
+.party-tiles {
+  position: absolute; left: -300px; right: -300px; bottom: -20px; height: 640px;
+  display: grid; grid-template-columns: repeat(14, 1fr); grid-template-rows: repeat(7, 1fr); gap: 5px;
+  transform: rotateX(64deg); transform-origin: 50% 100%;
+}
+.party-tile { animation: party-tile 3.6s steps(1) infinite; }
+@keyframes party-tile {
+  0% { background: rgba(255, 159, 255, 0.34); }
+  25% { background: rgba(159, 211, 255, 0.3); }
+  50% { background: rgba(159, 224, 176, 0.28); }
+  75% { background: rgba(255, 201, 138, 0.3); }
+}
+.party-floor-fade { position: absolute; inset: 0; background: linear-gradient(180deg, #07060a 0%, rgba(7, 6, 10, 0) 45%); }
+
+.party-confetti { position: absolute; top: -30px; opacity: 0.85; animation: party-fall linear infinite; }
+@keyframes party-fall { from { transform: translateY(0) rotate(0); } to { transform: translateY(960px) rotate(720deg); } }
+
+.party-ball-wire { position: absolute; z-index: 3; left: calc(50% - 55px); top: 0; width: 110px; display: flex; flex-direction: column; align-items: center; }
+.party-ball-wire > span:first-child { width: 2px; height: 48px; background: #3a3a44; }
+.party-ball {
+  width: 110px; height: 110px; border-radius: 50%; box-shadow: 0 0 60px rgba(255, 255, 255, 0.25);
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.95) 0, rgba(255, 255, 255, 0) 26%),
+    radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.55) 100%),
+    repeating-linear-gradient(0deg, rgba(20, 20, 28, 0.55) 0 2px, rgba(0, 0, 0, 0) 2px 11px),
+    repeating-linear-gradient(90deg, #d4d4e0 0 9px, #5a5a68 9px 11px),
+    #8a8a98;
+  animation: party-ball 3s linear infinite;
+}
+@keyframes party-ball { from { background-position: 0 0, 0 0, 0 0, 0 0; } to { background-position: 0 0, 0 0, 0 0, 44px 0; } }
+
+/* ── Top bar ── */
+
+.party-top { position: absolute; z-index: 6; top: 24px; left: 28px; right: 28px; display: flex; align-items: center; justify-content: space-between; }
+.party-code { display: flex; align-items: center; gap: 12px; padding: 8px 14px 8px 8px; border-radius: 16px; background: rgba(14, 14, 14, 0.78); font-size: 14px; font-weight: 800; color: #ffffff; }
+.party-keys { display: flex; gap: 4px; }
+.party-keys kbd {
+  min-width: 30px; height: 30px; padding: 0 6px; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; background: var(--seedy-accent); color: #1e1e1e; font-size: 15px; font-weight: 900;
+}
+.party-actions { display: flex; gap: 8px; }
+.party-song, .party-leave { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: 0; border-radius: 13px; font-size: 14px; }
+.party-song { background: rgba(14, 14, 14, 0.78); color: #ffffff; font-weight: 700; }
+.party-song svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.party-bpm { color: #8c8c8c; font-weight: 600; }
+.party-chip { margin-left: 4px; padding: 2px 8px; border-radius: 7px; background: #2a2a2a; font-size: 12px; }
+.party-song[aria-pressed='false'] .party-chip { background: var(--seedy-accent); color: #1e1e1e; }
+.party-leave { background: #f0f0f0; color: #1e1e1e; font-weight: 800; }
+.party-leave kbd { padding: 2px 6px; border-radius: 6px; background: #d6d6d6; font-size: 12px; }
+
+/* ── Title ── */
+
+.party-title { position: absolute; z-index: 4; top: 172px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.party-title h1 { position: relative; margin: 0; font-size: 70px; line-height: 1; font-weight: 900; letter-spacing: -0.01em; transform: skewX(-8deg); }
+.party-title h1 span { white-space: nowrap; }
+.party-title-shadow { position: absolute; left: 5px; top: 6px; color: #2a1830; }
+.party-title h1 .party-rainbow { position: relative; }
+.party-title p { margin: 0; font-size: 17px; font-weight: 700; color: #e0e0e0; }
+
+.party-rainbow {
+  background: linear-gradient(90deg, #ff9fff, #ffc98a, #fff59f, #9fe0b0, #9fd3ff, #c9a8ff, #ff9fff); background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: party-shift 6s linear infinite;
+}
+@keyframes party-shift { to { background-position: 200% 0; } }
+
+/* ── Dancers: two bounces a bar, lined up with the song (Party.tsx sets their animations' time) ── */
+
+.party-dancer { position: absolute; z-index: 4; }
+.party-shadow { position: absolute; left: 15%; right: 15%; bottom: -6px; border-radius: 50%; background: rgba(0, 0, 0, 0.55); filter: blur(4px); }
+.party-dance { transform-origin: 50% 100%; animation: party-dance calc(var(--party-beat) * 2) ease-in-out infinite; }
+.party-dance.is-late { animation-delay: calc(var(--party-beat) * -1); }
+.party-dance svg { display: block; }
+.party.is-paused .party-dance { animation-play-state: paused; }
+@keyframes party-dance {
+  0%, 100% { transform: translateY(0) rotate(-8deg); }
+  25% { transform: translateY(-26px) rotate(0) scale(1.04, 0.96); }
+  50% { transform: translateY(0) rotate(8deg); }
+  75% { transform: translateY(-26px) rotate(0) scale(1.04, 0.96); }
+}
+
+/* ── The arrow lane ── */
+
+.party-lane {
+  position: absolute; z-index: 5; left: 40px; top: 250px; width: 280px; height: 470px; border-radius: 24px; overflow: hidden;
+  background: rgba(10, 9, 14, 0.72); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.party-notes { position: absolute; inset: 0; }
+.party-note { position: absolute; top: 0; will-change: transform; }
+.party-note.is-missed { opacity: 0.35; }
+.party-arrow { display: block; }
+.party-target { position: absolute; top: 16px; display: flex; border-radius: 16px; }
+.party-target.is-down { background: color-mix(in srgb, var(--c) 16%, transparent); }
+.party-glow { position: absolute; top: 16px; width: 52px; height: 52px; border-radius: 16px; pointer-events: none; animation: party-glow 0.9s ease-out forwards; }
+@keyframes party-glow {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 70%, transparent); }
+  100% { box-shadow: 0 0 0 18px color-mix(in srgb, var(--c) 0%, transparent); }
+}
+.party-lane-foot {
+  position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; padding: 40px 16px 14px; border: 0;
+  background: linear-gradient(0deg, rgba(10, 9, 14, 0.95) 40%, rgba(10, 9, 14, 0)); font-size: 13px; font-weight: 700; line-height: 1.5; color: #a1a1a1; text-align: center;
+}
+.party-lane-foot.is-action { color: #ffffff; }
+.party-lane-foot.is-action:hover { color: var(--seedy-accent); }
+.party .party-lane-foot.is-action:focus-visible { outline-offset: -4px; border-radius: 0 0 24px 24px; }
+
+/* ── Score ── */
+
+.party-score { position: absolute; z-index: 5; right: 40px; top: 250px; width: 280px; display: flex; flex-direction: column; gap: 14px; }
+.party-card { display: flex; flex-direction: column; gap: 2px; padding: 16px 18px; border-radius: 20px; background: rgba(10, 9, 14, 0.72); }
+.party-label { font-size: 12px; font-weight: 800; letter-spacing: 0.14em; color: #8c8c8c; }
+.party-number { font-size: 40px; line-height: 1.1; font-weight: 900; font-variant-numeric: tabular-nums; color: #ffffff; }
+.party-judge-card { align-items: center; padding: 18px 18px 16px; }
+.party-judge { font-size: 44px; line-height: 1; font-weight: 900; transform-origin: 50% 50%; white-space: nowrap; animation: party-pop 1.8s ease-out forwards; }
+.party-judge.party-rainbow { animation: party-pop 1.8s ease-out forwards, party-shift 6s linear infinite; }
+.party-judge.is-ready { color: #ffffff; animation: none; }
+.party-judge.is-great { color: #9fe0b0; }
+.party-judge.is-good { color: #9fd3ff; }
+.party-judge.is-miss { color: var(--seedy-danger); }
+/* The verdict at the end of the song stays. */
+.party-judge.is-final { font-size: 34px; line-height: 44px; animation-name: party-pop-in; }
+.party-judge.is-final.party-rainbow { animation-name: party-pop-in, party-shift; }
+@keyframes party-pop { 0% { transform: scale(1.3); opacity: 0; } 12% { transform: scale(1); opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0.35; } }
+@keyframes party-pop-in { 0% { transform: scale(1.3); opacity: 0; } 12%, 100% { transform: scale(1); opacity: 1; } }
+.party-combo { font-size: 26px; font-weight: 900; color: #ffffff; font-variant-numeric: tabular-nums; }
+.party-combo span { font-size: 15px; font-weight: 800; letter-spacing: 0.1em; color: #a1a1a1; }
+.party-lives { gap: 8px; padding: 14px 18px; }
+.party-lives-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.party-tradition { font-size: 13px; font-weight: 800; color: #ffc98a; }
+.party-lives-row { display: flex; align-items: center; gap: 4px; height: 40px; }
+.party-lives-row svg { display: block; flex: none; }
+.party-lives-count { margin-left: 6px; font-size: 22px; font-weight: 900; color: #ffffff; }
+.party-level {
+  display: flex; justify-content: space-between; padding: 12px 18px; border: 0; border-radius: 16px;
+  background: rgba(10, 9, 14, 0.72); font-size: 13px; color: #8c8c8c; text-align: left;
+}
+.party-level:hover { background: rgba(30, 28, 36, 0.85); }
+.party-level-name { font-weight: 800; color: #ffffff; }
+
+/* ── Unlocked: Disco accent ── */
+
+.party-unlock {
+  position: absolute; z-index: 6; left: 50%; bottom: 26px; transform: translateX(-50%); width: 700px; box-sizing: border-box;
+  display: flex; align-items: center; gap: 18px; padding: 16px 18px; border-radius: 22px; background: rgba(20, 18, 24, 0.92);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.party-disco {
+  flex: none; width: 54px; height: 54px; border-radius: 16px;
+  background: conic-gradient(#ff9fff, #ffc98a, #fff59f, #9fe0b0, #9fd3ff, #c9a8ff, #ff9fff); animation: party-spin 4s linear infinite;
+}
+.party-unlock-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; line-height: 1.45; color: #a1a1a1; }
+.party-unlock-kicker { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; line-height: normal; text-transform: uppercase; color: #9fe0b0; }
+.party-unlock h2 { margin: 0; font-size: 18px; font-weight: 900; line-height: normal; color: #ffffff; }
+.party-unlock-actions { flex: none; display: flex; gap: 8px; }
+.party-keep, .party-nope { height: 44px; padding: 0 16px; border: 0; border-radius: 13px; font-size: 14px; }
+.party-keep { background: #f0f0f0; color: #1e1e1e; font-weight: 800; }
+.party-nope { background: #2a2a2a; color: #ffffff; font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) {
+  .party-stage *:not(.party-note) { animation: none !important; }
+}

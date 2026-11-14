@@ -19,6 +19,7 @@ import { NotFound } from './screens/NotFound';
 import { Unreachable } from './screens/Unreachable';
 import { startReadyWatch } from './screens/requests/ready';
 import { MeduToastHost } from './ui/medu-toast';
+import { PartyHost } from './party/PartyHost';
 import { AdminGeneral } from './screens/admin/General';
 import { AdminHome } from './screens/admin/HomeScreen';
 import { AdminRequests } from './screens/admin/Requests';
@@ -150,7 +151,7 @@ export function App() {
   useEffect(() => { if (state === 'ready') startReadyWatch(); }, [state]);
 
   if (state === 'booting') return <div class="boot"><div class="spinner" /></div>;
-  if (state === 'signedOut') return <><SignIn /><ToastHost /></>;
+  if (state === 'signedOut') return <><SignIn /><ToastHost /><PartyHost /></>;
   if (state === 'offline') return <><Unreachable /><ToastHost /></>;
 
   let view: preact.JSX.Element = <NotFound />;
@@ -170,6 +171,7 @@ export function App() {
       <PersonalHost />
       <ManageHost />
       <AudioHost />
+      <PartyHost />
     </>
   );
 }
