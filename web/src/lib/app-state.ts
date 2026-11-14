@@ -68,6 +68,17 @@ function setFavicon(href: string) {
   if (link.href !== new URL(href, window.location.href).href) link.href = href;
 }
 
+/* The server's own name (Jellyfin's ServerName), remembered so "Can't reach your server" can still say which one. */
+const NAME_KEY = 'seedy.serverName';
+const savedName = () => { try { return window.localStorage.getItem(NAME_KEY) ?? ''; } catch { return ''; } };
+export const serverNameStore = createStore<string>(savedName());
+export function loadServerName() {
+  return jf.getPublicInfo().then((info) => {
+    serverNameStore.set(info.ServerName);
+    try { window.localStorage.setItem(NAME_KEY, info.ServerName); } catch { /* private window */ }
+  }).catch(() => undefined);
+}
+
 export async function loadBranding() {
   try {
     applyBranding(await seedy.getClientBranding());
@@ -114,6 +125,7 @@ export async function boot() {
     signOutLocal();
   });
   bootState.set('booting');
+  void loadServerName();
   await loadBranding();
   for (const s of candidateSessions()) {
     try {
