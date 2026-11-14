@@ -39,6 +39,7 @@ const SPECKS = [[1113, 886, 3, 0.55], [1247, 342, 3, 0.41], [1201, 146, 5, 0.37]
 const CONFETTI: [number, number, number, number, string, number, number][] = [[1060, 8, 12, 2, '#9fe0b0', 6.3, -4.9], [592, 12, 18, 2, '#c9a8ff', 10, -8.6], [1167, 8, 16, 2, '#9fe0b0', 7, -1.1], [1009, 12, 10, 6, '#ffc98a', 6.7, -5.8], [1236, 8, 18, 2, '#9fd3ff', 8.3, -1.7], [1322, 8, 10, 2, '#9fe0b0', 10, -3.1], [1145, 12, 12, 6, '#9fd3ff', 6.3, -1.4], [950, 12, 12, 6, '#ffc98a', 10.8, -3.6], [1244, 8, 16, 2, '#9fe0b0', 8, -2.8], [733, 10, 16, 2, '#c9a8ff', 10.3, -10.1], [772, 8, 16, 2, '#ff9fff', 7.9, -0.9], [1397, 10, 18, 2, '#9fd3ff', 10.6, -6.2], [1416, 10, 18, 2, '#ff9fff', 8.1, -0.9], [625, 12, 10, 6, '#c9a8ff', 6.8, -5.3], [628, 10, 16, 2, '#fff59f', 10.8, -1.3], [1295, 12, 12, 6, '#9fd3ff', 9.7, -2.5], [1020, 8, 12, 2, '#ff9fff', 8.9, -4.6], [1161, 12, 16, 2, '#c9a8ff', 6.3, -4.5], [1068, 12, 12, 6, '#c9a8ff', 10.3, -2], [621, 8, 12, 2, '#c9a8ff', 9.4, -8.6], [897, 8, 10, 2, '#c9a8ff', 6.6, -5.6], [1036, 12, 16, 2, '#9fe0b0', 8.9, -4.5], [960, 8, 12, 2, '#9fe0b0', 8.1, -3.3], [425, 12, 18, 2, '#9fd3ff', 10.7, -2], [957, 8, 18, 2, '#ffc98a', 7.2, -4.9], [1300, 10, 16, 2, '#fff59f', 9.4, -5.3], [584, 10, 10, 6, '#ff9fff', 7.6, -2.3], [302, 8, 12, 2, '#fff59f', 8.3, -5], [464, 12, 12, 6, '#ffc98a', 6.4, -2.8], [307, 8, 18, 2, '#ffc98a', 6.7, -5.3], [1382, 10, 12, 2, '#c9a8ff', 10.4, -1.8], [122, 10, 18, 2, '#fff59f', 6.8, -4.5], [891, 12, 18, 2, '#ff9fff', 9.1, -7.4], [1081, 12, 12, 6, '#c9a8ff', 9.3, -2.9], [1161, 12, 18, 2, '#9fd3ff', 10.7, -0.3], [352, 8, 16, 2, '#ffc98a', 7.3, -4.5], [1106, 8, 16, 2, '#ffc98a', 7.4, -3.1], [906, 12, 16, 2, '#9fd3ff', 9.6, -6.9], [552, 8, 18, 2, '#ffc98a', 8.5, -2.1], [944, 10, 12, 2, '#ff9fff', 6.5, -5.8], [1239, 10, 18, 2, '#ff9fff', 6.2, -4.8], [315, 10, 16, 2, '#c9a8ff', 9.2, -4.8], [72, 10, 16, 2, '#9fd3ff', 9.7, -8.9], [174, 12, 10, 6, '#9fd3ff', 8.8, -7.1], [961, 8, 12, 2, '#fff59f', 10.7, -6.4], [1368, 12, 16, 2, '#ffc98a', 8.7, -5.3], [1035, 10, 16, 2, '#fff59f', 8.1, -3.5], [1305, 8, 18, 2, '#ffc98a', 7.8, -7], [1070, 8, 18, 2, '#ffc98a', 7.1, -3.2], [1082, 8, 12, 2, '#c9a8ff', 7.8, -2.2], [1119, 12, 10, 6, '#ffc98a', 10.9, -6.8], [395, 12, 16, 2, '#ff9fff', 10.6, -7.6], [337, 8, 16, 2, '#9fe0b0', 10.9, -3.5], [777, 8, 10, 2, '#9fd3ff', 6.1, -0.9]];
 /* The dance floor: 14 × 7 tiles, each a quarter of the colour loop behind its left neighbour. */
 const TILES = Array.from({ length: 98 }, (_, i) => -((((Math.floor(i / 14) - (i % 14)) % 4) + 4) % 4) * 0.9);
+const TILE_COLOURS = ['rgba(255, 159, 255, 0.34)', 'rgba(159, 211, 255, 0.3)', 'rgba(159, 224, 176, 0.28)', 'rgba(255, 201, 138, 0.3)'];
 /* The dancers, from the stage's centre line: [x offset, top, width, mood, hue, half a bar late]. */
 const DANCERS: [number, number, number, MeduMood, number, boolean][] = [
   [-328, 440, 128, 'yay', 150, true],
@@ -57,7 +58,10 @@ function Backdrop() {
       {SPECKS.map(([x, y, size, o], i) => <span key={i} style={{ left: pct(x), top: y + 'px', width: size + 'px', height: size + 'px', opacity: o }} />)}
     </div>
     <div aria-hidden="true" class="party-floor">
-      <div class="party-tiles">{TILES.map((d, i) => <span key={i} class="party-tile" style={{ animationDelay: `${d}s` }} />)}</div>
+      <div class="party-tiles">
+        {/* The colour each tile shows when motion is reduced is where its loop would be. */}
+        {TILES.map((d, i) => <span key={i} class="party-tile" style={{ animationDelay: `${d}s`, background: TILE_COLOURS[Math.round(-d / 0.9) % 4] }} />)}
+      </div>
       <div class="party-floor-fade" />
     </div>
     {CONFETTI.map(([x, w, h, r, c, dur, delay], i) => (

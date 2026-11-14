@@ -37,8 +37,11 @@ export class Run {
   private first = 0;
 
   constructor(readonly level: Level) {
-    this.notes = steps.charts[level]
-      .map((n) => ({ t: steps.offset_seconds + n.beat * BEAT, lane: LANES.indexOf(n.lane as Lane), result: null }))
+    // A step names one lane, or several for a jump (both arrows at once): each arrow is its own note.
+    const chart: { beat: number; lane: string | string[] }[] = steps.charts[level];
+    this.notes = chart
+      .flatMap((n) => (Array.isArray(n.lane) ? n.lane : [n.lane]).map((lane) => ({ t: steps.offset_seconds + n.beat * BEAT, lane: LANES.indexOf(lane as Lane), result: null })))
+      .filter((n) => n.lane >= 0)
       .sort((a, b) => a.t - b.t);
   }
 
