@@ -1,0 +1,27 @@
+/* The deep sea behind Medu's full-page moments (Not found, Can't reach the server). */
+.sea-scene {
+  position: relative; overflow: hidden; isolation: isolate;
+  background: radial-gradient(ellipse 70% 55% at 50% 0%, rgba(159, 200, 255, 0.07), rgba(159, 200, 255, 0) 70%),
+    linear-gradient(180deg, #0e0e0e 0%, #0d1016 52%, #0b0d12 100%);
+}
+.sea { position: absolute; inset: 0; pointer-events: none; }
+.sea-ray {
+  position: absolute; top: -160px; transform-origin: 50% 0; transform: rotate(15deg); filter: blur(12px);
+  background: linear-gradient(180deg, rgba(214, 230, 255, 0.085), rgba(214, 230, 255, 0) 76%);
+  animation: sea-ray 11s ease-in-out infinite alternate;
+}
+@keyframes sea-ray { from { transform: rotate(11deg); opacity: 0.5; } to { transform: rotate(19deg); opacity: 1; } }
+.sea-snow { position: absolute; border-radius: 50%; background: #dfe8f5; opacity: var(--o); animation: sea-snow linear infinite; }
+@keyframes sea-snow { 0% { transform: translate(0, -30px); opacity: 0; } 12%, 88% { opacity: var(--o); } 100% { transform: translate(18px, 160px); opacity: 0; } }
+.sea-bub { position: absolute; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.42); animation: sea-rise ease-in infinite; }
+@keyframes sea-rise { 0% { transform: translate(0, 0); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate(14px, var(--sea-rise)); opacity: 0; } }
+.sea-fish { position: absolute; left: 0; animation: sea-swim linear infinite; }
+.sea-fish svg { display: block; }
+.sea-fish.is-back { animation-name: sea-swim-back; }
+@keyframes sea-swim { from { transform: translateX(-140px); } to { transform: translateX(calc(100vw + 160px)); } }
+@keyframes sea-swim-back { from { transform: translateX(calc(100vw + 160px)) scaleX(-1); } to { transform: translateX(-140px) scaleX(-1); } }
+.sea-bed { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 220px; }
+.sea-weed { transform-box: fill-box; transform-origin: 50% 100%; animation: sea-weed 4.6s ease-in-out infinite alternate; }
+@keyframes sea-weed { from { transform: skewX(-7deg); } to { transform: skewX(7deg); } }
+/* Held still, the scene keeps its angles and its snow, and the fish stay out of it. */
+@media (prefers-reduced-motion: reduce) { .sea * { animation: none !important; } .sea-fish { display: none; } }
