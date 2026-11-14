@@ -1,0 +1,33 @@
+/* French for Medu Dance Revolution, the Konami code's party (party/), and its Disco accent. */
+const fr: Record<string, string> = {
+  'Code accepted': 'Code accepté',
+  'Leave the party': 'Quitter la fête',
+  'A group of jellyfish is called a smack. This one’s yours.': 'En anglais, un groupe de méduses s’appelle un « smack ». Celui-ci est à vous.',
+  'Arrows': 'Flèches',
+  'Use ← ↓ ↑ → on the keyboard, or the remote’s arrows': 'Utilisez ← ↓ ↑ → au clavier, ou les flèches de la télécommande',
+  'Press Enter to start the music': 'Appuyez sur Entrée pour lancer la musique',
+  'Press Enter to dance again': 'Appuyez sur Entrée pour danser encore',
+  'Score': 'Score',
+  'SCORE': 'SCORE',
+  'COMBO': 'COMBO',
+  'MAX COMBO': 'COMBO MAX',
+  'LIVES': 'VIES',
+  '+30, as tradition demands': '+30, tradition oblige',
+  'READY?': 'PRÊT ?',
+  'PERFECT!!': 'PARFAIT !!',
+  'GREAT!': 'SUPER !',
+  'GOOD': 'BIEN',
+  'MISS': 'RATÉ',
+  'GAME OVER': 'PERDU',
+  'CLEARED!': 'RÉUSSI !',
+  'FULL COMBO!!': 'SANS FAUTE !!',
+  'Difficulty': 'Difficulté',
+  'Change the difficulty (the song starts again)': 'Changer la difficulté (la chanson recommence)',
+  'Unlocked': 'Débloqué',
+  'Disco accent': 'Accent disco',
+  'Your accent slowly cycles through every colour. Switch it off any time in Settings.': 'Votre couleur d’accent passe lentement par toutes les couleurs. Désactivable à tout moment dans les Paramètres.',
+  'Keep it': 'Je garde',
+  'No thanks': 'Non merci',
+  'Disco': 'Disco'
+};
+export default fr;

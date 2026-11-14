@@ -10,6 +10,7 @@ import { createStore, useStore } from '../../lib/store';
 import { BrandMark } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { Sheet } from '../../ui/overlay';
+import { discoColour, discoOn, setDisco } from '../../party/disco';
 import { CUSTOM, deviceStore, readCustom, type DevicePrefs } from './prefs';
 import { ShortcutGrid } from './shortcuts';
 import './effects.css';
@@ -101,6 +102,8 @@ function applyCustomCss(css: string) {
 
 let lastAccent = '';
 function applyAccent() {
+  // Disco (unlocked by the Konami code) cycles the accent; turning it off puts the chosen one back.
+  setDisco(readCustom(CUSTOM.disco) === 'on' && bootState.get() === 'ready', () => applyBranding(brandingStore.get()));
   const key = String(readCustom(CUSTOM.accent)) + '|' + deviceStore.get().ignoreServerCss;
   if (key === lastAccent) return;
   lastAccent = key;
@@ -175,7 +178,7 @@ function patchScrolling() {
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-function editable(el: Element | null) {
+export function editable(el: Element | null) {
   if (!el) return false;
   if (el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) return true;
   if (el instanceof HTMLInputElement) return !['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color', 'file'].includes(el.type);
@@ -309,7 +312,7 @@ function padAction(name: string) {
     return;
   }
   if (name === 'B') {
-    if (document.querySelector('.scrim, .popover') || onPlayer()) { dispatchKey('Escape'); return; }
+    if (document.querySelector('.scrim, .popover, .party') || onPlayer()) { dispatchKey('Escape'); return; }
     back();
   }
 }
@@ -365,7 +368,8 @@ function idleTick() {
   // Playback started without anyone touching this device (another app sent it a title): the picture comes first.
   if (saverOpen.get() && (onPlayer() || mediaPlaying() || bootState.get() !== 'ready')) { saverOpen.set(false); idle.touch(); return; }
   if (d.screensaver === 'off' || saverOpen.get() || bootState.get() !== 'ready' || onPlayer() || document.hidden) { if (!saverOpen.get()) idle.touch(); return; }
-  if (mediaPlaying()) { idle.touch(); return; }
+  // Medu Dance Revolution (the Konami code's party) keeps it away too, between songs included.
+  if (mediaPlaying() || document.querySelector('.party')) { idle.touch(); return; }
   if (Date.now() - idle.last >= Math.max(10, d.screensaverAfter) * 1000) saverOpen.set(true);
 }
 
@@ -391,6 +395,7 @@ export function startPersonalEffects() {
   if (started) return;
   started = true;
   setAccentFilter((server) => {
+    if (discoOn()) return discoColour();
     const mine = readCustom(CUSTOM.accent);
     if (mine && HEX.test(mine)) return mine;
     // "Ignore the server's CSS": Seedy's stock look instead of the admin's theme.
@@ -405,7 +410,7 @@ export function startPersonalEffects() {
     const k = readCustom(CUSTOM.dateLocale) + '|' + readCustom(CUSTOM.language);
     if (k !== lastDates) { lastDates = k; applyDates(); }
   });
-  bootState.subscribe((st) => { if (st === 'ready') applyLanguagePref(readCustom(CUSTOM.language)); });
+  bootState.subscribe((st) => { if (st === 'ready') applyLanguagePref(readCustom(CUSTOM.language)); applyAccent(); });
   deviceStore.subscribe(applyDevice);
   applyDevice(deviceStore.get());
   patchScrolling();

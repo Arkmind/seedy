@@ -4,9 +4,10 @@ import './medu.css';
 
 // Medu, Seedy's jellyfish (Brand · Mascot board). One drawing in a 200 × 264 box (viewBox 0 -24 200 264), six moods
 // on top of an idle pose, and a small variant under 80 px that drops the face details and keeps three tentacles.
+// Party (sunglasses and a party hat) is the Konami code's dancer (Medu Dance Revolution board).
 // Motion is CSS (medu.css) and stops under prefers-reduced-motion.
 
-export type MeduMood = 'idle' | 'wave' | 'search' | 'sleepy' | 'yay' | 'think' | 'oops';
+export type MeduMood = 'idle' | 'wave' | 'search' | 'sleepy' | 'yay' | 'think' | 'oops' | 'party';
 
 const INK = '#1e1e1e';
 const ARM = '#efdff3';
@@ -20,7 +21,7 @@ const TENTACLES = {
   d2: 'M130 117 C136 142 122 160 132 184 C138 200 128 214 134 228',
   d4: 'M152 112 C160 136 144 152 154 174 C162 192 150 206 156 220',
 };
-const BLUSH: Record<MeduMood, number> = { idle: 0.55, wave: 0.55, search: 0.4, sleepy: 0.5, yay: 0.7, think: 0.45, oops: 0.4 };
+const BLUSH: Record<MeduMood, number> = { idle: 0.55, wave: 0.55, search: 0.4, sleepy: 0.5, yay: 0.7, think: 0.45, oops: 0.4, party: 0.75 };
 
 const fill = (color: string) => ({ fill: color });
 const stroke = (color: string) => ({ stroke: color });
@@ -66,6 +67,18 @@ function Face({ mood }: { mood: MeduMood }) {
         <Eyes dy={-3} />
         {line('M94 98 L106 97')}
       </>;
+    case 'party':
+      return <>
+        <path d="M78 31 Q100 40 122 31 L106 -18 Z" style={fill(ACCENT)} />
+        <path d="M86 14 Q100 20 114 14 M93 -2 Q101 2 109 -2" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.9" />
+        <circle cx="106" cy="-19" r="8" fill="#ffffff" />
+        <rect x="64" y="72" width="31" height="22" rx="9" fill={INK} />
+        <rect x="105" y="72" width="31" height="22" rx="9" fill={INK} />
+        {line('M95 79 Q100 75 105 79 M64 78 L48 72 M136 78 L152 72', 3.5)}
+        <path d="M71 77 L79 86 M112 77 L120 86" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.85" />
+        <path d="M88 98 Q100 116 112 98 Z" fill={INK} stroke={INK} stroke-width="2.4" stroke-linejoin="round" />
+        <path d="M94 105 Q100 111 106 105 Q100 101 94 105 Z" style={fill(ACCENT)} />
+      </>;
     case 'oops':
       return <>
         <Eyes />
@@ -110,7 +123,7 @@ export function Medu({ mood = 'idle', size, torch = false, glow, bubbles = false
   const uid = useId().replace(/[^\w-]/g, '');
   const small = size < 80;
   const halo = glow ?? !small;
-  const speed = mood === 'sleepy' ? ' m-slow' : mood === 'yay' ? ' m-fast' : '';
+  const speed = mood === 'sleepy' ? ' m-slow' : mood === 'yay' || mood === 'party' ? ' m-fast' : '';
   const a11y = label ? { role: 'img' as const, 'aria-label': label } : { 'aria-hidden': true };
   const torchArm = mood === 'search' && torch && !small;
   return (
