@@ -17,7 +17,7 @@ import { ItemCard, LibraryCard, SkeletonCards, WatchedCheck, Progress, Art, deta
 import { cardArt, primaryUrl } from '../../api/images';
 import { Icon, type IconName } from '../../ui/icons';
 import { MeduState } from '../../ui/medu';
-import { openSearch } from '../../ui/search/SearchBox';
+import { openSearch } from '../../ui/search/open';
 import { MenuItem, Popover, toast } from '../../ui/overlay';
 import { withEpisodeArt } from '../me/prefs';
 import './browse.css';

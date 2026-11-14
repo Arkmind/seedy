@@ -6,6 +6,7 @@ import { meStore } from '../../lib/app-state';
 import { getLocation, href, navigate, setQuery, useLocation } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { resolvePlayable } from '../../screens/browse/parts';
+import { OPEN_SEARCH } from './open';
 import { detailsPath, playPath } from '../cards';
 import { Icon } from '../icons';
 import { NbIcon } from '../navbar/icons';
@@ -31,9 +32,6 @@ const editable = (el: Element | null) =>
   !!el && (el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement || (el as HTMLElement).isContentEditable
     || (el instanceof HTMLInputElement && !['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color', 'file'].includes(el.type)));
 
-/** Opens the header's search, like pressing "/" (the empty pages' "Find something to add"). */
-export const openSearch = () => window.dispatchEvent(new Event('seedy:open-search'));
-
 /* "/" (not while typing elsewhere) or Ctrl/Cmd K. Dialogs keep their keys. openSearch() does the same. */
 function useShortcut(run: () => void, input: { current: HTMLInputElement | null }) {
   const runRef = useRef(run);
@@ -53,8 +51,8 @@ function useShortcut(run: () => void, input: { current: HTMLInputElement | null 
     };
     const onOpen = () => runRef.current();
     window.addEventListener('keydown', onKey);
-    window.addEventListener('seedy:open-search', onOpen);
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('seedy:open-search', onOpen); };
+    window.addEventListener(OPEN_SEARCH, onOpen);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener(OPEN_SEARCH, onOpen); };
   }, []);
 }
 

@@ -9,7 +9,7 @@ import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { seerrTarget } from '../../ui/cards';
 import { Icon } from '../../ui/icons';
 import { MeduState } from '../../ui/medu';
-import { openSearch } from '../../ui/search/SearchBox';
+import { openSearch } from '../../ui/search/open';
 import { MenuButton, MenuItem } from '../../ui/overlay';
 import { EmptyState, ErrorState } from '../browse/parts';
 import { seasonList } from '../browse/request-seasons';

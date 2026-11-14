@@ -9,7 +9,7 @@ import { Icon } from '../ui/icons';
 import { Medu } from '../ui/medu';
 import { Header } from '../ui/navbar/Header';
 import { toast } from '../ui/overlay';
-import { openSearch } from '../ui/search/SearchBox';
+import { openSearch } from '../ui/search/open';
 import { SAND_BACK, SAND_FRONT, Sea, Weed, type Bubble, type Fish, type Flake, type Ray } from '../ui/sea';
 import { seasonsLabel } from './browse/parts';
 import './not-found.css';
