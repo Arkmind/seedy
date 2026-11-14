@@ -452,13 +452,26 @@ class PlayerController(private val context: Context, private val session: UserSe
         play(next)
     }
 
-    /** Switches to another episode (the Episodes panel). */
+    /**
+     * Switches to another episode (Next episode, the Episodes panel). Moving on to the next one from the credits
+     * finishes this one, so it doesn't stay in Continue watching with the credits left; earlier, it keeps its place.
+     */
     fun play(other: BaseItemDto) {
         rememberPicks()
+        val finished = other.id == _state.value.next?.id && inEndZone()
         scope.launch {
-            stopReporting()
+            stopReporting(finished)
             open(other.id)
         }
+    }
+
+    /** In the credits (an Outro segment in the second half) or, without one, the last seconds of the video. */
+    private fun inEndZone(): Boolean {
+        val dur = _state.value.durationMs
+        if (dur <= 0) return false
+        val outro = _state.value.segments.firstOrNull { it.type == MediaSegmentType.OUTRO && it.startTicks / 10_000 >= dur / 2 }
+        val from = outro?.let { it.startTicks / 10_000 } ?: (dur - minOf(25_000L, dur * 15 / 100))
+        return exo.currentPosition >= from - 2_000
     }
 
     /** Restarts the stream where it is with new options (an audio track or quality the server has to convert). */
@@ -604,9 +617,10 @@ class PlayerController(private val context: Context, private val session: UserSe
         send(Streams.Report(it, s, exo.currentPosition * 10_000, !exo.playWhenReady, exo.playbackParameters.speed, _state.value.subtitleIndex))
     }
 
-    private suspend fun stopReporting() {
+    /** [finished]: report the stop at the end, so the server marks the video watched. */
+    private suspend fun stopReporting(finished: Boolean = false) {
         val s = stream ?: return
-        if (started) reportNow { streams.reportStopped(it) }
+        if (started) reportNow { streams.reportStopped(if (finished) it.copy(positionTicks = _state.value.durationMs * 10_000) else it) }
         started = false
         streams.stopEncoding(s)
         streams.closeLive(s)

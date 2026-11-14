@@ -56,12 +56,8 @@ class Browse(private val session: UserSession) {
         ).content.items
     }
 
-    suspend fun resume(parentId: UUID): BaseItemDto? = io {
-        api.libraryApi.getResumeItems(
-            userId = userId, parentId = parentId, limit = 1, mediaTypes = listOf(MediaType.VIDEO), enableUserData = true,
-            fields = CardFields, enableTotalRecordCount = false,
-        ).content.items.firstOrNull()
-    }
+    /** Where a show or season stands: its episode in progress, unless the person moved past it (see [continueWatching]). */
+    suspend fun resume(parentId: UUID): BaseItemDto? = io { session.continueWatching(limit = 1, parentId = parentId, fields = CardFields).firstOrNull() }
 
     suspend fun nextUp(seriesId: UUID): BaseItemDto? = io {
         api.showApi.getNextUp(
