@@ -12,8 +12,8 @@ import { PosterCard, UpcomingCard, seerrPath } from '../../ui/cards';
 import { Header, type HeaderActive } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import {
-  CardGrid, EmptyState, ErrorState, GridSkeleton, ItemGrid, NextUpCard, PageHead, ResumeCard, SeerrGrid, Sentinel, groupUpcoming, watchChanged,
-  useItemList, usePaged, useRequests, useSeerrPages
+  CardGrid, EmptyState, ErrorState, GridSkeleton, groupUpcoming, ItemGrid, ListFoot, NextUpCard, PageHead, ResumeCard, SeerrGrid, Sentinel,
+  useItemList, usePaged, useRequests, useSeerrPages, watchChanged
 } from './parts';
 import './lists.css';
 import { getNextUpForMe } from '../me/prefs';
@@ -105,9 +105,9 @@ function SimilarList() {
   useEffect(() => { if (state.data) setItems(state.data); }, [state.data]);
   return (
     <ListFrame
-      title={<><span class="lead">{t('Because you watched')}</span> {name || 'this'}</>}
+      title={<><span class="lead">{t('Because you watched')}</span> {name || t('this')}</>}
       count={countOf(state.data)}
-      lede={seed ? <Link to={`/details/${seed}`} class="list-seed"><Icon name="chevronLeft" size={14} stroke={2.4} />Back to {name || 'the title'}</Link> : undefined}
+      lede={seed ? <Link to={`/details/${seed}`} class="list-seed"><Icon name="chevronLeft" size={14} stroke={2.4} />{t('Back to {name}', { name: name || t('the title') })}</Link> : undefined}
     >
       <Body state={{ ...state, data: state.data ? items : undefined }} empty={<EmptyState icon="film" title={t('No suggestions yet')} text={t('Jellyfin hasn\'t found anything similar on this server.')} />}>
         {(list) => <CardGrid items={list} onReplace={replace} origin="because" />}
@@ -131,7 +131,7 @@ function GenreList() {
   );
   return (
     <ListFrame title={genre || t('Genre')} count={paged.items.length || !paged.loading ? plural(paged.total, 'title') : undefined} lede={view ? t('In {library}', { library: view.Name }) : undefined} active={view ? { viewId: view.Id } : 'home'}>
-      <PagedGrid paged={paged} empty={<EmptyState icon="film" title={`No ${genre.toLowerCase()} titles`} text={t('Nothing on this server is tagged with this genre yet.')} />} />
+      <PagedGrid paged={paged} empty={<EmptyState icon="film" title={t('No {genre} titles', { genre: genre.toLowerCase() })} text={t('Nothing on this server is tagged with this genre yet.')} />} />
     </ListFrame>
   );
 }
@@ -145,17 +145,8 @@ function PagedGrid({ paged, empty }: { paged: ReturnType<typeof usePaged>; empty
       <CardGrid items={paged.items} onReplace={paged.replace} />
       {!paged.done && <Sentinel onVisible={paged.loadMore} token={paged.items.length} disabled={paged.loading || !!paged.error} />}
       {paged.loading && <div class="list-loading"><span class="spinner" aria-label={t('Loading more')} /></div>}
-      <ListFoot shown={paged.items.length} total={paged.total} />
+      <ListFoot shown={paged.items.length} total={paged.total} class="list-foot" />
     </>
-  );
-}
-
-function ListFoot({ shown, total }: { shown: number; total: number }) {
-  return (
-    <div class="lib-foot list-foot" aria-live="polite">
-      <div class="lib-foot-bar" aria-hidden="true"><i style={{ width: `${total ? Math.min(100, (shown / total) * 100) : 100}%` }} /></div>
-      Showing {shown} of {total}
-    </div>
   );
 }
 

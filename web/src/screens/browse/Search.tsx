@@ -24,7 +24,7 @@ import { RequestSeasonsDialog } from './request-seasons';
    ("Browse by genre"). Typing in the box updates this page and its address. */
 
 function titleMeta(item: BaseItem): string {
-  const kind = item.Type === 'Series' ? 'Series' : item.Type === 'Movie' ? 'Movie' : '';
+  const kind = item.Type === 'Series' ? t('Series') : item.Type === 'Movie' ? t('Movie') : '';
   return [kind, yearRange(item)].filter(Boolean).join(' · ');
 }
 
@@ -323,7 +323,7 @@ function GenreResults({ genre }: { genre: string }) {
       </div>
       {error && !items.length && (
         <div class="error-box" role="alert">
-          <h2>Couldn't load {genre}</h2>
+          <h2>{t("Couldn't load {genre}", { genre })}</h2>
           <p>{t('The server didn\'t answer. Check your connection and try again.')}</p>
           <button type="button" class="btn btn-secondary" onClick={() => setTick((n) => n + 1)}>{t('Try again')}</button>
         </div>
@@ -332,7 +332,7 @@ function GenreResults({ genre }: { genre: string }) {
         <section class="empty search-empty">
           <span class="empty-icon" aria-hidden="true"><Icon name="film" size={26} /></span>
           <div class="empty-body">
-            <h2 class="empty-title">No {genre.toLowerCase()} titles</h2>
+            <h2 class="empty-title">{t('No {genre} titles', { genre: genre.toLowerCase() })}</h2>
             <p class="empty-text">{t('Nothing on this server is tagged with this genre yet.')}</p>
           </div>
         </section>

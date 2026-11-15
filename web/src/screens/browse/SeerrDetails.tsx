@@ -158,7 +158,7 @@ export function SeerrDetails({ mediaType, tmdbId }: { mediaType: 'movie' | 'tv';
         {seasons.length > 1 ? t('Request seasons') : t('Request')}
       </button>
     ) : (
-      <button type="button" class="btn btn-primary" disabled={busy !== null} onClick={() => request()} aria-label={`Request ${d.title}`}>
+      <button type="button" class="btn btn-primary" disabled={busy !== null} onClick={() => request()} aria-label={t('Request {title}', { title: d.title })}>
         <Icon name="plus" size={20} stroke={2.6} />
         {busy === 'std' ? t('Requesting…') : t('Request')}
       </button>

@@ -19,8 +19,8 @@ import { Icon } from '../../ui/icons';
 import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { Row } from '../../ui/Row';
 import {
-  Lazy, NextUpCard, ResumeCard, RowSkeleton, groupUpcoming, join, resolvePlayable, seasonsLabel, tileView, toggleFavorite, watchChanged,
-  togglePlayed, typeLabel, useRequests, yearOf
+  episodeLabel, groupUpcoming, join, Lazy, NextUpCard, resolvePlayable, ResumeCard, RowSkeleton, seasonsLabel, tileView, toggleFavorite,
+  togglePlayed, typeLabel, useRequests, watchChanged, yearOf
 } from './parts';
 import { TrailerLayer, useHeroTrailer } from './trailer';
 import { ArrivedNotice } from '../me/arrivals';
@@ -79,7 +79,7 @@ export function Home() {
   // Through the shared prefs queue, so two quick hides reach the server in order (and the second keeps the first).
   const savePrefsPatch = async (patch: { hiddenRows?: string[]; hiddenSeeds?: string[] }, message: string) => {
     if (await queuePrefs(patch)) toast(message);
-    else toast("Couldn't save that change", 'error');
+    else toast(t("Couldn't save that change"), 'error');
   };
   const hideRow = (row: HomeRow) =>
     savePrefsPatch({ hiddenRows: [...(meStore.get().prefs.hiddenRows ?? []), row.id] }, t('Row hidden'));
@@ -171,10 +171,7 @@ async function loadFeatured(): Promise<FeaturedEntry[]> {
 function playLabel(entry: FeaturedEntry): string {
   const p = entry.play ?? entry.item;
   const verb = (p.UserData?.PlaybackPositionTicks ?? 0) > 0 ? t('Resume') : t('Play');
-  if (p.Type === 'Episode' && p.IndexNumber !== undefined && p.IndexNumber !== null) {
-    return p.ParentIndexNumber ? `${verb} S${p.ParentIndexNumber} · E${p.IndexNumber}` : `${verb} E${p.IndexNumber}`;
-  }
-  return verb;
+  return p.Type === 'Episode' && p.IndexNumber != null ? `${verb} ${episodeLabel(p)}` : verb;
 }
 
 function HeroSkeleton() {
@@ -279,7 +276,7 @@ function Featured({ onState }: { onState: (s: 'loading' | 'shown' | 'none') => v
       <div aria-hidden="true" class="hero-shade-t" />
 
       <div class="hero-body">
-        <div key={item.Id} class="hero-info" role="group" aria-roledescription="slide" aria-label={`${idx + 1} of ${n}: ${item.Name}`}>
+        <div key={item.Id} class="hero-info" role="group" aria-roledescription="slide" aria-label={t('{n} of {total}: {name}', { n: idx + 1, total: n, name: item.Name })}>
           <div class="overline hero-over"><span class="hero-dot" aria-hidden="true" /><span>{cur.reason ? t('{reason} · Featured', { reason: t(cur.reason) }) : t('Featured')}</span></div>
           <h1 class="hero-title fit-title" style={fitTitle(item.Name)}>{item.Name}</h1>
           <div class="hero-meta">
@@ -395,7 +392,7 @@ function Top10Row({ row }: { row: HomeRow }) {
 }
 
 function BecauseRow({ row, onHideRow, onHideSeed }: { row: HomeRow; onHideRow: (r: HomeRow) => void; onHideSeed: (r: HomeRow) => void }) {
-  const seed = row.seedName ?? 'this';
+  const seed = row.seedName ?? t('this');
   const title = <><span class="lead">{t('Because you watched')}</span> {seed}</>;
   const { items, pending } = useRowData(() => (row.seedId ? getSimilar(row.seedId, 16).then((r) => r.Items) : Promise.resolve([])), [row.seedId]);
   if (pending) return <RowSkeleton title={title} />;
@@ -419,7 +416,7 @@ function BecauseRow({ row, onHideRow, onHideSeed }: { row: HomeRow; onHideRow: (
           {(close) => (
             <>
               <MenuItem icon="eyeOff" label={t('Hide this row')} onSelect={() => { close(); onHideRow(row); }} />
-              <MenuItem icon="close" label={`Don't use ${seed}`} sub={t('For Because you watched suggestions')} onSelect={() => { close(); onHideSeed(row); }} />
+              <MenuItem icon="close" label={t("Don't use {name}", { name: seed })} sub={t('For Because you watched suggestions')} onSelect={() => { close(); onHideSeed(row); }} />
             </>
           )}
         </MenuButton>
@@ -563,7 +560,7 @@ function UpcomingShowsRow({ row }: { row: HomeRow }) {
 }
 
 function CollectionRow({ row }: { row: HomeRow }) {
-  const title = row.title ?? 'Collection';
+  const title = row.title ?? t('Collection');
   const { items, pending } = useRowData(
     () => (row.collectionId ? getItems({ parentId: row.collectionId, limit: 20, sortBy: ['PremiereDate', 'SortName'] }).then((r) => r.Items) : Promise.resolve([])),
     [row.collectionId]

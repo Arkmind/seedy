@@ -5,7 +5,7 @@ import { CARD_FIELDS, getGenres, getItem, getItems, getSimilar, type ItemsQuery 
 import { backdropUrl, cardArt } from '../../api/images';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { currentUserId, isAdmin, meStore, viewsStore } from '../../lib/app-state';
-import { pct, plural } from '../../lib/format';
+import { plural } from '../../lib/format';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { safeLocal, saveLocal, useAsync, useStore } from '../../lib/store';
 import { ItemCard, playPath } from '../../ui/cards';
@@ -16,8 +16,8 @@ import { getVirtualFolders } from '../server/api';
 import { MenuButton, MenuItem, Sheet, toast } from '../../ui/overlay';
 import { Row } from '../../ui/Row';
 import {
-  CardGrid, EmptyState, ErrorState, GridSkeleton, ListRows, PageHead, RowSkeleton, Sentinel, join, playRandom,
-  useInView, usePaged, yearOf, type GridSelect
+  CardGrid, EmptyState, ErrorState, GridSkeleton, join, ListFoot, ListRows, PageHead, playRandom, RowSkeleton, Sentinel, useInView, usePaged,
+  yearOf, type GridSelect
 } from './parts';
 import { CUSTOM, readCustom } from '../me/prefs';
 import { headerHeight } from '../../ui/sticky';
@@ -73,7 +73,6 @@ export function typesFor(ct?: string): string[] | undefined {
 /* What Shuffle plays: episodes for shows, tracks for music. */
 function playableTypesFor(ct?: string): string[] | undefined {
   if (ct === 'tvshows') return ['Episode'];
-  if (ct === 'music') return ['Audio'];
   if (ct === 'boxsets') return ['Movie', 'Episode', 'Video'];
   return typesFor(ct);
 }
@@ -144,19 +143,9 @@ function baseQuery(view: BaseItem, tab: TabId): ItemsQuery {
   const ct = view.CollectionType;
   switch (tab) {
     case 'collections': return { includeItemTypes: ['BoxSet'], recursive: true, fields: LIST_FIELDS };
-    case 'albums': return { parentId: view.Id, includeItemTypes: ['MusicAlbum'], fields: LIST_FIELDS };
-    case 'favorites': return { parentId: view.Id, includeItemTypes: ct === 'music' ? ['MusicAlbum', 'MusicArtist', 'Audio'] : typesFor(ct), isFavorite: true, fields: LIST_FIELDS };
+    case 'favorites': return { parentId: view.Id, includeItemTypes: typesFor(ct), isFavorite: true, fields: LIST_FIELDS };
     default: return { parentId: view.Id, includeItemTypes: typesFor(ct), fields: LIST_FIELDS };
   }
-}
-
-/* Album artists aren't children of the music library, so they have their own endpoint. */
-function fetchArtists(view: BaseItem, q: ItemsQuery, signal?: AbortSignal) {
-  return get<ItemsResult>('/Artists/AlbumArtists', {
-    userId: currentUserId(), parentId: view.Id, startIndex: q.startIndex, limit: q.limit, sortBy: q.sortBy?.join(','), sortOrder: q.sortOrder,
-    fields: LIST_FIELDS.join(','), enableImageTypes: 'Primary,Backdrop,Thumb', imageTypeLimit: 1, enableTotalRecordCount: true,
-    isFavorite: q.isFavorite, genres: q.genres?.join('|'), filters: q.filters?.join(','), nameLessThan: q.nameLessThan
-  }, signal);
 }
 
 const LETTERS = '#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -209,7 +198,7 @@ function LibraryView({ view }: { view: BaseItem }) {
   const tab: TabId = tabs.some((t) => t.id === tabParam) ? tabParam! : firstTab;
   const isGrid = tab !== 'suggestions' && tab !== 'genres';
   const sortParam = loc.query.get('sort') as SortId | null;
-  const sort = SORTS.find((s) => s.id === sortParam) ?? (tab === 'collections' || tab === 'artists' ? SORTS[1] : SORTS[0]);
+  const sort = SORTS.find((s) => s.id === sortParam) ?? (tab === 'collections' ? SORTS[1] : SORTS[0]);
   const order = (loc.query.get('order') === 'asc' || loc.query.get('order') === 'desc' ? loc.query.get('order') : sort.order) as 'asc' | 'desc';
   const filters = readFilters(loc.query);
   const filterKey = JSON.stringify(filters);
@@ -218,9 +207,9 @@ function LibraryView({ view }: { view: BaseItem }) {
   const setLayout = (l: 'grid' | 'list') => { setLayoutState(l); saveLocal(layoutKey, l); };
   const [sheet, setSheet] = useState(false);
 
-  const query = useMemo(() => {
+  const query = useMemo<ItemsQuery>(() => {
     const q = applyFilters(baseQuery(view, tab), filters);
-    return { ...q, sortBy: [...sort.fields], sortOrder: order === 'asc' ? t('Ascending') : t('Descending') } as ItemsQuery;
+    return { ...q, sortBy: [...sort.fields], sortOrder: order === 'asc' ? 'Ascending' : 'Descending' };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view.Id, tab, sort.id, order, filterKey]);
 
@@ -230,7 +219,6 @@ function LibraryView({ view }: { view: BaseItem }) {
       : sort.id === 'Random' ? (start > 0
         ? Promise.resolve({ Items: [], TotalRecordCount: start })
         : getItems({ ...query, startIndex: 0, limit: 120 }, signal).then((r) => ({ ...r, TotalRecordCount: r.Items.length })))
-      : tab === 'artists' ? fetchArtists(view, { ...query, startIndex: start, limit }, signal)
       : getItems({ ...query, startIndex: start, limit }, signal);
   const paged = usePaged(fetchPage, [view.Id, tab, sort.id, order, filterKey, isGrid], 60);
   const sel = useSelection(paged.items);
@@ -268,7 +256,7 @@ function LibraryView({ view }: { view: BaseItem }) {
 
   // Shuffle picks from what this tab shows (filters included); the player turns a show into its next episode.
   const shuffle = async () => {
-    const q: ItemsQuery = tab !== 'suggestions' && tab !== 'genres' && tab !== 'artists'
+    const q: ItemsQuery = tab !== 'suggestions' && tab !== 'genres'
       ? { ...query, startIndex: undefined }
       : applyFilters({ parentId: view.Id, includeItemTypes: playableTypesFor(ct), isMissing: false }, filters);
     const pick = await playRandom(q).catch(() => undefined);
@@ -284,7 +272,7 @@ function LibraryView({ view }: { view: BaseItem }) {
   const chips: { key: string; label: string; remove: () => void }[] = [
     ...filters.flags.map((f) => ({ key: 'f' + f, label: t(FLAGS.find((x) => x.id === f)!.label), remove: () => removeFlag('flags', f) })),
     ...filters.genres.map((g) => ({ key: 'g' + g, label: g, remove: () => removeFlag('genres', g) })),
-    ...filters.decades.map((d) => ({ key: 'd' + d, label: `${d}s`, remove: () => removeFlag('decades', d) })),
+    ...filters.decades.map((d) => ({ key: 'd' + d, label: t('{decade}s', { decade: d }), remove: () => removeFlag('decades', d) })),
     ...filters.ratings.map((r) => ({ key: 'r' + r, label: r, remove: () => removeFlag('ratings', r) }))
   ];
 
@@ -295,7 +283,7 @@ function LibraryView({ view }: { view: BaseItem }) {
       <main class="page-main">
         <PageHead
           title={view.Name}
-          count={count !== undefined ? plural(count, ct === 'music' ? 'album' : 'title') : undefined}
+          count={count !== undefined ? plural(count, 'title') : undefined}
           actions={sel.active && isGrid ? undefined :
             <>
               <button type="button" class="btn btn-primary is-md lib-shuffle" onClick={shuffle}>
@@ -349,13 +337,11 @@ function LibraryView({ view }: { view: BaseItem }) {
           {isGrid && (
             <div class="lib-tools">
               <SortButton sort={sort.id} order={order} onChange={(s, o) => setQuery({ sort: s, order: o })} />
-              {tab !== 'artists' && (
-                <button type="button" class="btn btn-secondary lib-filters" aria-haspopup="dialog" onClick={() => setSheet(true)}>
-                  <Icon name="filters" size={18} />
-                  {t('Filters')}
-                  {filterCount(filters) > 0 && <span class="accent-badge" aria-label={`${filterCount(filters)} active`}>{filterCount(filters)}</span>}
-                </button>
-              )}
+              <button type="button" class="btn btn-secondary lib-filters" aria-haspopup="dialog" onClick={() => setSheet(true)}>
+                <Icon name="filters" size={18} />
+                {t('Filters')}
+                {filterCount(filters) > 0 && <span class="accent-badge" aria-label={t('{n} active', { n: filterCount(filters) })}>{filterCount(filters)}</span>}
+              </button>
               <div role="group" aria-label={t('Layout')} class="seg is-icons">
                 <button type="button" class="seg-btn" aria-label={t('Poster grid')} aria-pressed={layout === 'grid' ? 'true' : 'false'} onClick={() => setLayout('grid')}>
                   <Icon name="grid" size={18} />
@@ -382,7 +368,7 @@ function LibraryView({ view }: { view: BaseItem }) {
 
         {tab === 'suggestions' ? <Suggestions view={view} />
           : tab === 'genres' ? <GenreTiles view={view} />
-          : <GridBody view={view} tab={tab} paged={paged} layout={layout} query={query} sort={sort.id} order={order} hasFilters={chips.length > 0} onClear={() => setFilters({ flags: [], genres: [], decades: [], ratings: [] })} select={tab === 'artists' ? undefined : sel.grid} />}
+          : <GridBody view={view} tab={tab} paged={paged} layout={layout} query={query} sort={sort.id} order={order} hasFilters={chips.length > 0} onClear={() => setFilters({ flags: [], genres: [], decades: [], ratings: [] })} select={sel.grid} />}
       </main>
 
       {sheet && (
@@ -402,7 +388,6 @@ function jellyfinLibraryUrl(view: BaseItem) {
   const ct = view.CollectionType;
   if (ct === 'movies') return `${JELLYFIN_WEB}#/movies.html?topParentId=${view.Id}&collectionType=movies`;
   if (ct === 'tvshows') return `${JELLYFIN_WEB}#/tv.html?topParentId=${view.Id}&collectionType=tvshows`;
-  if (ct === 'music') return `${JELLYFIN_WEB}#/music.html?topParentId=${view.Id}&collectionType=music`;
   return `${JELLYFIN_WEB}#/list.html?parentId=${view.Id}`;
 }
 
@@ -430,8 +415,8 @@ function SortButton({ sort, order, onChange }: { sort: SortId; order: 'asc' | 'd
           {sort !== 'Random' && (
             <>
               <div class="menu-sep" />
-              <MenuItem icon="sortEpisodes" label={t('Ascending')} sub={sort === 'SortName' ? 'A to Z' : sort === 'Runtime' ? t('Shortest first') : t('Oldest or lowest first')} pressed={order === 'asc'} onSelect={() => { close(); onChange(sort, 'asc'); }} />
-              <MenuItem icon="sortEpisodes" label={t('Descending')} sub={sort === 'SortName' ? 'Z to A' : sort === 'Runtime' ? t('Longest first') : t('Newest or highest first')} pressed={order === 'desc'} onSelect={() => { close(); onChange(sort, 'desc'); }} />
+              <MenuItem icon="sortEpisodes" label={t('Ascending')} sub={sort === 'SortName' ? t('A to Z') : sort === 'Runtime' ? t('Shortest first') : t('Oldest or lowest first')} pressed={order === 'asc'} onSelect={() => { close(); onChange(sort, 'asc'); }} />
+              <MenuItem icon="sortEpisodes" label={t('Descending')} sub={sort === 'SortName' ? t('Z to A') : sort === 'Runtime' ? t('Longest first') : t('Newest or highest first')} pressed={order === 'desc'} onSelect={() => { close(); onChange(sort, 'desc'); }} />
             </>
           )}
         </>
@@ -517,7 +502,7 @@ function GridBody({ view, tab, paged, layout, query, sort, order, hasFilters, on
     let index = 0;
     if (l !== '#') {
       const q = { ...query, nameLessThan: l, limit: 0, startIndex: 0, enableImageTypes: [], fields: [] as string[] };
-      const r = tab === 'artists' ? await fetchArtists(view, q).catch(() => null) : await getItems(q).catch(() => null);
+      const r = await getItems(q).catch(() => null);
       index = r?.TotalRecordCount ?? 0;
     }
     await paged.ensure(index);
@@ -555,7 +540,7 @@ function GridBody({ view, tab, paged, layout, query, sort, order, hasFilters, on
   if (paged.loading && !paged.items.length) return <GridSkeleton count={20} />;
   if (!paged.items.length) {
     if (hasFilters) return <EmptyState icon="filters" title={t('Nothing matches these filters')} text={t('Try removing a filter or two.')} action={<button type="button" class="btn btn-primary is-sm" onClick={onClear}>{t('Clear all')}</button>} />;
-    if (tab === 'favorites') return <EmptyState icon="heart" title={`No favorites in ${view.Name} yet`} text={t('Tap the heart on any title and it will show up here.')} />;
+    if (tab === 'favorites') return <EmptyState icon="heart" title={t('No favorites in {name} yet', { name: view.Name })} text={t('Tap the heart on any title and it will show up here.')} />;
     if (tab === 'collections') return <EmptyState icon="folder" title={t('No collections yet')} text={t('Collections group related titles, like a film series. Create them in Jellyfin and they\'ll show up here.')} />;
     return <EmptyLibrary view={view} onFound={paged.reload} />;
   }
@@ -582,10 +567,7 @@ function GridBody({ view, tab, paged, layout, query, sort, order, hasFilters, on
           </nav>
         )}
       </div>
-      <div class="lib-foot" aria-live="polite">
-        <div class="lib-foot-bar" aria-hidden="true"><i style={{ width: pct(paged.total ? paged.items.length / paged.total : 1) }} /></div>
-        Showing {paged.items.length} of {paged.total}
-      </div>
+      <ListFoot shown={paged.items.length} total={paged.total} />
     </>
   );
 }
@@ -652,13 +634,13 @@ function FilterSheet({ view, base, initial, onClose, onApply }: { view: BaseItem
         <div class="fopts" aria-busy="true">{Array.from({ length: 8 }, (_, i) => <span key={i} class="skel" style={{ width: '90px', height: '36px', borderRadius: '999px' }} />)}</div>
       ) : (
         <>
-          {genres.length > 0 && group('Genres', genres.map((g) => opt('genres', g, g)))}
-          {decades.length > 0 && group('Decades', decades.map((d) => opt('decades', d, `${d}s`)))}
-          {ratings.length > 0 && group('Parental rating', ratings.map((r) => opt('ratings', r, r)))}
+          {genres.length > 0 && group(t('Genres'), genres.map((g) => opt('genres', g, g)))}
+          {decades.length > 0 && group(t('Decades'), decades.map((d) => opt('decades', d, t('{decade}s', { decade: d }))))}
+          {ratings.length > 0 && group(t('Parental rating'), ratings.map((r) => opt('ratings', r, r)))}
         </>
       )}
       <div class="sheet-actions fsheet-actions">
-        <button type="button" class="btn btn-ghost is-light" disabled={!filterCount(draft)} onClick={() => setDraft({ flags: [], genres: [], decades: [], ratings: [] })}>Clear all</button>
+        <button type="button" class="btn btn-ghost is-light" disabled={!filterCount(draft)} onClick={() => setDraft({ flags: [], genres: [], decades: [], ratings: [] })}>{t('Clear all')}</button>
         <button type="button" class="btn btn-primary is-sm" onClick={() => onApply(draft)}>
           {count === null ? t('Show titles') : count === 0 ? t('No titles match') : t('Show {count}', { count: plural(count, 'title') })}
         </button>

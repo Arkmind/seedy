@@ -61,7 +61,7 @@ export function Favorites() {
             <Link to="/favorites" replace class="tab" aria-current={!only ? 'page' : undefined}>{t('All')}</Link>
             {present.map((g) => (
               <Link key={g.id} to={`/favorites?type=${g.id}`} replace class="tab" aria-current={only === g.id ? 'page' : undefined}>
-                {g.title}<span class="tab-count">{g.items.length}</span>
+                {t(g.title)}<span class="tab-count">{g.items.length}</span>
               </Link>
             ))}
           </nav>
@@ -85,10 +85,10 @@ export function Favorites() {
           shown.map((g) => {
             const gi = GROUPS.findIndex((x) => x.id === g.id);
             return (
-              <section key={g.id} class="browse-section fav-section" aria-label={g.title}>
+              <section key={g.id} class="browse-section fav-section" aria-label={t(g.title)}>
                 <div class="browse-section-head">
                   <div class="row-head-main">
-                    <h2 class="row-title">{g.title}</h2>
+                    <h2 class="row-title">{t(g.title)}</h2>
                     <span class="row-sub">{g.id === 'people' ? plural(g.items.length, 'person', 'people') : plural(g.items.length, 'title')}</span>
                   </div>
                   {only && <button type="button" class="row-link link-btn" onClick={() => setQuery({ type: undefined })}>{t('Show all favorites')}</button>}

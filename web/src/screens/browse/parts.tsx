@@ -2,26 +2,26 @@ import { Fragment, type ComponentChildren, type RefObject } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { get, currentUserId, type Query } from '../../api/client';
 import {
-  CARD_FIELDS, clearResume, getEpisodes, getItems, getNextUp, getResume, setFavorite, setPlayed, type ItemsQuery
+  clearResume, getEpisodes, getItems, getNextUp, getResume, setFavorite, setPlayed, type ItemsQuery
 } from '../../api/jellyfin';
-import { seriesPosterUrl } from '../../api/images';
+import { cardArt, primaryUrl, seriesPosterUrl } from '../../api/images';
 import { seerrRequest, type SeerrItem, type SeerrStatus } from '../../api/seedy';
 import { meStore } from '../../lib/app-state';
 import { createStore, useStore } from '../../lib/store';
 import type { BaseItem, ItemsResult, UserItemData } from '../../api/types';
 import {
-  dayOf, daysFromToday, episodeCode, episodeTag, fmtDate, fmtDayMonth, itemYear, join, plural, progressFraction, remainingSeconds, runtime, timeLeft, whenLabel, yearRange
+  dayOf, daysFromToday, episodeCode, episodeTag, fmtDate, fmtDayMonth, itemYear, join, pct, plural, progressFraction, remainingSeconds,
+  runtime, timeLeft, whenLabel, yearRange
 } from '../../lib/format';
 import { Link, navigate } from '../../lib/router';
 import { ItemCard, LibraryCard, SkeletonCards, WatchedCheck, Progress, Art, detailsPath, playPath } from '../../ui/cards';
-import { cardArt, primaryUrl } from '../../api/images';
 import { Icon, type IconName } from '../../ui/icons';
 import { MeduState } from '../../ui/medu';
 import { openSearch } from '../../ui/search/open';
 import { MenuItem, Popover, toast } from '../../ui/overlay';
 import { withEpisodeArt } from '../me/prefs';
 import './browse.css';
-import { t } from '../../lib/i18n';
+import { formatNumber, t } from '../../lib/i18n';
 import { RequestSeasonsDialog } from './request-seasons';
 
 /* ───────── Item helpers ───────── */
@@ -40,15 +40,19 @@ export function seasonsLabel(item: BaseItem): string {
 }
 
 export const typeLabel = (item: BaseItem) =>
-  item.Type === 'Series' ? 'Series' : item.Type === 'Episode' ? 'Episode' : item.Type === 'BoxSet' ? 'Collection' : item.Type === 'MusicAlbum' ? t('Album') : t('Movie');
+  item.Type === 'Series' ? t('Series') : item.Type === 'Episode' ? t('Episode') : item.Type === 'BoxSet' ? t('Collection') : item.Type === 'MusicAlbum' ? t('Album') : t('Movie');
 
 export { join };
+
+/* "S2 · E3" ("E3" without a season). */
+export const episodeLabel = (ep: BaseItem) =>
+  ep.ParentIndexNumber ? `S${ep.ParentIndexNumber} · E${ep.IndexNumber ?? ''}` : ep.IndexNumber !== undefined ? `E${ep.IndexNumber}` : '';
 
 /* "S3 E2 · The Pass · 34 min left" / "Movie · 1 h 12 min left". */
 export function resumeMeta(item: BaseItem): string {
   const left = timeLeft(remainingSeconds(item));
   if (item.Type === 'Episode') return join(episodeTag(item), item.Name, left);
-  return join('Movie', left);
+  return join(t('Movie'), left);
 }
 
 /* Library grid meta: year for films, year range or seasons for shows. */
@@ -81,10 +85,10 @@ export async function toggleFavorite(item: BaseItem, apply: (next: BaseItem) => 
   apply(patchUserData(item, { IsFavorite: on }));
   try {
     await setFavorite(item.Id, on);
-    toast(on ? `Added ${item.Name} to favorites` : `Removed ${item.Name} from favorites`);
+    toast(on ? t('Added {name} to favorites', { name: item.Name }) : t('Removed {name} from favorites', { name: item.Name }));
   } catch {
     apply(item);
-    toast(`Couldn't update ${item.Name}`, 'error');
+    toast(t("Couldn't update {name}", { name: item.Name }), 'error');
   }
 }
 
@@ -98,10 +102,10 @@ export async function togglePlayed(item: BaseItem, apply: (next: BaseItem) => vo
   }));
   try {
     await setPlayed(item.Id, on);
-    toast(on ? `Marked ${item.Name} as watched` : `Marked ${item.Name} as unwatched`);
+    toast(on ? t('Marked {name} as watched', { name: item.Name }) : t('Marked {name} as unwatched', { name: item.Name }));
   } catch {
     apply(item);
-    toast(`Couldn't update ${item.Name}`, 'error');
+    toast(t("Couldn't update {name}", { name: item.Name }), 'error');
   }
 }
 
@@ -214,7 +218,7 @@ export function groupUpcoming(episodes: BaseItem[]): UpcomingGroup[] {
     let isToday = daysFromToday(date) === 0;
     if (run > 1) {
       const last = list[run - 1];
-      line = `${episodeCode(first)}–E${String(last.IndexNumberEnd ?? last.IndexNumber ?? 0).padStart(2, '0')} · ${run} episodes`;
+      line = `${episodeCode(first)}–E${String(last.IndexNumberEnd ?? last.IndexNumber ?? 0).padStart(2, '0')} · ${plural(run, 'episode')}`;
       when = t('From {date}', { date: fmtDayMonth(date) });
     } else {
       line = join(episodeCode(first), first.Name);
@@ -266,6 +270,16 @@ export function Sentinel({ onVisible, token, disabled }: { onVisible: () => void
     return () => io.disconnect();
   }, [token, disabled]);
   return <div ref={ref} aria-hidden="true" class="sentinel" />;
+}
+
+/* "Showing 60 of 248" with its bar, under a grid that pages in as it scrolls. */
+export function ListFoot({ shown, total, class: cls }: { shown: number; total: number; class?: string }) {
+  return (
+    <div class={'lib-foot' + (cls ? ' ' + cls : '')} aria-live="polite">
+      <div class="lib-foot-bar" aria-hidden="true"><i style={{ width: pct(total ? shown / total : 1) }} /></div>
+      {t('Showing {shown} of {total}', { shown: formatNumber(shown), total: formatNumber(total) })}
+    </div>
+  );
 }
 
 /* ───────── Paged item lists (library grids, genre pages) ───────── */
@@ -472,9 +486,9 @@ export function ListRow({ item, onReplace }: { item: BaseItem; onReplace: (next:
   const art = cardArt(item, 360);
   const canPlay = item.Type !== 'BoxSet' && item.Type !== 'MusicArtist';
   const unplayed = item.Type === 'Series' ? item.UserData?.UnplayedItemCount ?? 0 : 0;
-  const state = played ? 'Watched'
+  const state = played ? t('Watched')
     : item.Type === 'Series' ? (unplayed ? t('{count} to watch', { count: plural(unplayed, 'episode') }) : t('Up to date'))
-    : item.Type === 'BoxSet' ? (item.ChildCount ? plural(item.ChildCount, 'title') : 'Collection')
+    : item.Type === 'BoxSet' ? (item.ChildCount ? plural(item.ChildCount, 'title') : t('Collection'))
     : progress > 0 ? timeLeft(remainingSeconds(item))
     : t('Not started');
   const meta = join(libraryMeta(item), item.Type === 'Series' ? seasonsLabel(item) : runtime(item), (item.Genres ?? []).slice(0, 2).join(', '));
@@ -491,7 +505,7 @@ export function ListRow({ item, onReplace }: { item: BaseItem; onReplace: (next:
       </div>
       <div class="list-state">
         <span class="list-state-1">{state}</span>
-        {item.DateCreated && <span class="list-state-2">Added {fmtDate(new Date(item.DateCreated))}</span>}
+        {item.DateCreated && <span class="list-state-2">{t('Added {date}', { date: fmtDate(new Date(item.DateCreated)) })}</span>}
       </div>
       <div class="list-tools">
         <button type="button" class="btn icon-btn is-bare" aria-label={played ? t('Mark {name} as unwatched', { name: item.Name }) : t('Mark {name} as watched', { name: item.Name })} aria-pressed={played ? 'true' : 'false'} onClick={() => togglePlayed(item, onReplace)}>
@@ -508,7 +522,7 @@ export function ListRow({ item, onReplace }: { item: BaseItem; onReplace: (next:
             onClick={async () => {
               const target = await resolvePlayable(item);
               if (target) navigate(playPath(target));
-              else toast(`Nothing to play in ${item.Name} yet`, 'error');
+              else toast(t('Nothing to play in {name} yet', { name: item.Name }), 'error');
             }}
           >
             <Icon name="playRound" size={20} />
@@ -531,7 +545,7 @@ export function ResumeCard({ item, width, origin, onOpen }: { item: BaseItem; wi
     <ItemCard
       item={withEpisodeArt(item)}
       width={width}
-      tag={item.Type === 'Episode' ? episodeTag(item) : 'Movie'}
+      tag={item.Type === 'Episode' ? episodeTag(item) : t('Movie')}
       progress={progressFraction(item)}
       meta={resumeMeta(item)}
       origin={origin}
@@ -616,10 +630,10 @@ export function useRequests() {
     try {
       const r = await seerrRequest({ mediaType: s.mediaType, tmdbId: s.tmdbId });
       setStatus((m) => ({ ...m, [k]: r?.status ?? 'pending' }));
-      toast(`Requested ${s.title}`, 'pending');
+      toast(t('Requested {title}', { title: s.title }), 'pending');
     } catch (e) {
       setStatus((m) => { const n = { ...m }; delete n[k]; return n; });
-      toast(`Couldn't request ${s.title}${(e as Error)?.message ? ': ' + (e as Error).message : ''}`, 'error');
+      toast(t("Couldn't request {title}", { title: s.title }) + ((e as Error)?.message ? ': ' + (e as Error).message : ''), 'error');
     } finally {
       setBusy((b) => ({ ...b, [k]: false }));
     }
@@ -707,4 +721,3 @@ export function SeerrGrid<T extends Titled>({ pages, empty, render }: { pages: S
   );
 }
 
-export { CARD_FIELDS };

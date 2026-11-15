@@ -39,13 +39,16 @@ export function useView(item?: BaseItem | null): BaseItem | undefined {
   return view;
 }
 
+/* "Play episode 3, The Pass, watched". */
+const episodeAria = (label: string, played: boolean) => (played ? t('{label}, watched', { label }) : label);
+
 export function fallbackLibraryName(item: BaseItem): string {
   switch (EXPECTED_TYPE[item.Type]) {
-    case 'tvshows': return 'Shows';
-    case 'movies': return 'Movies';
-    case 'boxsets': return 'Collections';
-    case 'music': return 'Music';
-    default: return 'Home';
+    case 'tvshows': return t('Shows');
+    case 'movies': return t('Movies');
+    case 'boxsets': return t('Collections');
+    case 'music': return t('Music');
+    default: return t('Home');
   }
 }
 
@@ -248,7 +251,7 @@ export function TrailerButton({ item }: { item: BaseItem }) {
       if (list[0]) { navigate(playPath(list[0])); return; }
     }
     if (remote) window.open(remote, '_blank', 'noopener,noreferrer');
-    else toast("Couldn't find the trailer", 'error');
+    else toast(t("Couldn't find the trailer"), 'error');
   };
   return (
     <button type="button" class="btn btn-square" aria-label={t('Play trailer')} onClick={play}>
@@ -359,11 +362,11 @@ export function SeasonEpisodes({ series, seasons, selected, onSelect, upNextId, 
     setBusy(true);
     try {
       await setPlayed(selected, !allWatched);
-      toast(allWatched ? `Marked ${season?.Name ?? 'season'} as unwatched` : `Marked ${season?.Name ?? 'season'} as watched`);
+      toast(allWatched ? t('Marked {name} as unwatched', { name: season?.Name ?? t('season') }) : t('Marked {name} as watched', { name: season?.Name ?? t('season') }));
       setTick((t) => t + 1);
       onChanged?.();
     } catch {
-      toast("Couldn't update the season", 'error');
+      toast(t("Couldn't update the season"), 'error');
     } finally {
       setBusy(false);
     }
@@ -490,7 +493,7 @@ function EpisodeRow({ ep, isNext, isCurrent }: { ep: BaseItem; isNext: boolean; 
           </>
         )}
         {!inProgress && !upcoming && !missing && <div class="ep-hover" aria-hidden="true"><span class="play-disc is-48"><Icon name="playRound" size={20} /></span></div>}
-        {upcoming && premiere && <span class="tag ep-airs">Airs {fmtWeekdayDate(premiere)}</span>}
+        {upcoming && premiere && <span class="tag ep-airs">{t('Airs {date}', { date: fmtWeekdayDate(premiere) })}</span>}
         {missing && <span class="tag ep-airs">{t('Missing')}</span>}
       </div>
       <div class="ep-text">
@@ -509,7 +512,7 @@ function EpisodeRow({ ep, isNext, isCurrent }: { ep: BaseItem; isNext: boolean; 
     <a
       href={href(playPath(ep))}
       class={cls}
-      aria-label={`${inProgress ? t('Resume') : t('Play')} episode ${num}, ${ep.Name}${played ? ', watched' : ''}`}
+      aria-label={episodeAria(inProgress ? t('Resume episode {n}, {name}', { n: num, name: ep.Name ?? '' }) : t('Play episode {n}, {name}', { n: num, name: ep.Name ?? '' }), played)}
       onClick={(e) => {
         if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
         e.preventDefault();
