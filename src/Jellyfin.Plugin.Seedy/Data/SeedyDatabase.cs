@@ -180,6 +180,31 @@ public sealed partial class SeedyDatabase : IDisposable
 
     private static DateTime FromMs(long ms) => DateTimeOffset.FromUnixTimeMilliseconds(ms).UtcDateTime;
 
+    private static long? MsOrNull(DateTime? d) => d is null ? null : Ms(d.Value);
+
+    private static string? StrOrNull(SqliteDataReader r, int i) => r.IsDBNull(i) ? null : r.GetString(i);
+
+    private static long? LongOrNull(SqliteDataReader r, int i) => r.IsDBNull(i) ? null : r.GetInt64(i);
+
+    private static int? IntOrNull(SqliteDataReader r, int i) => r.IsDBNull(i) ? null : r.GetInt32(i);
+
+    private static double? DoubleOrNull(SqliteDataReader r, int i) => r.IsDBNull(i) ? null : r.GetDouble(i);
+
+    private static DateTime? DateOrNull(SqliteDataReader r, int i) => r.IsDBNull(i) ? null : FromMs(r.GetInt64(i));
+
+    // Runs a query and reads every row; the caller owns the connection and command.
+    private static List<T> ReadAll<T>(SqliteCommand cmd, Func<SqliteDataReader, T> read)
+    {
+        var list = new List<T>();
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+        {
+            list.Add(read(r));
+        }
+
+        return list;
+    }
+
     private void Write(Action<SqliteConnection> action)
     {
         _writeLock.Wait();
@@ -211,21 +236,21 @@ public sealed partial class SeedyDatabase : IDisposable
         TitleName = r.GetString(5),
         ItemName = r.GetString(6),
         StartedAt = FromMs(r.GetInt64(7)),
-        StoppedAt = r.IsDBNull(8) ? null : FromMs(r.GetInt64(8)),
+        StoppedAt = DateOrNull(r, 8),
         PositionTicks = r.GetInt64(9),
         RuntimeTicks = r.GetInt64(10),
         Finished = r.GetInt64(11) != 0,
-        DeviceName = r.IsDBNull(12) ? null : r.GetString(12),
-        Client = r.IsDBNull(13) ? null : r.GetString(13),
-        PlaySessionId = r.IsDBNull(14) ? null : r.GetString(14),
-        Origin = r.IsDBNull(15) ? null : r.GetString(15),
-        WatchedMs = r.IsDBNull(16) ? null : r.GetInt64(16),
-        PlayMethod = r.IsDBNull(17) ? null : r.GetString(17),
-        TranscodeReasons = r.IsDBNull(18) ? null : r.GetString(18),
-        Bitrate = r.IsDBNull(19) ? null : r.GetInt64(19),
-        LibraryId = r.IsDBNull(20) ? null : r.GetString(20),
-        VideoCodec = r.IsDBNull(21) ? null : r.GetString(21),
-        SubtitleCodec = r.IsDBNull(22) ? null : r.GetString(22)
+        DeviceName = StrOrNull(r, 12),
+        Client = StrOrNull(r, 13),
+        PlaySessionId = StrOrNull(r, 14),
+        Origin = StrOrNull(r, 15),
+        WatchedMs = LongOrNull(r, 16),
+        PlayMethod = StrOrNull(r, 17),
+        TranscodeReasons = StrOrNull(r, 18),
+        Bitrate = LongOrNull(r, 19),
+        LibraryId = StrOrNull(r, 20),
+        VideoCodec = StrOrNull(r, 21),
+        SubtitleCodec = StrOrNull(r, 22)
     };
 
     private const string PlayColumns = "id, user_id, item_id, title_id, item_type, title_name, item_name, started_at, stopped_at, position_ticks, runtime_ticks, finished, device_name, client, play_session_id, origin, watched_ms, play_method, transcode_reasons, bitrate, library_id, video_codec, subtitle_codec";
@@ -252,7 +277,7 @@ public sealed partial class SeedyDatabase : IDisposable
         Bind(cmd, "$tname", p.TitleName);
         Bind(cmd, "$iname", p.ItemName);
         Bind(cmd, "$started", Ms(p.StartedAt));
-        Bind(cmd, "$stopped", p.StoppedAt is null ? null : Ms(p.StoppedAt.Value));
+        Bind(cmd, "$stopped", MsOrNull(p.StoppedAt));
         Bind(cmd, "$pos", p.PositionTicks);
         Bind(cmd, "$run", p.RuntimeTicks);
         Bind(cmd, "$fin", p.Finished ? 1 : 0);
@@ -286,7 +311,7 @@ public sealed partial class SeedyDatabase : IDisposable
             WHERE id = $id
             """;
         Bind(cmd, "$id", p.Id);
-        Bind(cmd, "$stopped", p.StoppedAt is null ? null : Ms(p.StoppedAt.Value));
+        Bind(cmd, "$stopped", MsOrNull(p.StoppedAt));
         Bind(cmd, "$pos", p.PositionTicks);
         Bind(cmd, "$run", p.RuntimeTicks);
         Bind(cmd, "$fin", p.Finished ? 1 : 0);
@@ -519,14 +544,7 @@ public sealed partial class SeedyDatabase : IDisposable
         using var cmd = c.CreateCommand();
         cmd.CommandText = $"SELECT {PlayColumns} FROM plays WHERE user_id = $user ORDER BY started_at";
         Bind(cmd, "$user", userId);
-        var list = new List<PlayRecord>();
-        using var r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            list.Add(ReadPlay(r));
-        }
-
-        return list;
+        return ReadAll(cmd, ReadPlay);
     }
 
     /// <summary>Deletes one of a user's plays.</summary>
@@ -632,7 +650,7 @@ public sealed partial class SeedyDatabase : IDisposable
             return null;
         }
 
-        return (r.GetString(0), r.IsDBNull(1) ? null : r.GetString(1));
+        return (r.GetString(0), StrOrNull(r, 1));
     }
 
     /// <summary>Stores a profile's preferences.</summary>
