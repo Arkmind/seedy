@@ -30,6 +30,8 @@ const fr: Record<string, string> = {
   'Couldn’t play it the usual way': 'Impossible de le lire de la façon habituelle',
   'Experimental player on the left, usual player on the right': 'Lecteur expérimental à gauche, lecteur habituel à droite',
   'This device couldn’t keep up, so the server is converting this video': 'Cet appareil n’a pas suivi : le serveur convertit cette vidéo',
+  'This device couldn’t keep up again, so the experimental player is now off (Settings › Playback)':
+    'Cet appareil n’a de nouveau pas suivi : le lecteur expérimental est désormais désactivé (Paramètres › Lecture)',
   'The experimental player couldn’t play this, so the server is converting it': 'Le lecteur expérimental n’a pas pu lire ce titre : le serveur le convertit',
   'Direct stream': 'Flux direct',
   'Transcoding': 'Transcodage',

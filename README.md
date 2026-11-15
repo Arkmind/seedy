@@ -75,8 +75,8 @@ tries hard not to make your server convert anything it doesn't have to.
   drawn in the browser), Up next, a pause screen, picks at the end of a movie, Watch together (SyncPlay) and casting
   to other Jellyfin apps.
 - **An experimental player** (Settings › Playback › Advanced) that decodes HEVC and other formats the browser can't
-  play on its own, instead of the server converting them. When the device can't keep up, it hands the video back to
-  the server.
+  play on its own, instead of the server converting them. It is on by default for videos up to 1080p. When the device
+  can't keep up, it hands the video back to the server, and after the second time it turns itself off on that device.
 - **A play log** behind the Top 10, the viewing history page, row order, genre rows and the admin Statistics. Jellyfin
   itself only keeps the last play of each title.
 - **Personal settings** at `/settings`: profile and sign-in, home screen, playback, subtitles, display (accent,

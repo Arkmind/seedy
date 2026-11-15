@@ -3338,6 +3338,7 @@
  "This deletes the files from the server’s disk, and everyone loses their watch progress for it. It can’t be undone.": "Les fichiers sont supprimés du disque du serveur, et tout le monde perd sa progression. C’est irréversible.",
  "This deletes their files from the server’s disk, and everyone loses their watch progress for them. It can’t be undone.": "Leurs fichiers sont supprimés du disque du serveur, et tout le monde perd sa progression. C’est irréversible.",
  "This device": "Cet appareil",
+ "This device couldn’t keep up again, so the experimental player is now off (Settings › Playback)": "Cet appareil n’a de nouveau pas suivi : le lecteur expérimental est désormais désactivé (Paramètres › Lecture)",
  "This device couldn’t keep up, so the server is converting this video": "Cet appareil n’a pas suivi : le serveur convertit cette vidéo",
  "This file is no longer being written": "Ce fichier n’est plus en cours d’écriture",
  "This folder is empty": "Ce dossier est vide",

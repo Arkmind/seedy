@@ -1,6 +1,6 @@
 import { SERVER_URL, get, post } from '../api/client';
 import type { PlaybackPrefs, SkipMode, SubtitlePrefs } from '../api/seedy';
-import { createStore, safeLocal, saveLocal } from '../lib/store';
+import { createStore, removeLocal, safeLocal, saveLocal } from '../lib/store';
 import { formatNumber } from '../lib/i18n';
 import { softMode, type SoftMode } from './soft-profile';
 import { DEFAULT_SUBTITLES } from '../lib/app-state';
@@ -97,7 +97,7 @@ export const DEVICE_DEFAULTS: DeviceSettings = {
   dts: false,
   truehd: false,
   mkv: true,
-  softPlayer: 'off',
+  softPlayer: 'needed',
   subtitleStyle: {},
   subtitleBurnIn: 'auto',
   pictureSubtitles: true,
@@ -158,6 +158,24 @@ export const deviceStore = createStore<DeviceSettings>(readDevice());
 export function setDevice<K extends keyof DeviceSettings>(key: K, value: DeviceSettings[K]) {
   saveLocal(DEVICE_KEYS[key], value);
   deviceStore.set((cur) => ({ ...cur, [key]: value }));
+}
+
+/* The experimental player is on by default. On a device it couldn't keep up with twice, it turns itself off, unless
+   the viewer picked a setting in Settings · Playback. */
+const SOFT_SLOW_KEY = 'seedy.device.advanced.softSlow';
+const SOFT_SLOW_LIMIT = 2;
+
+/* Counts one hand-back to the server for slowness. True when that turned the experimental player off. */
+export function softPlayerSlow(): boolean {
+  if (safeLocal<unknown>(DEVICE_KEYS.softPlayer, undefined) !== undefined) return false;
+  const count = (Number(safeLocal<unknown>(SOFT_SLOW_KEY, 0)) || 0) + 1;
+  if (count < SOFT_SLOW_LIMIT) {
+    saveLocal(SOFT_SLOW_KEY, count);
+    return false;
+  }
+  removeLocal(SOFT_SLOW_KEY);
+  setDevice('softPlayer', 'off');
+  return true;
 }
 
 export function setSubtitleStyle(patch: Partial<SubtitleStyle>) {
