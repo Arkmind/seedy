@@ -6,7 +6,7 @@ import { clock } from '../../audio/parts';
 import { canDownload } from '../../lib/app-state';
 import { dot, duration, fmtLongMonthYear, fmtMonthYear, fmtWeekdayDate, ticksToSeconds } from '../../lib/format';
 import { t, tn } from '../../lib/i18n';
-import { Link, setQuery } from '../../lib/router';
+import { Link, setQuery, useLocation } from '../../lib/router';
 import { safeLocal, saveLocal } from '../../lib/store';
 import { Icon } from '../../ui/icons';
 import { toast } from '../../ui/overlay';
@@ -67,6 +67,23 @@ export const viewerOpened = { current: false };
 export function openPhoto(id: string, slideshow = false) {
   viewerOpened.current = true;
   setQuery({ photo: id, play: slideshow ? '1' : undefined }, false);
+}
+
+/* Edits made from the selection bar or the viewer (a favourite) show on the grid before it reloads; `viewerList` is
+   what the viewer pages through when it isn't the grid (a selection, a memory, a slideshow). */
+export function usePhotoEdits() {
+  const loc = useLocation();
+  const [local, setLocal] = useState<Record<string, PhotoItem>>({});
+  const [viewerList, setViewerList] = useState<PhotoItem[] | null>(null);
+  useEffect(() => { if (!loc.query.get('photo')) setViewerList(null); }, [loc.query.get('photo')]);
+  return {
+    patch: (list: PhotoItem[]) => list.map((x) => local[x.Id] ?? x),
+    viewerList,
+    setViewerList,
+    onChanged: (changed: PhotoItem[]) => setLocal((m) => ({ ...m, ...Object.fromEntries(changed.map((x) => [x.Id, x])) })),
+    onShow: (photos: PhotoItem[]) => { setViewerList(photos); openPhoto(photos[0].Id, true); },
+    onItem: (it: PhotoItem) => { setLocal((m) => ({ ...m, [it.Id]: it })); if (viewerList) setViewerList((l) => l && l.map((x) => (x.Id === it.Id ? it : x))); }
+  };
 }
 
 export function photoHref(id: string): string {

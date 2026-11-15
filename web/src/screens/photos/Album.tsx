@@ -16,7 +16,7 @@ import {
   MEDIA_TYPES, PHOTO_FIELDS, ancestorsOf, countsLabel, folderInfo, getMedia, groupByDay, isVideo, subfolders, thumbUrl, type FolderInfo, type PhotoItem
 } from './api';
 import { PIcon } from './icons';
-import { FolderCard, FolderGrid, JustifiedRows, PhotoSelectionBar, rowFor, TabRow, Timeline, openPhoto, useTileSize } from './parts';
+import { FolderCard, FolderGrid, JustifiedRows, PhotoSelectionBar, rowFor, TabRow, Timeline, openPhoto, usePhotoEdits, useTileSize } from './parts';
 import { PhotoViewer } from './Viewer';
 import { downloadZip } from './zip';
 import { LibraryMenuItems } from '../../ui/library-menu';
@@ -60,12 +60,11 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
     isFavorite: show === 'favorites' ? true : undefined, sortBy: sort.by, sortOrder: sort.order, startIndex: start, limit,
     fields: PHOTO_FIELDS, enableImageTypes: ['Primary'], imageTypeLimit: 1
   }, signal), [item.Id, show, sort.id, managed.n], 200);
-  const [local, setLocal] = useState<Record<string, PhotoItem>>({});
-  const list = (paged.items as PhotoItem[]).map((x) => local[x.Id] ?? x);
+  const edits = usePhotoEdits();
+  const { viewerList, setViewerList } = edits;
+  const list = edits.patch(paged.items as PhotoItem[]);
   const months = useMemo(() => (sort.id === 'name' ? [] : groupByDay(list)), [list, sort.id]);
   const sel = useSelection(list);
-  const [viewerList, setViewerList] = useState<PhotoItem[] | null>(null);
-  useEffect(() => { if (!loc.query.get('photo')) setViewerList(null); }, [loc.query.get('photo')]);
 
   const all = async (q: { random?: boolean; photos?: boolean } = {}) => {
     const r = await getMedia({
@@ -151,9 +150,9 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
 
         {sel.active && (
           <PhotoSelectionBar sel={sel} total={paged.total} name={item.Name}
-            onChanged={(changed) => setLocal((m) => ({ ...m, ...Object.fromEntries(changed.map((x) => [x.Id, x])) }))}
+            onChanged={edits.onChanged}
             onSelectAll={async () => sel.set(await all())}
-            onShow={(photos) => { setViewerList(photos); openPhoto(photos[0].Id, true); }} />
+            onShow={edits.onShow} />
         )}
 
         {paged.error && !paged.items.length ? <ErrorState error={paged.error} retry={paged.reload} title={t('Couldn’t load the photos')} />
@@ -178,7 +177,7 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
           total={viewerList ? viewerList.length : paged.total}
           more={viewerList ? undefined : paged.loadMore}
           done={viewerList ? true : paged.done}
-          onItem={(it) => { setLocal((m) => ({ ...m, [it.Id]: it })); if (viewerList) setViewerList((l) => l && l.map((x) => (x.Id === it.Id ? it : x))); }}
+          onItem={edits.onItem}
         />
       )}
     </div>

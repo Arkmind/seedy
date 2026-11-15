@@ -21,7 +21,7 @@ import {
 } from './api';
 import { PIcon } from './icons';
 import {
-  FolderCard, FolderGrid, MemoryCard, PhotoSelectionBar, rowFor, SizeSwitch, TabRow, Timeline, openPhoto, useTileSize
+  FolderCard, FolderGrid, MemoryCard, PhotoSelectionBar, rowFor, SizeSwitch, TabRow, Timeline, openPhoto, usePhotoEdits, useTileSize
 } from './parts';
 import { PhotoViewer } from './Viewer';
 import { LibraryMenuItems } from '../../ui/library-menu';
@@ -77,11 +77,9 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
   const currentCamera = camera ?? cameras[0]?.[0];
   const cameraItems = cameras.find(([k]) => k === currentCamera)?.[1] ?? [];
 
-  const [local, setLocal] = useState<Record<string, PhotoItem>>({});
-  const patch = (list: PhotoItem[]) => list.map((x) => local[x.Id] ?? x);
-  const list: PhotoItem[] = patch(grid ? (paged.items as PhotoItem[]) : tab === 'cameras' ? cameraItems : []);
-  const [viewerList, setViewerList] = useState<PhotoItem[] | null>(null);
-  useEffect(() => { if (!loc.query.get('photo')) setViewerList(null); }, [loc.query.get('photo')]);
+  const edits = usePhotoEdits();
+  const { viewerList, setViewerList } = edits;
+  const list: PhotoItem[] = edits.patch(grid ? (paged.items as PhotoItem[]) : tab === 'cameras' ? cameraItems : []);
 
   const sel = useSelection(list);
   useEffect(() => { sel.stop(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [view.Id, tab, camera]);
@@ -118,13 +116,11 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
             <TabRow label={t('Photo views')} tabs={tabs} current={tab} to={(id) => (id === first ? base : `${base}?tab=${id}`)} />
             {tab !== 'folders' && <SizeSwitch size={size} onChange={setSize} />}
           </div>
-          {sel.active && <PhotoSelectionBar sel={sel} total={tab === 'cameras' ? list.length : paged.total} name={view.Name} onChanged={(changed) => {
-            setLocal((m) => ({ ...m, ...Object.fromEntries(changed.map((x) => [x.Id, x])) }));
-          }} onSelectAll={async () => {
+          {sel.active && <PhotoSelectionBar sel={sel} total={tab === 'cameras' ? list.length : paged.total} name={view.Name} onChanged={edits.onChanged} onSelectAll={async () => {
             if (tab === 'cameras') { sel.set(list); return; }
             const r = await getMedia(mediaQuery(view.Id, { ...tabQuery, limit: paged.total }));
             sel.set(r.Items);
-          }} onShow={(photos) => { setViewerList(photos); openPhoto(photos[0].Id, true); }} />}
+          }} onShow={edits.onShow} />}
         </div>
 
         {tab === 'timeline' && !sel.active && <Memories view={view} onOpen={(m) => { setViewerList(m.items); openPhoto(m.items[0].Id); }} />}
@@ -169,7 +165,7 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
           total={viewerList ? viewerList.length : tab === 'cameras' ? list.length : paged.total}
           more={viewerList || !grid ? undefined : paged.loadMore}
           done={viewerList || !grid ? true : paged.done}
-          onItem={(it) => { setLocal((m) => ({ ...m, [it.Id]: it })); if (viewerList) setViewerList((l) => l && l.map((x) => (x.Id === it.Id ? it : x))); }}
+          onItem={edits.onItem}
         />
       )}
     </div>
