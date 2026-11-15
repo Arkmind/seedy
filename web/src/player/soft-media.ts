@@ -195,9 +195,16 @@ export class SoftMedia extends EventTarget implements MediaLike {
 
   /* Behind for two windows in a row with packets waiting: decoding, not the network, is what's slow. */
   private checkSpeed(p: AVPlayer, now: number) {
+    const w = this.watch;
+    // A hidden page (another tab, a minimized or covered window) draws no frames: libmedia skips what nobody sees.
+    if (document.visibilityState === 'hidden') {
+      w.at = 0;
+      w.behind = 0;
+      w.graceUntil = now + 5000;
+      return;
+    }
     const s = p.getStats();
     const frames = Number(s.videoFrameRenderCount);
-    const w = this.watch;
     if (w.at && now >= w.graceUntil && !this.stalled) {
       const secs = (now - w.at) / 1000;
       const rendered = (frames - w.frames) / secs;
