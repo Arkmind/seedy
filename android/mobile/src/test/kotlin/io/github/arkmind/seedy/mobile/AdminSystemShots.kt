@@ -1,6 +1,6 @@
 package io.github.arkmind.seedy.mobile
 
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import io.github.arkmind.seedy.core.admin.system.ActivityAction
 import io.github.arkmind.seedy.core.admin.system.ActivityActionKind
 import io.github.arkmind.seedy.core.admin.system.ActivityActions
