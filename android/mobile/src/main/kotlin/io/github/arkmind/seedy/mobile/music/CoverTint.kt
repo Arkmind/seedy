@@ -9,6 +9,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.graphics.get
+import androidx.core.graphics.scale
 import coil3.SingletonImageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
@@ -31,11 +33,11 @@ private val noColour = FloatArray(0)
 
 /** The main colour of a picture: its most common colourful shade (greys, black and white count little). */
 private fun dominant(bitmap: Bitmap): FloatArray? {
-    val small = Bitmap.createScaledBitmap(bitmap, 16, 16, true)
+    val small = bitmap.scale(16, 16)
     data class Bucket(var n: Double = 0.0, var r: Double = 0.0, var g: Double = 0.0, var b: Double = 0.0)
     val buckets = HashMap<Int, Bucket>()
     for (y in 0 until 16) for (x in 0 until 16) {
-        val p = small.getPixel(x, y)
+        val p = small[x, y]
         val r = (p shr 16) and 0xff
         val g = (p shr 8) and 0xff
         val b = p and 0xff

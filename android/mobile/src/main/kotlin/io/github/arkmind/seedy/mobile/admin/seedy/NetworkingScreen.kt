@@ -34,7 +34,7 @@ import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.ErrorCard
 import io.github.arkmind.seedy.mobile.admin.FieldBlock
 import io.github.arkmind.seedy.mobile.admin.FieldSection
-import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.admin.leaveGuard
 import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
@@ -73,7 +73,7 @@ fun NetworkingScreen(state: NetworkingState, actions: NetworkingActions, onBack:
     var passwordSheet by remember { mutableStateOf(false) }
     val changes = state.changes
     val bar = changes > 0 || state.restarting
-    LeaveGuard(changes > 0, t("Your changes to the network settings haven’t been saved yet. If you leave now, they’re lost."), onBack)
+    leaveGuard(changes > 0, t("Your changes to the network settings haven’t been saved yet. If you leave now, they’re lost."), onBack)
     SettingsPage(
         t("Networking"),
         t("Ports, HTTPS, remote access and your home network. Every change here needs a restart."),

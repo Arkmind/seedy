@@ -252,7 +252,7 @@ fun <T> TabPills(options: List<Pair<T, String>>, value: T, onPick: (T) -> Unit, 
 
 /** A status dot. */
 @Composable
-fun Dot(color: Color, size: Dp = 7.dp, modifier: Modifier = Modifier) = Box(modifier.size(size).background(color, CircleShape))
+fun Dot(color: Color, modifier: Modifier = Modifier, size: Dp = 7.dp) = Box(modifier.size(size).background(color, CircleShape))
 
 /** "● Active": a 6 px dot and a short label (12 px bold by default). */
 @Composable
@@ -266,7 +266,7 @@ fun StatusLine(
     gap: Dp = 6.dp,
 ) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(gap)) {
-        Dot(dot, 6.dp)
+        Dot(dot, size = 6.dp)
         SText(label, size = size, weight = weight, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -317,6 +317,7 @@ fun ErrorCard(title: String, onRetry: () -> Unit, modifier: Modifier = Modifier,
 
 /** An empty list: a title and a line, in a card (16 px sides unless [modifier] says otherwise). */
 @Composable
+@Suppress("ModifierParameter") // the default sets the page's 16 dp sides; a caller's modifier replaces them
 fun EmptyCard(title: String, text: String?, modifier: Modifier = Modifier.padding(horizontal = 16.dp), action: (@Composable () -> Unit)? = null) {
     Card(modifier, padding = 16.dp, gap = 2.dp) {
         SText(title, size = 13.sp, weight = 700, color = SeedyColors.White)
@@ -429,7 +430,7 @@ fun NameTag(label: String, color: Color = SeedyColors.TextHero, dot: Color? = nu
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        if (dot != null) Dot(dot, 6.dp)
+        if (dot != null) Dot(dot, size = 6.dp)
         SText(label, size = 10.sp, weight = 800, color = color, maxLines = 1)
     }
 }
@@ -800,7 +801,7 @@ fun BoxScope.SaveBar(
  * back arrow does to ask the same.
  */
 @Composable
-fun LeaveGuard(dirty: Boolean, text: String, onLeave: () -> Unit): () -> Unit {
+fun leaveGuard(dirty: Boolean, text: String, onLeave: () -> Unit): () -> Unit {
     var asking by remember { mutableStateOf(false) }
     BackHandler(enabled = dirty && !asking) { asking = true }
     if (asking) {

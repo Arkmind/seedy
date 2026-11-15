@@ -55,6 +55,7 @@ fun titleMeta(title: SeerrTitle, upcoming: Boolean, today: LocalDate = LocalDate
  * (requested, on the server), the title and a line under it.
  */
 @Composable
+@Suppress("ModifierParameter") // the default sizes the card when the caller gives none
 fun SeerrTitleCard(title: SeerrTitle, upcoming: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier.width(120.dp), today: LocalDate = LocalDate.now()) {
     Column(modifier.tap(onClick = onClick), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(11.dp)).background(SeedyColors.Surface)) {

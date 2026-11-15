@@ -22,8 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.admin.people.ApiKeysActions
@@ -41,6 +40,7 @@ import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.PillStyle
 import io.github.arkmind.seedy.mobile.admin.SheetButtons
 import io.github.arkmind.seedy.mobile.admin.StatusLine
+import io.github.arkmind.seedy.mobile.admin.system.copyText
 import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.mobile.parts.SeedyField
 import io.github.arkmind.seedy.mobile.parts.Toast
@@ -122,7 +122,7 @@ private fun KeyLine(k: KeyRow, busy: Boolean, onRevoke: () -> Unit) {
 @Composable
 private fun Created(app: String, key: String, actions: ApiKeysActions) {
     val accent = LocalAccent.current
-    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
     Column(
         Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SeedyColors.Panel)
             .border(1.5.dp, accent, RoundedCornerShape(18.dp)).padding(16.dp),
@@ -137,7 +137,7 @@ private fun Created(app: String, key: String, actions: ApiKeysActions) {
             SelectionContainer { BasicText(key, style = Mono.copy(fontSize = 13.sp, color = SeedyColors.White)) }
         }
         PillButton(t("Copy key"), {
-            clipboard.setText(AnnotatedString(key))
+            copyText(context, "plain text", key)
             actions.say(t("Key copied"))
         }, style = PillStyle.Light)
     }

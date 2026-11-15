@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.player.audio
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
@@ -196,6 +197,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
                 Player.STATE_BUFFERING -> set { copy(loading = true) }
                 Player.STATE_READY -> set { copy(loading = false) }
                 Player.STATE_ENDED -> onEnded()
+                Player.STATE_IDLE -> Unit // stopped, or failed: onPlayerError handles that
             }
         }
 
@@ -983,6 +985,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
     private fun set(patch: AudioState.() -> AudioState) = _state.update(patch)
 
     companion object {
+        @SuppressLint("StaticFieldLeak") // holds the application context only
         @Volatile private var instance: AudioEngine? = null
 
         fun get(context: Context, core: SeedyCore): AudioEngine =

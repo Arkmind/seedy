@@ -4,7 +4,6 @@ import android.app.DownloadManager
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import androidx.compose.foundation.layout.Box
@@ -19,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.books.BookFormat
@@ -172,7 +172,7 @@ private fun download(context: Context, url: String, name: String): String? {
         val ok = runCatching {
             val dm = context.getSystemService(DownloadManager::class.java)
             dm.enqueue(
-                DownloadManager.Request(Uri.parse(url)).setTitle(name)
+                DownloadManager.Request(url.toUri()).setTitle(name)
                     .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                     .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name),
             )
@@ -180,7 +180,7 @@ private fun download(context: Context, url: String, name: String): String? {
         if (ok) return t("Downloading {name}", "name" to name)
     }
     return try {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         null
     } catch (_: ActivityNotFoundException) {
         t("Couldn’t download {name}", "name" to name)

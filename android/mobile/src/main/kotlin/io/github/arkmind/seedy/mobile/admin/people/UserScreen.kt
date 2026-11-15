@@ -34,7 +34,7 @@ import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.core.settings.Choices
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
-import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.admin.leaveGuard
 import io.github.arkmind.seedy.mobile.admin.MenuItem
 import io.github.arkmind.seedy.mobile.admin.MenuSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
@@ -66,7 +66,7 @@ fun UserScreen(state: UserEditState, actions: UserEditActions, onBack: () -> Uni
     var photoMenu by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
     // Leaving with unsaved changes asks first.
-    val back = LeaveGuard(
+    val back = leaveGuard(
         state.changes > 0,
         t("Your changes to {name}’s account haven’t been saved yet. If you leave now, they’re lost.", "name" to state.savedName),
     ) { actions.discard(); onBack() }

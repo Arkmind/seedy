@@ -4,7 +4,6 @@ import android.app.DownloadManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import androidx.compose.foundation.background
@@ -29,6 +28,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import io.github.arkmind.seedy.core.session.UserSession
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
@@ -92,7 +92,7 @@ fun Quiet(text: String, modifier: Modifier = Modifier, color: Color = SeedyColor
 fun downloadFromServer(context: Context, session: UserSession, path: String, query: Map<String, String>, fileName: String, mime: String): Boolean = runCatching {
     val base = session.api.baseUrl ?: return false
     val token = session.api.accessToken ?: return false
-    val uri = Uri.parse(base.trimEnd('/') + path).buildUpon().apply { query.forEach { (k, v) -> appendQueryParameter(k, v) } }.build()
+    val uri = (base.trimEnd('/') + path).toUri().buildUpon().apply { query.forEach { (k, v) -> appendQueryParameter(k, v) } }.build()
     val request = DownloadManager.Request(uri)
         .addRequestHeader("Authorization", "MediaBrowser Token=\"$token\"")
         .setTitle(fileName)

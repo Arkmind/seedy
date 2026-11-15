@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -109,7 +110,7 @@ fun BoxScope.MobileDataSheet(id: UUID, device: DeviceSettings, onPlay: (DataChoi
         }
     }
     val choices = remember(device) { dataChoices(device) }
-    var picked by remember { mutableStateOf(choices.indexOfFirst { it.bitrate == device.qualityMobile }.coerceAtLeast(0)) }
+    var picked by remember { mutableIntStateOf(choices.indexOfFirst { it.bitrate == device.qualityMobile }.coerceAtLeast(0)) }
     var never by remember { mutableStateOf(false) }
     val accent = LocalAccent.current
     val seconds = loaded?.runTimeTicks?.let(::ticksToSeconds)?.takeIf { it > 0 }

@@ -237,7 +237,7 @@ private fun Accounts(state: AdminRequestsState, actions: AdminRequestsActions, o
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         SText(a.name, size = 15.sp, weight = 800, color = SeedyColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Dot(if (a.linked) SeedyColors.Ok else SeedyColors.Pending, 6.dp)
+                            Dot(if (a.linked) SeedyColors.Ok else SeedyColors.Pending, size = 6.dp)
                             SText(
                                 if (a.linked) (a.seerrName?.takeIf { it.isNotEmpty() } ?: t("Seerr user {id}", "id" to a.seerrUserId.toString())) + " · " +
                                     (if (a.matchedBy == "manual") t("Linked by an admin") else t("Matched by Jellyfin sign-in"))

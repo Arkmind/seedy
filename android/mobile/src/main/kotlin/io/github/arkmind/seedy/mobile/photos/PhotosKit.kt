@@ -242,7 +242,7 @@ fun PhotoChip(label: String, on: Boolean, icon: IconDef? = null, count: String? 
 
 /** The boards' 44 px buttons: light ([primary]) or dark, an icon and a label. */
 @Composable
-fun PhotoButton(icon: IconDef, label: String?, primary: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun PhotoButton(icon: IconDef, label: String?, modifier: Modifier = Modifier, primary: Boolean = false, onClick: () -> Unit) {
     Row(
         modifier.height(44.dp).clip(RoundedCornerShape(13.dp)).background(if (primary) SeedyColors.Inverse else SeedyColors.Surface)
             .tap(onClick = onClick).padding(horizontal = if (label == null) 12.dp else 18.dp),

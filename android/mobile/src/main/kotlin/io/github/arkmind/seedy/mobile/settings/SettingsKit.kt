@@ -437,7 +437,7 @@ fun BoardSwitch(on: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = tru
 
 /** A setting that's on or off; [modifier] goes on the whole row (a library being moved). */
 @Composable
-fun SwitchRow(name: String, help: String?, on: Boolean, device: Boolean = false, enabled: Boolean = true, modifier: Modifier = Modifier, onChange: (Boolean) -> Unit) {
+fun SwitchRow(name: String, help: String?, on: Boolean, modifier: Modifier = Modifier, device: Boolean = false, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
     val label = remember { CssBox() }
     Row(
         modifier.tap(role = Role.Switch, enabled = enabled) { onChange(!on) }.settingsRow(label),

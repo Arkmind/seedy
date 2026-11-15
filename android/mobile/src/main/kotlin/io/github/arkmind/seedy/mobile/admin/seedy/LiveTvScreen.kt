@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,7 +47,7 @@ import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.Dot
 import io.github.arkmind.seedy.mobile.admin.ErrorCard
 import io.github.arkmind.seedy.mobile.admin.FieldBlock
-import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.admin.leaveGuard
 import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.MenuItem
 import io.github.arkmind.seedy.mobile.admin.MenuSheet
@@ -126,7 +127,7 @@ private fun LiveTvMain(state: LiveTvAdminState, actions: LiveTvAdminActions, onB
     var recSheet by remember { mutableStateOf<RecSheet?>(null) }
     var browse by remember { mutableStateOf<RecSheet?>(null) }
     val changes = state.changes
-    LeaveGuard(changes > 0, t("Your changes to Live TV haven’t been saved yet. If you leave now, they’re lost."), onBack)
+    leaveGuard(changes > 0, t("Your changes to Live TV haven’t been saved yet. If you leave now, they’re lost."), onBack)
     SettingsPage(
         t("Live TV"),
         t("Tuners, guide data and recordings."),
@@ -355,7 +356,7 @@ private fun SourceLine(r: SourceRow, onClick: () -> Unit) {
             }
             if (r.detail.isNotEmpty()) SText(r.detail, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
             Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Dot(toneColor(r.tone), 6.dp)
+                Dot(toneColor(r.tone), size = 6.dp)
                 SText(r.status, size = 12.sp, weight = 600, color = SeedyColors.Text2)
             }
         }
@@ -368,7 +369,7 @@ private fun SourceLine(r: SourceRow, onClick: () -> Unit) {
 private fun FindTuners(configured: List<TunerHost>, actions: LiveTvAdminActions, onAdd: (TunerHost) -> Unit, onDismiss: () -> Unit) {
     var list by remember { mutableStateOf<List<TunerHost>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    var run by remember { mutableStateOf(0) }
+    var run by remember { mutableIntStateOf(0) }
     LaunchedEffect(run) {
         list = null
         error = null

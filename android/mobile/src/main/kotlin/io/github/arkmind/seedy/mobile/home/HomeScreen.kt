@@ -281,6 +281,7 @@ private fun Hero(
 }
 
 @Composable
+@Suppress("ConfigurationScreenWidthHeight") // the title scales with the screen width as on the board; the window size would round differently
 private fun HeroPage(entry: FeaturedEntry, onOpen: (BaseItemDto) -> Unit, onPlay: (BaseItemDto) -> Unit) {
     val viewer = LocalViewer.current
     val item = entry.item

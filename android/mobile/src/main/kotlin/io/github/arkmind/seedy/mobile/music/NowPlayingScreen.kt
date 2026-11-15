@@ -35,6 +35,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -245,7 +247,7 @@ fun LyricsPanel(title: String, sub: String, lyrics: Lyrics, position: Double, ti
     BackHandler(onBack = onClose)
     val list = rememberLazyListState()
     val cur = lyrics.currentAt(position)
-    var hold by remember { mutableStateOf(0L) }
+    var hold by remember { mutableLongStateOf(0L) }
     LaunchedEffect(cur) { if (cur >= 0 && System.currentTimeMillis() > hold) list.animateScrollToItem((cur - 2).coerceAtLeast(0)) }
     Column(
         Modifier.fillMaxSize().background(Color(0xFF121212)).cssGradient(180f, listOf(tint, Color(0xFF121212), Color(0xFF121212)), listOf(0f, 0.72f, 1f)).blockTaps(),
@@ -335,7 +337,7 @@ private fun QueueLabel(text: String, top: Dp = 4.dp) {
 private fun QueueList(entries: List<Entry>, added: Boolean, onJump: (String) -> Unit, onRemove: (String) -> Unit, onMove: (Boolean, Int, Int) -> Unit) {
     val density = LocalDensity.current
     val step = with(density) { RowStep.toPx() }
-    var from by remember { mutableStateOf(-1) }
+    var from by remember { mutableIntStateOf(-1) }
     var dy by remember { mutableFloatStateOf(0f) }
     val to = if (from >= 0) (from + (dy / step).roundToInt()).coerceIn(0, entries.size - 1) else -1
     Column {

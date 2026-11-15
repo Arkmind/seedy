@@ -311,7 +311,7 @@ private fun SessionCard(s: NowPlaying, onMenu: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Dot(MethodDots.getValue(s.kind), 6.dp)
+                Dot(MethodDots.getValue(s.kind), size = 6.dp)
                 SText(t(s.kind.label()), size = 12.sp, weight = 700, lineHeight = 1.4f, color = SeedyColors.Text, maxLines = 1)
             }
             SText(s.detail, Modifier.weight(1f).onSizeChanged { lines = maxOf(1, (it.height / 17f).roundToInt()) }, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)

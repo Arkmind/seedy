@@ -50,7 +50,7 @@ import io.github.arkmind.seedy.mobile.admin.AddChip
 import io.github.arkmind.seedy.mobile.admin.BoardField
 import io.github.arkmind.seedy.mobile.admin.ChipFlow
 import io.github.arkmind.seedy.mobile.admin.ErrorCard
-import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.admin.leaveGuard
 import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.NameTag
 import io.github.arkmind.seedy.mobile.admin.PillButton
@@ -118,7 +118,7 @@ fun DefaultHomeScreen(state: HomeAdminState, actions: HomeAdminActions, onBack: 
     var genreSheet by remember { mutableStateOf(false) }
     var titleSheet by remember { mutableStateOf(false) }
     val changes = state.changes
-    LeaveGuard(changes > 0, t("Your changes to the home screen haven’t been saved yet. If you leave now, they’re lost."), onBack)
+    leaveGuard(changes > 0, t("Your changes to the home screen haven’t been saved yet. If you leave now, they’re lost."), onBack)
     SettingsPage(
         t("Home screen"),
         t("The home screen every new profile starts with. After that, row order adapts to each person unless they or you turn it off."),

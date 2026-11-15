@@ -13,6 +13,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.content.edit
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -102,7 +103,7 @@ object RequestAlerts {
             val name = info.tags.firstOrNull { it.startsWith("name:") }?.removePrefix("name:") ?: continue
             if (name !in keep && !info.state.isFinished) wm.cancelUniqueWork(name)
         }
-        if (!on) context.getSharedPreferences(Prefs, Context.MODE_PRIVATE).edit().clear().apply()
+        if (!on) context.getSharedPreferences(Prefs, Context.MODE_PRIVATE).edit { clear() }
     }
 
     /** Whether Android lets Seedy post (Android 13 asks the person first). */
@@ -125,7 +126,7 @@ object RequestAlerts {
             val prefs = context.getSharedPreferences(Prefs, Context.MODE_PRIVATE)
             val key = "${server.id}:$userId"
             val changes = RequestWatch.diff(RequestWatch.decode(prefs.getString(key, null)), now)
-            prefs.edit().putString(key, RequestWatch.encode(RequestWatch.remember(now))).commit()
+            prefs.edit(commit = true) { putString(key, RequestWatch.encode(RequestWatch.remember(now))) }
             if (changes.isEmpty() || !allowed(context)) return@withLock
             val seerrBy = seerr.associateBy(RequestWatch::keyOf)
             val mediaBy = mediaList.associateBy(RequestWatch::keyOf)
@@ -252,7 +253,6 @@ object RequestAlerts {
     }
 
     private fun ensureChannel(context: Context) {
-        if (Build.VERSION.SDK_INT < 26) return
         val nm = context.getSystemService(NotificationManager::class.java)
         if (nm.getNotificationChannel(Channel) == null) {
             nm.createNotificationChannel(NotificationChannel(Channel, t("Requests"), NotificationManager.IMPORTANCE_DEFAULT).apply {

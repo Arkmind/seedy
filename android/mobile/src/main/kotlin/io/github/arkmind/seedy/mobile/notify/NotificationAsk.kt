@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import io.github.arkmind.seedy.ui.theme.LocalCore
 
 /**
@@ -29,7 +30,7 @@ fun rememberNotificationAsk(): (force: Boolean) -> Unit {
             val granted = Build.VERSION.SDK_INT < 33 ||
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
             if (wanted && !granted && (force || !prefs.getBoolean("asked", false))) {
-                prefs.edit().putBoolean("asked", true).apply()
+                prefs.edit { putBoolean("asked", true) }
                 launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }

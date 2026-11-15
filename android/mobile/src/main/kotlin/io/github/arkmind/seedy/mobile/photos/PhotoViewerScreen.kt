@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -191,8 +192,9 @@ private fun Strip(items: List<BaseItemDto>, page: Int, onPick: (Int) -> Unit) {
     val state = rememberLazyListState(initialFirstVisibleItemIndex = page)
     val density = LocalDensity.current
     // The current one in the middle of the strip.
-    LaunchedEffect(page, state.layoutInfo.viewportSize.width) {
-        val w = state.layoutInfo.viewportSize.width
+    val viewport by remember(state) { derivedStateOf { state.layoutInfo.viewportSize.width } }
+    LaunchedEffect(page, viewport) {
+        val w = viewport
         if (w == 0) return@LaunchedEffect
         val item = with(density) { (56 * ratioOf(items[page])).dp.roundToPx() }
         state.scrollToItem(page, -(w - item) / 2)

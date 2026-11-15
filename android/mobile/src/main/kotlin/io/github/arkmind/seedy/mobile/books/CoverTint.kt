@@ -9,6 +9,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.graphics.get
+import androidx.core.graphics.scale
 import coil3.SingletonImageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
@@ -49,10 +51,10 @@ fun rememberDominant(url: String?): FloatArray? {
 private class Bucket(var n: Float = 0f, var r: Float = 0f, var g: Float = 0f, var b: Float = 0f)
 
 private fun dominantOf(bitmap: Bitmap): FloatArray? {
-    val small = if (bitmap.width != 16 || bitmap.height != 16) Bitmap.createScaledBitmap(bitmap, 16, 16, true) else bitmap
+    val small = if (bitmap.width != 16 || bitmap.height != 16) bitmap.scale(16, 16) else bitmap
     val buckets = HashMap<Int, Bucket>()
     for (y in 0 until small.height) for (x in 0 until small.width) {
-        val p = small.getPixel(x, y)
+        val p = small[x, y]
         val r = (p shr 16) and 0xff
         val g = (p shr 8) and 0xff
         val b = p and 0xff

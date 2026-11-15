@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.toColorInt
 import io.github.arkmind.seedy.core.admin.seedy.AccentSwatches
 import io.github.arkmind.seedy.core.admin.seedy.AdminConfig
 import io.github.arkmind.seedy.core.admin.seedy.BrandingActions
@@ -176,7 +177,7 @@ private fun AccentColourRow(accent: String, actions: BrandingActions) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(Modifier.padding(start = 2.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 for ((label, value) in AccentSwatches) {
-                    AccentDot(Color(android.graphics.Color.parseColor(value)), value.equals(accent, ignoreCase = true), t(label)) {
+                    AccentDot(Color(value.toColorInt()), value.equals(accent, ignoreCase = true), t(label)) {
                         hex = value
                         actions.setAccent(value)
                     }

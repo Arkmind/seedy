@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.mobile.audio
 
+import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -39,6 +40,7 @@ import io.github.arkmind.seedy.ui.theme.SText
 private val Headphones = IconDef(2.2f, "M4 15v-3a8 8 0 0 1 16 0v3", "M4.5 14h1a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5v-3a1.5 1.5 0 0 1 1.5-1.5Z", "M18.5 14h1a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5v-3a1.5 1.5 0 0 1 1.5-1.5Z")
 
 private val Wired = setOf(AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_USB_HEADSET)
+@SuppressLint("InlinedApi") // API 28 and 31 constants, only compared: older systems never report them
 private val Bluetooth = setOf(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_BLE_SPEAKER, AudioDeviceInfo.TYPE_HEARING_AID)
 
 /** Where the sound goes now: a Bluetooth device's name, "Headphones", or "This phone". Follows devices coming and going. */

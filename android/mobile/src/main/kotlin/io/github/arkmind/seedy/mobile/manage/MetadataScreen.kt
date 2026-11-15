@@ -53,7 +53,7 @@ import io.github.arkmind.seedy.mobile.admin.BoardField
 import io.github.arkmind.seedy.mobile.admin.ChipFlow
 import io.github.arkmind.seedy.mobile.admin.ErrorCard
 import io.github.arkmind.seedy.mobile.admin.FieldSection
-import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.admin.leaveGuard
 import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
@@ -101,7 +101,7 @@ fun MetadataScreen(state: MetadataState, actions: MetadataActions, poster: Strin
     val focus = LocalFocusManager.current
     // A sheet takes the keyboard: the field behind it lets go first.
     LaunchedEffect(sheet) { if (sheet != null) focus.clearFocus() }
-    val back = LeaveGuard(state.dirty, t("Your changes to {name} aren’t saved yet.", "name" to state.name), onBack)
+    val back = leaveGuard(state.dirty, t("Your changes to {name} aren’t saved yet.", "name" to state.name), onBack)
     SettingsPage(
         t("Edit metadata"),
         lede = null,
@@ -167,7 +167,7 @@ fun ItemHead(poster: String?, name: String, facts: String) {
 @Composable
 private fun Details(state: MetadataState, actions: MetadataActions, open: (String) -> Unit) {
     FieldSection(null) {
-        MetaField(t("Title"), "Name", state, actions) { BoardField(state.title, { v -> actions.edit { it.copy(title = v) } }, autoCorrect = true) }
+        MetaField(t("Title"), lock = "Name", state = state, actions = actions) { BoardField(state.title, { v -> actions.edit { it.copy(title = v) } }, autoCorrect = true) }
         MetaField(t("Original title")) { BoardField(state.originalTitle, { v -> actions.edit { it.copy(originalTitle = v) } }, autoCorrect = true) }
         MetaField(t("Sort title")) { BoardField(state.sortTitle, { v -> actions.edit { it.copy(sortTitle = v) } }, placeholder = state.title) }
     }
@@ -178,20 +178,20 @@ private fun Details(state: MetadataState, actions: MetadataActions, open: (Strin
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (state.isSeries) MetaField(t("Status"), modifier = Modifier.weight(1f)) { SelectField(statusLabel(state.status), t("Unknown")) { open("status") } }
-            MetaField(t("Age rating"), "OfficialRating", state, actions, Modifier.weight(1f)) { SelectField(state.rating, t("None")) { open("rating") } }
+            MetaField(t("Age rating"), Modifier.weight(1f), "OfficialRating", state, actions) { SelectField(state.rating, t("None")) { open("rating") } }
         }
     }
     FieldSection(null) {
-        MetaField(t("Overview"), "Overview", state, actions) { BoardField(state.overview, { v -> actions.edit { it.copy(overview = v) } }, lines = 6, autoCorrect = true) }
+        MetaField(t("Overview"), lock = "Overview", state = state, actions = actions) { BoardField(state.overview, { v -> actions.edit { it.copy(overview = v) } }, lines = 6, autoCorrect = true) }
     }
     FieldSection(null) {
-        MetaField(t("Genres"), "Genres", state, actions) {
+        MetaField(t("Genres"), lock = "Genres", state = state, actions = actions) {
             ChipFlow(state.genres, { i -> actions.edit { s -> s.copy(genres = s.genres.filterIndexed { j, _ -> j != i }) } }, t("Add genre"), { open("genre") })
         }
-        MetaField(t("Tags"), "Tags", state, actions) {
+        MetaField(t("Tags"), lock = "Tags", state = state, actions = actions) {
             ChipFlow(state.tags, { i -> actions.edit { s -> s.copy(tags = s.tags.filterIndexed { j, _ -> j != i }) } }, t("Add tag"), { open("tag") })
         }
-        MetaField(t("Studios and networks"), "Studios", state, actions) {
+        MetaField(t("Studios and networks"), lock = "Studios", state = state, actions = actions) {
             ChipFlow(state.studios, { i -> actions.edit { s -> s.copy(studios = s.studios.filterIndexed { j, _ -> j != i }) } }, t("Add"), { open("studio") })
         }
     }
@@ -236,10 +236,10 @@ private fun People(state: MetadataState, actions: MetadataActions, open: (String
 @Composable
 private fun MetaField(
     label: String,
+    modifier: Modifier = Modifier,
     lock: String? = null,
     state: MetadataState? = null,
     actions: MetadataActions? = null,
-    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {

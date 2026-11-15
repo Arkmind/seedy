@@ -3,8 +3,8 @@ package io.github.arkmind.seedy.mobile.notify
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.net.toUri
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,7 +63,7 @@ object RequestLinks {
         val intent = (context.packageManager.getLaunchIntentForPackage(context.packageName) ?: Intent()).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             // A distinct address per button, so Android keeps each one's extras.
-            data = Uri.parse("seedy://request/$code/${link.action}")
+            data = "seedy://request/$code/${link.action}".toUri()
             putExtra(Prefix + "action", link.action)
             putExtra(Prefix + "note", note)
             putExtra(Prefix + "server", link.server)
