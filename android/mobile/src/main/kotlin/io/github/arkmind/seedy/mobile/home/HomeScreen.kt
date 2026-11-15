@@ -150,7 +150,7 @@ fun HomeScreen(
         Header(account, onSearch, stuck)
         }
         menuFor?.let { item ->
-            ItemMenuSheet(item.cardTitle, continueEntries(item) { watched ->
+            ItemMenuSheet(item.cardTitle, continueEntries { watched ->
                 onFinish?.invoke(item, watched) { ok ->
                     message = when {
                         !ok && watched -> t("Couldn’t mark it as watched")
@@ -198,7 +198,7 @@ private fun PullMedu(pull: PullToRefreshState, refreshing: Boolean, threshold: D
 }
 
 /** A Continue watching card's menu: mark the title watched, or take it out of the row without marking it. */
-private fun continueEntries(item: BaseItemDto, finish: (Boolean) -> Unit): List<MenuEntry> = listOf(
+private fun continueEntries(finish: (Boolean) -> Unit): List<MenuEntry> = listOf(
     MenuEntry(WebIcons.Check, t("Mark as watched"), run = { finish(true) }),
     MenuEntry(WebIcons.Close, t("Remove from Continue watching"), sub = t("Starts from the beginning next time"), run = { finish(false) }),
 )

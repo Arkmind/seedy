@@ -43,20 +43,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.arkmind.seedy.core.feature.DetailsViewModel
-import io.github.arkmind.seedy.core.format.dayMonth
 import io.github.arkmind.seedy.core.format.episodeNumber
 import io.github.arkmind.seedy.core.format.inProgress
 import io.github.arkmind.seedy.core.format.isVirtual
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.format.playLabel
-import io.github.arkmind.seedy.core.format.premiereDay
 import io.github.arkmind.seedy.core.format.progress
 import io.github.arkmind.seedy.core.format.rating
 import io.github.arkmind.seedy.core.format.remainingSeconds
 import io.github.arkmind.seedy.core.format.runtime
 import io.github.arkmind.seedy.core.format.score
+import io.github.arkmind.seedy.core.format.seasonEpisodeMeta
 import io.github.arkmind.seedy.core.format.timeLeft
-import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.format.year
 import io.github.arkmind.seedy.core.format.yearRange
 import io.github.arkmind.seedy.core.i18n.t
@@ -99,7 +97,6 @@ class DetailsActions(
     val onSeason: (UUID) -> Unit = {},
     /** Opens the request sheet: the seasons to tick first (empty: every open one). */
     val onRequest: (List<Int>) -> Unit = {},
-    val onMarkSeason: () -> Unit = {},
     /** Opens the More menu (null: no menu button). */
     val onMore: (() -> Unit)? = null,
 )
@@ -396,18 +393,11 @@ private fun EpisodeRow(ep: BaseItemDto, upNext: Boolean, onPlay: () -> Unit) {
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             SText(join(ep.episodeNumber, ep.name), size = 14.sp, weight = 700, color = SeedyColors.White, maxLines = 2)
-            val meta = episodeMeta(ep)
+            val meta = seasonEpisodeMeta(ep)
             if (meta.isNotEmpty()) SText(meta, size = 12.sp, color = SeedyColors.Text3, maxLines = 1)
         }
         Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).tap(enabled = playable, onClick = onPlay), contentAlignment = Alignment.Center) {
             SIcon(AppIcons.PlayOutline, size = 20.dp, color = SeedyColors.Text2)
         }
     }
-}
-
-/** "54 min · 25 Sep", "52 min · 34 min left", "Airs Fri 23 Oct". */
-fun episodeMeta(ep: BaseItemDto): String {
-    val day = ep.premiereDay
-    if (ep.isVirtual) return day?.let { if (it.isAfter(java.time.LocalDate.now())) t("Airs {date}", "date" to weekdayDate(it)) else dayMonth(it) }.orEmpty()
-    return join(ep.runtime, if (ep.inProgress) timeLeft(ep.remainingSeconds) else day?.let(::dayMonth))
 }

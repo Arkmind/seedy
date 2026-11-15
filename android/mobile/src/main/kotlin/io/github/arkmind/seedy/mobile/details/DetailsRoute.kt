@@ -83,7 +83,6 @@ fun DetailsRoute(id: UUID) {
                 onShuffle = { vm.shuffle(nav::play) },
                 onSeason = vm::selectSeason,
                 onRequest = { ask = it },
-                onMarkSeason = vm::toggleSeasonPlayed,
                 onMore = if (item != null && item.type != BaseItemKind.PERSON) ({
                     // The Delete line says how much goes ("2 seasons · 252 GB"); a playlist or collection takes no files.
                     if (item.canDelete == true && item.type != BaseItemKind.PLAYLIST && item.type != BaseItemKind.BOX_SET) bulk.loadDeleteSub(listOf(item.id.toString()))

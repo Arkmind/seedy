@@ -164,7 +164,7 @@ fun PhonePlayerScreen(
         if (locked) {
             if (controls) {
                 Box(Modifier.align(Alignment.TopEnd).padding(14.dp)) {
-                    RoundIcon(WebIcons.Lock, t("Unlock controls"), actions.onLock, size = 20.dp, color = SeedyColors.White, bg = SeedyColors.Glass)
+                    RoundIcon(WebIcons.Lock, actions.onLock, size = 20.dp, color = SeedyColors.White, bg = SeedyColors.Glass)
                 }
             }
         } else if (controls && shownSwipe == null) {
@@ -197,13 +197,13 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            RoundIcon(WebIcons.ArrowLeft, t("Back"), actions.onBack, size = 22.dp, stroke = 2.2f, color = SeedyColors.White)
+            RoundIcon(WebIcons.ArrowLeft, actions.onBack, size = 22.dp, stroke = 2.2f, color = SeedyColors.White)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 SText(heading(item), size = 14.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
                 subheading(item)?.let { SText(it, size = 12.sp, color = SeedyColors.Text2, maxLines = 1) }
             }
-            RoundIcon(WebIcons.Lock, t("Lock controls"), actions.onLock, size = 20.dp, color = SeedyColors.Inverse)
-            RoundIcon(PlayerIcons.Pip, t("Picture in picture"), actions.onPip, size = 20.dp, color = SeedyColors.Inverse)
+            RoundIcon(WebIcons.Lock, actions.onLock, size = 20.dp, color = SeedyColors.Inverse)
+            RoundIcon(PlayerIcons.Pip, actions.onPip, size = 20.dp, color = SeedyColors.Inverse)
             // The board's Cast button waits for video casting.
         }
         // Seek and pause: 128 px from the top of the board's 390 px, kept in that proportion on taller screens.
@@ -266,7 +266,7 @@ private fun overline(item: BaseItemDto?): String? = when {
 }
 
 @Composable
-private fun RoundIcon(icon: IconDef, label: String, onClick: () -> Unit, size: Dp, color: Color, stroke: Float = icon.stroke, bg: Color = Color.Transparent) {
+private fun RoundIcon(icon: IconDef, onClick: () -> Unit, size: Dp, color: Color, stroke: Float = icon.stroke, bg: Color = Color.Transparent) {
     Box(Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(bg).tap(onClick = onClick), contentAlignment = Alignment.Center) {
         SIcon(icon, size = size, color = color, stroke = stroke)
     }

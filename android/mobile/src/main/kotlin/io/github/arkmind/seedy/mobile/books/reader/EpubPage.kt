@@ -17,7 +17,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.viewinterop.AndroidView
 import io.github.arkmind.seedy.core.books.BookChapter
