@@ -41,17 +41,15 @@ import io.github.arkmind.seedy.core.notify.Watched
 import io.github.arkmind.seedy.core.requests.RequestsApi
 import io.github.arkmind.seedy.core.requests.SeerrRequest
 import io.github.arkmind.seedy.core.seedy.SeedyApi
-import io.github.arkmind.seedy.core.seedy.SeedyMe
 import io.github.arkmind.seedy.mobile.R
 import io.github.arkmind.seedy.ui.components.MeduMood
 import io.github.arkmind.seedy.ui.components.meduBitmap
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import io.github.arkmind.seedy.ui.theme.parseHexColor
+import io.github.arkmind.seedy.ui.theme.accentOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.JsonPrimitive
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
@@ -106,10 +104,12 @@ object RequestAlerts {
         if (!on) context.getSharedPreferences(Prefs, Context.MODE_PRIVATE).edit { clear() }
     }
 
-    /** Whether Android lets Seedy post (Android 13 asks the person first). */
-    fun allowed(context: Context): Boolean =
-        (Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) &&
-            NotificationManagerCompat.from(context).areNotificationsEnabled()
+    /** Whether Seedy has the permission to post (Android 13 asks the person first). */
+    fun permitted(context: Context): Boolean =
+        Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+
+    /** Whether Android lets Seedy post: [permitted], and notifications aren't turned off. */
+    fun allowed(context: Context): Boolean = permitted(context) && NotificationManagerCompat.from(context).areNotificationsEnabled()
 
     /** Looks at the profile's requests ([api] is signed in as them) and notifies what moved on since the last look. */
     suspend fun check(context: Context, core: SeedyCore, server: SavedServer, userId: String, api: ApiClient) = withContext(Dispatchers.IO) {
@@ -130,7 +130,7 @@ object RequestAlerts {
             if (changes.isEmpty() || !allowed(context)) return@withLock
             val seerrBy = seerr.associateBy(RequestWatch::keyOf)
             val mediaBy = mediaList.associateBy(RequestWatch::keyOf)
-            val ctx = Ctx(context, server.id, userId, api, accentOf(me))
+            val ctx = Ctx(context, server.id, userId, api, accentOf(me, null) ?: SeedyColors.Accent)
             val notes = changes.mapNotNull { c ->
                 seerrBy[c.key]?.let { runCatching { ctx.seerrNote(it, c) }.getOrNull() }
                     ?: mediaBy[c.key]?.let { ctx.mediaNote(it, c) }
@@ -138,10 +138,6 @@ object RequestAlerts {
             post(context, ctx, notes)
         }
     }
-
-    /** The profile's accent (Settings · Display) over the server's, for the notification's tint and Medu. */
-    private fun accentOf(me: SeedyMe) =
-        parseHexColor((me.prefs.custom["display.accent"] as? JsonPrimitive)?.content) ?: parseHexColor(me.branding.accent) ?: SeedyColors.Accent
 
     private class Note(
         val id: Int,
