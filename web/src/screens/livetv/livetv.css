@@ -62,8 +62,6 @@
 .lt-btn.is-icon.is-48 { width: 48px; }
 .lt-btn.is-fav { color: var(--seedy-accent); }
 .lt-btn.is-fav:not(:disabled):hover { color: var(--seedy-ink-inverse); }
-.lt-btn.is-danger { color: var(--seedy-danger); }
-.lt-btn.is-danger:not(:disabled):hover { background: var(--seedy-danger); color: var(--seedy-ink-inverse); }
 .lt-btn:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 3px; }
 .lt-btn:disabled { opacity: 0.5; cursor: default; }
 

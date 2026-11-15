@@ -97,7 +97,7 @@ export function ServerLibraries() {
         </>
       }
     >
-      <div role="tablist" aria-label={t('Library settings')} class="srv-tabs srv-lib-tabs">
+      <div role="tablist" aria-label={t('Library settings')} class="srv-tabs">
         {TABS.map((x) => (
           <button key={x.id} type="button" role="tab" class="tab" aria-selected={tab === x.id ? 'true' : 'false'} onClick={() => setQuery({ tab: x.id === 'libraries' ? null : x.id })}>{t(x.label)}</button>
         ))}

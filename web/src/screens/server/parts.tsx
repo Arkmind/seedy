@@ -128,7 +128,7 @@ export function UnsavedBar({ changes, note, saving, onDiscard, onSave, saveLabel
 }) {
   if (changes <= 0) return null;
   return (
-    <div class="unsaved srv-unsaved" role="region" aria-label={t('Unsaved changes')}>
+    <div class="unsaved" role="region" aria-label={t('Unsaved changes')}>
       <span class="unsaved-text" aria-live="polite">
         <span class="dot is-pending" />
         {tn(changes, '{n} unsaved change', '{n} unsaved changes')}{note ? ` · ${note}` : ''}

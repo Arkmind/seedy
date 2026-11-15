@@ -422,7 +422,7 @@ function DiskIcon({ ram }: { ram: boolean }) {
 
 function StoragePanel({ list, error, onRetry }: { list?: Disk[]; error: boolean; onRetry: () => void }) {
   return (
-    <section aria-labelledby="ov-storage" class="srv-box srv-storage">
+    <section aria-labelledby="ov-storage" class="srv-box">
       <div class="srv-box-head">
         <h2 id="ov-storage" class="srv-box-title">{t('Storage')}{list && <span> · {tn(list.length, '{n} disk', '{n} disks')}</span>}</h2>
         <Link to="/admin/settings" class="srv-box-link">{t('Change paths in Settings')}</Link>

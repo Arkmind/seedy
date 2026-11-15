@@ -47,8 +47,6 @@
   background: var(--seedy-ok); box-shadow: 0 0 0 3px var(--seedy-panel);
 }
 
-.srv-empty { padding: 22px; }
-
 /* Notices: "File Transformation won't load", "2 plugin updates". */
 .srv-notices { display: flex; flex-direction: column; gap: 8px; }
 .srv-notice {
@@ -163,7 +161,6 @@ span.srv-now-art { display: block; aspect-ratio: 16 / 9; border-radius: 11px; }
 /* ── Sheets: pair editors ── */
 
 .srv-picker-note { display: flex; align-items: center; gap: 8px; padding: 14px 12px; font-size: 14px; color: var(--seedy-text-2); }
-.srv-picker-note.is-error { color: var(--seedy-danger); }
 
 .srv-pairs { display: flex; flex-direction: column; gap: 8px; }
 .srv-pairs-head { display: grid; grid-template-columns: 1fr 1fr 36px; gap: 8px; padding: 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--seedy-text-3); }
