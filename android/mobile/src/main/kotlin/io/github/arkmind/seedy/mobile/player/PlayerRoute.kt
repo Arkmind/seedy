@@ -20,7 +20,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -135,8 +134,8 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
     LaunchedEffect(state.ask, state.endShown) { if (state.ask != null || state.endShown) panel = null }
     // "I’m done for now", Back to browse, Back: leaving from the credits counts the title as watched.
     val leave = { player.doneForNow(); nav.back() }
-    // One video surface, moved into the end-of-movie tile and back without being rebuilt.
-    val videoFrame = remember(player) { movableContentOf { ContentFrame(player = player.exo, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) } }
+    // The video: full screen, or in the end-of-movie tile (a new surface there, so it lays out afresh each time).
+    val videoFrame: @Composable () -> Unit = { ContentFrame(player = player.exo, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
 
     BackHandler {
         when {
