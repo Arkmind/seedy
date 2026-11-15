@@ -85,25 +85,6 @@ a.seerr-alt:hover { color: var(--seedy-ink-inverse); }
 
 .seerr-message { padding: 140px var(--gutter) 80px; max-width: 960px; }
 
-/* Season picker sheet. */
-.seerr-sheet-head { display: flex; flex-direction: column; gap: 6px; }
-.seerr-picks { display: flex; flex-direction: column; gap: 8px; }
-.seerr-pick {
-  display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 14px; border-radius: var(--r-card);
-  background: var(--seedy-bg); box-shadow: inset 0 0 0 1px var(--seedy-surface-2); cursor: pointer;
-  transition: box-shadow var(--t-fast) var(--ease);
-}
-.seerr-pick:hover { box-shadow: inset 0 0 0 1px var(--seedy-text-3); }
-.seerr-pick.is-on { box-shadow: inset 0 0 0 2px var(--seedy-accent); }
-.seerr-pick.is-locked { cursor: default; box-shadow: none; background: var(--seedy-row); }
-.seerr-pick.is-all { min-height: 44px; background: transparent; box-shadow: none; padding: 0 14px; }
-.seerr-pick input { width: 18px; height: 18px; margin: 0; accent-color: var(--seedy-accent); flex: none; }
-.seerr-pick-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.seerr-pick-name { font-size: 15px; font-weight: 700; color: #ffffff; }
-.seerr-pick.is-locked .seerr-pick-name { color: var(--seedy-text-2); }
-.seerr-pick-sub { font-size: 13px; color: var(--seedy-text-3); }
-.seerr-pick .status-pill { height: 28px; background: var(--seedy-panel); }
-
 @media (max-width: 900px) {
   .seerr-hero { min-height: 0; }
   .seerr-hero-body { padding-top: 160px; }

@@ -33,6 +33,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.admin.system.LastTone
@@ -151,6 +152,6 @@ private fun WhenLine(task: TaskRow, accent: Color, onLogs: (String, String) -> U
 private fun Indeterminate(modifier: Modifier, color: Color) {
     val x by rememberInfiniteTransition(label = "task").animateFloat(-0.3f, 1f, infiniteRepeatable(tween(1200, easing = LinearEasing), RepeatMode.Restart), label = "slide")
     BoxWithConstraints(modifier.height(4.dp).clip(RoundedCornerShape(2.dp)).background(SeedyColors.Surface2)) {
-        Box(Modifier.offset(x = maxWidth * x).width(maxWidth * 0.3f).height(4.dp).background(color))
+        Box(Modifier.offset { IntOffset((maxWidth * x).roundToPx(), 0) }.width(maxWidth * 0.3f).height(4.dp).background(color))
     }
 }

@@ -4,23 +4,22 @@ import * as seedy from '../../api/seedy';
 import type { AdminConfig, AdminStatus, HomeRowSetting, PlayLogProfile, RowKind, SeerrAccount, SeerrTestResult } from '../../api/seedy';
 import { applyBranding, DEFAULT_PLAYBACK, refreshMe } from '../../lib/app-state';
 import { createStore, useStore } from '../../lib/store';
+import type { SaveState } from '../../ui/controls';
 import { confirm } from '../../ui/overlay';
 import { t } from '../../lib/i18n';
 
-/* Admin state shared by the four admin pages: the whole AdminConfig is loaded once and kept here, so moving
+/* Admin state shared by the Seedy admin pages: the whole AdminConfig is loaded once and kept here, so moving
    between pages doesn't refetch. Autosave pages edit it in place and a debounced save sends the whole
    object back; the Home screen page keeps a draft and commits its section explicitly. */
 
-export type SaveState = 'saved' | 'saving' | 'error';
-
-export const configStore = createStore<AdminConfig | null>(null);
+const configStore = createStore<AdminConfig | null>(null);
 const loadErrorStore = createStore<Error | null>(null);
-export const saveStateStore = createStore<SaveState>('saved');
+const saveStateStore = createStore<SaveState>('saved');
 
 /* ── Defaults and normalising ── */
 
 export const LOCKED_ROWS = new Set<RowKind>(['featured', 'continue']);
-export const ROW_KINDS: RowKind[] = [
+const ROW_KINDS: RowKind[] = [
   'featured', 'continue', 'nextup', 'top10', 'because', 'genres', 'mymedia', 'latest',
   'discover', 'upcomingMovies', 'upcomingShows', 'collections'
 ];
@@ -53,7 +52,7 @@ const DEF_REQUESTS: AdminConfig['requests'] = {
 };
 const DEF_PLAYLOG: AdminConfig['playLog'] = { enabled: true, retentionDays: 365, useTop10: true, useHistory: true, useRowOrder: true, useGenres: true };
 
-export function normaliseConfig(c: AdminConfig): AdminConfig {
+function normaliseConfig(c: AdminConfig): AdminConfig {
   const h: Partial<AdminConfig['home']> = c.home ?? {};
   return {
     ...c,
@@ -77,7 +76,7 @@ export function normaliseConfig(c: AdminConfig): AdminConfig {
 
 let loading: Promise<void> | null = null;
 
-export function loadConfig(force = false): Promise<void> {
+function loadConfig(force = false): Promise<void> {
   if (loading) return loading;
   if (configStore.get() && !force) return Promise.resolve();
   loadErrorStore.set(null);
@@ -178,7 +177,7 @@ if (typeof window !== 'undefined') {
 
 export const statusStore = createStore<{ data?: AdminStatus; error?: Error; at: number }>({ at: 0 });
 
-export interface SeerrTestState { state: 'idle' | 'testing' | 'done'; result?: SeerrTestResult; error?: string; at: number }
+interface SeerrTestState { state: 'idle' | 'testing' | 'done'; result?: SeerrTestResult; error?: string; at: number }
 export const seerrTestStore = createStore<SeerrTestState>({ state: 'idle', at: 0 });
 
 // A slow test started earlier must not overwrite the result of a newer one.
@@ -201,29 +200,28 @@ export function testSeerr(body: { url?: string; apiKey?: string } = {}) {
   );
 }
 
-export const accountsStore = createStore<{ data?: SeerrAccount[]; error?: Error; loading: boolean }>({ loading: false });
-
-export function loadAccounts(force = false) {
-  const s = accountsStore.get();
-  if ((s.data && !force) || s.loading) return;
-  accountsStore.set((p) => ({ ...p, loading: true }));
-  seedy.adminSeerrAccounts().then(
-    (data) => accountsStore.set({ data, loading: false }),
-    (error: Error) => accountsStore.set((p) => ({ ...p, error, loading: false }))
-  );
+/* A list loaded once and kept between pages; `load(true)` fetches it again. */
+function cachedList<T>(fetch: () => Promise<T[]>) {
+  const store = createStore<{ data?: T[]; error?: Error; loading: boolean }>({ loading: false });
+  const load = (force = false) => {
+    const s = store.get();
+    if ((s.data && !force) || s.loading) return;
+    store.set((p) => ({ ...p, loading: true }));
+    fetch().then(
+      (data) => store.set({ data, loading: false }),
+      (error: Error) => store.set((p) => ({ ...p, error, loading: false }))
+    );
+  };
+  return { store, load };
 }
 
-export const profilesStore = createStore<{ data?: PlayLogProfile[]; error?: Error; loading: boolean }>({ loading: false });
+const accounts = cachedList<SeerrAccount>(() => seedy.adminSeerrAccounts());
+export const accountsStore = accounts.store;
+export const loadAccounts = accounts.load;
 
-export function loadProfiles(force = false) {
-  const s = profilesStore.get();
-  if ((s.data && !force) || s.loading) return;
-  profilesStore.set((p) => ({ ...p, loading: true }));
-  seedy.adminPlayLogProfiles().then(
-    (data) => profilesStore.set({ data, loading: false }),
-    (error: Error) => profilesStore.set((p) => ({ ...p, error, loading: false }))
-  );
-}
+const profiles = cachedList<PlayLogProfile>(() => seedy.adminPlayLogProfiles());
+export const profilesStore = profiles.store;
+export const loadProfiles = profiles.load;
 
 /* ── Leaving a page with unsaved changes ── */
 

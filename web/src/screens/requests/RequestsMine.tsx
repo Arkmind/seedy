@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { mediaList, type MediaRequest } from '../../api/media';
 import { tmdbImage } from '../../api/images';
 import { requestList, type SeerrRequest } from '../../api/seedy';
-import { dayOf, daysFromToday, fmtMonthYear, fmtWeekdayDate } from '../../lib/format';
+import { dayOf } from '../../lib/format';
 import { t, tx } from '../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { seerrTarget } from '../../ui/cards';
@@ -15,11 +15,12 @@ import { EmptyState, ErrorState } from '../browse/parts';
 import { seasonList } from '../browse/request-seasons';
 import { NotSetUp, Shell, useServices, ViewTabs, type Service } from './frame';
 import {
-  actLine, mediaKindLine, mediaName, mediaNote, readyAction, RequestThumb, SERVICE_NAMES, useMediaActions, type MediaActions
+  mediaKindLine, mediaName, mediaNote, readyAction, RequestThumb, SERVICE_NAMES, useMediaActions, type MediaActions
 } from './media-parts';
-import { refreshSummary, useRequestActions, useSummary, type RequestActions } from './parts';
+import { useRequestActions, useSummary, type RequestActions } from './parts';
 import { meStore } from '../../lib/app-state';
 import { useStore } from '../../lib/store';
+import { actLine, aheadDate, requesterName } from './wording';
 
 /* My requests and All requests (RequestsMine board): everything asked for, from Seerr, Lidarr, Shelfarr and Librarr,
    in one list. Each row shows where the request is on its way (Asked → Approved → Searching → Downloading → Ready),
@@ -57,8 +58,6 @@ function seerrStage(r: SeerrRequest): Stage {
   return { n: 3 };
 }
 
-const aheadDate = (d: Date) => (daysFromToday(d) <= 31 ? fmtWeekdayDate(d) : fmtMonthYear(d));
-
 function seerrNote(r: SeerrRequest): { text: string; tone: string } | null {
   if (r.status === 'available') return null;
   if (r.requestStatus === 'pending') return { text: t('Waiting for an admin'), tone: 'pending' };
@@ -81,7 +80,7 @@ function seerrNote(r: SeerrRequest): { text: string; tone: string } | null {
 
 function seerrWhat(r: SeerrRequest, everyone: boolean): string {
   const what = r.mediaType === 'tv' ? (r.seasons?.length ? seasonList(r.seasons) : t('All seasons')) : t('Movie');
-  const who = r.requestedByMe ? t('you') : r.requestedBy || t('someone');
+  const who = requesterName(r);
   return [what, r.is4k ? '4K' : '', everyone ? actLine('askedBy', r.requestedAt, who) : actLine('asked', r.requestedAt)].filter(Boolean).join(' · ');
 }
 
@@ -100,7 +99,7 @@ function mediaStage(r: MediaRequest): Stage {
 }
 
 function mediaWhatLine(r: MediaRequest, everyone: boolean): string {
-  const who = r.requestedByMe ? t('you') : r.requestedBy || t('someone');
+  const who = requesterName(r);
   return [mediaKindLine(r), everyone ? actLine('askedBy', r.requestedAt, who) : actLine('asked', r.requestedAt)].filter(Boolean).join(' · ');
 }
 
@@ -389,7 +388,7 @@ function SeerrPipelineRow({ r, everyone, actions, canManage }: { r: SeerrRequest
               <MenuItem icon="info" label={t('Open {title}', { title: r.title })} onSelect={() => { close(); navigate(seerrTarget(r)); }} />
               {canManage && r.requestStatus === 'failed' && <MenuItem icon="refresh" label={t('Retry')} onSelect={() => { close(); actions.retry(r); }} />}
               {(canManage || (r.requestedByMe && r.requestStatus === 'pending')) && (
-                <MenuItem icon="close" danger label={canManage ? t('Remove request') : t('Cancel request')} onSelect={() => { close(); actions.remove(r); void refreshSummary(); }} />
+                <MenuItem icon="close" danger label={canManage ? t('Remove request') : t('Cancel request')} onSelect={() => { close(); actions.remove(r); }} />
               )}
             </>
           )}

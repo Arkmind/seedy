@@ -2,16 +2,12 @@ import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { imageUrl } from '../api/images';
 import type { BaseItem } from '../api/types';
+import { DrawnSquareSvg, SQUARE_PALETTES } from '../ui/drawn-art';
 
 /* Album art. Without a picture on the server a cover is drawn the way the music boards draw theirs: a sun or moon over
    a hill, a wave or a field in one of nine palettes, picked from the item's id, with the title set on it. */
 
-export const PALETTES = [
-  ['#1c2a3a', '#2f4a66', '#f2c47e', '#e8eef4'], ['#3a1d2e', '#6b2f4f', '#ff9fbf', '#fbe4f3'], ['#13302b', '#1f5a4d', '#9fe0c8', '#def4f1'],
-  ['#2b2118', '#5c3b22', '#f0a35e', '#f7ecd5'], ['#1d1d2e', '#3b3b6b', '#b9b3ff', '#efe6fb'], ['#262626', '#444444', '#f0f0f0', '#ffffff'],
-  ['#36200f', '#a3471f', '#ffd27a', '#fff2d8'], ['#0f2233', '#1b6f8f', '#9fe9ff', '#e6fbff'], ['#2a1035', '#7a3fd1', '#ffb3e6', '#fbe4f3']
-];
-const PATHS = ['M0 140 Q50 110 100 140 T200 140 V200 H0Z', 'M0 200 L200 70 V200Z', 'M0 150 L50 110 L90 140 L140 90 L200 130 V200 H0Z', 'M0 0 H200 V40 Q100 70 0 40Z'];
+export const PALETTES = SQUARE_PALETTES;
 
 export function seedOf(id?: string | null): number {
   let h = 2166136261;
@@ -24,25 +20,7 @@ export const paletteOf = (id?: string | null) => PALETTES[seedOf(id) % PALETTES.
 /* The drawn cover; `plain` leaves out the sun and the hill (artists, whose initials go on top). */
 export function DrawnCover({ seed, plain }: { seed: number; plain?: boolean }) {
   const i = seed % PALETTES.length;
-  const [c0, c1, c2, c3] = PALETTES[i];
-  const s = i % 4;
-  const by = s === 1 ? 120 : s === 3 ? 0 : 200;
-  const bh = s === 1 ? 80 : s === 3 ? 30 : 0;
-  const cx = [70, 130, 100, 60][s];
-  const cy = [80, 70, 95, 120][s];
-  return (
-    <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" class="ap-drawn" aria-hidden="true">
-      <rect width="200" height="200" fill={c0} />
-      <rect y={by} width="200" height={bh} fill={c1} />
-      {!plain && (
-        <>
-          <circle cx={cx} cy={cy} r={[46, 30, 58, 22][s]} fill={c2} />
-          <circle cx={cx} cy={cy} r={[70, 52, 82, 40][s]} fill="none" stroke={c3} stroke-width={[3, 8, 2, 6][s]} opacity={[0.5, 0.35, 0.6, 0.4][s]} />
-          <path d={PATHS[(i + 1) % 4]} fill={c1} opacity={[0.9, 0.7, 0.85, 0.6][s]} />
-        </>
-      )}
-    </svg>
-  );
+  return <DrawnSquareSvg c={PALETTES[i]} s={i % 4} hill={(i + 1) % 4} bare={plain} class="ap-drawn" hidden />;
 }
 
 type Pic = Pick<BaseItem, 'Id' | 'ImageTags' | 'AlbumId' | 'AlbumPrimaryImageTag' | 'ParentPrimaryImageItemId' | 'ParentPrimaryImageTag'>;

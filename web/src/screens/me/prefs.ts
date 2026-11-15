@@ -1,9 +1,11 @@
-import { authHeader, get, getSession, post, request, url } from '../../api/client';
+import { authHeader, currentUserId, get, post, request, url } from '../../api/client';
+import { fileBase64 } from '../../api/images';
 import { CARD_FIELDS, getMe, getUserViews } from '../../api/jellyfin';
 import { getMe as getSeedyMe, savePrefs, type PlaybackPrefs, type UserPrefs } from '../../api/seedy';
 import type { ItemsResult, User, UserConfiguration } from '../../api/types';
-import { applyBranding, DEFAULT_PLAYBACK, meStore, setPrefsBusyCheck, userStore, viewsStore } from '../../lib/app-state';
+import { applyBranding, meStore, playbackPrefs, setPrefsBusyCheck, userStore, viewsStore } from '../../lib/app-state';
 import { createStore, safeLocal, saveLocal, useStore } from '../../lib/store';
+import type { SaveState } from '../../ui/controls';
 
 /* Personal settings (Settings · Profile, Home screen, Display, Controls).
 
@@ -12,7 +14,7 @@ import { createStore, safeLocal, saveLocal, useStore } from '../../lib/store';
    - Jellyfin's UserConfiguration — Jellyfin's own settings, so they apply in Jellyfin's other apps too.
    - This browser (localStorage `seedy.device.*`) — rows tagged "This device". */
 
-/* ── Keys in prefs.custom (owned by these pages; documented in the round report) ── */
+/* ── Keys in prefs.custom (owned by these pages) ── */
 export const CUSTOM = {
   accent: 'display.accent',
   /* Disco accent (party/disco.ts): unset until the Konami code unlocks it, then 'on' or 'off'. */
@@ -30,7 +32,7 @@ export const CUSTOM = {
   dismissedMediaArrivals: 'home.dismissedMediaArrivals'
 } as const;
 
-export const CUSTOM_DEFAULTS = {
+const CUSTOM_DEFAULTS = {
   [CUSTOM.accent]: null as string | null,
   [CUSTOM.disco]: null as string | null,
   [CUSTOM.language]: 'auto',
@@ -68,7 +70,6 @@ export function useCustom<K extends CustomKey>(key: K): CustomValue<K> {
 
 /* ── Saving: changes save as they're made; the note at the foot of each page shows the state ── */
 
-export type SaveState = 'saved' | 'saving' | 'error';
 export const saveState = createStore<SaveState>('saved');
 
 /* Every prefs write in Seedy goes through this one queue (Settings pages, Home's row menus, the player): one request
@@ -158,10 +159,10 @@ async function refreshProfile() {
   } catch { /* keep the last known profile */ }
 }
 
-/* Saves part of the profile's prefs; resolves false if the server refused it (it stays queued for "Try again").
-   `delay` batches typing in number fields. */
 setPrefsBusyCheck(() => inFlight || Object.keys(pending).length > 0);
 
+/* Saves part of the profile's prefs; resolves false if the server refused it (it stays queued for "Try again").
+   `delay` batches typing in number fields. */
 export function savePrefsPatch(patch: Partial<UserPrefs>, delay = 0): Promise<boolean> {
   localVersion++;
   applyLocal(patch);
@@ -176,7 +177,7 @@ export const saveCustom = (patch: Record<string, unknown>, delay = 0) => savePre
 
 /* The plugin replaces playback prefs as a whole, so send every field. */
 export const savePlayback = (patch: Partial<PlaybackPrefs>) =>
-  savePrefsPatch({ playback: { ...DEFAULT_PLAYBACK, ...(meStore.get().prefs?.playback ?? {}), ...patch } });
+  savePrefsPatch({ playback: { ...playbackPrefs(), ...patch } });
 
 /* "Try again" after a failed save. */
 export function retrySave() {
@@ -209,7 +210,7 @@ let jfQueue: Promise<unknown> = Promise.resolve();
 const jfOutstanding: Partial<FullUserConfig>[] = [];
 
 /* Merge into a fresh copy of the full object (another page or app may have saved since) and post it. Saves run one
-   at a time; the m2 pages (Playback, Subtitles) use this same queue. */
+   at a time; Playback and Subtitles use this same queue. */
 export function saveUserConfig(patch: Partial<FullUserConfig>, opts: { refreshViews?: boolean } = {}): Promise<boolean> {
   const before = userStore.get();
   if (!before) return Promise.resolve(false);
@@ -257,7 +258,7 @@ export function saveUserConfig(patch: Partial<FullUserConfig>, opts: { refreshVi
 }
 
 /* The header tabs and My media follow Jellyfin's view order and exclusions. */
-export async function reloadViews() {
+async function reloadViews() {
   try { viewsStore.set((await getUserViews()).Items); } catch { /* keep the old list */ }
 }
 
@@ -277,7 +278,7 @@ export interface DevicePrefs {
   smoothScrolling: boolean;
 }
 
-export const DEVICE_DEFAULTS: DevicePrefs = {
+const DEVICE_DEFAULTS: DevicePrefs = {
   softPlaceholders: true,
   fastAnimations: false,
   screensaver: 'off',
@@ -320,7 +321,7 @@ export function getNextUpForMe(limit = 16, opts: { seriesId?: string; parentId?:
   const days = readCustom(CUSTOM.nextUpDays);
   const cutoff = days > 0 ? new Date(Date.now() - days * 86_400_000).toISOString() : undefined;
   return get<ItemsResult>('/Shows/NextUp', {
-    userId: getSession()?.userId ?? '', limit, seriesId: opts.seriesId, parentId: opts.parentId, enableUserData: true, imageTypeLimit: 1,
+    userId: currentUserId(), limit, seriesId: opts.seriesId, parentId: opts.parentId, enableUserData: true, imageTypeLimit: 1,
     enableResumable: false, enableRewatching: readCustom(CUSTOM.rewatching), disableFirstEpisode: false, nextUpDateCutoff: cutoff,
     enableImageTypes: 'Primary,Backdrop,Thumb,Logo', fields: [...CARD_FIELDS, 'DateLastMediaAdded'].join(','), enableTotalRecordCount: false
   });
@@ -337,12 +338,7 @@ export function withEpisodeArt<T extends { Type?: string; ImageTags?: Record<str
 /* ── Profile picture ── */
 
 export async function uploadUserImage(userId: string, file: File) {
-  const data = await new Promise<string>((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result).replace(/^data:[^,]*,/, ''));
-    r.onerror = () => reject(r.error);
-    r.readAsDataURL(file);
-  });
+  const data = await fileBase64(file);
   // The route Jellyfin's own apps use (also proxied by the dev server).
   const res = await fetch(url(`/Users/${userId}/Images/Primary`), {
     method: 'POST', headers: { Authorization: authHeader(), 'Content-Type': file.type || 'image/jpeg' }, body: data

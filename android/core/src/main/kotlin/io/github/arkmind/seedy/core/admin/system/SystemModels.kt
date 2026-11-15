@@ -5,7 +5,6 @@ import io.github.arkmind.seedy.core.admin.AdminHttp
 import io.github.arkmind.seedy.core.admin.JellyfinJson
 import io.github.arkmind.seedy.core.admin.SeedyAdminStatus
 import io.github.arkmind.seedy.core.admin.SeedyJson
-import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.i18n.t
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -76,9 +75,6 @@ internal inline fun <reified T> jellyfinList(list: List<T>): JsonElement =
 
 /** Seedy's endpoints are missing on an older plugin (404, or 405 for a path it doesn't route). */
 internal fun Throwable.isNotFound(): Boolean = this is AdminException && (status == 404 || status == 405)
-
-/** The reason after "Couldn’t load the backups.": the web's "the server did not answer", or what it said. */
-internal fun reason(e: Throwable): String = errorText(e)
 
 internal fun rethrowCancel(e: Throwable) {
     if (e is kotlinx.coroutines.CancellationException) throw e

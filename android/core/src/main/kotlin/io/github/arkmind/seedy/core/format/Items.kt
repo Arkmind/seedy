@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.core.format
 
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
+import java.util.UUID
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.LocationType
@@ -10,6 +11,7 @@ import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import org.jellyfin.sdk.model.api.UserItemDataDto
 
 /* Item labels, as the web app writes them (web/src/lib/format.ts). */
 
@@ -62,11 +64,6 @@ val BaseItemDto.episodeShort: String
         val s = parentIndexNumber ?: return "E$e"
         return if (s == 0) t("Special {n}", "n" to e) else "S$s · E$e"
     }
-
-/** "Season 3 · Episode 2". */
-val BaseItemDto.seasonEpisodeLong: String
-    get() = if (parentIndexNumber == 0) t("Special · Episode {e}", "e" to (indexNumber ?: ""))
-    else t("Season {s} · Episode {e}", "s" to (parentIndexNumber ?: ""), "e" to (indexNumber ?: ""))
 
 val BaseItemDto.year: Int? get() = productionYear ?: premiereDate?.year
 
@@ -160,6 +157,21 @@ fun subtitleTrackLabel(s: org.jellyfin.sdk.model.api.MediaStream): Pair<String, 
     return name to join(title, if (s.isDefault) t("Default") else null)
 }
 
+/** "1:48", "4:12", "1:02:09": a length or a position in whole seconds. */
+fun clockOf(seconds: Double): String {
+    val s = max(0, seconds.toInt())
+    val h = s / 3600
+    val m = (s % 3600) / 60
+    val sec = (s % 60).toString().padStart(2, '0')
+    return if (h > 0) "$h:${m.toString().padStart(2, '0')}:$sec" else "$m:$sec"
+}
+
+/** "1×", "1.25×": the player's speed. */
+fun playbackSpeedLabel(speed: Float): String = (if (speed % 1f == 0f) speed.toInt().toString() else speed.toString().trimEnd('0')) + "×"
+
+/** "IN" for Ines Northey: the first letters of a name's first two words. */
+fun nameInitials(name: String): String = name.split(' ').filter { w -> w.any { it.isLetter() } }.take(2).joinToString("") { it.first().uppercase() }
+
 /** "01:48", "1:02:03". */
 fun clock(ms: Long): String {
     val total = (ms / 1000).coerceAtLeast(0)
@@ -178,6 +190,23 @@ fun episodeMeta(e: BaseItemDto): String {
     if (date != null && date.isAfter(LocalDate.now())) return t("Airs {date}", "date" to weekdayDate(date))
     val started = e.progress > 0f && e.userData?.played != true
     return join(e.runtime, if (started) timeLeft(e.remainingSeconds) else date?.let(::dayMonth))
+}
+
+/**
+ * An episode's line in a season's list: "54 min · 25 Sep", "52 min · 34 min left", "Airs Fri 23 Oct"; with
+ * [showWatched], "54 min · Watched" once it's seen.
+ */
+fun seasonEpisodeMeta(ep: BaseItemDto, today: LocalDate = LocalDate.now(), showWatched: Boolean = false): String {
+    val day = ep.premiereDay
+    if (ep.isVirtual) return day?.let { if (it.isAfter(today)) t("Airs {date}", "date" to weekdayDate(it)) else dayMonth(it) }.orEmpty()
+    return join(
+        ep.runtime,
+        when {
+            showWatched && ep.userData?.played == true -> t("Watched")
+            ep.inProgress -> timeLeft(ep.remainingSeconds)
+            else -> day?.let(::dayMonth)
+        },
+    )
 }
 
 /** "3 seasons": a series' ChildCount is its season count. */
@@ -216,6 +245,9 @@ val BaseItemDto.libraryMetaLong: String
 /** The score shown with a star ("8.4"), or null. */
 val BaseItemDto.score: String? get() = communityRating?.takeIf { it > 0f }?.let { String.format(Locale.US, "%.1f", it) }
 
+/** A TMDB-style score as "★ 7.4", or null without one. */
+fun starRating(r: Double?): String? = r?.takeIf { it > 0 }?.let { "★ " + String.format(Locale.US, "%.1f", it) }
+
 /** An episode's number in its season: "2", "2–3". */
 val BaseItemDto.episodeNumber: String
     get() = indexNumber?.let { n -> indexNumberEnd?.let { "$n–$it" } ?: "$n" }.orEmpty()
@@ -225,3 +257,16 @@ val BaseItemDto.isVirtual: Boolean get() = locationType == LocationType.VIRTUAL
 
 /** The day a title premiered (Jellyfin's premiere dates are calendar days). */
 val BaseItemDto.premiereDay: LocalDate? get() = premiereDate?.toLocalDate()
+
+/** The user data Jellyfin leaves out until this profile touches [item]. */
+fun blankUserData(item: BaseItemDto): UserItemDataDto =
+    UserItemDataDto(playbackPositionTicks = 0, playCount = 0, isFavorite = false, played = false, key = item.id.toString(), itemId = item.id)
+
+/** The item with its heart set, making its user data when it has none. */
+fun BaseItemDto.withFavorite(on: Boolean): BaseItemDto = copy(userData = (userData ?: blankUserData(this)).copy(isFavorite = on))
+
+/** The item with its heart set; an item without user data stays without. */
+fun BaseItemDto.favorited(on: Boolean): BaseItemDto = copy(userData = userData?.copy(isFavorite = on))
+
+/** [id]'s heart set in a list (see [favorited]). */
+fun List<BaseItemDto>.favorited(id: UUID, on: Boolean): List<BaseItemDto> = map { if (it.id == id) it.favorited(on) else it }

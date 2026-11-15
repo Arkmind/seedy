@@ -67,11 +67,11 @@ public sealed partial class SeedyDatabase
         ItemId = r.GetString(0),
         Locator = r.GetString(1),
         Percent = r.GetDouble(2),
-        Chapter = r.IsDBNull(3) ? null : r.GetString(3),
-        ChapterIndex = r.IsDBNull(4) ? null : r.GetInt32(4),
-        ChapterCount = r.IsDBNull(5) ? null : r.GetInt32(5),
+        Chapter = StrOrNull(r, 3),
+        ChapterIndex = IntOrNull(r, 4),
+        ChapterCount = IntOrNull(r, 5),
         Finished = r.GetInt64(6) != 0,
-        Settings = r.IsDBNull(7) ? null : r.GetString(7),
+        Settings = StrOrNull(r, 7),
         UpdatedAt = FromMs(r.GetInt64(8))
     };
 
@@ -104,14 +104,7 @@ public sealed partial class SeedyDatabase
             + " ORDER BY updated_at DESC LIMIT $limit";
         Bind(cmd, "$user", userId);
         Bind(cmd, "$limit", limit);
-        var list = new List<ReadingRecord>();
-        using var r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            list.Add(ReadReading(r));
-        }
-
-        return list;
+        return ReadAll(cmd, ReadReading);
     }
 
     /// <summary>Saves a profile's place in a book.</summary>

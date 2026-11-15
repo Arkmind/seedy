@@ -42,18 +42,19 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.music.ArtistViewModel
 import io.github.arkmind.seedy.core.music.Release
 import io.github.arkmind.seedy.core.music.albumArtistOf
-import io.github.arkmind.seedy.core.music.dot
 import io.github.arkmind.seedy.core.music.playsLabel
 import io.github.arkmind.seedy.core.music.releaseLabel
 import io.github.arkmind.seedy.core.music.releaseOf
 import io.github.arkmind.seedy.core.music.yearOf
+import io.github.arkmind.seedy.mobile.browse.Message
+import io.github.arkmind.seedy.mobile.browse.SectionHead
 import io.github.arkmind.seedy.mobile.browse.topInset
-import io.github.arkmind.seedy.mobile.library.Message
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.theme.LocalAccent
@@ -115,7 +116,7 @@ fun ArtistScreen(
                             uppercase = true, color = SeedyColors.White, maxLines = 2,
                         )
                         val owned = state.disc?.owned
-                        val meta = dot(
+                        val meta = join(
                             if (state.plays > 0) tn(state.plays, "{n} play from you", "{n} plays from you") else null,
                             owned?.takeIf { it > 0 }?.let { tn(it, "{n} album on the server", "{n} albums on the server") },
                             item.productionLocations?.firstOrNull(),
@@ -154,7 +155,7 @@ fun ArtistScreen(
             item(key = "disc-h") { SectionHead(t("Albums")) }
             item(key = "disc") { CardRow { items(4) { Skeleton(Modifier.width(124.dp).aspectRatio(1f)) } } }
         } else {
-            val releases = d.albums.map { it to yearOf(it) } + d.singles.map { it to dot(releaseLabel(releaseOf(it).takeIf { r -> r != Release.Album } ?: Release.Single), yearOf(it)) }
+            val releases = d.albums.map { it to yearOf(it) } + d.singles.map { it to join(releaseLabel(releaseOf(it).takeIf { r -> r != Release.Album } ?: Release.Single), yearOf(it)) }
             if (releases.isNotEmpty()) {
                 item(key = "disc-h") {
                     SectionHead(t("Albums"), link = if (releases.size > 2) (if (allAlbums) t("Show less") else t("See all")) else null, onLink = { allAlbums = !allAlbums })
@@ -166,7 +167,7 @@ fun ArtistScreen(
             }
             if (d.appears.isNotEmpty()) {
                 item(key = "app-h") { SectionHead(t("Appears on")) }
-                item(key = "app") { CardRow { items(d.appears, key = { it.id }) { a -> AlbumCard(a, dot(albumArtistOf(a), yearOf(a)), { actions.onOpen(a) }, Modifier.width(124.dp)) } } }
+                item(key = "app") { CardRow { items(d.appears, key = { it.id }) { a -> AlbumCard(a, join(albumArtistOf(a), yearOf(a)), { actions.onOpen(a) }, Modifier.width(124.dp)) } } }
             }
             if (d.videos.isNotEmpty()) {
                 item(key = "vid-h") { SectionHead(t("Music videos")) }

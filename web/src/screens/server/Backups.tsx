@@ -9,6 +9,7 @@ import { type BackupFile, type BackupManifest, type BackupOptions, type BackupSc
 import { copyText, dateTime, fmtSize, majorMinor, realDate, weekdayName } from './format';
 import { loadServerOffset, serverOffsetStore, serverTimeNote } from './status';
 import { ListEmpty, ListError } from './advanced-parts';
+import { capitalize } from '../../lib/format';
 import './advanced.css';
 
 /* English copy, translated where it is shown. */
@@ -29,8 +30,7 @@ const fileOf = (path: string) => path.split(/[\\/]/).pop() ?? path;
 function partsLine(o: BackupOptions): string {
   const list = PARTS.filter((p) => o[p.key]).map((p) => t(p.short));
   if (!list.length) return t('Server settings only');
-  const s = list.join(', ');
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  return capitalize(list.join(', '));
 }
 
 /* Whether the Seedy plugin can size, serve, delete and schedule backups (Jellyfin 12 itself can't). */

@@ -1,25 +1,16 @@
 import type { ComponentChildren } from 'preact';
 import { useLayoutEffect, useState } from 'preact/hooks';
 import type { BaseItem } from '../../api/types';
-import { dayOf, duration, pct, ticksToSeconds } from '../../lib/format';
-import { t } from '../../lib/i18n';
+import { dot, duration, itemYear, pct, runtime } from '../../lib/format';
+import { t, tc } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { playAudiobook } from '../../audio/engine';
-import { authorLine, isAudioBook, isComic, seriesOf, type Reading } from './api';
+import { authorLine, isAudioBook, isComic, type Reading, seriesOf } from './api';
 import { AudioCover, BookCover } from './covers';
+import { time } from './library-data';
 import '@fontsource-variable/noto-serif/wght.css';
 
 /* Pieces shared by the books screens: cards, section heads, a few labels. */
-
-/* A word whose translation depends on where it stands ("Series" the tab is plural in French, "Normal" agrees with
-   what it describes): the dictionary key is "Series|tab", English shows the word itself. */
-export function tc(text: string, context: string): string {
-  const key = `${text}|${context}`;
-  const out = t(key);
-  return out === key ? text : out;
-}
-
-export const yearOfBook = (item: BaseItem) => item.ProductionYear ?? (item.PremiereDate ? dayOf(item.PremiereDate)?.getFullYear() : undefined);
 
 /* "About 3 h", "1 h 30 min", "25 min": rough reading/listening time for cards. */
 export function roughTime(minutes: number): string {
@@ -44,8 +35,8 @@ export function bookSub(item: BaseItem): string {
   const series = seriesOf(item);
   if (series) return `${series}, ${item.IndexNumber}`;
   const author = authorLine(item);
-  const year = yearOfBook(item);
-  return [author, year ? String(year) : item.Genres?.[0]?.toLowerCase()].filter(Boolean).join(' · ');
+  const year = itemYear(item);
+  return dot(author, year ? String(year) : item.Genres?.[0]?.toLowerCase());
 }
 
 /* Comics: "Kestrel · new", "Kestrel · reading" in a running series, else "Author · 2025" (or "One-shot"). */
@@ -54,11 +45,10 @@ export function comicSub(item: BaseItem, reading: Reading | undefined, running: 
   const series = seriesOf(item);
   if (series && running) return `${series} · ${state}`;
   const author = authorLine(item);
-  const year = yearOfBook(item);
-  return [author, year ? String(year) : ''].filter(Boolean).join(' · ') || t('One-shot');
+  const year = itemYear(item);
+  return dot(author, year ? String(year) : '') || t('One-shot');
 }
 
-export const audioLength = (item: BaseItem) => (item.RunTimeTicks ? duration(ticksToSeconds(item.RunTimeTicks)) : '');
 
 /* ───────── Columns that fit: overview rows show one row of whatever fits ───────── */
 
@@ -136,7 +126,7 @@ export function HeadphonesIcon({ size = 13 }: { size?: number }) {
 }
 
 export function AudioCard({ item }: { item: BaseItem }) {
-  const len = audioLength(item);
+  const len = runtime(item);
   return (
     <Link to={`/details/${item.Id}`} class="bk-card is-audio" aria-label={item.Name}>
       <span class="bk-card-art"><AudioCover item={item} /></span>
@@ -164,12 +154,12 @@ export function seriesFan(volumes: BaseItem[]): BaseItem[] {
 export function SeriesCard({ group, to }: { group: SeriesGroup; to: string }) {
   const fan = seriesFan(group.volumes);
   const pos = ['is-a', 'is-b', 'is-c'];
-  const sub = [group.author, t('{read} of {total} read', { read: group.read, total: group.volumes.length })].filter(Boolean).join(' · ');
+  const sub = dot(group.author, t('{read} of {total} read', { read: group.read, total: group.volumes.length }));
   return (
     <Link to={to} class="bk-series" aria-label={group.name}>
       <span class="bk-fan" aria-hidden="true">
         {fan.map((v, i) => (
-          <span key={v.Id} class={'bk-fan-cover ' + pos[fan.length === 1 ? 1 : fan.length === 2 ? i : i]}>
+          <span key={v.Id} class={'bk-fan-cover ' + pos[fan.length === 1 ? 1 : i]}>
             <BookCover item={v} size="xs" width={220} />
           </span>
         ))}
@@ -226,4 +216,38 @@ export function ContinueCard({ entry }: { entry: ContinueEntry }) {
   );
 }
 
-export const comicOrBook = (item: BaseItem) => (isAudioBook(item) ? 'audio' : isComic(item) ? 'comic' : 'book');
+/* The chapter a position falls in (-1 before the first). */
+export function chapterIndexAt(chapters: { StartPositionTicks: number }[], pos: number): number {
+  let ci = -1;
+  chapters.forEach((c, i) => { if (c.StartPositionTicks <= pos) ci = i; });
+  return ci;
+}
+
+/* "Mara Linde" → "linde mara", so authors sort by surname. */
+export function surnameFirst(name: string): string {
+  const p = name.trim().split(/\s+/);
+  return (p.length > 1 ? p[p.length - 1] + ' ' + p.slice(0, -1).join(' ') : name).toLowerCase();
+}
+
+/* A file's extension from its path ("epub"), or [fallback]. */
+export const fileExt = (item: Pick<BaseItem, 'Path'>, fallback = '') => /\.(\w+)$/.exec(item.Path ?? '')?.[1] ?? fallback;
+
+/* A volume in a series: "Book 2 · read" with a tick, "Book 3 · 46%" in the accent, "Book 4 · new". */
+export function VolumeCard({ item, reading, current }: { item: BaseItem; reading?: Reading; current?: boolean }) {
+  const n = item.IndexNumber;
+  const read = !!item.UserData?.Played || !!reading?.Finished;
+  const inProgress = !read && !!reading && reading.Percent > 0;
+  const fresh = !read && !reading && !!item.DateCreated && Date.now() - time(item.DateCreated) < 30 * 86_400_000;
+  const label = n !== undefined && n !== null ? (isComic(item) ? t('No. {n}', { n }) : t('Book {n}', { n })) : '';
+  const state = read ? t('read') : inProgress ? `${Math.round(reading!.Percent)}%` : fresh ? t('new') : '';
+  const sub = dot(label, state);
+  return (
+    <BookCard
+      item={item}
+      sub={sub}
+      subClass={read ? 'is-dimmer' : inProgress ? 'is-accent' : undefined}
+      titleClass={read ? 'is-dim' : current ? 'is-current' : undefined}
+      badge={read ? <span class="bk-read-badge" aria-label={tc('Read', 'done')}><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span> : undefined}
+    />
+  );
+}

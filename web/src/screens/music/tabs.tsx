@@ -1,27 +1,27 @@
 import { useEffect, useMemo } from 'preact/hooks';
-import { get, getSession } from '../../api/client';
+import { get, currentUserId } from '../../api/client';
 import { getItem, getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
+import { dot } from '../../lib/format';
 import { t, tn } from '../../lib/i18n';
 import { Link, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { manageChanged } from '../browse/manage/host';
 import { MenuButton, MenuItem } from '../../ui/overlay';
 import { Icon } from '../../ui/icons';
-import { EmptyState, ErrorState, Sentinel, usePaged, useInView } from '../browse/parts';
+import { EmptyState, ErrorState, PagedFooter, usePaged, useInView } from '../browse/parts';
 import { TRACK_FIELDS, genreMix, type Track } from '../../audio/api';
 import { playContainer, playLoaded } from '../../audio/engine';
 import { AIcon } from '../../audio/icons';
 import { Cover } from '../../audio/cover';
 import {
-  AlbumCard, ArtistCard, GenreTile, MUSIC_FIELDS, NewPlaylistTile, PlaylistCard, TrackTable, TracksSkeleton, albumArtist, dot, songsLabel, yearOf
+  AlbumCard, ArtistCard, GenreTile, MUSIC_FIELDS, NewPlaylistTile, PlaylistCard, TrackTable, TracksSkeleton, albumArtist, songsLabel,
+  yearOf, CardSkel, artistAlbums, audioPlaylists, playlistPreview, type PlaylistPreview, musicGenres
 } from './parts';
-import { CardSkel, artistAlbums, audioPlaylists, playlistPreview, type PlaylistPreview } from './MusicLibrary';
 
 /* The music library's tabs (built in the MusicHome board's language): albums, artists and songs with sorting and a
    favourites filter, playlists, genres (each opening its albums) and the library's folders. */
 
-const uid = () => getSession()?.userId ?? '';
 
 interface SortOpt { id: string; label: string; by: string[]; order: 'Ascending' | 'Descending' }
 
@@ -67,18 +67,6 @@ function Toolbar({ count, sorts, sort, favs }: { count?: string; sorts?: SortOpt
   );
 }
 
-function More({ paged }: { paged: ReturnType<typeof usePaged> }) {
-  return (
-    <>
-      {!paged.done && <Sentinel onVisible={paged.loadMore} token={paged.items.length} disabled={paged.loading || !!paged.error} />}
-      {paged.loading && paged.items.length > 0 && <div class="lib-loading"><span class="spinner" aria-label={t('Loading more')} /></div>}
-      {paged.error && paged.items.length > 0 && (
-        <div class="grid-more"><button type="button" class="btn btn-secondary" onClick={paged.loadMore}><Icon name="refresh" size={18} />{t('Load more')}</button></div>
-      )}
-    </>
-  );
-}
-
 /* ───────── Albums ───────── */
 
 const ALBUM_SORTS: SortOpt[] = [
@@ -105,7 +93,7 @@ export function AlbumsTab({ view, genre }: { view: BaseItem; genre?: BaseItem })
         : paged.loading && !paged.items.length ? <div class="mu-grid is-fill">{Array.from({ length: 14 }, (_, i) => <CardSkel key={i} />)}</div>
         : !paged.items.length ? <EmptyState icon="music" title={fav ? t('No favourite albums yet') : t('No albums yet')} text={fav ? t('Tap the heart on an album and it shows up here.') : t('Albums show up here once the server finds them.')} />
         : <div class="mu-grid is-fill">{(paged.items as Track[]).map((a) => <AlbumCard key={a.Id} album={a} sub={dot(albumArtist(a), yearOf(a))} />)}</div>}
-      <More paged={paged} />
+      <PagedFooter paged={paged} />
     </section>
   );
 }
@@ -123,7 +111,7 @@ export function ArtistsTab({ view }: { view: BaseItem }) {
   const sort = useSort(ARTIST_SORTS, 'SortName');
   const fav = loc.query.get('fav') === '1';
   const paged = usePaged((start, limit, signal) => get<ItemsResult>('/Artists/AlbumArtists', {
-    userId: uid(), parentId: view.Id, startIndex: start, limit, sortBy: sort.by.join(','), sortOrder: sort.order, isFavorite: fav || undefined,
+    userId: currentUserId(), parentId: view.Id, startIndex: start, limit, sortBy: sort.by.join(','), sortOrder: sort.order, isFavorite: fav || undefined,
     fields: 'ItemCounts,ChildCount,PrimaryImageAspectRatio', enableImageTypes: 'Primary,Backdrop', imageTypeLimit: 1, enableTotalRecordCount: true
   }, signal), [view.Id, sort.id, fav], 70);
   return (
@@ -133,7 +121,7 @@ export function ArtistsTab({ view }: { view: BaseItem }) {
         : paged.loading && !paged.items.length ? <div class="mu-grid is-fill">{Array.from({ length: 14 }, (_, i) => <CardSkel key={i} round />)}</div>
         : !paged.items.length ? <EmptyState icon="music" title={fav ? t('No favourite artists yet') : t('No artists yet')} text={t('Artists show up here once the server finds their albums.')} />
         : <div class="mu-grid is-fill is-artists">{paged.items.map((a) => <ArtistCard key={a.Id} artist={a} sub={artistAlbums(a)} />)}</div>}
-      <More paged={paged} />
+      <PagedFooter paged={paged} />
     </section>
   );
 }
@@ -166,7 +154,7 @@ export function SongsTab({ view }: { view: BaseItem }) {
         : paged.loading && !paged.items.length ? <TracksSkeleton rows={12} />
         : !paged.items.length ? <EmptyState icon="music" title={fav ? t('No favourite songs yet') : t('No songs yet')} text={fav ? t('Tap the heart on a song and it shows up here.') : t('Songs show up here once the server finds them.')} />
         : <TrackTable tracks={paged.items as Track[]} cols="list" source={{ kind: 'library', id: view.Id, name: view.Name }} />}
-      <More paged={paged} />
+      <PagedFooter paged={paged} />
     </section>
   );
 }
@@ -203,7 +191,7 @@ export function GenresTab({ view }: { view: BaseItem }) {
 
 function GenreGrid({ view }: { view: BaseItem }) {
   const data = useAsync(() =>
-    get<ItemsResult>('/MusicGenres', { userId: uid(), parentId: view.Id, fields: 'ItemCounts', enableImages: false, sortBy: 'SortName' }).then((r) => r.Items),
+    musicGenres(view.Id).then((r) => r.Items),
   [view.Id]);
   return (
     <section class="mu-sec" aria-label={t('Genres')}>

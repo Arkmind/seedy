@@ -4,6 +4,7 @@ import io.github.arkmind.seedy.core.format.dayMonth
 import io.github.arkmind.seedy.core.format.fullDate
 import io.github.arkmind.seedy.core.format.monthYear
 import io.github.arkmind.seedy.core.format.parseDay
+import io.github.arkmind.seedy.core.format.starRating
 import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
@@ -15,8 +16,9 @@ import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 /*
- * The words of the music and book request pages (web: screens/requests/media-parts.tsx, music.tsx, books.tsx,
- * mine.tsx and the dialogs): request names, the lines under them, where they are on their way, card states.
+ * The words of the music and book request pages (web: screens/requests/media-parts.tsx, RequestsMusic.tsx,
+ * RequestsBooks.tsx, RequestsMine.tsx and the dialogs): request names, the lines under them, where they are on their
+ * way, card states.
  */
 
 /** The services a person can request from, in the web's order. */
@@ -276,7 +278,7 @@ object MediaFormat {
         return when (row) {
             BookRow.Next -> if (b.upcoming) listOf(series, bookWhen(b, today)).filter { it.isNotEmpty() }.joinToString(" · ") to true
             else (series.ifEmpty { b.author.orEmpty() }) to false
-            BookRow.Trending -> listOfNotNull(b.year?.toString(), b.rating?.takeIf { it > 0 }?.let { "★ " + String.format(Locale.US, "%.1f", it) }).joinToString(" · ") to false
+            BookRow.Trending -> listOfNotNull(b.year?.toString(), starRating(b.rating)).joinToString(" · ") to false
             BookRow.Audiobooks -> b.author.orEmpty() to false
             null -> listOfNotNull(b.author, b.year?.toString()).joinToString(" · ") to false
         }

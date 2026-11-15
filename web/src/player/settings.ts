@@ -3,6 +3,7 @@ import type { PlaybackPrefs, SkipMode, SubtitlePrefs } from '../api/seedy';
 import { createStore, safeLocal, saveLocal } from '../lib/store';
 import { formatNumber } from '../lib/i18n';
 import { softMode, type SoftMode } from './soft-profile';
+import { DEFAULT_SUBTITLES } from '../lib/app-state';
 
 /* Settings behind Settings · Playback and Settings · Subtitles, as the player reads them.
    "This device" settings live in this browser (localStorage, `seedy.device.*`); the rest follow the profile
@@ -107,7 +108,7 @@ export const DEVICE_DEFAULTS: DeviceSettings = {
 };
 
 /* localStorage key of every device setting. */
-export const DEVICE_KEYS: Record<keyof DeviceSettings, string> = {
+const DEVICE_KEYS: Record<keyof DeviceSettings, string> = {
   qualityHome: 'seedy.device.quality.home',
   qualityAway: 'seedy.device.quality.away',
   qualityCast: 'seedy.device.quality.cast',
@@ -191,7 +192,7 @@ export interface CustomPlayback {
   moviePicks: boolean;
 }
 
-export const STILL_WATCHING_DEFAULT: StillWatching = { episodes: 3, minutes: 90 };
+const STILL_WATCHING_DEFAULT: StillWatching = { episodes: 3, minutes: 90 };
 
 const isSkip = (v: unknown): v is SkipMode => v === 'auto' || v === 'button' || v === 'off';
 
@@ -314,12 +315,12 @@ export function autoBitrate(dev: DeviceSettings, loc: NetworkLocation, adminCap:
 
 /* ───────────────────────── Subtitle look ───────────────────────── */
 
-const SIZE_FROM_PREFS: Record<SubtitlePrefs['size'], SubSize> = { S: 'small', M: 'normal', L: 'large' };
+export const SIZE_FROM_PREFS: Record<SubtitlePrefs['size'], SubSize> = { S: 'small', M: 'normal', L: 'large' };
 export const SIZE_TO_PREFS: Record<SubSize, SubtitlePrefs['size']> = { small: 'S', normal: 'M', large: 'L', xlarge: 'L' };
 
 export function resolveStyle(dev: DeviceSettings, subs: SubtitlePrefs | undefined): SubtitleStyle {
   const s = dev.subtitleStyle ?? {};
-  const prefs = subs ?? { size: 'M', lift: true };
+  const prefs = subs ?? DEFAULT_SUBTITLES;
   return {
     size: s.size ?? SIZE_FROM_PREFS[prefs.size] ?? 'normal',
     weight: s.weight ?? 'normal',

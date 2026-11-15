@@ -1,6 +1,9 @@
 import type { AuthResult, User } from './types';
+import { removeLocal, safeLocal, saveLocal } from '../lib/store';
 
-export const APP_VERSION = '0.1.0';
+/* The release this build is (build.sh's VERSION), sent to Jellyfin as the client's version. */
+declare const __SEEDY_VERSION__: string;
+export const APP_VERSION = __SEEDY_VERSION__;
 export const CLIENT_NAME = 'Seedy';
 
 /* Where Seedy lives. The plugin tells the page in two meta tags: the server's base url ("" or e.g. "/jellyfin"), and
@@ -31,22 +34,12 @@ const NO_ADOPT_KEY = 'seedy.noAdopt';
 
 export interface Session { userId: string; token: string; serverId: string; userName: string }
 
-function readStore<T>(key: string): T | null {
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : null;
-  } catch {
-    return null;
-  }
-}
+const readStore = <T>(key: string): T | null => safeLocal<T | null>(key, null);
 
+/* Private windows can refuse storage; the session then lasts for this tab only. */
 function writeStore(key: string, value: unknown) {
-  try {
-    if (value === null) window.localStorage.removeItem(key);
-    else window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* Private windows can refuse storage; the session then lasts for this tab only. */
-  }
+  if (value === null) removeLocal(key);
+  else saveLocal(key, value);
 }
 
 let memoryDeviceId: string | null = null;
@@ -56,14 +49,20 @@ export function deviceId(): string {
   if (!id) {
     id = 'seedy-' + (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
     memoryDeviceId = id;
-    try { window.localStorage.setItem(DEVICE_KEY, id); } catch { /* see readStore */ }
+    try { window.localStorage.setItem(DEVICE_KEY, id); } catch { /* see writeStore */ }
   }
   return id;
 }
 
+/* "Chrome", "Safari"…, or `fallback` for a browser it doesn't know. */
+export function browserName(fallback = 'Browser'): string {
+  const ua = navigator.userAgent;
+  return /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : fallback;
+}
+
 export function deviceName(): string {
   const ua = navigator.userAgent;
-  const browser = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+  const browser = browserName();
   const os = /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? (/iPhone|iPad/.test(ua) ? 'iOS' : 'macOS') : /Android/.test(ua) ? 'Android' : /Linux/.test(ua) ? 'Linux' : '';
   return os ? `${browser} on ${os}` : browser;
 }
@@ -83,6 +82,9 @@ function adoptJellyfinWebSession(): Session | null {
 export function getSession(): Session | null {
   return session;
 }
+
+export const currentUserId = () => session?.userId ?? '';
+export const sessionToken = () => session?.token ?? '';
 
 export function candidateSessions(): Session[] {
   const list: Session[] = [];
@@ -161,7 +163,7 @@ function markSeen() {
   const now = Date.now();
   if (now - seenAt < 30_000) return;
   seenAt = now;
-  try { window.localStorage.setItem(SEEN_KEY, String(now)); } catch { /* see readStore */ }
+  try { window.localStorage.setItem(SEEN_KEY, String(now)); } catch { /* see writeStore */ }
 }
 export function lastSeen(): number | null {
   try { return Number(window.localStorage.getItem(SEEN_KEY)) || null; } catch { return seenAt || null; }
@@ -211,6 +213,33 @@ export async function request<T>(
   const type = res.headers.get('content-type') ?? '';
   if (!type.includes('json')) return (await res.text()) as unknown as T;
   return (await res.json()) as T;
+}
+
+/* Jellyfin writes transcoding paths in lower case; the dev proxy (and nothing else) cares. */
+const fixPath = (p: string) => p.replace(/^\/videos\//, '/Videos/').replace(/^\/audio\//, '/Audio/');
+
+/* A server path as a full URL that carries the token as ApiKey (once), for <video>, <audio>, <a download>. */
+export function withApiKey(path: string): string {
+  const u = fixPath(path);
+  if (/[?&](ApiKey|api_key)=/i.test(u)) return SERVER_URL + u;
+  return SERVER_URL + u + (u.includes('?') ? '&' : '?') + 'ApiKey=' + encodeURIComponent(sessionToken());
+}
+
+/* The original file, as stored (needs the profile's download permission). */
+export const downloadUrl = (id: string) => withApiKey(`/Items/${id}/Download`);
+
+/* A request that must survive the tab closing (playback stops, encoder cleanup). */
+export function keepalive(method: 'POST' | 'DELETE', path: string, body?: unknown) {
+  try {
+    return fetch(SERVER_URL + path, {
+      method,
+      keepalive: true,
+      headers: { Authorization: authHeader(), 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body)
+    }).catch(() => undefined);
+  } catch {
+    return Promise.resolve(undefined);
+  }
 }
 
 export const get = <T>(path: string, query?: Query, signal?: AbortSignal) => request<T>('GET', path, { query, signal });

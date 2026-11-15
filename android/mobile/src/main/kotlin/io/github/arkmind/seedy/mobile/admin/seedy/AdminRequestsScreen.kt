@@ -8,9 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,6 +46,7 @@ import io.github.arkmind.seedy.mobile.admin.PillStyle
 import io.github.arkmind.seedy.mobile.admin.RadioRow
 import io.github.arkmind.seedy.mobile.admin.TextSheet
 import io.github.arkmind.seedy.mobile.admin.avatarColour
+import io.github.arkmind.seedy.mobile.admin.toneColor
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
@@ -59,7 +59,9 @@ import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHead
 import io.github.arkmind.seedy.mobile.settings.SheetHost
+import io.github.arkmind.seedy.mobile.settings.SheetList
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
+import io.github.arkmind.seedy.mobile.settings.choices
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.mobile.settings.settingsRow
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -195,7 +197,7 @@ private fun Connection(state: AdminRequestsState, actions: AdminRequestsActions,
                 withStyle(SpanStyle(fontWeight = FontWeight(800), color = SeedyColors.White)) { append(line.lead) }
                 if (line.rest.isNotEmpty()) append(" " + line.rest)
             }
-            androidx.compose.foundation.text.BasicText(
+            BasicText(
                 text, Modifier.weight(1f),
                 style = BaseText.copy(fontSize = 13.sp, lineHeight = (13 * 1.45).sp, color = SeedyColors.Text2),
             )
@@ -212,11 +214,7 @@ private fun Accounts(state: AdminRequestsState, actions: AdminRequestsActions, o
     val list = state.accounts
     Card(Modifier.padding(horizontal = 16.dp)) {
         when {
-            list == null && state.accountsError != null -> Row(Modifier.settingsRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Dot(SeedyColors.Danger)
-                SText(t("Couldn’t load the accounts.") + " " + state.accountsError, Modifier.weight(1f), size = 13.sp, color = SeedyColors.Text2)
-                PillButton(t("Try again"), actions::retryAccounts, height = 36.dp)
-            }
+            list == null && state.accountsError != null -> RetryRow(t("Couldn’t load the accounts.") + " " + state.accountsError, actions::retryAccounts)
             list == null -> repeat(3) { i ->
                 if (i > 0) RowLine()
                 Box(Modifier.settingsRow().heightIn(min = 60.dp))
@@ -237,7 +235,7 @@ private fun Accounts(state: AdminRequestsState, actions: AdminRequestsActions, o
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         SText(a.name, size = 15.sp, weight = 800, color = SeedyColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Dot(if (a.linked) SeedyColors.Ok else SeedyColors.Pending, 6.dp)
+                            Dot(if (a.linked) SeedyColors.Ok else SeedyColors.Pending, size = 6.dp)
                             SText(
                                 if (a.linked) (a.seerrName?.takeIf { it.isNotEmpty() } ?: t("Seerr user {id}", "id" to a.seerrUserId.toString())) + " · " +
                                     (if (a.matchedBy == "manual") t("Linked by an admin") else t("Matched by Jellyfin sign-in"))
@@ -267,7 +265,7 @@ private fun LinkSheet(account: SeerrAccount, accounts: List<SeerrAccount>, actio
     }
     BottomSheet(onDismiss) {
         SheetHead(t("Link {name}", "name" to account.name), t("Pick the Seerr account {name} requests as. Their Seerr limits and auto-approval apply.", "name" to account.name))
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+        SheetList {
             val list = users
             when {
                 error != null -> SText(t("Couldn’t load Seerr’s users.") + " " + error, Modifier.padding(12.dp), size = 13.sp, color = SeedyColors.Danger)

@@ -51,7 +51,7 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 /** The TV's places, in the rail's order. Requests only when the server's Seedy is connected to Seerr. */
 enum class TvPlace(val label: String, val icon: IconDef) {
     Search("Search", AppIcons.RailSearch),
-    Home("Home", AppIcons.Home),
+    Home("Home", WebIcons.Home),
     Movies("Movies", AppIcons.Movies),
     Shows("Shows", AppIcons.Shows),
     LiveTv("Live TV", AppIcons.LiveTv),
@@ -59,11 +59,9 @@ enum class TvPlace(val label: String, val icon: IconDef) {
     Requests("Requests", AppIcons.Requests),
 }
 
-/** The rail's sliders icon (Settings). */
-private val SettingsIcon = IconDef(
-    2f, "M4 7h9", "M17 7h3", "M4 17h3", "M11 17h9",
-    "M13 7a2 2 0 1 0 4 0a2 2 0 1 0 -4 0Z", "M7 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0Z",
-)
+/** The rail's places: Requests only when Seerr is set up for this person. */
+fun tvPlaces(requests: Boolean): List<TvPlace> = if (requests) TvPlace.entries else TvPlace.entries - TvPlace.Requests
+
 
 /** How far the page starts from the left edge, past the collapsed rail (boards: 176 px). */
 val RailInset = 176.bp
@@ -112,7 +110,7 @@ fun TvRail(
                 }
             }
             RailItem(
-                SettingsIcon, t("Settings"), open, current = settingsCurrent, onClick = onSettings, quiet = true,
+                WebIcons.Sliders, t("Settings"), open, current = settingsCurrent, onClick = onSettings, quiet = true,
                 modifier = if (settingsCurrent) Modifier.focusRequester(currentRequester) else Modifier,
             )
         }

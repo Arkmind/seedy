@@ -1,7 +1,8 @@
 package io.github.arkmind.seedy.ui.components
 
 import android.graphics.BlurMaskFilter
-import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.EaseIn
+import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.Canvas
@@ -32,14 +33,12 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativePaint
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.floor
 import kotlin.math.tan
-
-private val EaseInOut = CubicBezierEasing(.42f, 0f, .58f, 1f)
-private val EaseIn = CubicBezierEasing(.42f, 0f, 1f, 1f)
 
 /** CSS `animation-direction: alternate`: how far along (eased) the loop is, running back on every other turn. */
 private fun alternate(t: Double, dur: Double, delay: Double, ease: Easing = EaseInOut): Float {
@@ -95,7 +94,7 @@ private fun RayLayer(ray: Ray, scene: DeepScene, kx: Float, ky: Float, clock: Mu
                         Offset.Zero, Offset(0f, size.height * .76f),
                         listOf(RayLight.copy(alpha = .08f), RayLight.copy(alpha = 0f)),
                     )
-                    asFrameworkPaint().maskFilter = BlurMaskFilter((sigma - .5f).coerceAtLeast(.1f) / .57735f, BlurMaskFilter.Blur.NORMAL)
+                    nativePaint.maskFilter = BlurMaskFilter((sigma - .5f).coerceAtLeast(.1f) / .57735f, BlurMaskFilter.Blur.NORMAL)
                 }
                 val m = RayMargin * kx * density
                 drawIntoCanvas { it.drawRect(m, 0f, size.width - m, size.height, paint) }

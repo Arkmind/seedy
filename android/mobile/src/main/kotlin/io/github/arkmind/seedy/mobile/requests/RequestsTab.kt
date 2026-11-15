@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.feature.RequestsViewModel
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.mediarequests.MediaRequestsViewModel
 import io.github.arkmind.seedy.core.mediarequests.MediaTab
@@ -40,15 +41,15 @@ import io.github.arkmind.seedy.core.mediarequests.RequestService
 import io.github.arkmind.seedy.core.requests.SeerrRequest
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.requests.TitlesKind
-import io.github.arkmind.seedy.core.seedy.libraryUuid
+import io.github.arkmind.seedy.mobile.browse.Message
 import io.github.arkmind.seedy.mobile.browse.topInset
-import io.github.arkmind.seedy.mobile.library.Message
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.MobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tabBarHeight
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.ui.components.openUrl
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
@@ -123,7 +124,7 @@ private fun MoviesRequests(services: ServiceTabs?) {
             onApprove = vm::approve,
             onDecline = vm::decline,
             onRetry = vm::retry,
-            onMessageShown = vm::clearMessage,
+            onMessageShown = vm::messageShown,
             onMore = vm::loadMore,
         ),
         bottomPadding = tabBarHeight(),
@@ -165,7 +166,7 @@ private fun MediaRequestsTab(vm: MediaRequestsViewModel, music: Boolean, service
                 url?.takeIf { it.isNotBlank() }?.let { { context.openUrl(it) } }
             },
             cover = vm.api::bookCover,
-            onMessageShown = vm::clearMessage,
+            onMessageShown = vm::messageShown,
         ),
         bottomPadding = tabBarHeight(),
     )
@@ -173,7 +174,7 @@ private fun MediaRequestsTab(vm: MediaRequestsViewModel, music: Boolean, service
 
 /** A Seerr title opens its library page when it's on the server, else its Seerr page. */
 fun MobileNav.openSeerr(mediaType: String, tmdbId: Int, jellyfinItemId: String?) {
-    val local = libraryUuid(jellyfinItemId)
+    val local = uuidOf(jellyfinItemId)
     go(if (local != null) Route.Details(local) else Route.SeerrTitle(mediaType, tmdbId))
 }
 

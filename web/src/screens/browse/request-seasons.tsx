@@ -5,8 +5,8 @@ import {
   seerrDetails, seerrRequest, seerrRequestOptions,
   type RequestBody, type RequestOptions, type SeerrDetails, type SeerrSeason, type SeerrStatus
 } from '../../api/seedy';
-import { dayOf, fmtDate, plural } from '../../lib/format';
-import { t, tn } from '../../lib/i18n';
+import { dayOf, fmtDate, pctOf, plural } from '../../lib/format';
+import { formatNumber, t, tn } from '../../lib/i18n';
 import { Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { Sheet, toast } from '../../ui/overlay';
@@ -385,11 +385,11 @@ function AdvField({ label, value, options, onChange }: { label: string; value: s
   );
 }
 
-const pctOf = (n: number, of: number) => `${of > 0 ? Math.max(0, Math.min(100, (n / of) * 100)) : 0}%`;
-
 function freeSize(bytes: number): string {
   const tb = bytes / 1024 ** 4;
-  return tb >= 1 ? `${tb.toFixed(1)} TB` : `${Math.round(bytes / 1024 ** 3)} GB`;
+  return tb >= 1
+    ? `${formatNumber(Number(tb.toFixed(1)), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} TB`
+    : `${formatNumber(Math.round(bytes / 1024 ** 3), { useGrouping: false })} GB`;
 }
 
 /* The seasons just asked for, as Seerr will show them on the next load. */

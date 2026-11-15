@@ -15,9 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,8 +34,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.audio.Reading
 import io.github.arkmind.seedy.core.books.AudiobookViewModel
 import io.github.arkmind.seedy.core.books.Bookmark
-import io.github.arkmind.seedy.core.books.uuidOf
+import io.github.arkmind.seedy.core.format.clockOf
 import io.github.arkmind.seedy.core.format.duration
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.mobile.audio.LocalAudio
@@ -52,6 +51,7 @@ import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.PickOption
 import io.github.arkmind.seedy.mobile.settings.SheetHead
+import io.github.arkmind.seedy.mobile.settings.SheetList
 import io.github.arkmind.seedy.player.audio.BookChapter
 import io.github.arkmind.seedy.player.audio.BookInfo
 import io.github.arkmind.seedy.player.audio.Sleep
@@ -184,7 +184,7 @@ private fun placeOf(book: BookInfo, pos: Double): Reading {
 private fun SpeedSheet(speed: Float, onPick: (Float) -> Unit, onClose: () -> Unit) {
     BottomSheet(onClose) {
         SheetHead(t("Playback speed"))
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+        SheetList {
             for (v in Speeds) PickOption(speedLabel(v), abs(speed - v) < 0.001f, sub = if (v == 1f) t("Normal") else null) { onPick(v); onClose() }
         }
     }
@@ -194,7 +194,7 @@ private fun SpeedSheet(speed: Float, onPick: (Float) -> Unit, onClose: () -> Uni
 internal fun SleepSheet(sleep: Sleep?, chapter: BookChapter?, onPick: (Sleep?) -> Unit, onClose: () -> Unit) {
     BottomSheet(onClose) {
         SheetHead(t("Sleep timer"))
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+        SheetList {
             PickOption(t("Off"), sleep == null) { onPick(null); onClose() }
             if (chapter != null) {
                 PickOption(t("At the end of the chapter"), sleep is Sleep.Chapter, sub = chapter.name) { onPick(Sleep.Chapter(chapter.index)); onClose() }
@@ -235,7 +235,7 @@ internal fun ChaptersSheet(book: BookInfo, pos: Double, onPick: (Int) -> Unit, o
                         else SText("${c.index + 1}", size = 13.sp, weight = 700, color = if (on) accent else SeedyColors.Text3)
                     }
                     SText(c.name, Modifier.weight(1f), size = 14.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.White else if (done) SeedyColors.Text3 else SeedyColors.Text, maxLines = 1)
-                    SText(audioClock(c.end - c.start), size = 12.sp, color = SeedyColors.Text3, maxLines = 1)
+                    SText(clockOf(c.end - c.start), size = 12.sp, color = SeedyColors.Text3, maxLines = 1)
                 }
             }
         }
@@ -256,11 +256,11 @@ internal fun BookmarksSheet(
     val accent = LocalAccent.current
     fun where(at: Double): String {
         val ch = chapterOf(book, at)
-        return listOfNotNull(ch?.takeIf { book.chapters.size > 1 }?.let { t("Chapter {n}", "n" to it.index + 1) }, audioClock(at - (ch?.start ?: 0.0))).joinToString(" · ")
+        return listOfNotNull(ch?.takeIf { book.chapters.size > 1 }?.let { t("Chapter {n}", "n" to it.index + 1) }, clockOf(at - (ch?.start ?: 0.0))).joinToString(" · ")
     }
     BottomSheet(onClose) {
         SheetHead(t("Bookmarks"))
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+        SheetList {
             MarkRow(BookIcons.Bookmark, accent, t("Add bookmark"), where(pos), onClick = { onAdd() })
             if (bookmarks.isEmpty()) {
                 SText(t("No bookmarks yet"), Modifier.padding(horizontal = 12.dp, vertical = 12.dp), size = 13.sp, color = SeedyColors.Text3)

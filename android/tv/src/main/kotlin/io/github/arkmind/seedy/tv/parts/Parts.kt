@@ -1,17 +1,21 @@
 package io.github.arkmind.seedy.tv.parts
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -20,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -34,6 +39,7 @@ import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import kotlinx.coroutines.delay
 
 /*
  * The TV boards are drawn at 1920×1080 px, which is 960×540 dp on a 1080p television: a board pixel is half a dp.
@@ -117,6 +123,40 @@ suspend fun FocusRequester.focusSoon(): Boolean {
         if (runCatching { requestFocus() }.getOrDefault(false)) return true
     }
     return false
+}
+
+/** Focuses [requester] once [ready]. */
+@Composable
+fun FocusWhen(ready: Boolean, requester: FocusRequester) {
+    LaunchedEffect(ready) { if (ready) requester.focusSoon() }
+}
+
+/** Attaches [requester] when there is one. */
+fun Modifier.maybeFocus(requester: FocusRequester?): Modifier = if (requester != null) focusRequester(requester) else this
+
+/** Lets a list ignore focus: the screen scrolls it to the row in use itself. */
+@OptIn(ExperimentalFoundationApi::class)
+internal object NoFocusScroll : BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
+}
+
+/** Space kept around a card row so the focused card's ring isn't clipped (ring 9 px, plus the focused card's growth). */
+internal val CardRowRingRoom = 12.bp
+
+/** The pages' message chip, bottom left [start] from the edge, gone after 3.2 s. */
+@Composable
+fun BoxScope.TvToast(message: String?, onDone: () -> Unit, start: Dp) {
+    if (message == null) return
+    LaunchedEffect(message) {
+        delay(3200)
+        onDone()
+    }
+    SText(
+        message,
+        Modifier.align(Alignment.BottomStart).padding(start = start, bottom = 48.bp).clip(RoundedCornerShape(16.bp)).background(SeedyColors.Surface)
+            .padding(horizontal = 24.bp, vertical = 16.bp),
+        size = 20.bsp, weight = 600, color = SeedyColors.Text,
+    )
 }
 
 /**

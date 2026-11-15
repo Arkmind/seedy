@@ -2,6 +2,8 @@
    by the player as HTML over the picture. Drawings (\p), karaoke timing, clips and transforms (\t) are left out;
    that covers dialogue and most signs. */
 
+import { fetchSubtitle } from './subtitles';
+
 export interface AssColor { r: number; g: number; b: number; a: number }
 
 export interface AssStyle {
@@ -88,6 +90,10 @@ function parseTime(s: string): number {
 
 /* SSA v4 alignment (1–3 bottom, 5–7 top, 9–11 middle) to numpad. */
 const legacyAlign = (a: number) => (a >= 9 ? a - 5 : a >= 5 ? a + 2 : a);
+
+export async function loadAss(url: string, signal?: AbortSignal): Promise<AssTrack> {
+  return parseAss(await (await fetchSubtitle(url, signal)).text());
+}
 
 export function parseAss(src: string): AssTrack {
   const text = src.replace(/^﻿/, '').replace(/\r\n?/g, '\n');

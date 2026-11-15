@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
-import { sendPlayCommand, syncPlayList } from '../api/jellyfin';
-import type { SessionInfo, SyncPlayGroup } from '../api/types';
-import { castTarget, listCastTargets } from '../lib/cast';
+import { syncPlayList } from '../api/jellyfin';
+import type { SyncPlayGroup } from '../api/types';
+import { castTarget } from '../lib/cast';
 import { secondsToTicks } from '../lib/format';
 import { useStore } from '../lib/store';
 import { t } from '../lib/i18n';
@@ -9,6 +9,7 @@ import { Icon } from '../ui/icons';
 import { MenuButton, MenuItem, toast } from '../ui/overlay';
 import type { ExternalApp } from './external';
 import { createGroup, joinGroup, leaveGroup, syncAccess, syncStore } from './syncplay';
+import { CastTargets, sendToDevice, useCastSessions } from '../ui/cast-menu';
 
 /* Top-right player menus: Watch together (SyncPlay) and Cast. */
 
@@ -103,11 +104,7 @@ export function CastMenu({ itemId, position, onCast, external }: {
   external?: { apps: ExternalApp[]; open: (app: ExternalApp) => void };
 }) {
   const target = useStore(castTarget);
-  const [sessions, setSessions] = useState<SessionInfo[] | null>(null);
-  const load = () => {
-    setSessions(null);
-    listCastTargets().then(setSessions, () => setSessions([]));
-  };
+  const { sessions, load } = useCastSessions();
   return (
     <MenuButton
       width={300}
@@ -126,29 +123,21 @@ export function CastMenu({ itemId, position, onCast, external }: {
     >
       {(close) => (
         <>
-          <span class="menu-label">{t('Play on')}</span>
-          <MenuItem label={t('This device')} sub={t('Keep watching here')} pressed={!target} onSelect={() => { castTarget.set(null); close(); }} />
-          {sessions === null && <span class="menu-item is-muted" aria-busy="true">{t('Looking for devices…')}</span>}
-          {sessions?.length === 0 && <span class="menu-item is-muted">{t('No other Jellyfin apps are open')}</span>}
-          {sessions?.map((s) => (
-            <MenuItem
-              key={s.Id}
-              label={s.DeviceName || s.Client || t('Device')}
-              sub={[s.Client, s.UserName].filter(Boolean).join(' · ')}
-              pressed={target?.Id === s.Id}
-              onSelect={() => {
-                close();
-                sendPlayCommand(s.Id, [itemId], secondsToTicks(position())).then(
-                  () => {
-                    castTarget.set(s);
-                    toast(t('Playing on {device}', { device: s.DeviceName || s.Client || '' }));
-                    onCast(s.Id);
-                  },
-                  () => toast(s.DeviceName ? t("Couldn't reach {device}", { device: s.DeviceName }) : t("Couldn't reach that device"), 'error')
-                );
-              }}
-            />
-          ))}
+          <CastTargets
+            sessions={sessions}
+            target={target}
+            hereSub={t('Keep watching here')}
+            herePressed={!target}
+            onHere={() => { castTarget.set(null); close(); }}
+            onPick={(s) => {
+              close();
+              void sendToDevice(s, [itemId], secondsToTicks(position())).then((ok) => {
+                if (!ok) return;
+                castTarget.set(s);
+                onCast(s.Id);
+              });
+            }}
+          />
           {external && (
             <>
               <div class="menu-sep" />

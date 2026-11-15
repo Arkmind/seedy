@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.Seedy.Api;
 using Jellyfin.Plugin.Seedy.Data;
-using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Seedy.Services.Media;
@@ -105,7 +104,6 @@ public sealed class MediaRequestService
     private static readonly TimeSpan NothingFound = TimeSpan.FromDays(2);
 
     private readonly SeedyDatabase _db;
-    private readonly IUserManager _users;
     private readonly LidarrClient _lidarr;
     private readonly ShelfarrClient _shelfarr;
     private readonly LibrarrClient _librarr;
@@ -118,17 +116,15 @@ public sealed class MediaRequestService
     /// Initializes a new instance of the <see cref="MediaRequestService"/> class.
     /// </summary>
     /// <param name="db">Database.</param>
-    /// <param name="users">User manager.</param>
     /// <param name="lidarr">Lidarr.</param>
     /// <param name="shelfarr">Shelfarr.</param>
     /// <param name="librarr">Librarr.</param>
     /// <param name="readarr">Readarr-API app.</param>
     /// <param name="library">What's on the server.</param>
     /// <param name="logger">Logger.</param>
-    public MediaRequestService(SeedyDatabase db, IUserManager users, LidarrClient lidarr, ShelfarrClient shelfarr, LibrarrClient librarr, ReadarrClient readarr, MediaLibrary library, ILogger<MediaRequestService> logger)
+    public MediaRequestService(SeedyDatabase db, LidarrClient lidarr, ShelfarrClient shelfarr, LibrarrClient librarr, ReadarrClient readarr, MediaLibrary library, ILogger<MediaRequestService> logger)
     {
         _db = db;
-        _users = users;
         _lidarr = lidarr;
         _shelfarr = shelfarr;
         _librarr = librarr;
@@ -148,51 +144,34 @@ public sealed class MediaRequestService
     /// <returns>Name.</returns>
     public static string ServiceName(string service) => service switch
     {
-        "lidarr" => "Lidarr",
-        "shelfarr" => "Shelfarr",
-        "librarr" => "Librarr",
-        "readarr" => "Readarr",
+        "lidarr" => LidarrClient.Name,
+        "shelfarr" => ShelfarrClient.Name,
+        "librarr" => LibrarrClient.Name,
+        "readarr" => ReadarrClient.Name,
         _ => service
     };
 
-    private static MediaRequestData DataOf(MediaRequestRecord q)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<MediaRequestData>(q.Data, Json) ?? new MediaRequestData();
-        }
-        catch (JsonException)
-        {
-            return new MediaRequestData();
-        }
-    }
+    private static MediaRequestData DataOf(MediaRequestRecord q) => Parse(q.Data, new MediaRequestData());
 
-    private static List<MediaRequestPart> PartsOf(MediaRequestRecord q)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<List<MediaRequestPart>>(q.Parts, Json) ?? [];
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
-    }
+    private static List<MediaRequestPart> PartsOf(MediaRequestRecord q) => Parse(q.Parts, new List<MediaRequestPart>());
 
-    private static MediaNoteDto? NoteOf(MediaRequestRecord q)
+    private static MediaNoteDto? NoteOf(MediaRequestRecord q) => Parse<MediaNoteDto?>(q.Note, null);
+
+    // A stored JSON column, or the fallback when it is empty or unreadable.
+    private static T Parse<T>(string? json, T fallback)
     {
-        if (string.IsNullOrEmpty(q.Note))
+        if (string.IsNullOrEmpty(json))
         {
-            return null;
+            return fallback;
         }
 
         try
         {
-            return JsonSerializer.Deserialize<MediaNoteDto>(q.Note, Json);
+            return JsonSerializer.Deserialize<T>(json, Json) ?? fallback;
         }
         catch (JsonException)
         {
-            return null;
+            return fallback;
         }
     }
 
@@ -417,12 +396,7 @@ public sealed class MediaRequestService
     /// <returns>The request.</returns>
     public async Task<MediaRequestDto> ApproveAsync(User admin, string id, CancellationToken ct)
     {
-        var q = Get(id);
-        if (q.Status != "pending")
-        {
-            throw new MediaServiceException("Seedy", "This request isn't waiting for approval.", HttpStatusCode.Conflict);
-        }
-
+        var q = GetPending(id);
         q.DecidedAt = DateTime.UtcNow;
         q.DecidedBy = admin.Username;
         await SendAsync(q, ct).ConfigureAwait(false);
@@ -436,12 +410,7 @@ public sealed class MediaRequestService
     /// <returns>The request.</returns>
     public async Task<MediaRequestDto> DeclineAsync(User admin, string id, CancellationToken ct)
     {
-        var q = Get(id);
-        if (q.Status != "pending")
-        {
-            throw new MediaServiceException("Seedy", "This request isn't waiting for approval.", HttpStatusCode.Conflict);
-        }
-
+        var q = GetPending(id);
         q.Status = "declined";
         q.DecidedAt = DateTime.UtcNow;
         q.DecidedBy = admin.Username;
@@ -516,12 +485,7 @@ public sealed class MediaRequestService
     /// <returns>The request.</returns>
     public async Task<MediaRequestDto> SearchNowAsync(User user, string id, CancellationToken ct)
     {
-        var q = Get(id);
-        if (!user.IsAdmin() && q.UserId != user.Id.ToString("N"))
-        {
-            throw new MediaServiceException("Seedy", "This isn't your request.", HttpStatusCode.Forbidden);
-        }
-
+        var q = GetOwned(id, user);
         if (q.SentAt is null)
         {
             if (q.Status == "pending")
@@ -578,12 +542,7 @@ public sealed class MediaRequestService
     /// <returns>The request.</returns>
     public async Task<MediaRequestDto> AcceptLowerAsync(User user, string id, CancellationToken ct)
     {
-        var q = Get(id);
-        if (!user.IsAdmin() && q.UserId != user.Id.ToString("N"))
-        {
-            throw new MediaServiceException("Seedy", "This isn't your request.", HttpStatusCode.Forbidden);
-        }
-
+        var q = GetOwned(id, user);
         var data = DataOf(q);
         var artist = q.Kind == "music" ? await _lidarr.ArtistAsync(q.ForeignId, ct).ConfigureAwait(false) : null;
         if (artist is null)
@@ -592,7 +551,7 @@ public sealed class MediaRequestService
         }
 
         var lower = await _lidarr.LowerQualityAsync(J.Int(artist["qualityProfileId"]) ?? 0, ct).ConfigureAwait(false)
-            ?? throw new MediaServiceException("Lidarr", "Lidarr has no lesser quality profile to fall back on.", HttpStatusCode.BadRequest);
+            ?? throw new MediaServiceException(LidarrClient.Name, "Lidarr has no lesser quality profile to fall back on.", HttpStatusCode.BadRequest);
         artist["qualityProfileId"] = lower.Id;
         await _lidarr.UpdateArtistAsync(artist, ct).ConfigureAwait(false);
         data.AcceptedQualityId = lower.Id;
@@ -607,6 +566,19 @@ public sealed class MediaRequestService
     }
 
     private MediaRequestRecord Get(string id) => _db.GetMediaRequest(id) ?? throw new MediaServiceException("Seedy", "This request is gone.", HttpStatusCode.NotFound);
+
+    private MediaRequestRecord GetPending(string id)
+    {
+        var q = Get(id);
+        return q.Status == "pending" ? q : throw new MediaServiceException("Seedy", "This request isn't waiting for approval.", HttpStatusCode.Conflict);
+    }
+
+    // The requester's own request; admins may act on any.
+    private MediaRequestRecord GetOwned(string id, User user)
+    {
+        var q = Get(id);
+        return user.IsAdmin() || q.UserId == user.Id.ToString("N") ? q : throw new MediaServiceException("Seedy", "This isn't your request.", HttpStatusCode.Forbidden);
+    }
 
     // ── Sending to the apps ──
 
@@ -863,7 +835,7 @@ public sealed class MediaRequestService
         }
     }
 
-    private static string Aggregate(IReadOnlyCollection<MediaRequestPart> parts)
+    private static string Aggregate(List<MediaRequestPart> parts)
     {
         if (parts.Count == 0)
         {
@@ -1391,22 +1363,4 @@ public sealed class MediaRequestService
         var close = name.LastIndexOf(')');
         return open >= 0 && close > open + 1 ? name[(open + 1)..close].Trim() : name;
     }
-
-    /// <summary>Seeds a request as it would be at some point of its life (for the dev stack's demo data).</summary>
-    /// <param name="q">The request, with its columns filled in.</param>
-    /// <param name="data">Its details.</param>
-    /// <param name="note">Its note.</param>
-    public void Import(MediaRequestRecord q, MediaRequestData data, MediaNoteDto? note)
-    {
-        var parts = q.Kind == "music"
-            ? [new MediaRequestPart { Format = "music", Service = "lidarr", Status = q.Status, Progress = q.Progress }]
-            : data.Formats.Select(f => new MediaRequestPart { Format = f, Service = q.Service, Status = q.Status, Progress = q.Progress }).ToList();
-        Store(q, data, parts, note);
-        _db.SaveMediaRequest(q);
-    }
-
-    /// <summary>The person a request belongs to, if they still exist.</summary>
-    /// <param name="q">Request.</param>
-    /// <returns>User or null.</returns>
-    public User? Owner(MediaRequestRecord q) => Guid.TryParse(q.UserId, out var id) ? _users.GetUserById(id) : null;
 }

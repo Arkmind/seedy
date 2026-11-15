@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'preact/hooks';
 import { userStore } from '../../lib/app-state';
-import { plural } from '../../lib/format';
+import { daysFromToday, plural } from '../../lib/format';
 import { formatNumber, t, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
+import { SelectField } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { MenuButton, MenuItem, Sheet, confirm, toast } from '../../ui/overlay';
 import { AdminLayout, LoadError } from '../admin/AdminLayout';
@@ -34,12 +35,7 @@ export async function loadUsersData(signal?: AbortSignal): Promise<UsersData> {
   return { users, sessions, devices, folders, ratings };
 }
 
-const isToday = (s?: string) => {
-  if (!s) return false;
-  const d = new Date(s);
-  const n = new Date();
-  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
-};
+const isToday = (s?: string) => !!s && daysFromToday(new Date(s)) === 0;
 
 /* "Watching now on iPhone", "Last seen yesterday on Living room TV". */
 export function presence(u: FullUser, data: Pick<UsersData, 'sessions' | 'devices'>): { text: string; online: boolean; watching: boolean } {
@@ -57,7 +53,7 @@ export function presence(u: FullUser, data: Pick<UsersData, 'sessions' | 'device
 
 /* The rating name for a maximum score: "TV-PG", "PG-13". Same choice as the Seedy plugin's admin pages: a named rating
    (TV ratings first) over a bare age, then the US name metadata mostly carries when the server's country has none. */
-export function ratingName(score: number | null | undefined, ratings: ParentalRating[]): string | undefined {
+function ratingName(score: number | null | undefined, ratings: ParentalRating[]): string | undefined {
   if (score === null || score === undefined) return undefined;
   const names = ratings.filter((r) => (r.RatingScore?.score ?? r.Value) === score && r.Name !== 'Unrated' && !/^\d+\+?$/.test(r.Name)).map((r) => r.Name);
   const named = names.find((n) => n.startsWith('TV-')) ?? names[0];
@@ -137,7 +133,7 @@ export function ServerUsers() {
       </div>
 
       {!data && loaded.error ? (
-        <LoadError error={loaded.error} onRetry={loaded.reload} what={t('the users')} />
+        <LoadError error={loaded.error} onRetry={loaded.reload} what="the users" />
       ) : !data ? (
         <div class="srv-list" aria-busy="true">
           {[0, 1, 2, 3].map((i) => (
@@ -334,13 +330,15 @@ function AddUserSheet({ open, users, onClose }: { open: boolean; users: FullUser
         </label>
         <label class="srv-field">
           <span class="srv-field-label">{t('Copy settings from')}</span>
-          <span class="select-wrap">
-            <select class="select srv-full" value={copyFrom} onChange={(e) => setCopyFrom((e.currentTarget as HTMLSelectElement).value)}>
-              <option value="">{t('Nobody · start with the defaults')}</option>
-              {users.map((u) => <option key={u.Id} value={u.Id}>{u.Policy.IsAdministrator ? t('{name} (access only, not admin)', { name: u.Name }) : u.Name}</option>)}
-            </select>
-            <Icon name="chevronDown" size={16} />
-          </span>
+          <SelectField
+            selectClass="srv-full"
+            value={copyFrom}
+            options={[
+              { value: '', label: t('Nobody · start with the defaults') },
+              ...users.map((u) => ({ value: u.Id, label: u.Policy.IsAdministrator ? t('{name} (access only, not admin)', { name: u.Name }) : u.Name }))
+            ]}
+            onChange={setCopyFrom}
+          />
           <span class="srv-field-help">{t('Libraries, devices, playback limits and parental controls. Never admin access.')}</span>
         </label>
         {error && <span class="form-error"><Icon name="alert" size={16} />{error}</span>}

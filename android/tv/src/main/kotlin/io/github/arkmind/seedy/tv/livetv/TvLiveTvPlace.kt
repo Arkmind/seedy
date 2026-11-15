@@ -3,7 +3,6 @@ package io.github.arkmind.seedy.tv.livetv
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,8 +52,10 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import io.github.arkmind.seedy.core.feature.LiveTvViewModel
 import io.github.arkmind.seedy.core.format.join
@@ -65,16 +66,17 @@ import io.github.arkmind.seedy.core.livetv.LiveTv
 import io.github.arkmind.seedy.player.LivePreview
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
 import io.github.arkmind.seedy.tv.nav.TvRoute
+import io.github.arkmind.seedy.tv.parts.FocusWhen
+import io.github.arkmind.seedy.tv.parts.NoFocusScroll
 import io.github.arkmind.seedy.tv.parts.TvPressable
 import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusRing
-import io.github.arkmind.seedy.tv.parts.focusSoon
+import io.github.arkmind.seedy.tv.parts.maybeFocus
 import io.github.arkmind.seedy.tv.shell.RailInset
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.components.ChannelLogo
-import io.github.arkmind.seedy.ui.icons.IconDef
-import io.github.arkmind.seedy.ui.icons.IconPart
+import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
@@ -91,18 +93,12 @@ import java.time.LocalDateTime
 
 private val LiveRed = Color(0xFFD63C3C)
 private val RecRed = Color(0xFFFF5C5C)
-private val FilledHeart = IconDef(0f, listOf(IconPart("M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z", filled = true)))
-
 /** The guide's span across the screen: two hours, four half-hour columns. */
 private const val SpanMinutes = 120
 
-/** Lets the guide's rows ignore focus; the screen scrolls the row in use to the top itself. */
-@OptIn(ExperimentalFoundationApi::class)
-private object NoFocusScroll : BringIntoViewSpec {
-    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
-}
 
 /** The rail's Live TV: board "Android TV · Live TV guide". */
+@androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun TvLiveTvPlace() {
     val session = currentSession()
@@ -183,11 +179,11 @@ fun TvGuide(
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.bp),
         ) {
             Pill({ onFavoritesOnly(!state.favoritesOnly) }) { ink ->
-                SIcon(if (state.favoritesOnly) FilledHeart else WebIcons.Heart, size = 22.bp, color = if (state.favoritesOnly) accent else ink)
+                SIcon(if (state.favoritesOnly) AppIcons.HeartSolid else WebIcons.Heart, size = 22.bp, color = if (state.favoritesOnly) accent else ink)
                 SText(if (state.favoritesOnly) t("Favorites") else t("All channels"), size = 19.bsp, weight = 700, color = ink)
             }
             Pill({ onDay(if (state.day == LocalDate.now()) LocalDate.now().plusDays(1) else LocalDate.now()) }) { ink ->
-                SText(dayLabel(state.day), size = 19.bsp, weight = 700, color = ink)
+                SText(LiveTv.dayLabel(state.day), size = 19.bsp, weight = 700, color = ink)
                 SIcon(WebIcons.ChevronDown, size = 20.bp, color = ink.copy(alpha = 0.7f), stroke = 2.4f)
             }
             Spacer(Modifier.weight(1f))
@@ -220,7 +216,7 @@ fun TvGuide(
                         if (nowMin in offset until offset + SpanMinutes) {
                             SText(
                                 LiveTv.clockOf(state.now),
-                                Modifier.offset(x = perMinute * (nowMin - offset).toFloat() - 32.bp, y = 10.bp).clip(RoundedCornerShape(8.bp)).background(accent).padding(horizontal = 10.bp, vertical = 4.bp),
+                                Modifier.offset { IntOffset((perMinute * (nowMin - offset).toFloat() - 32.bp).roundToPx(), 10.bp.roundToPx()) }.clip(RoundedCornerShape(8.bp)).background(accent).padding(horizontal = 10.bp, vertical = 4.bp),
                                 size = 18.bsp, weight = 800, color = SeedyColors.InkInverse,
                             )
                         }
@@ -243,7 +239,7 @@ fun TvGuide(
                             GuideRow(
                                 c = c, state = state, offset = offset, perMinute = perMinute, nowMin = nowMin,
                                 focusedId = focused?.second?.id,
-                                firstModifier = if (index == 0) Modifier.focusRequester(first) else Modifier,
+                                firstFocus = if (index == 0) first else null,
                                 onFocus = { p, start, end ->
                                     onFocus(c, p)
                                     // Keep the focused programme in view: past the right edge, start it at the left.
@@ -260,17 +256,7 @@ fun TvGuide(
             }
         }
     }
-    LaunchedEffect(shown.isNotEmpty()) { if (shown.isNotEmpty()) first.focusSoon() }
-}
-
-private fun dayLabel(day: LocalDate): String {
-    val today = LocalDate.now()
-    val short = weekdayDate(day).substringBeforeLast(' ')
-    return when (day) {
-        today -> t("Today, {day}", "day" to short)
-        today.plusDays(1) -> t("Tomorrow, {day}", "day" to short)
-        else -> weekdayDate(day)
-    }
+    FocusWhen(shown.isNotEmpty(), first)
 }
 
 @Composable
@@ -317,7 +303,7 @@ private fun GuideRow(
     perMinute: androidx.compose.ui.unit.Dp,
     nowMin: Long,
     focusedId: java.util.UUID?,
-    firstModifier: Modifier,
+    firstFocus: FocusRequester?,
     onFocus: (BaseItemDto?, Long, Long) -> Unit,
     onWatch: () -> Unit,
     onRecord: (BaseItemDto) -> Unit,
@@ -345,7 +331,7 @@ private fun GuideRow(
         ) {
             if (programs.isEmpty()) {
                 // No guide data for this channel: one cell across, so it can still be watched.
-                TvPressable(onWatch, Modifier.fillMaxSize().padding(start = 3.bp, end = 3.bp, top = 6.bp, bottom = 8.bp).then(firstModifier).onFocusChanged { if (it.isFocused) onFocus(null, offset, offset + SpanMinutes) }) { f ->
+                TvPressable(onWatch, Modifier.fillMaxSize().padding(start = 3.bp, end = 3.bp, top = 6.bp, bottom = 8.bp).maybeFocus(firstFocus).onFocusChanged { if (it.isFocused) onFocus(null, offset, offset + SpanMinutes) }) { f ->
                     Box(
                         Modifier.fillMaxSize().clip(RoundedCornerShape(12.bp)).background(if (f) SeedyColors.Inverse else SeedyColors.Row).padding(horizontal = 16.bp),
                         contentAlignment = Alignment.CenterStart,
@@ -365,7 +351,7 @@ private fun GuideRow(
                     // OK watches the channel, whichever programme is under the remote; holding OK records that one.
                     onClick = onWatch,
                     modifier = Modifier.offset(x = left).width(width).fillMaxHeight().padding(start = 3.bp, end = 3.bp, top = 6.bp, bottom = 8.bp)
-                        .then(if (i == 0) firstModifier else Modifier)
+                        .maybeFocus(if (i == 0) firstFocus else null)
                         .then(if (airing) Modifier.focusRequester(airingCell) else Modifier)
                         .onFocusChanged { if (it.isFocused) onFocus(p, a, end) }
                         .onPreviewKeyEvent { e ->

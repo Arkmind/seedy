@@ -6,9 +6,9 @@ import type { AdminConfig, HomeRowSetting, RowKind } from '../../api/seedy';
 import type { BaseItem } from '../../api/types';
 import { yearRange } from '../../lib/format';
 import { Art } from '../../ui/cards';
-import { NumField, Panel, Segmented, SelectField, SettingRow, Stepper, Switch } from '../../ui/controls';
+import { NumField, Panel, Segmented, SelectField, SettingRow, Stepper, Switch, tOpts } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
-import { MenuItem, Popover, Sheet, toast } from '../../ui/overlay';
+import { MenuItem, Popover, Sheet, toast, toastError } from '../../ui/overlay';
 import { t, tn } from '../../lib/i18n';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
 import { LOCKED_ROWS, saveSection, setLeaveGuard, useAdminConfig } from './config';
@@ -36,9 +36,6 @@ const LOOK_BACK = [
   { value: 90, label: '90 days' },
   { value: 0, label: 'No limit' }
 ];
-
-/* Option labels are English constants, translated at render. */
-const tr = <T,>(options: { value: T; label: string }[]) => options.map((o) => ({ ...o, label: t(o.label) }));
 
 const GENRE_WINDOW = [
   { value: 30, label: 'Last 30 days' },
@@ -104,7 +101,7 @@ export function AdminHome() {
       setDraft(null);
       toast(t('Home screen saved'));
     } catch (e) {
-      toast(`${t('Couldn’t save.')} ${(e as Error).message || t('Check the server log.')}`, 'error');
+      toastError(t('Couldn’t save.'), e, t('Check the server log.'));
     } finally {
       setSaving(false);
     }
@@ -143,7 +140,7 @@ export function AdminHome() {
                 id="byw-window"
                 minWidth={180}
                 value={LOOK_BACK.some((o) => o.value === home.because.lookBackDays) ? home.because.lookBackDays : 60}
-                options={tr(LOOK_BACK)}
+                options={tOpts(LOOK_BACK)}
                 onChange={(v) => edit((h) => ({ ...h, because: { ...h.because, lookBackDays: v } }))}
               />
             </SettingRow>
@@ -188,7 +185,7 @@ export function AdminHome() {
                 id="genre-window"
                 minWidth={180}
                 value={GENRE_WINDOW.some((o) => o.value === home.genres.windowDays) ? home.genres.windowDays : 90}
-                options={tr(GENRE_WINDOW)}
+                options={tOpts(GENRE_WINDOW)}
                 onChange={(v) => edit((h) => ({ ...h, genres: { ...h.genres, windowDays: v } }))}
               />
             </SettingRow>

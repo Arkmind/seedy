@@ -27,7 +27,6 @@ const fr: Record<string, string> = {
   'No folders here': 'Pas de dossiers ici',
   'Photos sitting in the library’s own folder show on the timeline.': 'Les photos rangées directement dans le dossier de la bibliothèque s’affichent dans la chronologie.',
   'Couldn’t load the photos': 'Impossible de charger les photos',
-  'Couldn’t start the scan': 'Impossible de lancer l’analyse',
 
   // Selection
   'Added {n} photo to favorites': '{n} photo ajoutée aux favoris',

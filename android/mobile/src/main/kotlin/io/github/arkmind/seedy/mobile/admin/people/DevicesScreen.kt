@@ -1,8 +1,6 @@
 package io.github.arkmind.seedy.mobile.admin.people
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -10,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -19,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.admin.people.DeviceKind
@@ -28,18 +24,20 @@ import io.github.arkmind.seedy.core.admin.people.DevicesActions
 import io.github.arkmind.seedy.core.admin.people.DevicesState
 import io.github.arkmind.seedy.core.admin.people.filtered
 import io.github.arkmind.seedy.core.admin.people.signOutOthersText
-import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.AdminIcons
 import io.github.arkmind.seedy.mobile.admin.CardNote
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.admin.IconTile
+import io.github.arkmind.seedy.mobile.admin.LoadingDots
 import io.github.arkmind.seedy.mobile.admin.MenuItem
 import io.github.arkmind.seedy.mobile.admin.MenuSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.PillStyle
 import io.github.arkmind.seedy.mobile.admin.SheetButtons
+import io.github.arkmind.seedy.mobile.admin.ShowMoreRow
 import io.github.arkmind.seedy.mobile.admin.SpacedDots
 import io.github.arkmind.seedy.mobile.admin.StatusLine
 import io.github.arkmind.seedy.mobile.admin.TabPills
@@ -59,15 +57,15 @@ import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 
-/* Busy servers collect hundreds of devices; show them a page at a time. */
-private const val Page = 40
+/* Busy servers collect hundreds of devices; show them a page at a time (here, in a user's tab and in Signed in on). */
+internal const val DevicePageSize = 40
 
 /** Server › Devices, from the web board "Server · Devices" in the phone kit. */
 @Composable
 fun DevicesScreen(state: DevicesState, actions: DevicesActions, onBack: () -> Unit, open: (String) -> Unit) {
     var query by remember { mutableStateOf("") }
     var who by remember { mutableStateOf<String?>(null) }
-    var shown by remember { mutableIntStateOf(Page) }
+    var shown by remember { mutableIntStateOf(DevicePageSize) }
     var menu by remember { mutableStateOf<DeviceRow?>(null) }
     var renaming by remember { mutableStateOf<DeviceRow?>(null) }
     var removing by remember { mutableStateOf<DeviceRow?>(null) }
@@ -103,15 +101,15 @@ fun DevicesScreen(state: DevicesState, actions: DevicesActions, onBack: () -> Un
                 enabled = !state.busy && state.devices != null,
             )
         }
-        SeedyField(query, { query = it; shown = Page }, Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp), placeholder = t("Search devices or apps"))
+        SeedyField(query, { query = it; shown = DevicePageSize }, Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp), placeholder = t("Search devices or apps"))
         if (state.people.isNotEmpty()) {
-            TabPills(listOf<Pair<String?, String>>(null to t("Everyone")) + state.people, who, { who = it; shown = Page }, top = 12.dp)
+            TabPills(listOf<Pair<String?, String>>(null to t("Everyone")) + state.people, who, { who = it; shown = DevicePageSize }, top = 12.dp)
         }
         val rows = state.filtered(who, query)
         Card(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
             when {
                 state.devices == null && state.error != null -> CardNote(t("Couldn’t load the devices") + ". " + state.error, action = t("Try again"), onAction = actions::reload)
-                state.devices == null -> SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3)
+                state.devices == null -> LoadingDots()
                 rows.isEmpty() -> CardNote(if (query.isNotBlank() || who != null) t("No devices match. Try another name or person.") else t("No devices have signed in yet."))
                 else -> rows.take(shown).forEachIndexed { i, d ->
                     if (i > 0) RowLine()
@@ -119,18 +117,11 @@ fun DevicesScreen(state: DevicesState, actions: DevicesActions, onBack: () -> Un
                 }
             }
         }
-        if (rows.size > shown) {
-            Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.Center) {
-                PillButton(t("Show more"), { shown += Page }, trailing = {
-                    SText(t("{n} more", "n" to formatNumber(rows.size - shown)), size = 13.sp, weight = 600, color = SeedyColors.Text3, maxLines = 1)
-                })
-            }
-        }
+        if (rows.size > shown) ShowMoreRow(rows.size - shown) { shown += DevicePageSize }
         FootNote(t("To stop a person signing in from a device, use their profile's Libraries and devices tab in {users}.", "users" to t("Users")), onClick = { open("users") })
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DeviceLine(d: DeviceRow, onClick: () -> Unit) {
     Row(
@@ -138,14 +129,9 @@ private fun DeviceLine(d: DeviceRow, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Surface), contentAlignment = Alignment.Center) {
-            SIcon(deviceIcon(d.kind), size = 20.dp, color = SeedyColors.TextHero)
-        }
+        IconTile(deviceIcon(d.kind), SeedyColors.TextHero, 40.dp, 20.dp, radius = 12.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp), itemVerticalAlignment = Alignment.CenterVertically) {
-                SText(d.name, size = 15.sp, weight = 800, color = SeedyColors.White)
-                if (d.mine) DeviceTag(t("This device"))
-            }
+            DeviceName(d.name, d.mine, t("This device"))
             if (d.playing != null) {
                 StatusLine(d.playing.orEmpty(), SeedyColors.Ok, color = SeedyColors.Ok, weight = 600)
             } else {
@@ -185,4 +171,14 @@ internal fun deviceIcon(kind: DeviceKind): IconDef = when (kind) {
     DeviceKind.Tv -> TvIcon
     DeviceKind.Phone -> PhoneIcon
     DeviceKind.Computer -> ComputerIcon
+}
+
+/** A device's name, with [tag] when it's the one in hand. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun DeviceName(name: String, mine: Boolean, tag: String) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+        SText(name, size = 15.sp, weight = 800, color = SeedyColors.White)
+        if (mine) DeviceTag(tag)
+    }
 }

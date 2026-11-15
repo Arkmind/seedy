@@ -16,8 +16,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,6 +30,8 @@ import io.github.arkmind.seedy.core.photos.FolderSort
 import io.github.arkmind.seedy.core.photos.PhotoFolderViewModel
 import io.github.arkmind.seedy.core.photos.countsLine
 import io.github.arkmind.seedy.core.photos.dateRange
+import io.github.arkmind.seedy.mobile.browse.EmptyNote
+import io.github.arkmind.seedy.mobile.browse.SquareChip
 import io.github.arkmind.seedy.mobile.browse.topInset
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -77,8 +77,7 @@ fun PhotoFolderScreen(state: PhotoFolderViewModel.State, actions: PhotoFolderAct
             }
         }
         val list = rememberLazyListState()
-        val nearEnd by remember { derivedStateOf { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index?.let { it >= list.layoutInfo.totalItemsCount - 8 } == true } }
-        LaunchedEffect(nearEnd, state.items.size) { if (nearEnd && !state.done && !state.loading) actions.onLoadMore() }
+        LoadMoreEffect(list, state.items.size, state.done, state.loading, actions.onLoadMore)
         LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(bottom = bottomPadding + 24.dp)) {
             item(key = "head") {
                 Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = topInset()), verticalAlignment = Alignment.CenterVertically) {
@@ -96,8 +95,8 @@ fun PhotoFolderScreen(state: PhotoFolderViewModel.State, actions: PhotoFolderAct
             if ((info?.count ?: 1) > 0) {
                 item(key = "show") {
                     LazyRow(Modifier.fillMaxWidth().padding(top = 24.dp), contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(FolderShow.entries, key = { it.name }) { s -> PhotoChip(t(s.label), s == state.show) { actions.onShow(s) } }
-                        item(key = "sort") { PhotoChip(t(state.sort.label), false, icon = PhotoIcons.Sort, onClick = actions.onSort) }
+                        items(FolderShow.entries, key = { it.name }) { s -> SquareChip(t(s.label), s == state.show) { actions.onShow(s) } }
+                        item(key = "sort") { SquareChip(t(state.sort.label), false, icon = PhotoIcons.Sort, onClick = actions.onSort) }
                     }
                 }
             }
@@ -155,7 +154,7 @@ private fun Hero(state: PhotoFolderViewModel.State, actions: PhotoFolderActions)
             Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(state.subfolders, key = { it.id }) { f ->
-                        PhotoChip(f.name.orEmpty(), false, icon = PhotoIcons.Folder, count = state.subCounts[f.id]?.toString()) { actions.onFolder(f) }
+                        SquareChip(f.name.orEmpty(), false, icon = PhotoIcons.Folder, count = state.subCounts[f.id]?.toString()) { actions.onFolder(f) }
                     }
                 }
             }

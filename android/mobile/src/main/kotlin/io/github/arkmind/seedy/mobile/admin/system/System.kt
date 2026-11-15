@@ -1,11 +1,11 @@
 package io.github.arkmind.seedy.mobile.admin.system
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,7 +64,7 @@ fun PluginsRoute() {
     LaunchedEffect(vm) { vm.load() }
     PluginsScreen(
         state, vm, onBack = nav::back,
-        openUrl = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } },
+        openUrl = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } },
         openSeedy = { nav.go(Route.Admin("branding")) },
     )
 }

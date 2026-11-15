@@ -1,8 +1,8 @@
 import { createPortal } from 'preact/compat';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { getItem, setFavorite } from '../../api/jellyfin';
-import { userStore } from '../../lib/app-state';
-import { clock, duration, ticksToSeconds } from '../../lib/format';
+import { canDownload, userStore } from '../../lib/app-state';
+import { clock, dot, duration, fmtLongWeekdayDate, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, back, navigate, setQuery, useLocation } from '../../lib/router';
 import { safeLocal, saveLocal, useStore } from '../../lib/store';
@@ -10,11 +10,12 @@ import { toast } from '../../ui/overlay';
 import { deviceStore } from '../me/prefs';
 import { patchUserData } from '../browse/parts';
 import {
-  PHOTO_FIELDS, bytesLabel, cameraName, coordsLabel, exposureLine, fileInfo, fileName, folderInfo, formatName, isVideo, longDay, ratioOf,
+  PHOTO_FIELDS, bytesLabel, cameraName, coordsLabel, exposureLine, fileInfo, fileName, folderInfo, formatName, isVideo, ratioOf,
   screenUrl, takenAt, thumbUrl, downloadUrl, type PhotoItem
 } from './api';
 import { PIcon, type PIconName } from './icons';
-import { clockOf, viewerOpened } from './parts';
+import { viewerOpened } from './parts';
+import { clock as mediaClock } from '../../audio/parts';
 
 /* The photo viewer (Photos · Viewer board): the photo over black with Close, its name, date and place in the list,
    Favorite, Rotate, Slideshow, Download and Details; Previous and Next at the sides, the neighbours in a strip below,
@@ -46,7 +47,7 @@ export function PhotoViewer({ list, total, more, done, onItem }: Props) {
   const playing = loc.query.get('play') === '1';
   const user = useStore(userStore);
   const device = useStore(deviceStore);
-  const canDownload = !!(user?.Policy as { EnableContentDownloading?: boolean } | undefined)?.EnableContentDownloading;
+  const mayDownload = canDownload(user);
   const index = list.findIndex((x) => x.Id === id);
   const [alone, setAlone] = useState<PhotoItem>();
   const [local, setLocal] = useState<Record<string, PhotoItem>>({});
@@ -174,7 +175,7 @@ export function PhotoViewer({ list, total, more, done, onItem }: Props) {
 
   const taken = item ? takenAt(item) : undefined;
   const count = total ?? list.length;
-  const sub = [taken ? longDay(taken) : '', taken ? clock(taken) : '', index >= 0 ? t('{n} of {total}', { n: index + 1, total: count }) : ''].filter(Boolean).join(' · ');
+  const sub = dot(taken ? fmtLongWeekdayDate(taken) : '', taken ? clock(taken) : '', index >= 0 ? t('{n} of {total}', { n: index + 1, total: count }) : '');
 
   return createPortal(
     <div class={'ph-viewer' + (info ? ' has-info' : '') + (idle ? ' is-idle' : '') + (playing ? ' is-playing' : '')} role="dialog" aria-modal="true" aria-label={item ? fileName(item) : t('Photo')}>
@@ -188,7 +189,7 @@ export function PhotoViewer({ list, total, more, done, onItem }: Props) {
           <VButton icon="heart" size={20} filled={!!item?.UserData?.IsFavorite} on={!!item?.UserData?.IsFavorite} label={item?.UserData?.IsFavorite ? t('Remove from favorites') : t('Add to favorites')} onClick={() => void favorite()} />
           <VButton icon="rotate" size={18} label={t('Rotate')} onClick={rotate} disabled={!item || isVideo(item)} />
           <VButton icon={playing ? 'pause' : 'slideshow'} size={18} label={playing ? t('Pause slideshow') : t('Start slideshow')} onClick={() => setPlaying(!playing)} />
-          {canDownload && item && (
+          {mayDownload && item && (
             <a class="ph-v-btn" href={downloadUrl(item.Id)} download aria-label={t('Download original')} title={t('Download original')}>
               <PIcon name="download" size={18} />
             </a>
@@ -363,7 +364,7 @@ function Stage({ item, rotation, view, setView, onSwipe }: { item: PhotoItem; ro
           {video && (
             <button type="button" class="ph-v-play" aria-label={t('Play {name}', { name: item.Name })} onClick={() => navigate(`/play/${item.Id}`)}>
               <PIcon name="play" size={34} />
-              <span>{clockOf(ticksToSeconds(item.RunTimeTicks))}</span>
+              <span>{mediaClock(Math.round(ticksToSeconds(item.RunTimeTicks)))}</span>
             </button>
           )}
         </div>
@@ -427,14 +428,14 @@ function Details({ item }: { item: PhotoItem }) {
   const folderPath = item.Path ? item.Path : '';
   const folderName = item.Album || (item.Path ? item.Path.split(/[\\/]/).slice(-2, -1)[0] : '');
   const geo = item.Latitude !== undefined && item.Longitude !== undefined && item.Latitude !== null && item.Longitude !== null && !(item.Latitude === 0 && item.Longitude === 0);
-  const sizeLine = [w && h ? `${w} × ${h}` : '', video ? duration(ticksToSeconds(item.RunTimeTicks)) : mp ? `${mp} MP` : ''].filter(Boolean).join(' · ');
-  const fileLine = [formatName(item, file.type), bytesLabel(file.size)].filter(Boolean).join(' · ');
+  const sizeLine = dot(w && h ? `${w} × ${h}` : '', video ? duration(ticksToSeconds(item.RunTimeTicks)) : mp ? `${mp} MP` : '');
+  const fileLine = dot(formatName(item, file.type), bytesLabel(file.size));
   // The folder's first photo, or this one when that has no picture.
   const cover = folderCover?.ImageTags?.Primary ? folderCover : item;
   return (
     <aside class="ph-v-info" aria-labelledby="ph-info-h">
       <h2 id="ph-info-h">{t('Details')}</h2>
-      {taken && <Fact icon="calendar" title={`${longDay(taken)}, ${clock(taken)}`} sub={item.PremiereDate ? t('Camera’s local time') : t('Date the file was saved')} />}
+      {taken && <Fact icon="calendar" title={`${fmtLongWeekdayDate(taken)}, ${clock(taken)}`} sub={item.PremiereDate ? t('Camera’s local time') : t('Date the file was saved')} />}
       {camera && <Fact icon="camera" title={camera} sub={exposureLine(item) || undefined} />}
       {(sizeLine || fileLine) && <Fact icon={video ? 'video' : 'file'} title={sizeLine || fileLine} sub={sizeLine ? fileLine : undefined} />}
       {folderName && <Fact icon="folder" title={folderName} sub={folderPath || undefined} />}

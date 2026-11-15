@@ -3,10 +3,10 @@ import { ApiError } from '../../api/client';
 import { tmdbImage } from '../../api/images';
 import { seerrDetails, seerrRequest, type SeerrDetails as SeerrTitle, type SeerrSeason, type SeerrStatus } from '../../api/seedy';
 import { meStore } from '../../lib/app-state';
-import { duration, fmtDate, plural, ratingLabel, dayOf, fitTitle } from '../../lib/format';
+import { dayOf, duration, fitTitle, fmtDate, initials, plural, ratingLabel, score } from '../../lib/format';
 import { Link, back } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
-import { TypePill, inLibrary as isInLibrary, playPath } from '../../ui/cards';
+import { castFace, inLibrary as isInLibrary, playPath, TypePill } from '../../ui/cards';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { toast } from '../../ui/overlay';
@@ -158,7 +158,7 @@ export function SeerrDetails({ mediaType, tmdbId }: { mediaType: 'movie' | 'tv';
         {seasons.length > 1 ? t('Request seasons') : t('Request')}
       </button>
     ) : (
-      <button type="button" class="btn btn-primary" disabled={busy !== null} onClick={() => request()} aria-label={`Request ${d.title}`}>
+      <button type="button" class="btn btn-primary" disabled={busy !== null} onClick={() => request()} aria-label={t('Request {title}', { title: d.title })}>
         <Icon name="plus" size={20} stroke={2.6} />
         {busy === 'std' ? t('Requesting…') : t('Request')}
       </button>
@@ -194,7 +194,7 @@ export function SeerrDetails({ mediaType, tmdbId }: { mediaType: 'movie' | 'tv';
               {d.certification && <span class="rating-badge">{ratingLabel(d.certification)}</span>}
               {runtimeLabel && <span>{runtimeLabel}</span>}
               {tv && seasonCount > 0 && <span>{plural(seasonCount, 'season')}</span>}
-              {d.rating ? <span class="score"><Icon name="star" size={15} />{d.rating.toFixed(1)}</span> : null}
+              {d.rating ? <span class="score"><Icon name="star" size={15} />{score(d.rating)}</span> : null}
               {genres && <span>{genres}</span>}
             </div>
             {d.tagline && <p class="seerr-tagline">{d.tagline}</p>}
@@ -315,18 +315,14 @@ function Shell({ children }: { children: preact.ComponentChildren }) {
   );
 }
 
-const CAST_BG = ['#3d2424', '#26362b', '#3f3322', '#2f2840', '#1f3a3c', '#3d2436', '#2e2e2e', '#24313d'];
-const CAST_INK = ['#f0b9a0', '#d9e3b5', '#f2cf86', '#e3c4ff', '#a8e6df', '#ffb3e6', '#e0e0e0', '#c9d6e3'];
-
 /* Same look as the library's cast card, but TMDB people aren't on the server, so it doesn't link. */
 function SeerrCastCard({ name, role, path, index }: { name: string; role?: string; path?: string; index: number }) {
   const img = tmdbImage(path, 'w300_and_h450_face');
   const [ok, setOk] = useState(true);
-  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   return (
     <div class="cast-card">
-      <span aria-hidden="true" class="cast-face" style={{ background: CAST_BG[index % CAST_BG.length], color: CAST_INK[index % CAST_INK.length] }}>
-        {img && ok ? <img src={img} alt="" class="art" loading="lazy" onError={() => setOk(false)} /> : initials}
+      <span aria-hidden="true" class="cast-face" style={castFace(index)}>
+        {img && ok ? <img src={img} alt="" class="art" loading="lazy" onError={() => setOk(false)} /> : initials(name)}
       </span>
       <span class="cast-text">
         <span class="cast-name">{name}</span>

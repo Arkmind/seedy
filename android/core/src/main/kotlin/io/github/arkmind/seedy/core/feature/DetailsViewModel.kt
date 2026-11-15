@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import io.github.arkmind.seedy.core.browse.Browse
 import io.github.arkmind.seedy.core.browse.ItemsQuery
 import io.github.arkmind.seedy.core.browse.techBadges
+import io.github.arkmind.seedy.core.format.blankUserData
 import io.github.arkmind.seedy.core.format.isVirtual
 import io.github.arkmind.seedy.core.format.parseDay
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.format.yearRange
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
@@ -328,7 +330,7 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
     }
 
     private fun patch(item: BaseItemDto, change: (UserItemDataDto) -> UserItemDataDto) {
-        val data = item.userData ?: UserItemDataDto(playbackPositionTicks = 0, playCount = 0, isFavorite = false, played = false, key = item.id.toString(), itemId = item.id)
+        val data = item.userData ?: blankUserData(item)
         _state.update { s -> s.copy(item = s.item?.copy(userData = change(s.item.userData ?: data))) }
     }
 
@@ -347,7 +349,7 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
             item.remoteTrailers?.firstNotNullOfOrNull { it.url?.takeIf(String::isNotBlank) }?.let { return@launch onTrailer(Trailer.Url(it)) }
             val seedy = browse.seedyTrailer(item.id) ?: return@launch
             when {
-                seedy.source == "local" && seedy.itemId != null -> runCatching { browse.item(UUID.fromString(seedy.itemId.let(::dashed))) }.getOrNull()?.let { onTrailer(Trailer.Local(it)) }
+                seedy.source == "local" && seedy.itemId != null -> uuidOf(seedy.itemId)?.let { id -> runCatching { browse.item(id) }.getOrNull() }?.let { onTrailer(Trailer.Local(it)) }
                 seedy.key != null -> onTrailer(Trailer.Url("https://www.youtube.com/watch?v=${seedy.key}"))
             }
         }
@@ -366,9 +368,6 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
     }
 
     companion object {
-        private fun dashed(id: String): String =
-            if (id.length == 32) "${id.substring(0, 8)}-${id.substring(8, 12)}-${id.substring(12, 16)}-${id.substring(16, 20)}-${id.substring(20)}" else id
-
         /** The web's useMissingSeasons: seasons Seerr knows that aren't on the server and aren't blocked. */
         fun gapsFor(seasons: List<BaseItemDto>, seerr: SeerrDetails?): Gaps {
             if (seerr == null) return Gaps()

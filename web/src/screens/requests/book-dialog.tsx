@@ -4,9 +4,10 @@ import { getLang, t, tn, tx } from '../../lib/i18n';
 import { useAsync } from '../../lib/store';
 import { Icon, type IconName } from '../../ui/icons';
 import { Sheet, toast } from '../../ui/overlay';
-import type { BookTarget } from './books';
-import { BookArt, noteRequest, refreshMediaSummary, SERVICE_NAMES } from './media-parts';
-import { Quota } from './music-dialog';
+import type { BookTarget } from './RequestsBooks';
+import {
+  BookArt, DialogClose, DialogError, DialogFoot, noteRequest, Quota, refreshMediaSummary, sendFailed, seriesNumber, SERVICE_NAMES
+} from './media-parts';
 
 /* Request a book (RequestBook board): the ebook, the audiobook or both (a comic for comics), the language, the
    person's monthly limit (an ebook and its audiobook count as two), the libraries it lands in, and whether an admin
@@ -37,7 +38,6 @@ function routeLine(format: BookFormat, service: string): string {
   return name;
 }
 
-const num = (n?: number) => (n === undefined ? '' : Number.isInteger(n) ? String(n) : n.toFixed(1));
 
 export function RequestBook({ target, onClose, onDone }: { target: BookTarget; onClose: () => void; onDone?: () => void }) {
   const state = useAsync(() => Promise.all([bookDetails(target.card), mediaOptions('book')]), [target.card.workId]);
@@ -100,19 +100,19 @@ function Body({ book, opts, row, loading, error, retry, onClose, onDone }: {
       onDone?.();
       onClose();
     } catch (e) {
-      toast(`${t('Couldn’t send the request.')} ${(e as Error).message || ''}`.trim(), 'error');
+      sendFailed(e);
     } finally {
       setBusy(false);
     }
   };
 
   const meta = [
-    book.series ? t('{series}, book {n}', { series: book.series, n: num(book.seriesIndex) }) : '',
+    book.series ? t('{series}, book {n}', { series: book.series, n: seriesNumber(book.seriesIndex) }) : '',
     book.year ? String(book.year) : '',
     book.pages ? t('{n} pages', { n: book.pages }) : ''
   ].filter(Boolean);
   const read = book.readTo !== undefined && book.readFrom !== undefined
-    ? (book.readFrom === book.readTo ? t('You’ve read book {n} on Seedy.', { n: num(book.readTo) }) : t('You’ve read books {from} to {to} on Seedy.', { from: num(book.readFrom), to: num(book.readTo) }))
+    ? (book.readFrom === book.readTo ? t('You’ve read book {n} on Seedy.', { n: seriesNumber(book.readTo) }) : t('You’ve read books {from} to {to} on Seedy.', { from: seriesNumber(book.readFrom), to: seriesNumber(book.readTo) }))
     : '';
   const services = [...new Set([...picked].map((f) => available.find((a) => a.format === f)?.service).filter(Boolean))] as string[];
   const libraries = [...new Set([...picked].map((f) => available.find((a) => a.format === f)?.library).filter(Boolean))] as string[];
@@ -134,14 +134,11 @@ function Body({ book, opts, row, loading, error, retry, onClose, onDone }: {
           {(book.description || read) && <span class="reqs-dlg-desc">{[book.description, read].filter(Boolean).join(' ')}</span>}
           {loading && !book.description && <span class="skel skel-line" style={{ width: '80%' }} />}
         </div>
-        <button type="button" class="reqs-dlg-close" aria-label={t('Close')} onClick={onClose}><Icon name="close" size={18} stroke={2.2} /></button>
+        <DialogClose onClose={onClose} />
       </div>
       <div class="reqs-dlg-body">
         {error ? (
-          <div class="rq-error">
-            <span>{error.message || t('Couldn’t load this book.')}</span>
-            <button type="button" class="btn btn-secondary is-sm" onClick={retry}>{t('Try again')}</button>
-          </div>
+          <DialogError message={error.message || t('Couldn’t load this book.')} onRetry={retry} />
         ) : (
           <>
             <span class="reqs-dlg-label">{t('Formats')}</span>
@@ -199,21 +196,17 @@ function Body({ book, opts, row, loading, error, retry, onClose, onDone }: {
           </>
         )}
       </div>
-      <div class="reqs-dlg-foot">
-        <span class="reqs-dlg-note">
-          {opts && <span class={'reqs-dot is-8 ' + (blocked || over ? 'is-danger' : opts.autoApprove ? 'is-ok' : 'is-pending')} aria-hidden="true" />}
-          {!opts ? '' : blocked ? t('Book requests are switched off for your profile')
-            : over ? tn(left as number, 'You have {n} book request left this month', 'You have {n} book requests left this month')
-            : opts.autoApprove ? t('Approved automatically for you') : t('An admin approves requests before {app} searches', { app: SERVICE_NAMES[(services[0] ?? 'shelfarr') as keyof typeof SERVICE_NAMES] })}
-        </span>
-        <span class="reqs-dlg-buttons">
-          <button type="button" class="reqs-dlg-cancel" onClick={onClose}>{t('Cancel')}</button>
-          <button type="button" data-autofocus class="btn btn-primary reqs-dlg-send" disabled={busy || blocked || over || !units || !opts} onClick={() => void submit()}>
-            <Icon name="request" size={18} stroke={2.2} />
-            {busy ? t('Requesting…') : label}
-          </button>
-        </span>
-      </div>
+      <DialogFoot
+        tone={!opts ? undefined : blocked || over ? 'danger' : opts.autoApprove ? 'ok' : 'pending'}
+        note={!opts ? '' : blocked ? t('Book requests are switched off for your profile')
+          : over ? tn(left as number, 'You have {n} book request left this month', 'You have {n} book requests left this month')
+          : opts.autoApprove ? t('Approved automatically for you') : t('An admin approves requests before {app} searches', { app: SERVICE_NAMES[(services[0] ?? 'shelfarr') as keyof typeof SERVICE_NAMES] })}
+        busy={busy}
+        disabled={busy || blocked || over || !units || !opts}
+        label={label}
+        onSend={() => void submit()}
+        onClose={onClose}
+      />
     </>
   );
 }

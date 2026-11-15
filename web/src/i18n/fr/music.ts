@@ -8,7 +8,6 @@ const fr: Record<string, string> = {
   'Instant mix': 'Mix instantané',
   'Songs': 'Morceaux',
   'Song': 'Morceau',
-  "Couldn't start the scan": 'Impossible de lancer l’analyse',
   'Jump back in': 'Reprendre l’écoute',
   'Instant mixes for you': 'Mix instantanés pour vous',
   'More mixes': 'Plus de mix',
@@ -59,7 +58,7 @@ const fr: Record<string, string> = {
   'Nothing the server can play is in here.': 'Rien ici que le serveur puisse lire.',
 
   // Song tables and menus
-  'Time (song length)': 'Durée',
+  'Time|song length': 'Durée',
   'Favorite': 'Favori',
   'Disc {n}': 'Disque {n}',
   'Playing': 'En lecture',

@@ -4,7 +4,6 @@ import io.github.arkmind.seedy.core.admin.AdminException
 import io.github.arkmind.seedy.core.admin.AdminHttp
 import io.github.arkmind.seedy.core.admin.ItemsResult
 import io.github.arkmind.seedy.core.admin.SeedyJson
-import io.github.arkmind.seedy.core.admin.normId
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
@@ -230,6 +229,13 @@ class ManageApi(private val session: UserSession) {
         val body = org.jellyfin.sdk.model.FileInfo(android.util.Base64.encode(bytes, android.util.Base64.NO_WRAP), mime)
         http.raw(HttpMethod.POST, "/Items/$id/Images/$type", body = body)
     }
+}
 
-    fun sameId(a: String?, b: String?): Boolean = !a.isNullOrEmpty() && normId(a) == normId(b)
+/** A metadata or image provider's short name, as the web writes it ("TheMovieDb" → "TMDb"). */
+fun providerName(name: String): String = when (name) {
+    "TheMovieDb" -> "TMDb"
+    "TheTVDB", "TheTvdb" -> "TVDb"
+    "The Open Movie Database" -> "OMDb"
+    "FanArt", "Fanart" -> "Fanart"
+    else -> name
 }

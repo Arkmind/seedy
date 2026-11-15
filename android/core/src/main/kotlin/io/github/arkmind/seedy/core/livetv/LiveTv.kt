@@ -1,12 +1,14 @@
 package io.github.arkmind.seedy.core.livetv
 
+import io.github.arkmind.seedy.core.data.io
 import io.github.arkmind.seedy.core.format.duration
 import io.github.arkmind.seedy.core.format.episodeTag
+import io.github.arkmind.seedy.core.format.hourMinute
+import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import java.time.LocalDate
 import org.jellyfin.sdk.api.client.extensions.liveTvApi
 import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -19,7 +21,6 @@ import org.jellyfin.sdk.model.api.RecordingStatus
 import java.text.Collator
 import java.time.Duration
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 /** A channel as the guide lists it: Seedy numbers channels that have no number, and cleans their names. */
@@ -99,8 +100,6 @@ class LiveTv(private val session: UserSession) {
         if (favorite) api.userDataApi.markFavoriteItem(channel.id, session.userId) else api.userDataApi.unmarkFavoriteItem(channel.id, session.userId)
     }
 
-    private suspend fun <T> io(block: suspend () -> T): T = withContext(Dispatchers.IO) { block() }
-
     companion object {
         private val tag = Regex("\\s*\\[[^\\]]*]\\s*")
         private val resolution = Regex("\\s*\\((?:\\d{3,4}[pi]|SD|HD|FHD|UHD|4K)\\)\\s*", RegexOption.IGNORE_CASE)
@@ -158,12 +157,21 @@ class LiveTv(private val session: UserSession) {
             return bg to (if (bg in lightColours) 0xFF1E1E1E else 0xFFFFFFFF)
         }
 
-        private val hhmm = DateTimeFormatter.ofPattern("HH:mm")
 
-        fun clockOf(t: LocalDateTime?): String = t?.format(hhmm).orEmpty()
+        fun clockOf(t: LocalDateTime?): String = t?.let(::hourMinute).orEmpty()
 
         /** "20:45 – 22:45". */
         fun timeRange(p: BaseItemDto): String = "${clockOf(p.startDate)} – ${clockOf(p.endDate)}"
+
+        /** The guide's day: "Today, Mon 3", "Tomorrow, Tue 4", else "Wed 5 March". */
+        fun dayLabel(day: LocalDate, today: LocalDate = LocalDate.now()): String {
+            val short = weekdayDate(day).substringBeforeLast(' ')
+            return when (day) {
+                today -> t("Today, {day}", "day" to short)
+                today.plusDays(1) -> t("Tomorrow, {day}", "day" to short)
+                else -> weekdayDate(day)
+            }
+        }
 
         fun isAiring(p: BaseItemDto?, now: LocalDateTime): Boolean = p?.startDate != null && p.endDate != null && !p.startDate!!.isAfter(now) && now.isBefore(p.endDate)
 

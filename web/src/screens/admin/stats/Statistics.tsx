@@ -3,13 +3,14 @@ import { cardArt } from '../../../api/images';
 import type { BaseItem } from '../../../api/types';
 import { formatNumber, t, tn } from '../../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../../lib/router';
-import { toast } from '../../../ui/overlay';
+import { toastError } from '../../../ui/overlay';
 import { AdminLayout, LoadError } from '../AdminLayout';
 import { exportStats, getStats, type Range, type Stats, type StatsFilters } from './api';
 import {
-  Avatar, Change, Kpi, KIND_COLOUR, KINDS, METHOD_COLOUR, Panel, Trend, capital, codecName, dayKey, durationText, fmtDate,
-  hoursText, hoursValue, kindLabel, listText, longDay, methodLabel, parseDay, pctText, shortMoment, songs
+  Avatar, Change, Kpi, KpiSkeletons, KIND_COLOUR, KINDS, METHOD_COLOUR, Panel, Trend, durationText, hoursText, hoursValue, kindLabel, longDay, methodLabel, parseDay, pctText, shortMoment, songs
 } from './parts';
+import { capitalize, dayKey, fmtIntl, listText } from '../../../lib/format';
+import { codecName } from '../../server/format';
 import './stats.css';
 
 const RANGES: { value: Range; label: string }[] = [
@@ -30,7 +31,7 @@ function readFilters(q: URLSearchParams): StatsFilters {
 }
 
 /* A link back to this page with one filter changed. */
-export function statsLink(f: StatsFilters, patch: Partial<StatsFilters>): string {
+function statsLink(f: StatsFilters, patch: Partial<StatsFilters>): string {
   const next = { ...f, ...patch };
   const q = new URLSearchParams();
   if (next.range !== '30d') q.set('range', next.range);
@@ -66,7 +67,7 @@ export function AdminStatistics() {
     try {
       await exportStats(filters);
     } catch (e) {
-      toast(`${t('Couldn’t export the statistics.')} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t export the statistics.'), e);
     } finally {
       setExporting(false);
     }
@@ -176,7 +177,7 @@ function Kpis({ data, filters }: { data: Stats; filters: StatsFilters }) {
   // No change to show when the log doesn't reach back over the period before: say since when it counts instead.
   const start = data.firstPlay && data.firstPlay > data.from ? data.firstPlay : data.from;
   const since = (data.range === 'all' || (data.firstPlay && data.firstPlay > data.from))
-    ? <Trend>{t('Since {date}', { date: fmtDate(parseDay(start), { day: 'numeric', month: 'short', year: 'numeric' }) })}</Trend>
+    ? <Trend>{t('Since {date}', { date: fmtIntl(parseDay(start), { day: 'numeric', month: 'short', year: 'numeric' }) })}</Trend>
     : k.prevWatchMs === null || k.prevWatchMs === undefined ? <Trend>{t('Not enough history to compare')}</Trend> : null;
   return (
     <div class="st-kpis">
@@ -243,9 +244,9 @@ function niceScale(maxMs: number): { step: number; top: number } {
 
 function bucketLabel(data: Stats, start: string, long: boolean): string {
   const d = parseDay(start);
-  if (data.bucket === 'month') return capital(fmtDate(d, long ? { month: 'long', year: 'numeric' } : { month: 'short' }));
-  if (data.bucket === 'week') return long ? t('Week of {date}', { date: fmtDate(d, { day: 'numeric', month: 'long' }) }) : fmtDate(d, { day: 'numeric', month: 'short' });
-  return long ? longDay(d) : fmtDate(d, { day: 'numeric', month: 'short' });
+  if (data.bucket === 'month') return capitalize(fmtIntl(d, long ? { month: 'long', year: 'numeric' } : { month: 'short' }));
+  if (data.bucket === 'week') return long ? t('Week of {date}', { date: fmtIntl(d, { day: 'numeric', month: 'long' }) }) : fmtIntl(d, { day: 'numeric', month: 'short' });
+  return long ? longDay(d) : fmtIntl(d, { day: 'numeric', month: 'short' });
 }
 
 function WatchTime({ data }: { data: Stats }) {
@@ -260,9 +261,10 @@ function WatchTime({ data }: { data: Stats }) {
   const avgText = data.bucket === 'month' ? t('Average {h} a month', { h: hoursText(avg, 1) })
     : data.bucket === 'week' ? t('Average {h} a week', { h: hoursText(avg, 1) }) : t('Average {h} a day', { h: hoursText(avg, 1) });
   return (
-    <section aria-labelledby="st-wt" class="st-panel">
-      <div class="st-panel-head">
-        <h2 id="st-wt">{per}</h2>
+    <Panel
+      id="st-wt"
+      title={per}
+      aside={
         <span class="st-wt-aside">
           <span class="st-avg-key">
             <svg viewBox="0 0 24 4" width="24" height="4" aria-hidden="true"><line x1="0" x2="24" y1="2" y2="2" /></svg>
@@ -270,9 +272,10 @@ function WatchTime({ data }: { data: Stats }) {
           </span>
           <button type="button" class="st-mini-btn" aria-pressed={asTable} onClick={() => setAsTable((v) => !v)}>{asTable ? t('Show as chart') : t('Show as table')}</button>
         </span>
-      </div>
+      }
+    >
       {asTable ? <WatchTable data={data} /> : <WatchChart data={data} avg={avg} />}
-    </section>
+    </Panel>
   );
 }
 
@@ -524,10 +527,10 @@ function WhenPeopleWatch({ data }: { data: Stats }) {
   const [cell, setCell] = useState<{ d: number; h: number } | null>(null);
   const max = Math.max(...data.heat.flat(), 0);
   const names = DAY_NAMES();
-  const short = names.map((d) => capital(fmtDate(d, { weekday: 'short' }).replace('.', '')));
+  const short = names.map((d) => capitalize(fmtIntl(d, { weekday: 'short' }).replace('.', '')));
   const hh = (h: number) => `${String(h % 24).padStart(2, '0')}:00`;
   const b = busiest(data.heat);
-  const busy = b ? t('Busiest: {days}, {from} to {to}', { days: capital(listText(b.days.map((d) => fmtDate(names[d], { weekday: 'long' })))), from: hh(b.from), to: hh(b.from + 3) }) : t('Nothing played in this period.');
+  const busy = b ? t('Busiest: {days}, {from} to {to}', { days: capitalize(listText(b.days.map((d) => fmtIntl(names[d], { weekday: 'long' })))), from: hh(b.from), to: hh(b.from + 3) }) : t('Nothing played in this period.');
 
   // The most recent such weekday in the period, opened at that hour.
   const openCell = (d: number, h: number) => {
@@ -542,9 +545,9 @@ function WhenPeopleWatch({ data }: { data: Stats }) {
       ...(cell.h >= 12 ? { right: `${((23 - cell.h) / 24) * 100}%` } : { left: `calc(34px + ${(cell.h / 24) * 100}%)` }),
       ...(cell.d <= 3 ? { top: `${(cell.d + 1) * 26 + 4}px` } : { bottom: `${(7 - cell.d) * 26 + 22}px` })
     }}>
-      <b>{t('{day}s, {time}', { day: fmtDate(names[cell.d], { weekday: 'long' }), time: hh(cell.h) })}</b>
+      <b>{t('{day}s, {time}', { day: fmtIntl(names[cell.d], { weekday: 'long' }), time: hh(cell.h) })}</b>
       <span>{t('{h} watched on average', { h: hoursText(data.heat[cell.d][cell.h], 1) })} · {tn(data.heatViewers[cell.d][cell.h], '{n} viewer', '{n} viewers')}</span>
-      <span class="st-tip-more">{t('Click to see each {day}', { day: fmtDate(names[cell.d], { weekday: 'long' }) })}<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
+      <span class="st-tip-more">{t('Click to see each {day}', { day: fmtIntl(names[cell.d], { weekday: 'long' }) })}<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
     </div>
   );
   return (
@@ -697,7 +700,7 @@ function MostWatched({ data }: { data: Stats }) {
 function Skeleton() {
   return (
     <div class="st-body" aria-hidden="true">
-      <div class="st-kpis">{[0, 1, 2, 3, 4].map((i) => <div key={i} class="st-kpi"><span class="skel skel-line" style={{ width: '60%' }} /><span class="skel skel-line" style={{ width: '40%', height: '28px' }} /><span class="skel skel-line" style={{ width: '80%' }} /></div>)}</div>
+      <KpiSkeletons count={5} />
       <section class="st-panel"><span class="skel skel-line" style={{ width: '200px', height: '18px' }} /><span class="skel" style={{ height: '220px', borderRadius: '12px' }} /></section>
     </div>
   );

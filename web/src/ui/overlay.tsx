@@ -241,6 +241,9 @@ export function toast(text: string, tone: ToastItem['tone'] = 'ok', ms = 3600) {
   window.setTimeout(() => toastStore.set((list) => list.filter((t) => t.id !== id)), ms);
 }
 
+/* "Couldn’t save. <the server's message>", as an error toast. */
+export const toastError = (lead: string, e: unknown, fallback = '') => toast(`${lead} ${(e as Error)?.message || fallback}`.trim(), 'error');
+
 export function ToastHost() {
   const list = useStore(toastStore);
   return (

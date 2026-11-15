@@ -4,10 +4,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.arkmind.seedy.core.admin.AdminHttp
 import io.github.arkmind.seedy.core.admin.SystemInfo
+import io.github.arkmind.seedy.core.admin.system.LogFile
+import io.github.arkmind.seedy.core.data.bool
+import io.github.arkmind.seedy.core.data.json
+import io.github.arkmind.seedy.core.data.obj
+import io.github.arkmind.seedy.core.data.strings
+import io.github.arkmind.seedy.core.data.with
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.session.UserSession
 import io.github.arkmind.seedy.core.settings.Choice
+import io.github.arkmind.seedy.core.settings.Choices
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -338,14 +345,14 @@ class PlaybackDraft(var enc: JsonObject = JsonObject(emptyMap()), var srv: JsonO
         val v = eStr(key)
         val all = withCurrent(options, v)
         val was = (enc[key] as? JsonPrimitive)?.contentOrNull.orEmpty()
-        return ChoiceSetting("enc:$key", name, changedHelp(key in encDraft, labelOf(all, was), help), labelOf(all, v), v, all)
+        return ChoiceSetting("enc:$key", name, changedHelp(key in encDraft, Choices.label(all, was), help), Choices.label(all, v), v, all)
     }
 
     private fun srvChoice(key: String, name: String, help: String?, options: List<Choice<String>>): ChoiceSetting {
         val v = sStr(key)
         val all = withCurrent(options, v)
         val was = (savedSrv(key) as? JsonPrimitive)?.contentOrNull.orEmpty()
-        return ChoiceSetting("srv:$key", name, changedHelp(key in srvDraft, labelOf(all, was), help), labelOf(all, v), v, all)
+        return ChoiceSetting("srv:$key", name, changedHelp(key in srvDraft, Choices.label(all, was), help), Choices.label(all, v), v, all)
     }
 
     /** A number row; [show] writes a value the way the row shows it. */
@@ -389,7 +396,7 @@ class PlaybackDraft(var enc: JsonObject = JsonObject(emptyMap()), var srv: JsonO
             val was = (enc[deviceKey] as? JsonPrimitive)?.contentOrNull.orEmpty()
             groups += SettingsGroup(
                 t("Device"),
-                listOf(ChoiceSetting("enc:$deviceKey", t("GPU device"), changedHelp(deviceKey in encDraft, labelOf(options, was).ifEmpty { t("Automatic") }, t("The GPU {name} runs on", "name" to short)), labelOf(options, value).ifEmpty { t("Automatic") }, value, options)),
+                listOf(ChoiceSetting("enc:$deviceKey", t("GPU device"), changedHelp(deviceKey in encDraft, Choices.label(options, was).ifEmpty { t("Automatic") }, t("The GPU {name} runs on", "name" to short)), Choices.label(options, value).ifEmpty { t("Automatic") }, value, options)),
             )
         }
         val lowPowerChanged = "EnableIntelLowPowerH264HwEncoder" in encDraft || "EnableIntelLowPowerHevcHwEncoder" in encDraft

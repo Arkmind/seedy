@@ -1,12 +1,12 @@
 import type { RefObject } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { setFavorite } from '../../api/jellyfin';
+import { setFavorite, setPlayed } from '../../api/jellyfin';
 import type { BaseItem } from '../../api/types';
-import { isAdmin, userStore } from '../../lib/app-state';
+import { isAdmin } from '../../lib/app-state';
 import { t, tn } from '../../lib/i18n';
 import { Icon, type IconName } from '../../ui/icons';
 import { MenuItem, Popover, toast } from '../../ui/overlay';
-import { canCollect, markPlayed, refreshItem } from './manage/actions';
+import { canCollect, canDeleteAny, refreshItem } from './manage/actions';
 import { openManage } from './manage/host';
 import { CollectionPicker, PlaylistPicker } from './manage/menu';
 import type { GridSelect } from './parts';
@@ -60,7 +60,6 @@ export function useSelection(visible: BaseItem[]): Selection {
   };
 }
 
-const canDeleteAny = () => isAdmin() || !!userStore.get()?.Policy?.EnableContentDeletion || !!(userStore.get()?.Policy as { EnableContentDeletionFromFolders?: string[] } | undefined)?.EnableContentDeletionFromFolders?.length;
 
 /* Runs an action on every picked title, a few at a time. */
 async function each(items: BaseItem[], fn: (id: string) => Promise<unknown>): Promise<number> {
@@ -72,12 +71,28 @@ async function each(items: BaseItem[], fn: (id: string) => Promise<unknown>): Pr
   return failed;
 }
 
-export function SelectionBar({ sel, total, kindLabel, onSelectAll, onChanged }: {
+/* The start of a selection bar: close, "3 selected" and "Select all 248". */
+export function SelectionHead({ sel, total, busy, setBusy, onSelectAll }: {
+  sel: Selection; total: number; busy: string | null; setBusy: (b: string | null) => void; onSelectAll: () => Promise<void>;
+}) {
+  const n = sel.items.length;
+  return (
+    <div class="lib-sel-left">
+      <button type="button" class="lib-sel-close" aria-label={t('Stop selecting')} onClick={sel.stop}><Icon name="close" size={18} stroke={2.2} /></button>
+      <span class="lib-sel-count" aria-live="polite">{t('{n} selected', { n })}</span>
+      {n < total && (
+        <button type="button" class="lib-sel-all" disabled={busy !== null} onClick={() => { setBusy('all'); onSelectAll().finally(() => setBusy(null)); }}>
+          {busy === 'all' ? t('Selecting…') : t('Select all {n}', { n: total })}
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function SelectionBar({ sel, total, onSelectAll, onChanged }: {
   sel: Selection;
   /* Everything in this view (for "Select all 248"). */
   total: number;
-  /* "{n} movies selected" for the toolbar's name. */
-  kindLabel: (n: number) => string;
   onSelectAll: () => Promise<void>;
   onChanged: () => void;
 }) {
@@ -107,20 +122,12 @@ export function SelectionBar({ sel, total, kindLabel, onSelectAll, onChanged }: 
   );
 
   return (
-    <div role="toolbar" aria-label={kindLabel(n)} class="lib-sel">
-      <div class="lib-sel-left">
-        <button type="button" class="lib-sel-close" aria-label={t('Stop selecting')} onClick={sel.stop}><Icon name="close" size={18} stroke={2.2} /></button>
-        <span class="lib-sel-count" aria-live="polite">{t('{n} selected', { n })}</span>
-        {n < total && (
-          <button type="button" class="lib-sel-all" disabled={busy !== null} onClick={() => { setBusy('all'); onSelectAll().finally(() => setBusy(null)); }}>
-            {busy === 'all' ? t('Selecting…') : t('Select all {n}', { n: total })}
-          </button>
-        )}
-      </div>
+    <div role="toolbar" aria-label={t('{n} selected', { n })} class="lib-sel">
+      <SelectionHead sel={sel} total={total} busy={busy} setBusy={setBusy} onSelectAll={onSelectAll} />
       <div class="lib-sel-actions">
         {btn('playlist', 'playlistAdd', t('Add to playlist'), () => setPicker((p) => (p === 'playlist' ? null : 'playlist')), playlistRef)}
         {canCollect() && btn('collection', 'collection', t('Add to collection'), () => setPicker((p) => (p === 'collection' ? null : 'collection')), collectionRef)}
-        {btn('watched', 'check', t('Mark watched'), () => void run('watched', (id) => markPlayed(id, true), (k) => tn(k, 'Marked {n} title as watched', 'Marked {n} titles as watched')))}
+        {btn('watched', 'check', t('Mark watched'), () => void run('watched', (id) => setPlayed(id, true), (k) => tn(k, 'Marked {n} title as watched', 'Marked {n} titles as watched')))}
         {isAdmin() && btn('refresh', 'refetch', t('Refresh metadata'), () => void run('refresh', refreshItem, (k) => tn(k, 'Refreshing {n} title', 'Refreshing {n} titles')))}
         {canDeleteAny() && btn('delete', 'trash', t('Delete'), () => openManage('delete', sel.items), undefined, true)}
         <button ref={moreRef} type="button" class="lib-sel-more" aria-label={t('More for selected')} aria-haspopup="menu" aria-expanded={picker === 'more' ? 'true' : 'false'}
@@ -136,7 +143,7 @@ export function SelectionBar({ sel, total, kindLabel, onSelectAll, onChanged }: 
       </Popover>
       <Popover anchor={moreRef as RefObject<HTMLElement>} open={picker === 'more'} onClose={() => setPicker(null)} width={260}>
         <div class="menu" role="menu">
-          <MenuItem icon="check" label={t('Mark unwatched')} onSelect={() => void run('watched', (id) => markPlayed(id, false), (k) => tn(k, 'Marked {n} title as unwatched', 'Marked {n} titles as unwatched'))} />
+          <MenuItem icon="check" label={t('Mark unwatched')} onSelect={() => void run('watched', (id) => setPlayed(id, false), (k) => tn(k, 'Marked {n} title as unwatched', 'Marked {n} titles as unwatched'))} />
           <MenuItem icon="heart" label={t('Add to favorites')} onSelect={() => void run('fav', (id) => setFavorite(id, true), (k) => tn(k, 'Added {n} title to favorites', 'Added {n} titles to favorites'))} />
           <MenuItem icon="heart" label={t('Remove from favorites')} onSelect={() => void run('fav', (id) => setFavorite(id, false), (k) => tn(k, 'Removed {n} title from favorites', 'Removed {n} titles from favorites'))} />
           <div class="menu-sep" />

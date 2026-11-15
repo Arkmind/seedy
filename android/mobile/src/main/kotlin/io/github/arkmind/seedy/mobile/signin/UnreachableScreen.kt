@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.data.SavedServer
+import io.github.arkmind.seedy.core.data.host
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.BrandMark
@@ -44,7 +45,6 @@ import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 
 /** "192.168.1.20:8096": a server's address as the unreachable pages print it. */
-fun hostOf(server: SavedServer): String = server.address.substringAfter("://").trimEnd('/')
 
 /**
  * Board "Android · Server unreachable": Medu dropped the cable. Try again now, or pick another server; Seedy tries by
@@ -88,7 +88,7 @@ fun UnreachableScreen(server: SavedServer, retryIn: Int?, onRetry: () -> Unit, o
                 Row(Modifier.padding(top = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Spinner(13.dp, SeedyColors.Text)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        BasicText(hostOf(server), style = BaseText.copy(fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = SeedyColors.Text3), maxLines = 1)
+                        BasicText(server.host, style = BaseText.copy(fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = SeedyColors.Text3), maxLines = 1)
                         SText(
                             " · " + if (retryIn != null) t("trying again in {n} s", "n" to retryIn) else t("trying again…"),
                             size = 12.sp, color = SeedyColors.Text3, maxLines = 1,

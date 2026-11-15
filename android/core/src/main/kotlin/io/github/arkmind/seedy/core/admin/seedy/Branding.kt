@@ -148,12 +148,8 @@ class BrandingViewModel(private val session: UserSession) : ViewModel(), Brandin
 
     override fun messageShown() = extra.update { it.copy(message = null) }
 
-    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
-    override fun onCleared() {
-        // Changes still waiting for their pause go out now.
-        kotlinx.coroutines.GlobalScope.launch { runCatching { store.flush() } }
-        super.onCleared()
-    }
+    // Changes still waiting for their pause go out now.
+    override fun onCleared() = store.flushDetached()
 
     private companion object {
         fun alongside(address: String): String = (runCatching { URI(address).path }.getOrNull().orEmpty().trimEnd('/')) + "/seedy"

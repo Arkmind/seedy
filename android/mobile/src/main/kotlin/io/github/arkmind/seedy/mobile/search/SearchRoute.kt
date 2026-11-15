@@ -27,8 +27,11 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.text.style.TextAlign
+import io.github.arkmind.seedy.core.format.cardTitle
+import io.github.arkmind.seedy.core.format.nameInitials
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.seedy.tmdbImage
+import io.github.arkmind.seedy.mobile.requests.openSeerr
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.components.Medu
 import io.github.arkmind.seedy.ui.components.MeduMood
@@ -86,11 +89,9 @@ import io.github.arkmind.seedy.mobile.browse.NoticeCard
 import io.github.arkmind.seedy.mobile.browse.Portrait
 import io.github.arkmind.seedy.mobile.browse.SectionLabel
 import io.github.arkmind.seedy.mobile.browse.SeerrPoster
-import io.github.arkmind.seedy.mobile.browse.initials
 import io.github.arkmind.seedy.mobile.browse.marked
 import io.github.arkmind.seedy.mobile.browse.topInset
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
-import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.bleed
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.icons.AppIcons
@@ -104,7 +105,6 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
-import java.util.UUID
 
 /** Board "Android · Search". */
 @Composable
@@ -122,20 +122,12 @@ fun SearchRoute() {
             onOpen = { vm.remember(); nav.open(it) },
             onPlay = { vm.remember(); nav.play(it) },
             onSeerr = vm::askSeerr,
-            onSeerrTitle = { s ->
-                vm.remember()
-                val local = s.jellyfinItemId?.let { runCatching { UUID.fromString(dashed(it)) }.getOrNull() }
-                if (local != null) nav.go(Route.Details(local)) else nav.go(Route.SeerrTitle(s.mediaType, s.tmdbId))
-            },
+            onSeerrTitle = { s -> vm.remember(); nav.openSeerr(s.mediaType, s.tmdbId, s.jellyfinItemId) },
             onRetry = vm::retry,
         ),
         bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
     )
 }
-
-/** Jellyfin ids come without dashes. */
-fun dashed(id: String): String =
-    if (id.length == 32 && '-' !in id) "${id.substring(0, 8)}-${id.substring(8, 12)}-${id.substring(12, 16)}-${id.substring(16, 20)}-${id.substring(20)}" else id
 
 class SearchActions(
     val onText: (String) -> Unit = {},
@@ -164,7 +156,7 @@ fun SearchScreen(state: SearchViewModel.State, actions: SearchActions, bottomPad
     LazyColumn(Modifier.fillMaxSize().background(SeedyColors.Bg), contentPadding = PaddingValues(bottom = bottomPadding + 24.dp)) {
         item(key = "top") {
             Column(Modifier.padding(start = 16.dp, end = 16.dp, top = topInset()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Field(state.text, actions, autofocus)
+                SearchField(state.text, actions.onText, actions.onBack, autofocus, t("Search movies, shows and people"))
                 if (results != null && !results.isEmpty) {
                     val all = results.all
                     ChipRow(Modifier.bleed(16.dp), side = 16.dp) {
@@ -187,9 +179,9 @@ fun SearchScreen(state: SearchViewModel.State, actions: SearchActions, bottomPad
     }
 }
 
-
+/** The search field of board "Android · Search": back, what's typed ([placeholder] until then) and Clear. */
 @Composable
-private fun Field(text: String, actions: SearchActions, autofocus: Boolean) {
+fun SearchField(text: String, onText: (String) -> Unit, onBack: () -> Unit, autofocus: Boolean, placeholder: String) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val focus = remember { FocusRequester() }
@@ -200,17 +192,17 @@ private fun Field(text: String, actions: SearchActions, autofocus: Boolean) {
             .then(if (focused) Modifier.border(2.dp, accent, shape) else Modifier).padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).tap(onClick = actions.onBack), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).tap(onClick = onBack), contentAlignment = Alignment.Center) {
             SIcon(WebIcons.ArrowLeft, size = 22.dp, color = SeedyColors.White)
         }
         // The caret sits after what's typed, also when the text comes from elsewhere (a recent search, Clear).
         var field by remember { mutableStateOf(TextFieldValue(text, TextRange(text.length))) }
         if (field.text != text) field = TextFieldValue(text, TextRange(text.length))
         Box(Modifier.weight(1f).padding(start = 2.dp), contentAlignment = Alignment.CenterStart) {
-            if (text.isEmpty()) SText(t("Search movies, shows and people"), size = 15.sp, weight = 600, color = SeedyColors.Text3, maxLines = 1)
+            if (text.isEmpty()) SText(placeholder, size = 15.sp, weight = 600, color = SeedyColors.Text3, maxLines = 1)
             BasicTextField(
                 value = field,
-                onValueChange = { field = it; if (it.text != text) actions.onText(it.text) },
+                onValueChange = { field = it; if (it.text != text) onText(it.text) },
                 singleLine = true,
                 interactionSource = interaction,
                 textStyle = BaseText.copy(fontSize = 15.sp, fontWeight = FontWeight(600), color = SeedyColors.White),
@@ -221,7 +213,7 @@ private fun Field(text: String, actions: SearchActions, autofocus: Boolean) {
             )
         }
         if (text.isNotEmpty()) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).tap { actions.onText("") }, contentAlignment = Alignment.Center) {
+            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).tap { onText("") }, contentAlignment = Alignment.Center) {
                 SIcon(WebIcons.Close, size = 18.dp, color = SeedyColors.TextHero, stroke = 2.4f)
             }
         }
@@ -442,7 +434,7 @@ private fun ResultRow(hit: Hit, state: SearchViewModel.State, actions: SearchAct
             Portrait(item, 54.dp)
         } else {
             Box(Modifier.size(96.dp, 54.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFF2F2840)), contentAlignment = Alignment.Center) {
-                SText(initials(item.cardTitleForInitials()), size = 15.sp, weight = 900, color = Color(0xFFE3C4FF))
+                SText(nameInitials(item.cardTitle), size = 15.sp, weight = 900, color = Color(0xFFE3C4FF))
                 viewer.images?.landscape(item, 240, viewer.episodeImages)?.let { AsyncImage(it, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop) }
             }
         }
@@ -454,8 +446,6 @@ private fun ResultRow(hit: Hit, state: SearchViewModel.State, actions: SearchAct
         }
     }
 }
-
-private fun BaseItemDto.cardTitleForInitials(): String = if (type == BaseItemKind.EPISODE) seriesName ?: name.orEmpty() else name.orEmpty()
 
 @Composable
 private fun RowSkeleton() {

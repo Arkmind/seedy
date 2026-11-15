@@ -161,8 +161,15 @@ export interface BaseItem {
   ExternalUrls?: { Name: string; Url: string }[];
   Tags?: string[];
   CanDelete?: boolean;
+  CanDownload?: boolean;
   SortName?: string;
   SpecialFeatureCount?: number;
+  /* Asked for with fields=Path; Container comes with MediaSources. */
+  Path?: string;
+  Container?: string;
+  /* Artists and genres, with fields=ItemCounts. */
+  AlbumCount?: number;
+  ProductionLocations?: string[];
 }
 
 export interface ItemsResult<T = BaseItem> { Items: T[]; TotalRecordCount: number; StartIndex?: number }
@@ -172,6 +179,8 @@ export interface UserPolicy {
   EnableSubtitleManagement?: boolean;
   EnableCollectionManagement?: boolean;
   EnableContentDeletion?: boolean;
+  EnableContentDeletionFromFolders?: string[];
+  EnableContentDownloading?: boolean;
   EnableRemoteControlOfOtherUsers?: boolean;
   EnableSharedDeviceControl?: boolean;
   EnableSyncPlayAccess?: boolean;

@@ -37,7 +37,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.admin.media.LibraryActions
 import io.github.arkmind.seedy.core.admin.media.LibraryPages
 import io.github.arkmind.seedy.core.admin.media.LibraryState
-import io.github.arkmind.seedy.core.admin.media.LibraryViewModel
+import io.github.arkmind.seedy.core.admin.media.AdminLibraryViewModel
 import io.github.arkmind.seedy.core.admin.media.SourceRow
 import io.github.arkmind.seedy.core.admin.media.SwitchItem
 import io.github.arkmind.seedy.core.i18n.t
@@ -46,6 +46,7 @@ import io.github.arkmind.seedy.mobile.admin.AccentRow
 import io.github.arkmind.seedy.mobile.admin.Bar
 import io.github.arkmind.seedy.mobile.admin.Chip
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.admin.LoadingDots
 import io.github.arkmind.seedy.mobile.admin.MonoText
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
@@ -82,7 +83,7 @@ import kotlin.math.roundToInt
 fun LibraryRoute(id: String) {
     val session = currentSession()
     val nav = LocalMobileNav.current
-    val vm = viewModel(key = "library-$id") { LibraryViewModel(session, id) }
+    val vm = viewModel(key = "library-$id") { AdminLibraryViewModel(session, id) }
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(id) { vm.load() }
     LaunchedEffect(id) { vm.live() }
@@ -184,7 +185,7 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
                     SText(t("Couldn’t load the metadata sources."), Modifier.weight(1f), size = 13.sp, color = SeedyColors.Danger)
                     PillButton(t("Try again"), actions::retry)
                 }
-                sources == null -> SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3)
+                sources == null -> LoadingDots()
                 sources.isEmpty() -> SText(t("This kind of library has no metadata sources."), Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3)
                 else -> SourceList(sources, actions)
             }
@@ -222,7 +223,7 @@ fun LibraryScreen(state: LibraryState, actions: LibraryActions, onBack: () -> Un
         val segments = state.segmentProviders
         Section(t("Skip markers from"), foot = t("Media segment providers, in order")) {
             when {
-                segments == null -> row { SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3) }
+                segments == null -> row { LoadingDots() }
                 segments.isEmpty() -> row { SText(t("None installed"), Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3) }
                 else -> for (s in segments) row { Switch(s, actions) }
             }

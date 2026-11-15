@@ -16,7 +16,7 @@ import { AlbumArt, BookArt, mediaName, readyAction } from '../requests/media-par
 
 const WEEK = 7 * 86_400_000;
 
-export function arrivals(list: SeerrRequest[], dismissed: number[], now = Date.now()) {
+function arrivals(list: SeerrRequest[], dismissed: number[], now = Date.now()) {
   return list.filter((r) => {
     if (!inLibrary(r)) return false;
     const at = r.availableAt ? new Date(r.availableAt).getTime() : NaN;
@@ -25,7 +25,7 @@ export function arrivals(list: SeerrRequest[], dismissed: number[], now = Date.n
 }
 
 /* Music and books that arrived in the last 7 days, from Seedy's own requests. */
-export function mediaArrivals(list: MediaRequest[], dismissed: string[], now = Date.now()) {
+function mediaArrivals(list: MediaRequest[], dismissed: string[], now = Date.now()) {
   return list.filter((r) => {
     if (r.status !== 'ready' || !r.itemId || !r.requestedByMe) return false;
     const at = r.readyAt ? new Date(r.readyAt).getTime() : NaN;

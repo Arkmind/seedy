@@ -1,8 +1,9 @@
 import { useState } from 'preact/hooks';
-import { JELLYFIN_WEB, get, post, getSession } from '../../api/client';
+import { currentUserId, get } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { meStore } from '../../lib/app-state';
+import { dot } from '../../lib/format';
 import { t, tn } from '../../lib/i18n';
 import { Link, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -12,14 +13,16 @@ import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { useInView } from '../browse/parts';
 import { CUSTOM, readCustom } from '../me/prefs';
 import { manageChanged } from '../browse/manage/host';
-import { genreMix, instantMix, orderByIds, playlistTracks, type Track } from '../../audio/api';
+import { genreMix, instantMix, orderByIds, type Track } from '../../audio/api';
 import { audioStore, playContainer, playLoaded, playedStore, recentSources } from '../../audio/engine';
 import { AIcon } from '../../audio/icons';
 import {
-  AlbumCard, ArtistCard, GenreTile, JumpCard, MUSIC_FIELDS, MixCard, NewPlaylistTile, PlaylistCard, SectionHead, albumArtist, albumArtistsCount,
-  albumsLabel, countOf, dot, playlistCovers, playlistSub, playsLabel, songsOf, songsLabel, yearOf, type Mix
+  AlbumCard, ArtistCard, GenreTile, JumpCard, MUSIC_FIELDS, MixCard, NewPlaylistTile, PlaylistCard, SectionHead, albumArtist,
+  albumArtistsCount, albumsLabel, countOf, playlistCovers, playsLabel, songsOf, songsLabel, yearOf, type Mix, CardSkel, artistAlbums,
+  audioPlaylists, playlistPreview, musicGenres
 } from './parts';
 import { AlbumsTab, ArtistsTab, FoldersTab, GenresTab, PlaylistsTab, SongsTab } from './tabs';
+import { LibraryMenuItems } from '../../ui/library-menu';
 import './music.css';
 
 /* A music library (MusicHome board): the title with its counts, Shuffle all, Instant mix and ⋯; the Overview (Jump
@@ -32,7 +35,6 @@ const TABS: { id: MusicTab; label: string }[] = [
   { id: 'playlists', label: 'Playlists' }, { id: 'genres', label: 'Genres' }, { id: 'folders', label: 'Folders' }
 ];
 
-const uid = () => getSession()?.userId ?? '';
 
 export function MusicLibrary({ view }: { view: BaseItem }) {
   const loc = useLocation();
@@ -95,21 +97,7 @@ export function MusicLibrary({ view }: { view: BaseItem }) {
                 {(close) => (
                   <>
                     <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); setReload((n) => n + 1); }} />
-                    <MenuItem icon="link" label={t('Copy link')} onSelect={() => {
-                      close();
-                      navigator.clipboard.writeText(window.location.href).then(() => toast(t('Link copied')), () => toast(t('Couldn’t copy the link'), 'error'));
-                    }} />
-                    <MenuItem icon="external" label={t('Open in Jellyfin')} href={`${JELLYFIN_WEB}#/music.html?topParentId=${view.Id}&collectionType=music`} />
-                    {me.isAdmin && (
-                      <>
-                        <div class="menu-sep" />
-                        <MenuItem icon="refresh" label={t('Scan library files')} sub={t('Look for new and changed media')} onSelect={() => {
-                          close();
-                          post<void>(`/Items/${view.Id}/Refresh`, undefined, { Recursive: true, MetadataRefreshMode: 'Default', ImageRefreshMode: 'Default', ReplaceAllMetadata: false, ReplaceAllImages: false })
-                            .then(() => toast(t('Scanning {name}', { name: view.Name }), 'pending'), () => toast(t("Couldn't start the scan"), 'error'));
-                        }} />
-                      </>
-                    )}
+                    <LibraryMenuItems item={view} close={close} />
                   </>
                 )}
               </MenuButton>
@@ -243,15 +231,14 @@ async function genreMixOf(g: BaseItem): Promise<Mix> {
 }
 
 const getGenres = (viewId: string) =>
-  get<ItemsResult>('/MusicGenres', { userId: uid(), parentId: viewId, fields: 'ItemCounts', enableImages: false, sortBy: 'SortName' })
-    .then((r) => r.Items.slice().sort((a, b) => ((b as { AlbumCount?: number }).AlbumCount ?? b.ChildCount ?? 0) - ((a as { AlbumCount?: number }).AlbumCount ?? a.ChildCount ?? 0)));
+  musicGenres(viewId).then((r) => r.Items.slice().sort((a, b) => (b.AlbumCount ?? b.ChildCount ?? 0) - (a.AlbumCount ?? a.ChildCount ?? 0)));
 
 function Mixes({ view, top }: { view: BaseItem; top?: TopArtist[] }) {
   const [more, setMore] = useState(false);
   const mixes = useAsync(async () => {
     if (!top) return null;
     const out: Mix[] = [];
-    const lead = top[0]?.artist ?? (await get<ItemsResult>('/Artists/AlbumArtists', { userId: uid(), parentId: view.Id, sortBy: 'Random', limit: 1 })).Items[0];
+    const lead = top[0]?.artist ?? (await get<ItemsResult>('/Artists/AlbumArtists', { userId: currentUserId(), parentId: view.Id, sortBy: 'Random', limit: 1 })).Items[0];
     if (lead) out.push(await artistMix(lead));
     const favs = await songsOf({ parentId: view.Id, isFavorite: true, sortBy: ['Random'], limit: 40 });
     if (favs.length) {
@@ -311,26 +298,6 @@ function RecentAlbums({ view }: { view: BaseItem }) {
   );
 }
 
-export function CardSkel({ round }: { round?: boolean }) {
-  return (
-    <div class="mu-card" aria-hidden="true">
-      <span class={'skel mu-skel-art' + (round ? ' is-round' : '')} />
-      <span class="skel skel-line" style={{ width: '70%' }} />
-    </div>
-  );
-}
-
-export interface PlaylistPreview { playlist: BaseItem; covers: Track[]; sub: string }
-
-export async function playlistPreview(pl: BaseItem): Promise<PlaylistPreview> {
-  const tracks = await playlistTracks(pl.Id).catch(() => [] as Track[]);
-  const secs = tracks.reduce((s, x) => s + (x.RunTimeTicks ?? 0), 0);
-  return { playlist: pl, covers: playlistCovers(tracks), sub: playlistSub({ ...pl, CumulativeRunTimeTicks: secs || undefined } as BaseItem, tracks.length || pl.ChildCount) };
-}
-
-export const audioPlaylists = (limit?: number) =>
-  getItems({ includeItemTypes: ['Playlist'], recursive: true, mediaTypes: ['Audio'], sortBy: ['DateCreated', 'SortName'], sortOrder: 'Descending', limit, fields: ['ChildCount', 'DateCreated'] });
-
 function YourPlaylists({ view }: { view: BaseItem }) {
   const [ref, seen] = useInView<HTMLElement>('600px');
   const managed = useStore(manageChanged);
@@ -353,7 +320,7 @@ function YourPlaylists({ view }: { view: BaseItem }) {
 function TopArtists({ view, top, loading }: { view: BaseItem; top?: TopArtist[]; loading: boolean }) {
   const fallback = useAsync(
     () => (top && !top.length
-      ? get<ItemsResult>('/Artists/AlbumArtists', { userId: uid(), parentId: view.Id, sortBy: 'SortName', limit: 7, fields: 'ItemCounts,ChildCount', enableImageTypes: 'Primary', imageTypeLimit: 1 }).then((r) => r.Items)
+      ? get<ItemsResult>('/Artists/AlbumArtists', { userId: currentUserId(), parentId: view.Id, sortBy: 'SortName', limit: 7, fields: 'ItemCounts,ChildCount', enableImageTypes: 'Primary', imageTypeLimit: 1 }).then((r) => r.Items)
       : Promise.resolve(null)),
     [view.Id, !!top && !top.length]
   );
@@ -369,11 +336,6 @@ function TopArtists({ view, top, loading }: { view: BaseItem; top?: TopArtist[];
     </section>
   );
 }
-
-export const artistAlbums = (a: BaseItem) => {
-  const n = (a as BaseItem & { AlbumCount?: number }).AlbumCount ?? a.ChildCount;
-  return n ? tn(n, '{n} album', '{n} albums') : '';
-};
 
 function Genres({ view }: { view: BaseItem }) {
   const [ref, seen] = useInView<HTMLElement>('600px');

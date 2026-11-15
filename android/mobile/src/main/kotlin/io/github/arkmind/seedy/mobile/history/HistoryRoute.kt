@@ -36,11 +36,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.feature.HistoryActions
 import io.github.arkmind.seedy.core.feature.HistoryState
 import io.github.arkmind.seedy.core.feature.HistoryViewModel
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.history.HistoryEntry
 import io.github.arkmind.seedy.core.history.HistoryFilter
 import io.github.arkmind.seedy.core.history.HistoryFormat
 import io.github.arkmind.seedy.core.i18n.t
-import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.mobile.admin.BoardField
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
@@ -55,6 +55,7 @@ import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
 import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.Faint
 import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
@@ -87,8 +88,8 @@ fun HistoryRoute() {
         state, vm, LocalDate.now(),
         HistoryNav(
             back = nav::back,
-            play = { e, start -> libraryUuid(e.itemId)?.let { nav.go(Route.Player(it, start)) } },
-            open = { e -> libraryUuid(e.titleId)?.let { nav.go(Route.Details(it)) } },
+            play = { e, start -> uuidOf(e.itemId)?.let { nav.go(Route.Player(it, start)) } },
+            open = { e -> uuidOf(e.titleId)?.let { nav.go(Route.Details(it)) } },
             browse = { nav.toTab(Tab.Home) },
         ),
     )
@@ -225,8 +226,6 @@ private fun HistoryRow(e: HistoryEntry, recent: Boolean, nav: HistoryNav, onMore
         }
     }
 }
-
-private val Faint = Color(0xFF6A6A6A)
 
 @Composable
 private fun RowButton(icon: IconDef, onClick: () -> Unit) {

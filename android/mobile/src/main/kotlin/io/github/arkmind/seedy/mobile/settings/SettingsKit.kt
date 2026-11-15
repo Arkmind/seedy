@@ -53,6 +53,7 @@ import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.ParentDataModifierNode
 import androidx.compose.ui.node.invalidateMeasurement
+import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -90,9 +91,11 @@ import kotlin.math.roundToInt
 /** #6a6a6a: the pages' foot notes. */
 val Faint = Color(0xFF6A6A6A)
 
+/** #5a5a5a: the ring of a radio, box or status dot that's off. */
+internal val OffRing = Color(0xFF5A5A5A)
+
 private val TagRing = Color(0xFF3A3A3A)
-private val TrackOff = Color(0xFF2A2A2A)
-private val CountOn = Color(0xFF5A5A5A)
+private val CountOn = OffRing
 
 /* ── Text as the boards' Chrome boxes it ── */
 
@@ -121,6 +124,11 @@ private data class CssTextElement(val size: Int, val ratio: Float) : ModifierNod
         node.size = size
         node.ratio = ratio
         node.invalidateMeasurement()
+    }
+    override fun InspectorInfo.inspectableProperties() {
+        name = "cssText"
+        properties["size"] = size
+        properties["ratio"] = ratio
     }
 }
 
@@ -398,6 +406,10 @@ private class CssRowElement(val label: CssBox, val min: Dp) : ModifierNodeElemen
     }
     override fun equals(other: Any?) = other is CssRowElement && other.label === label && other.min == min
     override fun hashCode() = System.identityHashCode(label) * 31 + min.hashCode()
+    override fun InspectorInfo.inspectableProperties() {
+        name = "cssRow"
+        properties["min"] = min
+    }
 }
 
 /** A row is at least 44 px; past that, it's as tall as CSS makes its label (and what's under it). */
@@ -428,7 +440,7 @@ fun StackRow(name: String, help: String?, gap: Dp = 10.dp, content: @Composable 
 fun BoardSwitch(on: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) {
     val accent = LocalAccent.current
     Box(
-        Modifier.size(46.dp, 28.dp).clip(CircleShape).background(if (on) accent else TrackOff)
+        Modifier.size(46.dp, 28.dp).clip(CircleShape).background(if (on) accent else SeedyColors.Surface2)
             .tap(role = Role.Switch, enabled = enabled) { onChange(!on) },
     ) {
         Box(Modifier.padding(start = if (on) 22.dp else 4.dp, top = 4.dp).size(20.dp).background(if (on) SeedyColors.InkInverse else SeedyColors.Text3, CircleShape))
@@ -437,7 +449,7 @@ fun BoardSwitch(on: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = tru
 
 /** A setting that's on or off; [modifier] goes on the whole row (a library being moved). */
 @Composable
-fun SwitchRow(name: String, help: String?, on: Boolean, device: Boolean = false, enabled: Boolean = true, modifier: Modifier = Modifier, onChange: (Boolean) -> Unit) {
+fun SwitchRow(name: String, help: String?, on: Boolean, modifier: Modifier = Modifier, device: Boolean = false, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
     val label = remember { CssBox() }
     Row(
         modifier.tap(role = Role.Switch, enabled = enabled) { onChange(!on) }.settingsRow(label),
@@ -542,8 +554,9 @@ fun SwatchRow(name: String, help: String?, swatches: List<Swatch>, value: String
     }
 }
 
+/** A 34 px colour swatch; the chosen one has a white ring. */
 @Composable
-private fun SwatchDot(s: Swatch, on: Boolean, onClick: () -> Unit) {
+internal fun SwatchDot(s: Swatch, on: Boolean, onClick: () -> Unit) {
     val stripe = SeedyColors.Text3
     Canvas(Modifier.size(34.dp).tap(role = Role.RadioButton, onClick = onClick)) {
         val r = size.minDimension / 2
@@ -590,17 +603,27 @@ class SheetState {
 @Composable
 fun rememberSheet(): SheetState = remember { SheetState() }
 
+/** A choice list with [value] in it (in order) when the server has one the list doesn't. */
+fun <T : Comparable<T>> withValue(list: List<T>, value: T): List<T> = if (value in list) list else (list + value).sorted()
+
+fun <T> choices(values: List<T>, label: (T) -> String): List<Choice<T>> = values.map { Choice(it, label(it)) }
+
 /** Draws the page's open sheet. */
 @Composable
 fun SheetHost(sheet: SheetState) {
     sheet.pick?.let { spec -> PickSheet(spec, sheet::close) }
 }
 
+/** A list sheet's options, scrolling when there are many. */
+@Composable
+fun ColumnScope.SheetList(content: @Composable ColumnScope.() -> Unit) =
+    Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp), content = content)
+
 @Composable
 private fun <T> PickSheet(spec: PickSpec<T>, onClose: () -> Unit) {
     BottomSheet(onDismiss = onClose) {
         SheetHead(spec.title)
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+        SheetList {
             for (o in spec.options) PickOption(o.label, o.value == spec.value) { spec.onPick(o.value); onClose() }
         }
     }

@@ -7,6 +7,9 @@ import io.github.arkmind.seedy.core.admin.dayDiff
 import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.admin.realDate
 import io.github.arkmind.seedy.core.admin.sameId
+import io.github.arkmind.seedy.core.data.bool
+import io.github.arkmind.seedy.core.data.intOrNull
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
@@ -120,9 +123,9 @@ class UsersViewModel(
         val p = pj.policy
         val pres = presence(u, d.sessions, d.devices, clock)
         val tags = buildList {
-            if (p.flag("IsAdministrator")) add(t("Admin"))
-            if (p.flag("IsDisabled")) add(t("Disabled"))
-            if (p.flag("IsHidden")) add(t("Hidden"))
+            if (p.bool("IsAdministrator")) add(t("Admin"))
+            if (p.bool("IsDisabled")) add(t("Disabled"))
+            if (p.bool("IsHidden")) add(t("Hidden"))
             ratingName(p.intOrNull("MaxParentalRating"), d.ratings)?.let(::add)
         }
         UserRow(
@@ -134,8 +137,8 @@ class UsersViewModel(
             seen = pres.text,
             tags = tags,
             access = libraryLine(p, d.folders) + " · " + limitsLine(p),
-            isAdmin = p.flag("IsAdministrator"),
-            disabled = p.flag("IsDisabled"),
+            isAdmin = p.bool("IsAdministrator"),
+            disabled = p.bool("IsDisabled"),
             isMe = sameId(u.id, session.userId.toString()),
         )
     }

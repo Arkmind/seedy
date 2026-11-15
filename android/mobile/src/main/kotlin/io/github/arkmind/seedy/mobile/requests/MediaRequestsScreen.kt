@@ -46,8 +46,8 @@ import io.github.arkmind.seedy.core.mediarequests.MediaTab
 import io.github.arkmind.seedy.core.mediarequests.MusicRelease
 import io.github.arkmind.seedy.core.mediarequests.ToneText
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.browse.Message
 import io.github.arkmind.seedy.mobile.browse.topInset
-import io.github.arkmind.seedy.mobile.library.Message
 import io.github.arkmind.seedy.mobile.manage.ItemMenuSheet
 import io.github.arkmind.seedy.mobile.manage.MenuEntry
 import io.github.arkmind.seedy.mobile.parts.Toast
@@ -88,7 +88,7 @@ class MediaActions(
 /**
  * Boards "Android · Requests · Music" and "… Books": the header with Search and Open in Lidarr/Shelfarr, the service
  * tabs, the Discover · My requests (· All requests) switch, the requests in progress and Discover's rows; the other
- * tabs list the requests on their way (web: mine.tsx).
+ * tabs list the requests on their way (web: RequestsMine.tsx).
  */
 @Composable
 fun MediaRequestsScreen(

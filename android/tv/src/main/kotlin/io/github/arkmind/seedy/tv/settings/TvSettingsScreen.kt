@@ -74,6 +74,7 @@ import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusScale
 import io.github.arkmind.seedy.tv.parts.focusSoon
+import io.github.arkmind.seedy.tv.parts.maybeFocus
 import io.github.arkmind.seedy.ui.components.ProfileSquare
 import io.github.arkmind.seedy.ui.components.PassScene
 import io.github.arkmind.seedy.ui.components.SubtitleLine
@@ -357,7 +358,7 @@ private fun TvRows(state: SettingsState, actions: SettingsActions, f: (String) -
                         }
                     },
                     modifier = Modifier.zIndex(if (isMoving) 1f else 0f)
-                        .then(f(r.kind)?.let { Modifier.focusRequester(it) } ?: Modifier)
+                        .maybeFocus(f(r.kind))
                         .onFocusChanged { if (it.isFocused && moving == null) onHint(t("OK picks the row up to move it · Left and right show or hide it")) }
                         .onPreviewKeyEvent { e ->
                             if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false

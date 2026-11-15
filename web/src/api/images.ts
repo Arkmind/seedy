@@ -1,5 +1,6 @@
 import { SERVER_URL, getSession } from './client';
 import type { BaseItem, User } from './types';
+import { t } from '../lib/i18n';
 
 type ImageType = 'Primary' | 'Backdrop' | 'Thumb' | 'Logo' | 'Banner' | 'Art' | 'Chapter';
 
@@ -101,4 +102,14 @@ export function tmdbImage(path: string | undefined | null, size: 'w342' | 'w500'
   if (!path) return undefined;
   if (/^https?:/.test(path)) return path;
   return `https://image.tmdb.org/t/p/${size}${path}`;
+}
+
+/* A file's bytes as base64 text, the way Jellyfin's image uploads take them. */
+export function fileBase64(file: File): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).replace(/^data:[^,]*,/, ''));
+    r.onerror = () => reject(r.error ?? new Error(t('The file could not be read')));
+    r.readAsDataURL(file);
+  });
 }

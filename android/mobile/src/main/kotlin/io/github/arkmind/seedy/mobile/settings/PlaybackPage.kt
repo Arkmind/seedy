@@ -68,7 +68,7 @@ fun PlaybackPage(state: SettingsState, actions: SettingsActions, nav: SettingsNa
             row { SwitchRow(t("Play the next episode automatically"), t("From the Up next card at the credits"), pb.autoPlayNext, onChange = actions::setAutoPlayNext) }
             if (state.seedy) {
                 row {
-                    val options = (Choices.UpNextSeconds + pb.upNextSeconds).distinct().sorted().map { Choice(it, Choices.seconds(it)) }
+                    val options = choices(withValue(Choices.UpNextSeconds, pb.upNextSeconds)) { Choices.seconds(it) }
                     PickRow(t("Up next countdown"), t("Your admin’s default is {n} seconds", "n" to state.defaults.upNextSeconds), Choices.seconds(pb.upNextSeconds)) {
                         sheet.open(t("Up next countdown"), options, pb.upNextSeconds) { v -> actions.setPlayback { it.copy(upNextSeconds = v) } }
                     }
@@ -98,13 +98,13 @@ fun PlaybackPage(state: SettingsState, actions: SettingsActions, nav: SettingsNa
                 row { SegRow(t("Credits"), t("Goes to Up next or end-of-movie picks"), skips, pb.skipCredits) { v -> actions.setPlayback { it.copy(skipCredits = v) } } }
             }
             row {
-                val options = (Choices.SeekBack + state.seekBack).distinct().sorted().map { Choice(it, Choices.seconds(it)) }
+                val options = choices(withValue(Choices.SeekBack, state.seekBack)) { Choices.seconds(it) }
                 PickRow(t("Skip back"), t("Double-tap the left side of the video"), Choices.seconds(state.seekBack), device = true) {
                     sheet.open(t("Skip back"), options, state.seekBack) { v -> device { it.copy(seekBack = v) } }
                 }
             }
             row {
-                val options = (Choices.SeekForward + state.seekForward).distinct().sorted().map { Choice(it, Choices.seconds(it)) }
+                val options = choices(withValue(Choices.SeekForward, state.seekForward)) { Choices.seconds(it) }
                 PickRow(t("Skip forward"), t("Double-tap the right side of the video"), Choices.seconds(state.seekForward), device = true) {
                     sheet.open(t("Skip forward"), options, state.seekForward) { v -> device { it.copy(seekForward = v) } }
                 }

@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { getGuideInfo, getPrograms, type Program } from '../../api/livetv';
 import { meStore } from '../../lib/app-state';
-import { clock, duration, episodeTag, fmtDayMonth, startOfDay } from '../../lib/format';
-import { locale, t } from '../../lib/i18n';
+import { clock, daysBetween, duration, fmtIntl, fmtWeekdayDate, fmtWeekdayShort, pct, startOfDay } from '../../lib/format';
+import { t } from '../../lib/i18n';
 import { useLocation } from '../../lib/router';
 import { safeLocal, saveLocal, useAsync, useStore } from '../../lib/store';
 import { Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { MenuButton, MenuItem, Popover, Sheet } from '../../ui/overlay';
 import {
-  CATEGORIES, categoryOf, previewAllowed, endMs, fraction, isAiring, isFavorite, leftLabel, newTag, programsChanged, recState, startMs, timeRange,
-  toggleRecord, toggleSeries, useChannels, useNow, useTimers, weekdayShort, type Category, type LiveChannel
+  CATEGORIES, categoryOf, endMs, fraction, groupByChannel, isAiring, isFavorite, leftLabel, newTag, previewAllowed, programEpisode,
+  programsChanged, recordLabel, recState, startClock, startMs, timeRange, toggleRecord, toggleSeries, useChannels, useNow, useTimers,
+  type Category, type ChannelFilter, type LiveChannel
 } from './data';
 import { LiveLayout, NoChannels } from './LiveLayout';
-import { ChannelLogo, Chip, HeartIcon, LivePill, LtIcon, ProgramArt, RecDot, SeriesDot, SoundButton, watch } from './parts';
+import { ChannelLogo, FilterChips, HeartIcon, LivePill, LtIcon, ProgramArt, RecDot, SeriesDot, SoundButton, useShowMore, watch } from './parts';
 import { useLivePreview } from './preview';
 
 /* Live TV · Guide (board "Live TV · Guide"): the selected programme on top with a muted preview, filter chips, the
@@ -29,7 +30,6 @@ const floorHalf = (ms: number) => Math.floor(ms / HALF) * HALF;
 const nowStart = (ms: number) => floorHalf(ms - 20 * 60_000);
 const PAGE = 60;
 
-type Filter = 'all' | 'fav' | Category;
 type Tile =
   | { kind: 'prog'; p: Program; s: number; e: number }
   | { kind: 'gap'; s: number; e: number; until?: number }
@@ -48,7 +48,7 @@ export function LiveGuide() {
   const info = useAsync(() => getGuideInfo(), []);
 
   const qCat = loc.query.get('cat');
-  const [filter, setFilter] = useState<Filter>(CATEGORIES.some((c) => c.id === qCat) ? (qCat as Category) : 'all');
+  const [filter, setFilter] = useState<ChannelFilter>(CATEGORIES.some((c) => c.id === qCat) ? (qCat as Category) : 'all');
   const qAt = Number(loc.query.get('at'));
   const [ws, setWs] = useState(() => (qAt > 0 ? floorHalf(qAt) : nowStart(Date.now())));
   const [limit, setLimit] = useState(PAGE);
@@ -85,17 +85,7 @@ export function LiveGuide() {
   }, [ws, bump, ver === 0]);
 
   const we = ws + SPAN;
-  const byChannel = useMemo(() => {
-    const m = new Map<string, Program[]>();
-    for (const p of cache.current.values()) {
-      if (!p.ChannelId) continue;
-      const arr = m.get(p.ChannelId) ?? [];
-      arr.push(p);
-      m.set(p.ChannelId, arr);
-    }
-    for (const arr of m.values()) arr.sort((a, b) => startMs(a) - startMs(b));
-    return m;
-  }, [ver]);
+  const byChannel = useMemo(() => groupByChannel(cache.current.values()), [ver]);
   const loadingWindow = [Math.floor(ws / BLOCK), Math.floor((we - 1) / BLOCK)].some((b) => blocks.current.get(b) !== 'done');
 
   const hasData = (c: LiveChannel) => byChannel.has(c.Id) || !!c.CurrentProgram;
@@ -113,14 +103,7 @@ export function LiveGuide() {
     .filter((c) => matches(c) && (!hideEmpty || hasData(c)))
     .sort((a, b) => (favFirst ? Number(isFavorite(b)) - Number(isFavorite(a)) : 0) || Number(hasData(b)) - Number(hasData(a)));
   const rows = matching.slice(0, limit);
-  const more = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = more.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return;
-    const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) setLimit((l) => l + PAGE); }, { rootMargin: '600px 0px' });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [matching.length > limit, limit]);
+  const more = useShowMore(matching.length > limit, limit, () => setLimit((l) => l + PAGE));
 
   /* The tiles of one row inside the window: programmes, gaps ("Off air until 06:00"), or no guide at all. */
   const tilesFor = (c: LiveChannel): Tile[] => {
@@ -246,7 +229,6 @@ export function LiveGuide() {
   const nowIn = now >= ws && now < we;
   const frac = (now - ws) / SPAN;
   const pctOf = (ms: number) => (((ms - ws) / SPAN) * 100).toFixed(3) + '%';
-  const filterCounts: Record<string, number | undefined> = { all: all.length, fav: favCount };
 
   return (
     <LiveLayout tab="guide">
@@ -255,12 +237,7 @@ export function LiveGuide() {
       ) : list && !loadingWindow ? null : <GuideHeroSkeleton />}
 
       <div class="lt-guide-bar">
-        <div role="group" aria-label={t('Show channels')} class="lt-chips">
-          <Chip label={t('All')} count={filterCounts.all} pressed={filter === 'all'} onClick={() => setFilter('all')} />
-          <Chip label={t('Favorites')} count={favCount} pressed={filter === 'fav'} onClick={() => setFilter('fav')} />
-          <span aria-hidden="true" class="lt-chip-sep" />
-          {CATEGORIES.map((x) => <Chip key={x.id} label={t(x.label)} pressed={filter === x.id} onClick={() => setFilter(filter === x.id ? 'all' : x.id)} />)}
-        </div>
+        <FilterChips filter={filter} onFilter={setFilter} total={all.length} favCount={favCount} />
         <div class="lt-guide-tools">
           <MenuButton
             width={240}
@@ -293,14 +270,14 @@ export function LiveGuide() {
       <div
         ref={gridRef}
         role="grid"
-        aria-label={t('TV guide, {day}', { day: new Intl.DateTimeFormat(locale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(ws)) })}
+        aria-label={t('TV guide, {day}', { day: fmtIntl(new Date(ws), { weekday: 'long', day: 'numeric', month: 'long' }) })}
         aria-rowcount={rows.length + 1}
         class="lt-grid"
         onKeyDown={(e) => onGridKey(e as unknown as KeyboardEvent)}
       >
         <div role="row" class="lt-grid-head">
           <div role="columnheader" class="lt-grid-corner">
-            <span>{`${weekdayShort(new Date(ws))} ${fmtDayMonth(new Date(ws))}`}</span>
+            <span>{fmtWeekdayDate(new Date(ws))}</span>
             <span class="lt-grid-nav">
               <button type="button" class="lt-grid-arrow" aria-label={t('Earlier')} onClick={() => setWs(ws - HALF * 2)}><Icon name="chevronLeft" size={16} stroke={2.4} /></button>
               <button type="button" class="lt-grid-arrow" aria-label={t('Later')} onClick={() => setWs(ws + HALF * 2)}><Icon name="chevronRight" size={16} stroke={2.4} /></button>
@@ -361,14 +338,14 @@ export function LiveGuide() {
                       const sel = selected?.Id === p.Id;
                       const rec = recState(p, timers);
                       const tag = p.IsLive ? 'live' : newTag(p);
-                      const sub = [p.IsMovie ? t('Film') : p.IsSeries && p.IndexNumber != null ? episodeTag(p) : '', timeRange(p)].filter(Boolean).join(' · ');
+                      const sub = [p.IsMovie ? t('Film') : programEpisode(p), timeRange(p)].filter(Boolean).join(' · ');
                       return (
                         <span key={key} class="lt-tile-wrap" style={{ left: pctOf(a), width: (((b - a) / SPAN) * 100).toFixed(3) + '%' }}>
                           <button
                             type="button"
                             {...common}
                             class={'lt-tile' + (airing ? ' is-airing' : '') + (sel ? ' is-selected' : '')}
-                            aria-label={[p.Name, p.IsSeries && p.IndexNumber != null ? episodeTag(p) : '', t('{start} to {end}', { start: clock(new Date(tl.s)), end: clock(new Date(tl.e)) }), c.label, rec === 'now' ? t('Recording') : rec === 'set' ? t('Recording set') : ''].filter(Boolean).join(', ')}
+                            aria-label={[p.Name, programEpisode(p), t('{start} to {end}', { start: clock(new Date(tl.s)), end: clock(new Date(tl.e)) }), c.label, recordLabel(rec, '')].filter(Boolean).join(', ')}
                             aria-selected={sel ? 'true' : 'false'}
                             onClick={() => { setSelId(p.Id); setFocus({ row: ri, key }); }}
                             onDblClick={() => { if (isAiring(p, Date.now())) watch(c.Id); }}
@@ -446,8 +423,8 @@ export function LiveGuide() {
 /* "Today, Mon 19", "Tomorrow, Tue 20", "Wed 21" */
 function dayLabel(day: number, now: number): string {
   const d = new Date(day);
-  const diff = Math.round((day - startOfDay(new Date(now)).getTime()) / 86_400_000);
-  const short = `${weekdayShort(d)} ${d.getDate()}`;
+  const diff = daysBetween(d, new Date(now));
+  const short = `${fmtWeekdayShort(d)} ${d.getDate()}`;
   if (diff === 0) return t('Today, {day}', { day: short });
   if (diff === 1) return t('Tomorrow, {day}', { day: short });
   if (diff === -1) return t('Yesterday, {day}', { day: short });
@@ -499,7 +476,7 @@ function GuideHero({ program: p, channel, now, timers, onAbout, programs }: {
   const rec = recState(p, timers);
   const tag = newTag(p);
   const cat = categoryOf(p);
-  const ep = p.IsSeries && p.IndexNumber != null ? episodeTag(p) : '';
+  const ep = programEpisode(p);
   const epLine = [ep, p.EpisodeTitle && p.EpisodeTitle !== p.Name ? p.EpisodeTitle : ''].filter(Boolean).join(' · ');
   const nextEp = p.IsSeries ? programs.find((x) => startMs(x) > startMs(p) && x.Name === p.Name && (x.IndexNumber !== p.IndexNumber || x.ParentIndexNumber !== p.ParentIndexNumber) && !x.IsRepeat) : undefined;
   const future = startMs(p) > now;
@@ -523,8 +500,8 @@ function GuideHero({ program: p, channel, now, timers, onAbout, programs }: {
         </div>
         <h2 id="lt-ghero-h" class="lt-ghero-title">{p.Name} {epLine && <span class="lt-ghero-ep">{epLine}</span>}</h2>
         <div class="lt-ghero-meta">
-          <span>{[cat, day ? `${weekdayShort(new Date(startMs(p)))} ${fmtDayMonth(new Date(startMs(p)))}` : '', timeRange(p)].filter(Boolean).join(' · ')}</span>
-          {airing && <div class="lt-bar is-5 lt-ghero-bar"><i style={{ width: (fraction(p, now) * 100).toFixed(2) + '%' }} /></div>}
+          <span>{[cat, day ? fmtWeekdayDate(new Date(startMs(p))) : '', timeRange(p)].filter(Boolean).join(' · ')}</span>
+          {airing && <div class="lt-bar is-5 lt-ghero-bar"><i style={{ width: pct(fraction(p, now)) }} /></div>}
           <b>{airing ? leftLabel(p, now) : future ? t('Starts in {time}', { time: duration((startMs(p) - now) / 1000) }) : t('Ended')}</b>
         </div>
         {p.Overview && <p class="lt-ghero-text">{p.Overview}</p>}
@@ -534,7 +511,7 @@ function GuideHero({ program: p, channel, now, timers, onAbout, programs }: {
           </button>
           {!past && (
             <button type="button" class="lt-btn" aria-pressed={rec ? 'true' : 'false'} onClick={() => void toggleRecord(p)}>
-              <RecDot size={17} />{rec === 'now' ? t('Recording') : rec === 'set' ? t('Recording set') : t('Record')}
+              <RecDot size={17} />{recordLabel(rec)}
             </button>
           )}
           {p.IsSeries && !past && (
@@ -546,7 +523,7 @@ function GuideHero({ program: p, channel, now, timers, onAbout, programs }: {
             <LtIcon name="info" size={19} />
           </button>
           {nextEp && (
-            <span class="lt-ghero-next">{t('Next episode')} · <b>{`${weekdayShort(new Date(startMs(nextEp)))} ${fmtDayMonth(new Date(startMs(nextEp)))}, ${clock(new Date(startMs(nextEp)))}`}</b></span>
+            <span class="lt-ghero-next">{t('Next episode')} · <b>{`${fmtWeekdayDate(new Date(startMs(nextEp)))}, ${startClock(nextEp)}`}</b></span>
           )}
         </div>
       </div>
@@ -568,10 +545,10 @@ function GuideHeroSkeleton() {
 }
 
 function AboutProgram({ program: p, channel, onClose }: { program: Program; channel?: LiveChannel; onClose: () => void }) {
-  const ep = p.IsSeries && p.IndexNumber != null ? episodeTag(p) : '';
+  const ep = programEpisode(p);
   const facts = [
     channel ? `${channel.num} · ${channel.label}` : p.ChannelName,
-    `${weekdayShort(new Date(startMs(p)))} ${fmtDayMonth(new Date(startMs(p)))} · ${timeRange(p)}`,
+    `${fmtWeekdayDate(new Date(startMs(p)))} · ${timeRange(p)}`,
     duration((endMs(p) - startMs(p)) / 1000),
     p.OfficialRating
   ].filter(Boolean);

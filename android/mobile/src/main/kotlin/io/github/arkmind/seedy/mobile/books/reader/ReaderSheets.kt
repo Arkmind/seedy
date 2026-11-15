@@ -51,6 +51,7 @@ import io.github.arkmind.seedy.core.books.ReaderLayout
 import io.github.arkmind.seedy.core.books.Spacing
 import io.github.arkmind.seedy.core.books.TocEntry
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.i18n.tc
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.theme.BaseText
@@ -63,9 +64,6 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
    bookmarks. */
 
 private val SegBg = Color(0xFF262626)
-
-/** The web's contextual "Normal" (spacing, margins). */
-private fun tc(text: String, context: String): String = t("$text|$context").let { if (it == "$text|$context") text else it }
 
 @Composable
 fun EpubSettingsSheet(value: EpubSettings, onChange: ((EpubSettings) -> EpubSettings) -> Unit, onClose: () -> Unit) = BottomSheet(onClose) {

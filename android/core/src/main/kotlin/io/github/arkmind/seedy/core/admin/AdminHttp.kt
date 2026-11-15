@@ -104,7 +104,6 @@ class AdminHttp(val api: ApiClient) {
         else -> encodeModel(body, json)
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun encodeModel(body: Any, json: Json): JsonElement =
-        json.encodeToJsonElement(json.serializersModule.serializer(body::class.java) as KSerializer<Any>, body)
+        json.encodeToJsonElement(json.serializersModule.serializer(body::class.java), body)
 }

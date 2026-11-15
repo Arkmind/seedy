@@ -65,6 +65,8 @@ public class SeedyController : ControllerBase
         _recorder = recorder;
     }
 
+    private static string VersionString => Plugin.Instance?.VersionString ?? "0.1.0";
+
     // ── Public: what the sign-in page needs ──
 
     /// <summary>Branding for the sign-in page and header. The Android apps also read it to find out whether a server
@@ -75,7 +77,7 @@ public class SeedyController : ControllerBase
     public ActionResult<BrandingDto> GetClient()
     {
         var branding = ConfigMapper.Branding(ConfigMapper.Current);
-        branding.Version = Plugin.Instance?.VersionString ?? "0.1.0";
+        branding.Version = VersionString;
         branding.Api = ConfigMapper.ApiLevel;
         return branding;
     }
@@ -216,11 +218,13 @@ public class SeedyController : ControllerBase
         {
             try
             {
-                var lookup = Task.WhenAll(_seerr.AccountFor(user, ct), _seerr.PublicUrlAsync(ct));
+                var accountTask = _seerr.AccountFor(user, ct);
+                var urlTask = _seerr.PublicUrlAsync(ct);
+                var lookup = Task.WhenAll(accountTask, urlTask);
                 if (await Task.WhenAny(lookup, Task.Delay(TimeSpan.FromSeconds(2), ct)).ConfigureAwait(false) == lookup)
                 {
-                    (account, matchedBy) = await _seerr.AccountFor(user, ct).ConfigureAwait(false);
-                    publicUrl = await _seerr.PublicUrlAsync(ct).ConfigureAwait(false);
+                    (account, matchedBy) = await accountTask.ConfigureAwait(false);
+                    publicUrl = await urlTask.ConfigureAwait(false);
                 }
             }
 #pragma warning disable CA1031 // Seerr trouble shows up as "not connected", never as a broken app.
@@ -234,7 +238,6 @@ public class SeedyController : ControllerBase
         // Profiles with a maturity limit don't browse Seerr: its titles carry no ratings Seedy could filter on.
         var restricted = user.MaxParentalRatingScore is not null;
         var seerrForUser = connected && !restricted;
-        var profile = ConfigMapper.PlayLogProfile(c, uid);
         return new MeDto
         {
             IsAdmin = user.IsAdmin(),
@@ -267,7 +270,7 @@ public class SeedyController : ControllerBase
                 LibrarrUrl = user.IsAdmin() && ConfigMapper.BookAppReady(c, "librarr") ? c.LibrarrUrl : null,
                 ReadarrUrl = user.IsAdmin() && ConfigMapper.BookAppReady(c, "readarr") ? c.ReadarrUrl : null
             },
-            HistoryEnabled = c.PlayLogEnabled && c.UseForHistory && profile.History,
+            HistoryEnabled = HistoryAllowed(uid),
             HomeRows = ConfigMapper.HomeRows(c).Select(r => new HomeRowSettingDto
             {
                 Kind = r.Kind,
@@ -280,7 +283,7 @@ public class SeedyController : ControllerBase
                 },
                 Count = r.Count > 0 ? r.Count : null
             }).ToList(),
-            PluginVersion = Plugin.Instance?.VersionString ?? "0.1.0"
+            PluginVersion = VersionString
         };
     }
 
@@ -377,7 +380,7 @@ public class SeedyController : ControllerBase
         return NoContent();
     }
 
-    private bool HistoryAllowed(string uid)
+    private static bool HistoryAllowed(string uid)
     {
         var c = ConfigMapper.Current;
         return c.PlayLogEnabled && c.UseForHistory && ConfigMapper.PlayLogProfile(c, uid).History;

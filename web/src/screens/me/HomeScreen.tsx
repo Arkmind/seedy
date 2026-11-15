@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { get, getSession } from '../../api/client';
+import { get, currentUserId } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import { adminGetConfig, getHome, type HomeRowPref, type HomeRowSetting, type RowKind } from '../../api/seedy';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { meStore, userStore, viewsStore } from '../../lib/app-state';
+import { joinNames, plural } from '../../lib/format';
 import { useAsync, useStore } from '../../lib/store';
 import { NumField, Segmented, Stepper, Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
@@ -31,8 +32,6 @@ const ROW_INFO: Partial<Record<RowKind, { name: string; help: string; count?: { 
 };
 
 /* The server's starting rows when the admin's own list isn't readable (non-admins). */
-const uid = () => getSession()?.userId ?? '';
-
 const SERVER_DEFAULTS: HomeRowSetting[] = [
   { kind: 'nextup', enabled: true }, { kind: 'top10', enabled: true }, { kind: 'because', enabled: true, count: 6 },
   { kind: 'genres', enabled: true, count: 4 }, { kind: 'mymedia', enabled: true }, { kind: 'latest', enabled: true },
@@ -55,6 +54,10 @@ export function MeHome() {
 /* ── Rows ── */
 
 interface RowView { kind: RowKind; enabled: boolean; count?: number; pinned: boolean; adminCount?: number }
+
+/* The rows as the profile keeps them: no count or pin unless set. */
+const toPrefs = (list: RowView[]): HomeRowPref[] =>
+  list.map((r) => ({ kind: r.kind, enabled: r.enabled, ...(r.count ? { count: r.count } : {}), ...(r.pinned ? { pinned: true } : {}) }));
 
 function useAdminRows() {
   const me = useStore(meStore);
@@ -95,16 +98,14 @@ function RowsSection() {
     });
   }, [admin.data, prefs.rows, mode, autoSnap]);
 
-  const save = (next: RowView[]) => savePrefsPatch({
-    rows: next.map((r): HomeRowPref => ({ kind: r.kind, enabled: r.enabled, ...(r.count ? { count: r.count } : {}), ...(r.pinned ? { pinned: true } : {}) }))
-  });
+  const save = (next: RowView[]) => savePrefsPatch({ rows: toPrefs(next) });
   const setRow = (kind: RowKind, patch: Partial<RowView>) => save(rows.map((r) => (r.kind === kind ? { ...r, ...patch } : r)));
 
   const sort = useSortable({
     ids: rows.map((r) => r.kind),
     listRef,
     itemSelector: '.rows-item',
-    name: (id) => ROW_INFO[id as RowKind]?.name ?? id,
+    name: (id) => { const n = ROW_INFO[id as RowKind]?.name; return n ? t(n) : id; },
     // In automatic order, moving a row pins it where it was put.
     onMove: (from, to) => {
       const next = moveItem(rows, from, to);
@@ -128,7 +129,7 @@ function RowsSection() {
           options={[{ value: 'auto', label: t('Order automatically') }, { value: 'mine', label: t('My order') }]}
           onChange={(v) => {
             // "My order" starts from what's on screen now, so switching never shuffles the list.
-            if (v === 'mine') savePrefsPatch({ rowOrder: v, rows: rows.map((r): HomeRowPref => ({ kind: r.kind, enabled: r.enabled, ...(r.count ? { count: r.count } : {}), ...(r.pinned ? { pinned: true } : {}) })) });
+            if (v === 'mine') savePrefsPatch({ rowOrder: v, rows: toPrefs(rows) });
             else savePrefsPatch({ rowOrder: v });
           }}
         />
@@ -210,7 +211,7 @@ function RowsSection() {
 function hiddenText(rows: number, seeds: number) {
   const a = rows ? tn(rows, '{n} row you hid from Home', '{n} rows you hid from Home') : '';
   const b = seeds ? tn(seeds, '{n} title not used for Because you watched', '{n} titles not used for Because you watched') : '';
-  return a && b ? t('{a} and {b}', { a, b }) : a || b;
+  return joinNames([a, b].filter(Boolean));
 }
 
 /* Rows and Because-you-watched titles hidden from Home's row menus, with a way back. */
@@ -283,7 +284,7 @@ const NOUNS: Record<string, [string, string]> = {
 
 function countLabel(n: number, ct?: string) {
   const [one, many] = NOUNS[ct ?? ''] ?? ['item', 'items'];
-  return tn(n, `{n} ${one}`, `{n} ${many}`);
+  return plural(n, one, many);
 }
 
 function LibrariesSection() {
@@ -292,7 +293,7 @@ function LibrariesSection() {
   const listRef = useRef<HTMLDivElement>(null);
   const [tick, setTick] = useState(0);
   const libs = useAsync(
-    () => get<ItemsResult>('/UserViews', { userId: uid(), includeHidden: true, includeExternalContent: false }).then((r) => r.Items),
+    () => get<ItemsResult>('/UserViews', { userId: currentUserId(), includeHidden: true, includeExternalContent: false }).then((r) => r.Items),
     [tick]
   );
   const counts = useAsync(
@@ -431,7 +432,7 @@ function LatestSection() {
   const user = useStore(userStore);
   const cfg = userConfig(user);
   const [open, setOpen] = useState(false);
-  const options = useAsync(() => get<{ Id: string; Name: string }[]>('/UserViews/GroupingOptions', { userId: uid() }), []);
+  const options = useAsync(() => get<{ Id: string; Name: string }[]>('/UserViews/GroupingOptions', { userId: currentUserId() }), []);
   const grouped = (cfg.GroupedFolders ?? []).filter((id) => options.data?.some((o) => o.Id === id));
   const total = options.data?.length ?? 0;
   return (

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { href, navigate, setQuery, useLocation } from '../../lib/router';
+import { href, Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { t, tn } from '../../lib/i18n';
 import { Icon } from '../../ui/icons';
@@ -116,11 +116,11 @@ export function ServerPlugins() {
       </nav>
 
       {restart > 0 && (
-        <a class="adv-notice" href={href('/admin/server')} onClick={(e) => { if (e.button === 0 && !e.metaKey && !e.ctrlKey) { e.preventDefault(); navigate('/admin/server'); } }}>
+        <Link class="adv-notice" to="/admin/server">
           <span class="dot is-pending" />
           <span class="adv-notice-text"><b>{t('Restart the server to finish.')}</b> {tn(restart, 'One plugin change takes effect after a restart.', '{n} plugin changes take effect after a restart.')}</span>
           <span class="adv-notice-link">{t('Open Overview')}</span>
-        </a>
+        </Link>
       )}
 
       {view === 'installed' && (

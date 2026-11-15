@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -31,8 +30,9 @@ import io.github.arkmind.seedy.core.feature.SeerrTitlesViewModel
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.requests.TitlesKind
+import io.github.arkmind.seedy.mobile.browse.Message
+import io.github.arkmind.seedy.mobile.browse.fullLine
 import io.github.arkmind.seedy.mobile.browse.topInset
-import io.github.arkmind.seedy.mobile.library.Message
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.ui.icons.WebIcons
@@ -67,7 +67,7 @@ fun SeerrTitlesScreen(kind: TitlesKind, state: SeerrTitlesViewModel.State, onBac
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item(key = "head", span = { GridItemSpan(maxLineSpan) }) {
+        fullLine("head") {
             Row(Modifier.fillMaxWidth().padding(top = topInset() - 4.dp).offset(x = (-12).dp), verticalAlignment = Alignment.CenterVertically) {
                 HeaderButton(WebIcons.ArrowLeft, onBack, Modifier.padding(end = 4.dp))
                 SText(t(kind.title), Modifier.weight(1f), size = 20.sp, weight = 900, color = SeedyColors.White, maxLines = 1)
@@ -76,7 +76,7 @@ fun SeerrTitlesScreen(kind: TitlesKind, state: SeerrTitlesViewModel.State, onBac
         val items = state.items
         when {
             items == null -> items(9) { Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(11.dp)).background(SeedyColors.Surface)) }
-            items.isEmpty() -> item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
+            items.isEmpty() -> fullLine("empty") {
                 if (state.failed) Message(t("Couldn't reach Seerr"), t("Try again in a moment."), t("Try again"), onMore)
                 else Message(t("Nothing here right now"), t("Seerr has no titles for this list."))
             }

@@ -1,9 +1,9 @@
-import { meStore } from '../../lib/app-state';
+import { meStore, playbackPrefs } from '../../lib/app-state';
 import { t } from '../../lib/i18n';
 import { useStore } from '../../lib/store';
 import { Switch } from '../../ui/controls';
 import { MeLayout } from './MeLayout';
-import { deviceStore as playerDeviceStore, setDevice as setPlayerDevice } from '../../player/settings';
+import { deviceStore as playerDeviceStore, seekSteps, setDevice as setPlayerDevice } from '../../player/settings';
 import { deviceStore, setDevice } from './prefs';
 import { ShortcutGrid } from './shortcuts';
 import { MeRow, MeSection, SaveLine } from './parts';
@@ -15,13 +15,15 @@ export function MeControls() {
   const me = useStore(meStore);
   const device = useStore(deviceStore);
   // "This device", as the board marks it: a TV remote's Back shouldn't change what Escape does on a laptop.
-  const backCloses = useStore(playerDeviceStore).backClosesPlayer;
-  const pb = me.prefs?.playback;
+  const playerDevice = useStore(playerDeviceStore);
+  const backCloses = playerDevice.backClosesPlayer;
+  /* The player's seek steps: this device's own, else the profile's. */
+  const steps = seekSteps(playerDevice, playbackPrefs(me.prefs));
   return (
     <MeLayout page="controls" title={t('Controls')} lede={t('Keyboard, remote and gamepad. Seek steps live in Playback.')}>
       <section aria-labelledby="keys-h" class="me-section me-keys-panel">
         <h2 id="keys-h" class="me-section-title">{t('Keyboard shortcuts in the player')}</h2>
-        <ShortcutGrid back={pb?.seekBackSeconds} forward={pb?.seekForwardSeconds} />
+        <ShortcutGrid back={steps.back} forward={steps.forward} />
         <span class="me-foot">{t('Press ? anywhere in Seedy to see these.')}</span>
       </section>
 

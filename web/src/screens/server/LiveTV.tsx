@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { getSession } from '../../api/client';
+import { currentUserId } from '../../api/client';
 import { t, tn } from '../../lib/i18n';
-import { Segmented } from '../../ui/controls';
+import { Segmented, SelectField, Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { confirm, Sheet, toast } from '../../ui/overlay';
 import { AdminLayout } from '../admin/AdminLayout';
 import { type ChannelMappingOptions, deleteListingProvider, deleteTuner, discoverTuners, errText, getChannelCount, getChannelMappingOptions, getLineups, getLiveTv, getSdCountries, getTasks, type ListingsProvider, type LiveTvOptions, type NameIdPair, saveListingProvider, saveLiveTv, saveTuner, setChannelMapping, startTask, type TaskInfo, type TunerHostInfo } from './api';
 import { getGuideInfo, type GuideInfo } from '../../api/livetv';
-import { LoadFailed, NumBox, PathField, Select, SettingRow, SwitchCtl, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
+import { LoadFailed, NumBox, PathField, SrvRow, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
 import { Glyph } from './glyphs';
-;
+import { capitalize } from '../../lib/format';
 
 /* ── Settings saved with the unsaved bar (everything except tuners and guide sources, which save on their own) ── */
 
@@ -77,7 +77,7 @@ export function ServerLiveTV() {
 
   /* Statuses: discovery marks HDHomeRuns online, the guide task says when listings were last fetched. */
   const refreshStatus = () => {
-    const uid = getSession()?.userId;
+    const uid = currentUserId();
     if (uid) getChannelCount(uid).then((r) => setChannels(r.TotalRecordCount), () => setChannels(null));
     getTasks().then((list) => setTask(list.find((t) => t.Key === 'RefreshGuide') ?? null), () => undefined);
     getGuideInfo().then(setGuide, () => undefined);
@@ -323,7 +323,7 @@ export function ServerLiveTV() {
                 <span class="srv-name">{t('Days of guide to download')}</span>
                 <span class="srv-help">{t('More days lets people schedule further ahead, but updates take longer')}</span>
               </label>
-              <Select id="guide-days" minWidth={160} value={r.GuideDays ?? 0}
+              <SelectField id="guide-days" minWidth={160} value={r.GuideDays ?? 0}
                 options={(GUIDE_DAYS.includes(r.GuideDays ?? 0) ? GUIDE_DAYS : [...GUIDE_DAYS, r.GuideDays ?? 0].sort((a, b) => a - b)).map((n) => ({ value: n, label: daysLabel(n) }))}
                 onChange={(v) => setR({ GuideDays: v || null })} />
             </div>
@@ -331,35 +331,35 @@ export function ServerLiveTV() {
 
           <section aria-labelledby="rec-h" class="panel">
             <h2 id="rec-h" class="panel-title srv-panel-h">{t('Recordings')}</h2>
-            <SettingRow name={t('Recordings folder')} help={t('Empty uses the server data folder')} cls="is-16" labelCls="is-free is-normal">
+            <SrvRow name={t('Recordings folder')} help={t('Empty uses the server data folder')} cls="is-16" labelCls="is-free is-normal">
               <PathField label={t('Recordings folder')} value={r.RecordingPath ?? ''} placeholder={t('Server data folder')} onChange={(v) => setR({ RecordingPath: v })} />
-            </SettingRow>
-            <SettingRow name={t('Movie recordings')} help={t('Optional, overrides the folder above')} cls="is-16" labelCls="is-free is-normal">
+            </SrvRow>
+            <SrvRow name={t('Movie recordings')} help={t('Optional, overrides the folder above')} cls="is-16" labelCls="is-free is-normal">
               <PathField label={t('Movie recordings')} value={r.MovieRecordingPath ?? ''} placeholder={t('Same as recordings folder')} onChange={(v) => setR({ MovieRecordingPath: v })} />
-            </SettingRow>
-            <SettingRow name={t('Series recordings')} help={t('Optional, overrides the folder above')} cls="is-16" labelCls="is-free is-normal">
+            </SrvRow>
+            <SrvRow name={t('Series recordings')} help={t('Optional, overrides the folder above')} cls="is-16" labelCls="is-free is-normal">
               <PathField label={t('Series recordings')} value={r.SeriesRecordingPath ?? ''} placeholder={t('Same as recordings folder')} onChange={(v) => setR({ SeriesRecordingPath: v })} />
-            </SettingRow>
-            <SettingRow name={t('Padding')} help={t('Start early and stop late when the tuner allows')} cls="is-16" labelCls="is-free is-normal">
+            </SrvRow>
+            <SrvRow name={t('Padding')} help={t('Start early and stop late when the tuner allows')} cls="is-16" labelCls="is-free is-normal">
               <div class="srv-chiprow">
                 <NumBox label={t('Minutes before')} unit={t('min before')} width={36} value={Math.round(r.PrePaddingSeconds / 60)} min={0} max={120} onChange={(v) => setR({ PrePaddingSeconds: v * 60 })} />
                 <NumBox label={t('Minutes after')} unit={t('min after')} width={36} value={Math.round(r.PostPaddingSeconds / 60)} min={0} max={240} onChange={(v) => setR({ PostPaddingSeconds: v * 60 })} />
               </div>
-            </SettingRow>
-            <SettingRow name={t('After recording, run')} help={t('Optional. Use {path} for the recording file')} htmlFor="post-app" cls="is-16" labelCls="is-free is-normal">
+            </SrvRow>
+            <SrvRow name={t('After recording, run')} help={t('Optional. Use {path} for the recording file')} htmlFor="post-app" cls="is-16" labelCls="is-free is-normal">
               <div class="srv-field-stack">
                 <input id="post-app" type="text" class="field srv-mono-plain" placeholder={t('Program, e.g. /usr/bin/comskip')} spellcheck={false} value={r.RecordingPostProcessor ?? ''}
                   onChange={(e) => setR({ RecordingPostProcessor: (e.currentTarget as HTMLInputElement).value.trim() })} />
                 <input type="text" class="field srv-mono-plain" aria-label={t('Arguments')} spellcheck={false} value={r.RecordingPostProcessorArguments ?? ''}
                   onChange={(e) => setR({ RecordingPostProcessorArguments: (e.currentTarget as HTMLInputElement).value })} />
               </div>
-            </SettingRow>
-            <SettingRow name={t('Save guide info as NFO')} help={t('Store listing details next to each recording')} cls="is-rec-switch" labelCls="is-free is-normal">
-              <SwitchCtl on={r.SaveRecordingNFO} set={(v) => setR({ SaveRecordingNFO: v })} label={t('Save guide info as NFO')} />
-            </SettingRow>
-            <SettingRow name={t('Save guide images')} help={t('Store listing artwork next to each recording')} cls="is-rec-switch" labelCls="is-free is-normal">
-              <SwitchCtl on={r.SaveRecordingImages} set={(v) => setR({ SaveRecordingImages: v })} label={t('Save guide images')} />
-            </SettingRow>
+            </SrvRow>
+            <SrvRow name={t('Save guide info as NFO')} help={t('Store listing details next to each recording')} cls="is-rec-switch" labelCls="is-free is-normal">
+              <Switch checked={r.SaveRecordingNFO} onChange={(v) => setR({ SaveRecordingNFO: v })} label={t('Save guide info as NFO')} />
+            </SrvRow>
+            <SrvRow name={t('Save guide images')} help={t('Store listing artwork next to each recording')} cls="is-rec-switch" labelCls="is-free is-normal">
+              <Switch checked={r.SaveRecordingImages} onChange={(v) => setR({ SaveRecordingImages: v })} label={t('Save guide images')} />
+            </SrvRow>
           </section>
         </>
       )}
@@ -461,34 +461,34 @@ function TunerEditor({ draft, isNew, channels, onChange, onCancel, onSaved }: {
       </div>
       <form class="srv-editor-body" onSubmit={(e) => { e.preventDefault(); void save(); }}>
         {isNew && (
-          <SettingRow name={t('Type')} help={t('What kind of tuner this is')} htmlFor="tuner-type" cls="is-16" labelCls="is-free is-normal">
-            <Select id="tuner-type" minWidth={360} value={type}
+          <SrvRow name={t('Type')} help={t('What kind of tuner this is')} htmlFor="tuner-type" cls="is-16" labelCls="is-free is-normal">
+            <SelectField id="tuner-type" minWidth={360} value={type}
               options={[{ value: 'm3u', label: t('M3U playlist (IPTV)') }, { value: 'hdhomerun', label: 'HDHomeRun' }]}
               onChange={(v) => onChange({ ...newTuner(v), FriendlyName: draft.FriendlyName, Url: draft.Url })} />
-          </SettingRow>
+          </SrvRow>
         )}
-        <SettingRow name={m3u ? t('File or URL') : t('IP address')} help={m3u ? t('M3U playlist') : t('The tuner’s address on your network')} htmlFor="tuner-url" cls="is-16" labelCls="is-free is-normal">
+        <SrvRow name={m3u ? t('File or URL') : t('IP address')} help={m3u ? t('M3U playlist') : t('The tuner’s address on your network')} htmlFor="tuner-url" cls="is-16" labelCls="is-free is-normal">
           <input id="tuner-url" type="text" class="field srv-mono-plain srv-text is-360" spellcheck={false} value={draft.Url ?? ''}
             placeholder={m3u ? 'http://iptv.local/playlist.m3u' : '192.168.1.40'} aria-invalid={err && !(draft.Url ?? '').trim() ? 'true' : undefined}
             onInput={(e) => set({ Url: (e.currentTarget as HTMLInputElement).value })} />
-        </SettingRow>
+        </SrvRow>
         {m3u && (
-          <SettingRow name={t('User agent')} help={t('Optional, sent with every request')} htmlFor="tuner-ua" cls="is-16" labelCls="is-free is-normal">
+          <SrvRow name={t('User agent')} help={t('Optional, sent with every request')} htmlFor="tuner-ua" cls="is-16" labelCls="is-free is-normal">
             <input id="tuner-ua" type="text" class="field srv-text is-360" placeholder={t('Default')} value={draft.UserAgent ?? ''}
               onInput={(e) => set({ UserAgent: (e.currentTarget as HTMLInputElement).value })} />
-          </SettingRow>
+          </SrvRow>
         )}
-        <SettingRow name={t('Limits')} help={m3u ? t('0 streams means no limit. Bitrate is used when it can’t be detected') : t('Bitrate is used when it can’t be detected')} cls="is-16" labelCls="is-free is-normal">
+        <SrvRow name={t('Limits')} help={m3u ? t('0 streams means no limit. Bitrate is used when it can’t be detected') : t('Bitrate is used when it can’t be detected')} cls="is-16" labelCls="is-free is-normal">
           <div class="srv-chiprow">
             {m3u && <NumBox label={t('Simultaneous streams')} unit={t('streams')} width={40} value={draft.TunerCount} min={0} max={99} onChange={(v) => set({ TunerCount: v })} />}
             <NumBox label={t('Fallback bitrate in Mbps')} unit="Mbps" width={40} value={Math.round(draft.FallbackMaxStreamingBitrate / 1_000_000)} min={1} max={400}
               onChange={(v) => set({ FallbackMaxStreamingBitrate: v * 1_000_000 })} />
           </div>
-        </SettingRow>
+        </SrvRow>
         {TUNER_SWITCHES.filter((s) => s.types.includes(type)).map((s) => (
-          <SettingRow key={s.key} name={t(s.name)} help={t(s.help)} labelCls="is-560">
-            <SwitchCtl on={!!draft[s.key]} set={(v) => set({ [s.key]: v } as Partial<TunerHostInfo>)} label={t(s.name)} />
-          </SettingRow>
+          <SrvRow key={s.key} name={t(s.name)} help={t(s.help)} labelCls="is-560">
+            <Switch checked={!!draft[s.key]} onChange={(v) => set({ [s.key]: v } as Partial<TunerHostInfo>)} label={t(s.name)} />
+          </SrvRow>
         ))}
         <div class="srv-editor-foot">
           {err ? <span class="form-error" role="alert"><Icon name="alert" size={16} />{err}</span> : <span class="srv-note">{t('Channels with DRM are never imported.')}</span>}
@@ -561,13 +561,12 @@ function providerDetail(p: ListingsProvider, tuners: TunerHostInfo[]): string {
     ? t('All tuners')
     : t('{tuners} only', { tuners: tuners.filter((x) => x.Id && p.EnabledTuners.includes(x.Id)).map(tunerName).join(', ') });
   if (p.Type === 'xmltv') {
-    const cat = (label: string, list?: string[]) => (list?.length ? t('{label}: {list}', { label: t(label), list: list.map(cap).join('|') }) : '');
+    const cat = (label: string, list?: string[]) => (list?.length ? t('{label}: {list}', { label: t(label), list: list.map(capitalize).join('|') }) : '');
     return [cat('Movies', p.MovieCategories), cat('Kids', p.KidsCategories), cat('News', p.NewsCategories), cat('Sports', p.SportsCategories), forTuners].filter(Boolean).join(' · ');
   }
   return [p.Username, p.Country, p.ZipCode, forTuners].filter(Boolean).join(' · ');
 }
 
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const CAT_LABEL = { movies: 'Movies categories', kids: 'Kids categories', news: 'News categories', sports: 'Sports categories' } as const;
 const splitList = (s: string) => s.split(/[|,]/).map((x) => x.trim()).filter(Boolean);
 
@@ -703,7 +702,7 @@ function GuideSourceSheet({ open, provider, tuners, onClose, onSaved }: {
               </label>
               <label class="srv-sheet-field">{t('Country')}
                 {countries && countries.length > 0
-                  ? <Select label={t('Country')} value={p.Country ?? ''} options={[{ value: '', label: t('Choose…') }, ...countries]} onChange={(v) => set({ Country: v })} />
+                  ? <SelectField label={t('Country')} value={p.Country ?? ''} options={[{ value: '', label: t('Choose…') }, ...countries]} onChange={(v) => set({ Country: v })} />
                   : <input class="field" value={p.Country ?? ''} placeholder="USA" onInput={(e) => set({ Country: (e.currentTarget as HTMLInputElement).value })} />}
               </label>
               <label class="srv-sheet-field">{t('Postal code')}
@@ -713,7 +712,7 @@ function GuideSourceSheet({ open, provider, tuners, onClose, onSaved }: {
             <div class="srv-sheet-field">{t('Lineup')}
               <div class="srv-browse-path">
                 {lineups && lineups.length > 0
-                  ? <Select label={t('Lineup')} value={p.ListingsId ?? ''} options={lineups.map((l) => ({ value: l.Id, label: l.Name }))} onChange={(v) => set({ ListingsId: v })} />
+                  ? <SelectField label={t('Lineup')} value={p.ListingsId ?? ''} options={lineups.map((l) => ({ value: l.Id, label: l.Name }))} onChange={(v) => set({ ListingsId: v })} />
                   : <input class="field" readOnly value={p.ListingsId ?? ''} placeholder={t('Find lineups for your area')} aria-label={t('Lineup')} />}
                 <button type="button" class="btn btn-secondary" disabled={busy || !p.Username || !p.Country || !p.ZipCode} onClick={() => void findLineups()}>{t('Find lineups')}</button>
               </div>
@@ -798,7 +797,7 @@ function MapChannels({ provider, onClose, onChanged }: { provider: ListingsProvi
         {shown.map((c) => (
           <div key={c.Id} class="srv-map-row">
             <span class="srv-map-name">{c.Name}<span class="srv-help">{c.ProviderChannelName ? t('Shows {name}', { name: c.ProviderChannelName }) : t('No listings')}</span></span>
-            <Select label={t('Listing for {name}', { name: c.Name })} value={c.ProviderChannelId ?? ''} options={choices}
+            <SelectField label={t('Listing for {name}', { name: c.Name })} value={c.ProviderChannelId ?? ''} options={choices}
               onChange={(v) => { if (busy !== c.Id) void map(c.Id, v); }} />
           </div>
         ))}

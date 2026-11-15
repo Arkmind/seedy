@@ -37,7 +37,6 @@ import io.github.arkmind.seedy.mobile.admin.FieldBlock
 import io.github.arkmind.seedy.mobile.admin.FieldSection
 import io.github.arkmind.seedy.mobile.admin.MonoText
 import io.github.arkmind.seedy.mobile.admin.PillButton
-import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.PillStyle
 import io.github.arkmind.seedy.mobile.admin.SheetButtons
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
@@ -126,11 +125,8 @@ fun ServerSettingsScreen(
         },
     ) {
         when {
-            !state.loaded && state.loadError != null -> {
-                SText(state.loadError.orEmpty(), Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp), size = 13.sp, color = SeedyColors.Danger)
-                PillRow { PillButton(t("Try again"), actions::retry) }
-            }
-            !state.loaded -> SText("…", Modifier.padding(20.dp), size = 13.sp, color = SeedyColors.Text3)
+            !state.loaded && state.loadError != null -> PageLoadError(state.loadError.orEmpty(), actions::retry)
+            !state.loaded -> PageLoading()
             expert -> SettingCards(state.expert, rows, sheets)
             else -> {
                 ServerCard(state, actions)

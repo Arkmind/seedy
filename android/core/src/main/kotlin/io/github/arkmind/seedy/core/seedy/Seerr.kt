@@ -165,10 +165,3 @@ val UserSession.seerrInSearch: Boolean
 fun tmdbImage(path: String?, size: String = "w342"): String? = path?.takeIf { it.isNotBlank() }?.let {
     if (it.startsWith("http://") || it.startsWith("https://")) it else "https://image.tmdb.org/t/p/$size$it"
 }
-
-/** Seerr's Jellyfin item id (32 hex, no dashes) as the SDK's UUID; null when it isn't on the server. */
-fun libraryUuid(id: String?): java.util.UUID? {
-    val s = id?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-    val dashed = if (s.length == 32) "${s.substring(0, 8)}-${s.substring(8, 12)}-${s.substring(12, 16)}-${s.substring(16, 20)}-${s.substring(20)}" else s
-    return runCatching { java.util.UUID.fromString(dashed) }.getOrNull()
-}

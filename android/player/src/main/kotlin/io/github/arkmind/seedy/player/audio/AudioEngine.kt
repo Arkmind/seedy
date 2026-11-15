@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.player.audio
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
@@ -26,6 +27,8 @@ import io.github.arkmind.seedy.core.audio.narratorOf
 import io.github.arkmind.seedy.core.audio.qualityLabel
 import io.github.arkmind.seedy.core.format.Images
 import io.github.arkmind.seedy.core.format.TICKS_PER_SECOND
+import io.github.arkmind.seedy.core.format.dashed
+import io.github.arkmind.seedy.core.format.favorited
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.SessionState
 import io.github.arkmind.seedy.core.session.UserSession
@@ -194,6 +197,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
                 Player.STATE_BUFFERING -> set { copy(loading = true) }
                 Player.STATE_READY -> set { copy(loading = false) }
                 Player.STATE_ENDED -> onEnded()
+                Player.STATE_IDLE -> Unit // stopped, or failed: onPlayerError handles that
             }
         }
 
@@ -646,7 +650,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
 
     fun toggleFavorite(track: BaseItemDto, on: Boolean = track.userData?.isFavorite != true) {
         fun patchAll(value: Boolean) {
-            fun Entry.patched() = if (this.track.id == track.id) copy(track = this.track.copy(userData = this.track.userData?.copy(isFavorite = value))) else this
+            fun Entry.patched() = if (this.track.id == track.id) copy(track = this.track.favorited(value)) else this
             set { copy(current = current?.patched(), context = context.map { it.patched() }, added = added.map { it.patched() }, original = original?.map { it.patched() }) }
             _favorites.tryEmit(track.id to value)
             refreshButtons()
@@ -761,7 +765,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
         val author = item.people.orEmpty().firstOrNull { it.type == PersonKind.AUTHOR || it.type == PersonKind.WRITER }?.name
             ?: item.albumArtist ?: item.artists?.firstOrNull() ?: authorsOf(item).firstOrNull()?.first
         val narrator = narratorOf(item)
-        val parts = multi?.parts?.map { BookPart(it.id.dashed(), seconds(it.start), seconds(it.runTimeTicks)) }
+        val parts = multi?.parts?.map { BookPart(dashed(it.id), seconds(it.start), seconds(it.runTimeTicks)) }
         val name = if (multi != null || item.album == null || item.album == item.name) item.name.orEmpty() else item.album.orEmpty()
         return BookInfo(item.id.toString(), name, author, narrator.takeIf { it != author }, duration, chapters, parts)
     }
@@ -770,7 +774,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
     private fun partTrack(book: BaseItemDto, p: io.github.arkmind.seedy.core.audio.AudioPart): BaseItemDto {
         val tag = book.imageTags?.get(ImageType.PRIMARY)
         return book.copy(
-            id = UUID.fromString(p.id.dashed()), name = p.name, type = BaseItemKind.AUDIO_BOOK, mediaType = MediaType.AUDIO, runTimeTicks = p.runTimeTicks,
+            id = UUID.fromString(dashed(p.id)), name = p.name, type = BaseItemKind.AUDIO_BOOK, mediaType = MediaType.AUDIO, runTimeTicks = p.runTimeTicks,
             album = book.name, parentId = book.id, imageTags = null, chapters = null, mediaSources = null, overview = null,
             parentPrimaryImageItemId = if (tag != null) book.id else book.parentPrimaryImageItemId,
             parentPrimaryImageTag = tag ?: book.parentPrimaryImageTag,
@@ -808,12 +812,6 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
     /** Plays songs already fetched (a page's track list) from [start], replacing the queue. */
     fun playTracks(tracks: List<BaseItemDto>, start: Int = 0, opts: PlayOptions = PlayOptions()) = playList(tracks, start, opts)
 
-    /** Plays these songs (Audio item ids) from [startIndex], replacing the queue. */
-    fun playIds(ids: List<UUID>, startIndex: Int = 0, opts: PlayOptions = PlayOptions()) = launch {
-        val tracks = it.tracks(ids)
-        playList(tracks, tracks.indexOfFirst { t -> t.id == ids.getOrNull(startIndex) }.coerceAtLeast(0), opts)
-    }
-
     /** Plays an album, playlist, artist, genre or library by id: their songs in order (or shuffled). */
     fun playContainer(id: UUID, opts: PlayOptions = PlayOptions()) = launch { a ->
         val item = a.audioItem(id)
@@ -821,11 +819,6 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
         val tracks = a.containerTracks(item)
         val start = opts.startId?.let { sid -> tracks.indexOfFirst { it.id == sid }.coerceAtLeast(0) } ?: 0
         playList(tracks, start, opts.copy(source = opts.source ?: Source(kindOf(item), item.id.toString(), item.name.orEmpty())))
-    }
-
-    /** Jellyfin's instant mix of a song, album, artist, playlist or genre. */
-    fun playMix(item: BaseItemDto) = launch { a ->
-        playList(a.instantMix(item.id), 0, PlayOptions(source = Source(SourceKind.Mix, item.id.toString(), t("{name} radio", "name" to item.name.orEmpty()))))
     }
 
     /** "Play" on any audio item: a song plays with the rest of its album after it. */
@@ -992,6 +985,7 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
     private fun set(patch: AudioState.() -> AudioState) = _state.update(patch)
 
     companion object {
+        @SuppressLint("StaticFieldLeak") // holds the application context only
         @Volatile private var instance: AudioEngine? = null
 
         fun get(context: Context, core: SeedyCore): AudioEngine =
@@ -1002,7 +996,5 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
 
         private fun seconds(ticks: Long?) = (ticks ?: 0L) / TICKS_PER_SECOND.toDouble()
         private fun ticks(s: Double) = (s * TICKS_PER_SECOND).roundToLong()
-        private fun String.dashed(): String =
-            if (length == 32) "${substring(0, 8)}-${substring(8, 12)}-${substring(12, 16)}-${substring(16, 20)}-${substring(20)}" else this
     }
 }

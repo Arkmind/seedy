@@ -8,12 +8,13 @@ import type { AdminConfig } from '../../api/seedy';
 import { refreshMe } from '../../lib/app-state';
 import { t } from '../../lib/i18n';
 import { createStore, useStore } from '../../lib/store';
-import { SavedNote, SelectField, SettingRow, Switch } from '../../ui/controls';
+import { Panel, SavedNote, SelectField, SettingRow, Switch } from '../../ui/controls';
 import { Icon, type IconName } from '../../ui/icons';
-import { MenuButton, MenuItem, Sheet, toast } from '../../ui/overlay';
+import { MenuButton, MenuItem, toastError } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
 import { editConfig, flushConfig, mergeServerConfig, useAdminConfig } from './config';
-import { ProfileAvatar } from './Requests';
+import { ApiKeyRow, ApiKeySheet, ConnLine, OpenAppButton, patchRow, ProfileAvatar, roleOf, TableError, TableSkeleton, TestButton, UrlInput } from './parts';
+import { capitalize, joinNames } from '../../lib/format';
 import '../requests/media.css';
 
 /* Music and book requests (AdminMediaRequests board): Seedy talks to Lidarr, Shelfarr, Librarr and a Readarr-API app
@@ -23,7 +24,7 @@ import '../requests/media.css';
 type Media = AdminMedia;
 type BookApp = 'shelfarr' | 'librarr' | 'readarr';
 
-export const DEF_MEDIA: Media = {
+const DEF_MEDIA: Media = {
   lidarr: { url: '', qualityProfileId: 0, metadataProfileId: 0, rootFolder: '', wholeArtist: 'all', searchOnApprove: true },
   shelfarr: { enabled: false, url: '' },
   librarr: { enabled: false, url: '' },
@@ -59,12 +60,12 @@ function loadInfo() {
   adminMediaInfo().then((data) => infoStore.set({ data, loading: false }), () => infoStore.set((s) => ({ ...s, loading: false })));
 }
 
-const profilesStore = createStore<{ data?: AdminMediaProfile[]; error?: Error }>({});
+const mediaProfilesStore = createStore<{ data?: AdminMediaProfile[]; error?: Error }>({});
 
 export function AdminMediaRequests() {
   const { config, error, save, reload } = useAdminConfig();
   const m = config ? media(config) : null;
-  useEffect(() => { loadInfo(); adminMediaProfiles().then((data) => profilesStore.set({ data }), (e: Error) => profilesStore.set({ error: e })); }, []);
+  useEffect(() => { loadInfo(); adminMediaProfiles().then((data) => mediaProfilesStore.set({ data }), (e: Error) => mediaProfilesStore.set({ error: e })); }, []);
   // Test what's set up when the page opens, unless it was tested a minute ago.
   useEffect(() => {
     if (!m) return;
@@ -112,36 +113,14 @@ function Head({ icon, title, sub, id }: { icon: IconName; title: string; sub: st
 }
 
 function UrlRow({ service, value, onCommit, placeholder }: { service: MediaService; value: string; onCommit: (v: string) => void; placeholder: string }) {
-  const [url, setUrl] = useState(value);
-  useEffect(() => setUrl(value), [value]);
-  const commit = async () => {
-    let v = url.trim().replace(/\/+$/, '');
-    if (v && !/^https?:\/\//i.test(v)) v = 'http://' + v;
-    if (v !== url) setUrl(v);
-    if (v === value) return;
+  const commit = async (v: string) => {
     onCommit(v);
     try { await flushConfig(); } catch { return; }
     if (v) { void test(service); if (service === 'lidarr') loadInfo(); }
   };
   return (
     <SettingRow name={t('Server address')} help={t('As this Jellyfin server reaches it')} htmlFor={service + '-url'}>
-      <input
-        id={service + '-url'}
-        class="field is-340"
-        type="url"
-        inputMode="url"
-        value={url}
-        placeholder={placeholder}
-        autoComplete="off"
-        spellcheck={false}
-        aria-label={t('{app} server address', { app: APP_NAMES[service] })}
-        onInput={(e) => setUrl((e.currentTarget as HTMLInputElement).value)}
-        onBlur={() => void commit()}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') { e.preventDefault(); void commit(); }
-          if (e.key === 'Escape') setUrl(value);
-        }}
-      />
+      <UrlInput id={service + '-url'} value={value} placeholder={placeholder} label={t('{app} server address', { app: APP_NAMES[service] })} onCommit={commit} />
     </SettingRow>
   );
 }
@@ -149,16 +128,20 @@ function UrlRow({ service, value, onCommit, placeholder }: { service: MediaServi
 function KeyRow({ service, hint, name, help }: { service: MediaService; hint?: string; name: string; help: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <SettingRow name={name} help={help}>
-      <div class="setting-controls is-10">
-        <span class="key-saved">
-          <Icon name="lock" size={16} />
-          {hint ? t('Saved · ends in {hint}', { hint }) : t('No key saved')}
-        </span>
-        <button type="button" class="btn btn-secondary" onClick={() => setOpen(true)}>{hint ? t('Replace key') : t('Add key')}</button>
-      </div>
-      <KeySheet service={service} open={open} onClose={() => setOpen(false)} replacing={!!hint} />
-    </SettingRow>
+    <ApiKeyRow name={name} help={help} hint={hint} onOpen={() => setOpen(true)}>
+      <ApiKeySheet
+        open={open}
+        onClose={() => setOpen(false)}
+        title={hint ? t('Replace {app} key', { app: APP_NAMES[service] }) : t('Add {app} key', { app: APP_NAMES[service] })}
+        text={t(KEY_HELP[service])}
+        label={t('{app} API key', { app: APP_NAMES[service] })}
+        save={async (key) => {
+          const res = await adminMediaKey(service, key);
+          mergeServerConfig(res, (server, local) => ({ ...local, media: { ...media(local), [service]: { ...media(local)[service], apiKeyHint: server.media?.[service]?.apiKeyHint } } }));
+        }}
+        onSaved={() => { void test(service); if (service === 'lidarr') loadInfo(); }}
+      />
+    </ApiKeyRow>
   );
 }
 
@@ -168,45 +151,6 @@ const KEY_HELP: Record<MediaService, string> = {
   librarr: 'Copy the key from Settings in Librarr. Seedy sends it as X-Api-Key, keeps it on the server and only shows its last four characters.',
   readarr: 'Copy the key from Settings › General in the app. Seedy keeps it on the server and only shows its last four characters.'
 };
-
-function KeySheet({ service, open, onClose, replacing }: { service: MediaService; open: boolean; onClose: () => void; replacing: boolean }) {
-  const [key, setKey] = useState('');
-  const [busy, setBusy] = useState(false);
-  useEffect(() => { if (open) setKey(''); }, [open]);
-  const submit = async (e: Event) => {
-    e.preventDefault();
-    const v = key.trim();
-    if (!v) return;
-    setBusy(true);
-    try {
-      await flushConfig().catch(() => { /* the key is saved on its own */ });
-      const res = await adminMediaKey(service, v);
-      mergeServerConfig(res, (server, local) => ({ ...local, media: { ...media(local), [service]: { ...media(local)[service], apiKeyHint: server.media?.[service]?.apiKeyHint } } }));
-      toast(t('API key saved'));
-      onClose();
-      void test(service);
-      if (service === 'lidarr') loadInfo();
-    } catch (err) {
-      toast(`${t('Couldn’t save the key.')} ${(err as Error).message || ''}`.trim(), 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-  const title = replacing ? t('Replace {app} key', { app: APP_NAMES[service] }) : t('Add {app} key', { app: APP_NAMES[service] });
-  return (
-    <Sheet open={open} onClose={onClose} label={title}>
-      <form style={{ display: 'contents' }} onSubmit={submit}>
-        <div class="sheet-head"><h2 class="sheet-title">{title}</h2></div>
-        <p class="sheet-text">{t(KEY_HELP[service])}</p>
-        <input class="field" type="password" value={key} aria-label={t('{app} API key', { app: APP_NAMES[service] })} placeholder={t('{app} API key', { app: APP_NAMES[service] })} autoComplete="off" spellcheck={false} onInput={(e) => setKey((e.currentTarget as HTMLInputElement).value)} />
-        <div class="sheet-actions">
-          <button type="button" class="btn btn-ghost is-light" onClick={onClose}>{t('Cancel')}</button>
-          <button type="submit" class="btn btn-primary is-sm" disabled={!key.trim() || busy}>{busy ? t('Saving…') : t('Save key')}</button>
-        </div>
-      </form>
-    </Sheet>
-  );
-}
 
 /* "Connected. Lidarr 3.1 · 41 artists monitored · 2 downloads running", worded from the test's numbers. */
 function connectedLine(r: MediaTestResult): string {
@@ -236,17 +180,11 @@ function ConnRow({ service, ready, children }: { service: MediaService; ready: b
   else if (s?.result?.ok) { dot = ''; lead = t('Connected.'); rest = connectedLine(s.result); }
   else if (s?.result) { dot = 'is-danger'; lead = t('Not connected.'); rest = t(s.result.message); }
   else { dot = 'is-pending'; lead = t('Not tested yet.'); rest = t('Test the connection to check the address and key.'); }
-  const testing = s?.state === 'testing';
   return (
     <div class="setting is-last">
-      <span class="conn-state" role="status" aria-live="polite">
-        <span class={'dot ' + dot} />
-        <span><b>{lead}</b>{rest ? ' ' + rest : ''}</span>
-      </span>
+      <ConnLine dot={dot} lead={lead} rest={rest} />
       <div class="setting-controls">
-        <button type="button" class="btn btn-primary is-sm" disabled={!ready || testing} aria-busy={testing ? 'true' : undefined} onClick={() => void test(service)}>
-          {testing ? t('Testing…') : t('Test connection')}
-        </button>
+        <TestButton disabled={!ready} testing={s?.state === 'testing'} onTest={() => void test(service)} />
         {children}
       </div>
     </div>
@@ -290,9 +228,7 @@ function LidarrPanel({ m }: { m: Media }) {
         <Switch label={t('Search as soon as it’s approved')} checked={l.searchOnApprove} onChange={(v) => set({ searchOnApprove: v })} />
       </SettingRow>
       <ConnRow service="lidarr" ready={ready}>
-        {l.url
-          ? <a class="btn btn-secondary" href={l.url} target="_blank" rel="noreferrer">{t('Open Lidarr')}<Icon name="external" size={16} /></a>
-          : <button type="button" class="btn btn-secondary" disabled>{t('Open Lidarr')}<Icon name="external" size={16} /></button>}
+        <OpenAppButton href={l.url || undefined} label={t('Open Lidarr')} />
       </ConnRow>
     </section>
   );
@@ -312,11 +248,12 @@ const ROUTES: { key: keyof Media['routes']; format: 'ebook' | 'audiobook' | 'com
   { key: 'comics', format: 'comic', name: 'Comics and manga', help: 'CBZ, CBR', plural: 'comics and manga' }
 ];
 
+/* "ebooks and audiobooks": what the app is picked for. */
+const formatsFor = (m: Media, app: BookApp) => joinNames(ROUTES.filter((r) => m.routes[r.key] === app).map((r) => t(r.plural)));
+
 function usedFor(m: Media, app: BookApp): string {
-  const formats = ROUTES.filter((r) => m.routes[r.key] === app).map((r) => t(r.plural));
-  if (!formats.length) return '';
-  const list = formats.length > 1 ? t('{a} and {b}', { a: formats.slice(0, -1).join(', '), b: formats[formats.length - 1]! }) : formats[0]!;
-  return t('Used for {formats}', { formats: list });
+  const list = formatsFor(m, app);
+  return list ? t('Used for {formats}', { formats: list }) : '';
 }
 
 function BooksPanel({ m }: { m: Media }) {
@@ -360,7 +297,7 @@ function BooksPanel({ m }: { m: Media }) {
         {ROUTES.map((r) => {
           const land = landing.find((l) => l.format === r.format);
           const options = [
-            ...enabled.filter((a) => r.format !== 'comic' || a.id !== 'readarr').map((a) => ({ value: a.id as string, label: a.id === 'readarr' ? 'Readarr API' : a.name })),
+            ...enabled.filter((a) => r.format !== 'comic' || a.id !== 'readarr').map((a) => ({ value: a.id as string, label: a.name })),
             { value: 'off', label: t('Don’t allow') }
           ];
           const value = options.some((o) => o.value === m.routes[r.key]) ? m.routes[r.key] : 'off';
@@ -394,12 +331,11 @@ const APP_PANEL: Record<BookApp, { icon: IconName; sub: string; key: string; key
 function BookAppPanel({ service, m }: { service: BookApp; m: Media }) {
   const p = APP_PANEL[service];
   const app = m[service];
-  const name = service === 'readarr' ? 'Readarr API' : APP_NAMES[service];
-  const used = ROUTES.filter((r) => m.routes[r.key] === service).map((r) => t(r.plural));
-  const usedLine = used.length > 1 ? t('{a} and {b}', { a: used.slice(0, -1).join(', '), b: used[used.length - 1]! }) : used[0];
+  const name = APPS.find((a) => a.id === service)!.name;
+  const usedLine = formatsFor(m, service);
   return (
     <section aria-labelledby={service + '-h'} class="panel">
-      <Head id={service + '-h'} icon={p.icon} title={name} sub={usedLine ? usedLine.charAt(0).toLocaleUpperCase() + usedLine.slice(1) : t(p.sub)} />
+      <Head id={service + '-h'} icon={p.icon} title={name} sub={usedLine ? capitalize(usedLine) : t(p.sub)} />
       <UrlRow service={service} value={app.url} onCommit={(v) => setMedia((x) => ({ ...x, [service]: { ...x[service], url: v } }), 0)} placeholder={p.placeholder} />
       <KeyRow service={service} hint={app.apiKeyHint} name={t(p.key)} help={t(p.keyHelp)} />
       <ConnRow service={service} ready={!!app.url && !!app.apiKeyHint} />
@@ -431,27 +367,22 @@ function LimitCell({ value, options, word, label, onChange, suffix }: { value: n
 }
 
 function LimitsPanel() {
-  const { data, error } = useStore(profilesStore);
+  const { data, error } = useStore(mediaProfilesStore);
   const change = async (p: AdminMediaProfile, patch: Partial<AdminMediaProfile>) => {
-    profilesStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === p.userId ? { ...x, ...patch } : x)) }));
+    patchRow(mediaProfilesStore, p.userId, patch);
     try {
-      profilesStore.set({ data: await adminMediaProfile(p.userId, patch) });
+      mediaProfilesStore.set({ data: await adminMediaProfile(p.userId, patch) });
     } catch (e) {
-      profilesStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === p.userId ? p : x)) }));
-      toast(`${t('Couldn’t change {name}.', { name: p.name })} ${(e as Error).message || ''}`.trim(), 'error');
+      mediaProfilesStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === p.userId ? p : x)) }));
+      toastError(t('Couldn’t change {name}.', { name: p.name }), e);
     }
   };
-  const role = (p: AdminMediaProfile) => (p.isAdmin ? t('Administrator') : p.maxParentalRating ? t('Maturity limit: {rating}', { rating: p.maxParentalRating }) : t('User'));
   return (
-    <section aria-labelledby="lim-h" class="panel is-gap" style={{ gap: '14px' }}>
-      <div class="panel-head">
-        <h2 id="lim-h" class="panel-title">{t('Approvals and limits')}</h2>
-        <p class="panel-text">{t('Seedy handles approvals for music and books, then sends only approved requests. Librarr’s own approval queue is skipped.')}</p>
-      </div>
+    <Panel id="lim" title={t('Approvals and limits')} text={t('Seedy handles approvals for music and books, then sends only approved requests. Librarr’s own approval queue is skipped.')} gap={14}>
       {!data && error ? (
-        <div class="admin-inline-error" role="alert"><span class="dot is-danger" />{t('Couldn’t load the profiles.')} {error.message}</div>
+        <TableError text={t('Couldn’t load the profiles.')} error={error.message} />
       ) : !data ? (
-        <div class="table-skel" aria-busy="true">{[0, 1, 2, 3].map((i) => <span key={i} class="skel" />)}</div>
+        <TableSkeleton busy />
       ) : (
         <div class="table-scroll">
           <div role="table" aria-label={t('Request limits')} class="table amr-limits">
@@ -468,7 +399,7 @@ function LimitsPanel() {
                   <div role="cell" class="table-cell">
                     <span class="who">
                       <ProfileAvatar userId={p.userId} name={p.name} imageTag={p.imageTag} index={i} />
-                      <span class="who-text"><span class="who-name">{p.name}</span><span class="who-sub">{role(p)}</span></span>
+                      <span class="who-text"><span class="who-name">{p.name}</span><span class="who-sub">{roleOf(p)}</span></span>
                     </span>
                   </div>
                   <div role="cell" class="table-cell">
@@ -493,7 +424,7 @@ function LimitsPanel() {
           </div>
         </div>
       )}
-    </section>
+    </Panel>
   );
 }
 
@@ -506,13 +437,12 @@ function AfterPanel({ m }: { m: Media }) {
     { key: 'showRequesters', name: 'Show requests to everyone', help: 'Others see “Requested by Sam” on the cover' }
   ];
   return (
-    <section aria-labelledby="after-h" class="panel">
-      <div class="panel-head is-title-only"><h2 id="after-h" class="panel-title">{t('When a download finishes')}</h2></div>
+    <Panel id="after" title={t('When a download finishes')}>
       {rows.map((r, i) => (
         <SettingRow key={r.key} name={t(r.name)} help={t(r.help)} last={i === rows.length - 1}>
           <Switch label={t(r.name)} checked={m[r.key]} onChange={(v) => setMedia((x) => ({ ...x, [r.key]: v }))} />
         </SettingRow>
       ))}
-    </section>
+    </Panel>
   );
 }

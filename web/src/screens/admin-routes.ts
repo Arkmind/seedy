@@ -1,0 +1,23 @@
+/* The admin pages: only admins open them, so they load in a chunk of their own. */
+export { AdminGeneral } from './admin/General';
+export { AdminHome } from './admin/HomeScreen';
+export { AdminRequests } from './admin/Requests';
+export { AdminMediaRequests } from './admin/MediaRequests';
+export { AdminPlayLog } from './admin/PlayLog';
+export { AdminStatistics } from './admin/stats/Statistics';
+export { AdminStatisticsDay } from './admin/stats/StatisticsDay';
+export { ServerOverview } from './server/Overview';
+export { ServerSettings } from './server/Settings';
+export { ServerUsers } from './server/Users';
+export { ServerUserEdit } from './server/UserEdit';
+export { ServerLibraries } from './server/Libraries';
+export { ServerPlayback } from './server/Playback';
+export { ServerNetworking } from './server/Networking';
+export { ServerLiveTV } from './server/LiveTV';
+export { ServerDevices } from './server/Devices';
+export { ServerActivity } from './server/Activity';
+export { ServerPlugins } from './server/Plugins';
+export { ServerTasks } from './server/Tasks';
+export { ServerBackups } from './server/Backups';
+export { ServerLogs } from './server/Logs';
+export { ServerApiKeys } from './server/ApiKeys';

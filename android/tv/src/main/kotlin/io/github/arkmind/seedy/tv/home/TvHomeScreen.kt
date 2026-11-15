@@ -71,11 +71,15 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.tv.browse.TvChoice
 import io.github.arkmind.seedy.tv.browse.TvSidePanel
+import io.github.arkmind.seedy.tv.parts.CardRowRingRoom
+import io.github.arkmind.seedy.tv.parts.FocusWhen
+import io.github.arkmind.seedy.tv.parts.NoFocusScroll
 import io.github.arkmind.seedy.tv.parts.TvPressable
 import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusRing
 import io.github.arkmind.seedy.tv.parts.focusSoon
+import io.github.arkmind.seedy.tv.parts.maybeFocus
 import io.github.arkmind.seedy.tv.requests.TitleCard
 import io.github.arkmind.seedy.tv.requests.titleAction
 import io.github.arkmind.seedy.tv.shell.RailInset
@@ -92,14 +96,6 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import java.util.UUID
 import kotlin.math.min
 
-/** Space kept around a card row so the focused card's ring isn't clipped (ring 9 px, plus the focused card's growth). */
-private val RingRoom = 12.bp
-
-/** Lets the home rows' list ignore focus; [TvHomeScreen] scrolls it to the row in use itself. */
-@OptIn(ExperimentalFoundationApi::class)
-private object NoFocusScroll : BringIntoViewSpec {
-    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
-}
 
 /** No card to go back to (the row emptied): the remote goes to the first row's first card. */
 private val NoCard = UUID(0, 0)
@@ -137,14 +133,14 @@ fun TvHomeScreen(
 
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
         Backdrop(hero?.item)
-        Column(Modifier.fillMaxSize().padding(start = RailInset, top = 104.bp), verticalArrangement = Arrangement.spacedBy(44.bp - RingRoom)) {
+        Column(Modifier.fillMaxSize().padding(start = RailInset, top = 104.bp), verticalArrangement = Arrangement.spacedBy(44.bp - CardRowRingRoom)) {
             Hero(hero)
             // Rows are 44 px apart on the board; each card row keeps 12 px above and below for the focus ring, taken from the gaps.
             // The list doesn't follow focus by itself (it would scroll just enough to show the card, leaving the row
             // above half in view): the row in use is scrolled to the top instead, title and all.
             val cardRows = LocalBringIntoViewSpec.current
             CompositionLocalProvider(LocalBringIntoViewSpec provides NoFocusScroll) {
-            LazyColumn(Modifier.fillMaxWidth().weight(1f), state = list, verticalArrangement = Arrangement.spacedBy(44.bp - RingRoom * 2), contentPadding = PaddingValues(bottom = 200.bp)) {
+            LazyColumn(Modifier.fillMaxWidth().weight(1f), state = list, verticalArrangement = Arrangement.spacedBy(44.bp - CardRowRingRoom * 2), contentPadding = PaddingValues(bottom = 200.bp)) {
                 itemsIndexed(rows, key = { _, r -> r.row.id }) { index, row ->
                     TvRow(
                         row = row,
@@ -192,7 +188,7 @@ fun TvHomeScreen(
         if (cardFocus[id]?.focusSoon() != true) firstCard.focusSoon()
         refocus = null
     }
-    LaunchedEffect(firstLoaded != null) { if (firstLoaded != null) firstCard.focusSoon() }
+    FocusWhen(firstLoaded != null, firstCard)
 }
 
 /** The focused title's backdrop at the top right, faded into the page on its left and bottom. */
@@ -281,17 +277,17 @@ private fun TvRow(
     onMenu: ((BaseItemDto) -> Unit)? = null,
     focusFor: (UUID) -> FocusRequester? = { null },
 ) {
-    Column(Modifier.padding(top = RingRoom), verticalArrangement = Arrangement.spacedBy(18.bp - RingRoom)) {
+    Column(Modifier.padding(top = CardRowRingRoom), verticalArrangement = Arrangement.spacedBy(18.bp - CardRowRingRoom)) {
         SText(row.title, size = 24.bsp, weight = 800, color = if (active) SeedyColors.White else SeedyColors.TextHero, maxLines = 1)
         val items = row.items.orEmpty()
         CompositionLocalProvider(LocalBringIntoViewSpec provides cardScroll) {
         // Room on the left too, so the first card's ring isn't cut.
         LazyRow(
-            Modifier.offset(x = -RingRoom),
+            Modifier.offset(x = -CardRowRingRoom),
             horizontalArrangement = Arrangement.spacedBy(28.bp),
             // Posters grow when focused: keep their tops in line, as on the Requests place.
             verticalAlignment = if (row.seerrRow) Alignment.Top else Alignment.CenterVertically,
-            contentPadding = PaddingValues(start = RingRoom, end = 96.bp, top = RingRoom, bottom = RingRoom),
+            contentPadding = PaddingValues(start = CardRowRingRoom, end = 96.bp, top = CardRowRingRoom, bottom = CardRowRingRoom),
         ) {
             if (row.seerrRow) {
                 // Discover and Upcoming movies: the Requests place's posters; OK opens the title.
@@ -310,7 +306,7 @@ private fun TvRow(
                     item = item,
                     kind = row.row.kind,
                     modifier = (if (i == 0 && firstCard != null) Modifier.focusRequester(firstCard) else Modifier)
-                        .then(focusFor(item.id)?.let { Modifier.focusRequester(it) } ?: Modifier),
+                        .maybeFocus(focusFor(item.id)),
                     onFocus = { onFocus(item) },
                     onClick = { onOpen(item) },
                     onPlay = { onPlay(item) },

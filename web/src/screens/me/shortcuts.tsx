@@ -3,7 +3,7 @@ import './parts.css';
 
 /* The player's keyboard shortcuts, as listed on the Controls board. Shared by Settings · Controls and the "?" overlay. */
 
-export const SHORTCUTS: { what: string; keys: string[] }[] = [
+const SHORTCUTS: { what: string; keys: string[] }[] = [
   { what: 'Play or pause', keys: ['Space', 'K'] },
   { what: 'Back 10 s, forward 30 s', keys: ['J', 'L'] },
   { what: 'Seek 5 s', keys: ['←', '→'] },
@@ -19,7 +19,7 @@ export const SHORTCUTS: { what: string; keys: string[] }[] = [
 const KEY_NAMES: Record<string, string> = { '←': 'Left arrow', '→': 'Right arrow', '↑': 'Up arrow', '↓': 'Down arrow', Esc: 'Escape' };
 
 /* "Back 10 s, forward 30 s" follows the person's seek steps (Settings · Playback). */
-export function shortcutLabel(what: string, back: number, forward: number) {
+function shortcutLabel(what: string, back: number, forward: number) {
   return what === 'Back 10 s, forward 30 s' ? t('Back {back} s, forward {forward} s', { back, forward }) : t(what);
 }
 

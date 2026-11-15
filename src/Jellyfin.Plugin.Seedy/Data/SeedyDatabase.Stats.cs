@@ -55,14 +55,7 @@ public sealed partial class SeedyDatabase
         cmd.CommandText = $"SELECT {PlayColumns} FROM plays WHERE started_at >= $from AND started_at < $to ORDER BY started_at";
         Bind(cmd, "$from", Ms(from));
         Bind(cmd, "$to", Ms(to));
-        var list = new List<PlayRecord>();
-        using var r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            list.Add(ReadPlay(r));
-        }
-
-        return list;
+        return ReadAll(cmd, ReadPlay);
     }
 
     /// <summary>The app each device played with last, by device name.</summary>

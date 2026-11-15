@@ -7,6 +7,7 @@ import { getLang, locale, t } from '../../lib/i18n';
 import { Icon } from '../../ui/icons';
 import { Popover } from '../../ui/overlay';
 import { DeviceTag } from './MeLayout';
+import { capitalize, displayLanguage } from '../../lib/format';
 import './playback.css';
 
 /* Building blocks shared by Settings · Playback and Settings · Subtitles. */
@@ -140,7 +141,7 @@ export function useFreshUser() {
 interface Culture { DisplayName: string; Name: string; ThreeLetterISOLanguageName: string }
 let culturesCache: Promise<PickOption<string>[]> | null = null;
 
-export function loadLanguages(): Promise<PickOption<string>[]> {
+function loadLanguages(): Promise<PickOption<string>[]> {
   culturesCache ??= get<Culture[]>('/Localization/Cultures').then((list) => {
     const seen = new Set<string>();
     return (list ?? [])
@@ -174,30 +175,18 @@ export function useLanguages(): PickOption<string>[] {
   return list;
 }
 
-let names: Intl.DisplayNames | null = null;
 /* A language code's name before the culture list has loaded. */
-export function languageName(code: string): string {
+function languageName(code: string): string {
   if (getLang() !== 'en') return localName(code, code);
-  try {
-    names ??= new Intl.DisplayNames(['en'], { type: 'language' });
-    return names.of(code) ?? code;
-  } catch {
-    return code;
-  }
+  return displayLanguage(code, 'en') ?? code;
 }
 
 /* Jellyfin's culture list names languages in English: in French, name them from the code instead. */
-let localNames: Intl.DisplayNames | null = null;
 function localName(code: string, fallback: string): string {
   if (getLang() === 'en') return fallback;
-  try {
-    localNames ??= new Intl.DisplayNames([locale()], { type: 'language' });
-    const n = localNames.of(code);
-    if (!n || n.toLowerCase() === code.toLowerCase() || n === 'root') return fallback;
-    return n.charAt(0).toLocaleUpperCase(locale()) + n.slice(1);
-  } catch {
-    return fallback;
-  }
+  const n = displayLanguage(code, locale());
+  if (!n || n.toLowerCase() === code.toLowerCase() || n === 'root') return fallback;
+  return capitalize(n);
 }
 
 /* Options for a language picker, with the current value kept even if the list hasn't loaded. */

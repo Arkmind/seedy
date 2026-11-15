@@ -6,6 +6,8 @@ import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.seedy.PlaybackPrefs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -216,6 +218,12 @@ class SeedyConfigStore(
         timer?.cancel()
         timer = null
         send()
+    }
+
+    /** Saves what's waiting without holding up its page: the page's view model is going away. */
+    @OptIn(DelicateCoroutinesApi::class)
+    fun flushDetached() {
+        GlobalScope.launch { runCatching { flush() } }
     }
 
     /** Changes and saves at once; on failure the settings go back to what they were and the error is thrown. */

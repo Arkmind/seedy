@@ -144,7 +144,7 @@ class NetworkingViewModel(private val session: UserSession) : ViewModel(), Netwo
     suspend fun live() {
         while (true) {
             runCatching { session.api.sessionApi.getSessions(activeWithinSeconds = 960).content }.getOrNull()?.let { list ->
-                val n = list.filter { it.nowPlayingItem != null }.map { it.userId?.toString() ?: it.id }.toSet().size
+                val n = list.filter { it.nowPlayingItem != null }.map { it.userId.toString() }.toSet().size
                 _state.update { it.copy(watching = n) }
             }
             delay(20_000)

@@ -1,9 +1,7 @@
 package io.github.arkmind.seedy.mobile.admin.seedy
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,20 +9,18 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.admin.seedy.ListingsProvider
@@ -46,7 +42,8 @@ import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.Dot
 import io.github.arkmind.seedy.mobile.admin.ErrorCard
 import io.github.arkmind.seedy.mobile.admin.FieldBlock
-import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.admin.IconTile
+import io.github.arkmind.seedy.mobile.admin.leaveGuard
 import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.MenuItem
 import io.github.arkmind.seedy.mobile.admin.MenuSheet
@@ -58,6 +55,7 @@ import io.github.arkmind.seedy.mobile.admin.SaveBar
 import io.github.arkmind.seedy.mobile.admin.SaveBarRoom
 import io.github.arkmind.seedy.mobile.admin.SheetFoot
 import io.github.arkmind.seedy.mobile.admin.TextSheet
+import io.github.arkmind.seedy.mobile.admin.toneColor
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
@@ -72,8 +70,10 @@ import io.github.arkmind.seedy.mobile.settings.SheetHead
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SheetState
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
+import io.github.arkmind.seedy.mobile.settings.choices
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.mobile.settings.settingsRow
+import io.github.arkmind.seedy.mobile.settings.withValue
 import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -89,7 +89,6 @@ internal sealed interface LiveSub {
 }
 
 private val GuideDays = listOf(0, 1, 3, 7, 14)
-private val PaddingMinutes = listOf(0, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60, 90, 120)
 
 /** Which recording setting a sheet edits. */
 private enum class RecSheet { Folder, Movies, Series, Padding, Post }
@@ -126,11 +125,11 @@ private fun LiveTvMain(state: LiveTvAdminState, actions: LiveTvAdminActions, onB
     var recSheet by remember { mutableStateOf<RecSheet?>(null) }
     var browse by remember { mutableStateOf<RecSheet?>(null) }
     val changes = state.changes
-    LeaveGuard(changes > 0, t("Your changes to Live TV haven’t been saved yet. If you leave now, they’re lost."), onBack)
+    val back = leaveGuard(changes > 0, t("Your changes to Live TV haven’t been saved yet. If you leave now, they’re lost."), onBack)
     SettingsPage(
         t("Live TV"),
         t("Tuners, guide data and recordings."),
-        onBack,
+        back,
         overlay = {
             SheetHost(sheet)
             tunerMenu?.let { r ->
@@ -325,7 +324,7 @@ private fun RecSheets(which: RecSheet?, r: RecSettings, actions: LiveTvAdminActi
 @Composable
 private fun EmptyLine(icon: io.github.arkmind.seedy.ui.icons.IconDef, title: String, text: String) {
     Row(Modifier.settingsRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        IconTile(icon)
+        IconTile(icon, SeedyColors.Text, 40.dp, 20.dp, radius = 11.dp)
         RowLabel(title, text, Modifier.weight(1f))
     }
 }
@@ -333,7 +332,7 @@ private fun EmptyLine(icon: io.github.arkmind.seedy.ui.icons.IconDef, title: Str
 @Composable
 private fun TunerLine(r: TunerRow, onClick: () -> Unit) {
     Row(Modifier.tap(onClick = onClick).settingsRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        IconTile(if (r.m3u) AppIcons.Playlist else WebIcons.Tv)
+        IconTile(if (r.m3u) AppIcons.Playlist else WebIcons.Tv, SeedyColors.Text, 40.dp, 20.dp, radius = 11.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SText(r.name, Modifier.weight(1f, fill = false), size = 14.sp, weight = 700, color = SeedyColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -355,7 +354,7 @@ private fun SourceLine(r: SourceRow, onClick: () -> Unit) {
             }
             if (r.detail.isNotEmpty()) SText(r.detail, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
             Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Dot(toneColor(r.tone), 6.dp)
+                Dot(toneColor(r.tone), size = 6.dp)
                 SText(r.status, size = 12.sp, weight = 600, color = SeedyColors.Text2)
             }
         }
@@ -368,7 +367,7 @@ private fun SourceLine(r: SourceRow, onClick: () -> Unit) {
 private fun FindTuners(configured: List<TunerHost>, actions: LiveTvAdminActions, onAdd: (TunerHost) -> Unit, onDismiss: () -> Unit) {
     var list by remember { mutableStateOf<List<TunerHost>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    var run by remember { mutableStateOf(0) }
+    var run by remember { mutableIntStateOf(0) }
     LaunchedEffect(run) {
         list = null
         error = null
@@ -384,7 +383,7 @@ private fun FindTuners(configured: List<TunerHost>, actions: LiveTvAdminActions,
                 else -> for (x in l) {
                     val known = configured.any { sameTuner(it, x) }
                     Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        IconTile(WebIcons.Tv)
+                        IconTile(WebIcons.Tv, SeedyColors.Text, 40.dp, 20.dp, radius = 11.dp)
                         RowLabel(
                             x.friendlyName?.takeIf { it.isNotEmpty() } ?: tunerTypeLabel(x.type),
                             listOf(hostOf(x.url), if (x.tunerCount > 0) tn(x.tunerCount, "{n} stream", "{n} streams") else "").filter { it.isNotEmpty() }.joinToString(" · "),
@@ -410,11 +409,3 @@ internal fun tunerSub(draft: TunerHost, isNew: Boolean, channels: Int?): String 
 
 /** The tuner's display name for a sub-page title. */
 internal fun tunerTitle(draft: TunerHost, isNew: Boolean): String = if (isNew) t("New tuner") else tunerName(draft)
-
-/** A 40 px icon tile (tuners, guide sources). */
-@Composable
-private fun IconTile(icon: IconDef, size: Dp = 40.dp) {
-    Box(Modifier.size(size).clip(RoundedCornerShape(11.dp)).background(SeedyColors.Surface), contentAlignment = Alignment.Center) {
-        SIcon(icon, size = 20.dp, color = SeedyColors.Text)
-    }
-}

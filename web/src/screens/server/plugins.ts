@@ -7,7 +7,7 @@ import { pluginUpdatesStore } from './status';
 /* Installed plugins, the repository catalog and the repositories, cached for the session and shared by the
    three Plugins views (and the nav badge). */
 
-export const SEEDY_PLUGIN_ID = 'b547483f57e9439e8a2a561828a524a6';
+const SEEDY_PLUGIN_ID = 'b547483f57e9439e8a2a561828a524a6';
 
 interface Installed { plugins?: PluginInfo[]; pages?: ConfigPage[]; repos?: RepositoryInfo[]; serverVersion?: string; error?: Error; loading: boolean }
 export const installedStore = createStore<Installed>({ loading: false });
@@ -177,7 +177,7 @@ export function initials(name: string): string {
 }
 
 /* The nav badge: compatible updates for installed plugins. */
-export function countUpdates(): number {
+function countUpdates(): number {
   const { plugins, serverVersion: server = '' } = installedStore.get();
   const { packages } = catalogStore.get();
   if (!plugins || !packages) return pluginUpdatesStore.get();
@@ -192,7 +192,7 @@ function publishUpdates() {
 
 /* English names for the catalog's categories; categoryLabel() translates them. Unknown categories keep the
    repository's own word. */
-export const CATEGORY_LABELS: Record<string, string> = {
+const CATEGORY_LABELS: Record<string, string> = {
   MoviesAndShows: 'Movies and shows',
   LiveTV: 'Live TV',
   Anime: 'Anime',
@@ -210,7 +210,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
 export const categoryLabel = (c?: string) => (!c ? t('Other') : CATEGORY_LABELS[c] ? t(CATEGORY_LABELS[c]) : c.replace(/([a-z])([A-Z])/g, '$1 $2'));
 
 /* Updates for the installed plugins (the Overview notice and the nav badge), by the same rules as the Plugins page. */
-export function pluginUpdates(plugins: PluginInfo[], packages: PackageInfo[], server: string): { plugin: PluginInfo; version: string }[] {
+function pluginUpdates(plugins: PluginInfo[], packages: PackageInfo[], server: string): { plugin: PluginInfo; version: string }[] {
   const installed = new Map<string, PluginInfo>();
   for (const pl of plugins) {
     if (pl.Status === 'Deleted') continue;

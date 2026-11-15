@@ -12,6 +12,7 @@ import io.github.arkmind.seedy.core.feature.SettingsViewModel
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
 import io.github.arkmind.seedy.tv.shell.TvPlace
 import io.github.arkmind.seedy.tv.shell.TvRail
+import io.github.arkmind.seedy.tv.shell.tvPlaces
 import io.github.arkmind.seedy.ui.theme.LocalCore
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.currentSession
@@ -25,7 +26,7 @@ fun TvSettingsRoute(appVersion: String, onPlace: (TvPlace) -> Unit = {}) {
     val vm = viewModel { SettingsViewModel(core, session) }
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.load("profile", "homescreen", "playback", "subtitles") }
-    val places = if (LocalViewer.current.requests) TvPlace.entries else TvPlace.entries - TvPlace.Requests
+    val places = tvPlaces(LocalViewer.current.requests)
     Box(Modifier.fillMaxSize()) {
         TvSettingsScreen(state, vm, appVersion, onLeave = nav::back)
         // The rail's places are the shell's: picking one leaves Settings for it.

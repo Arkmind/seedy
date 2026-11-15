@@ -7,7 +7,7 @@ import { browserSupport, buildDeviceProfile, type DeviceProfile, type ProfileOpt
 
 /* Off; when the server would convert the video, up to 1080p or at any size; or every video (for trying it out). */
 export type SoftMode = 'off' | 'needed' | 'any' | 'always';
-export const SOFT_MODES: SoftMode[] = ['off', 'needed', 'any', 'always'];
+const SOFT_MODES: SoftMode[] = ['off', 'needed', 'any', 'always'];
 export const softMode = (v: unknown): SoftMode => (SOFT_MODES.includes(v as SoftMode) ? (v as SoftMode) : 'off');
 
 let available: boolean | null = null;
@@ -56,8 +56,11 @@ const FIXABLE = new Set([
   'DirectPlayError'
 ]);
 
+/* Why the server converts a stream, from its address ("VideoCodecNotSupported", "AudioChannelsNotSupported"…). */
+export const transcodeReasons = (url: string) => (new URL(url, 'http://x').searchParams.get('TranscodeReasons') ?? '').split(',').filter(Boolean);
+
 export function softFixes(transcodingUrl: string): boolean {
-  const reasons = (new URL(transcodingUrl, 'http://x').searchParams.get('TranscodeReasons') ?? '').split(',').filter(Boolean);
+  const reasons = transcodeReasons(transcodingUrl);
   return reasons.length > 0 && reasons.every((r) => FIXABLE.has(r)) && reasons.some((r) => /^Video|^RefFrames|^Anamorphic/.test(r));
 }
 

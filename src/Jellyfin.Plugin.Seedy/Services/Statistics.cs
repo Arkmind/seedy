@@ -159,7 +159,7 @@ public sealed partial class Statistics
 
     // Profiles in the order Seedy's admin lists them (administrators first), which also picks their avatar colour.
     private List<User> Profiles()
-        => _users.GetUsers().OrderBy(u => !u.IsAdmin()).ThenBy(u => u.Username, StringComparer.OrdinalIgnoreCase).ToList();
+        => _users.InAdminOrder().ToList();
 
     private static bool Enabled(User u) => !u.HasPermission(PermissionKind.IsDisabled);
 
@@ -230,7 +230,7 @@ public sealed partial class Statistics
             From = Day(from),
             To = Day(today),
             Today = Day(today),
-            RetentionDays = Plugin.Instance?.Configuration.PlayLogRetentionDays ?? 365,
+            RetentionDays = ConfigMapper.Current.PlayLogRetentionDays,
             FirstPlay = firstPlay is { } f ? Day(f) : null
         };
 
@@ -740,7 +740,7 @@ public sealed partial class Statistics
                     music.Bitrate = p.Bitrate;
                 }
 
-                if (Weight(p.PlayMethod) > Weight(music.Method))
+                if (PlaybackRecorder.MethodWeight(p.PlayMethod) > PlaybackRecorder.MethodWeight(music.Method))
                 {
                     music.Method = p.PlayMethod;
                 }
@@ -810,14 +810,6 @@ public sealed partial class Statistics
         var count = albums.TryGetValue(p.TitleId, out var x) ? x.Count : 0;
         albums[p.TitleId] = (p.TitleName, count + 1);
     }
-
-    private static int Weight(string? method) => method switch
-    {
-        "Transcode" => 3,
-        "DirectStream" => 2,
-        "DirectPlay" => 1,
-        _ => 0
-    };
 
     /// <summary>The plays behind the Statistics page, as CSV.</summary>
     /// <param name="q">Filters.</param>

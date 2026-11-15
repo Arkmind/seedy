@@ -7,7 +7,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
 import java.util.UUID
@@ -35,7 +34,7 @@ data class SongFacts(val track: BaseItemDto, val album: BaseItemDto?)
 
 /**
  * What Now playing loads beside the player (board "Android · Now playing", web NowPlaying.tsx): the song's lyrics, About
- * the song, the devices to play on, and the item a source opens.
+ * the song, and the item a source opens.
  */
 class NowPlayingViewModel(session: UserSession) : ViewModel() {
     private val music = MusicApi(session)
@@ -44,8 +43,6 @@ class NowPlayingViewModel(session: UserSession) : ViewModel() {
     val lyrics: StateFlow<Lyrics> = _lyrics.asStateFlow()
     private val _facts = MutableStateFlow<SongFacts?>(null)
     val facts: StateFlow<SongFacts?> = _facts.asStateFlow()
-    private val _targets = MutableStateFlow<List<CastTarget>?>(null)
-    val targets: StateFlow<List<CastTarget>?> = _targets.asStateFlow()
     private var lyricsJob: Job? = null
 
     /** Loads [track]'s lyrics unless they're loaded already. */
@@ -74,21 +71,8 @@ class NowPlayingViewModel(session: UserSession) : ViewModel() {
         }
     }
 
-    fun loadTargets(deviceId: String?) {
-        _targets.value = null
-        viewModelScope.launch { _targets.value = runCatching { music.castTargets(deviceId) }.getOrDefault(emptyList()) }
-    }
-
-    fun castTo(target: CastTarget, ids: List<UUID>, startTicks: Long, onDone: (Boolean) -> Unit) {
-        viewModelScope.launch { onDone(runCatching { music.castTo(target.id, ids, startTicks) }.isSuccess) }
-    }
-
     /** The item a "Playing from" source is (a mix's seed: a song, album or artist), to open it. */
     fun item(id: UUID, onReady: (BaseItemDto) -> Unit) {
         viewModelScope.launch { runCatching { music.item(id) }.onSuccess(onReady) }
-    }
-
-    fun mix(id: UUID, onReady: (List<BaseItemDto>) -> Unit, onFail: () -> Unit) {
-        viewModelScope.launch { runCatching { music.audio.instantMix(id) }.onSuccess { if (it.isEmpty()) onFail() else onReady(it) }.onFailure { onFail() } }
     }
 }

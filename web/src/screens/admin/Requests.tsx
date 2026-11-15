@@ -3,21 +3,20 @@ import {
   adminSeerrLink, adminSeerrMatch, adminSeerrSetKey, adminSeerrUsers, adminSetCanRequest,
   type AdminConfig, type SeerrAccount, type SeerrUser
 } from '../../api/seedy';
-import { userImageUrl } from '../../api/images';
 import { useStore } from '../../lib/store';
 import { meStore, refreshMe } from '../../lib/app-state';
 import { Panel, RadioCards, SavedNote, SelectField, SettingRow, Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
-import { Sheet, toast } from '../../ui/overlay';
+import { Sheet, toast, toastError } from '../../ui/overlay';
 import { t } from '../../lib/i18n';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
+import { ApiKeyRow, ApiKeySheet, ConnLine, OpenAppButton, patchRow, PROFILE_COLOURS, ProfileAvatar, roleOf, TableError, TableSkeleton, TestButton, UrlInput } from './parts';
 import {
   accountsStore, editConfig, flushConfig, loadAccounts, mergeServerConfig, seerrTestStore, testSeerr, useAdminConfig
 } from './config';
 
 type Req = AdminConfig['requests'];
 
-const AVATAR_COLOURS = ['#f0f0f0', '#9fd3ff', '#b8f59f', '#ffc98a'];
 
 const SHOWS: { key: 'showDiscover' | 'showUpcomingMovies' | 'showRequestButtons' | 'showRequestInSearch'; name: string; help: string }[] = [
   { key: 'showDiscover', name: 'Discover row', help: 'Popular titles not in the library' },
@@ -66,15 +65,10 @@ export function AdminRequests() {
 function ConnectionPanel({ req }: { req: Req }) {
   // Browsers use Seerr's own Application URL when it has one; the address above is how the server reaches it.
   const publicUrl = useStore(meStore).requests.seerrUrl;
-  const [url, setUrl] = useState(req.url);
   const [keyOpen, setKeyOpen] = useState(false);
-  useEffect(() => setUrl(req.url), [req.url]);
+  const test = useStore(seerrTestStore);
 
-  const commitUrl = async () => {
-    let v = url.trim().replace(/\/+$/, '');
-    if (v && !/^https?:\/\//i.test(v)) v = 'http://' + v;
-    if (v !== url) setUrl(v);
-    if (v === req.url) return;
+  const commitUrl = async (v: string) => {
     setReq({ url: v }, 0);
     if (!v) return;
     try { await flushConfig(); } catch { return; }
@@ -84,55 +78,30 @@ function ConnectionPanel({ req }: { req: Req }) {
   return (
     <Panel id="conn" title={t('Seerr connection')}>
       <SettingRow name={t('Address')} help={t('As this Jellyfin server reaches it')} htmlFor="seerr-url">
-        <input
-          id="seerr-url"
-          class="field is-340"
-          type="url"
-          inputMode="url"
-          value={url}
-          placeholder="http://seerr.local:5055"
-          autoComplete="off"
-          spellcheck={false}
-          onInput={(e) => setUrl((e.currentTarget as HTMLInputElement).value)}
-          onBlur={() => void commitUrl()}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') { e.preventDefault(); void commitUrl(); }
-            if (e.key === 'Escape') setUrl(req.url);
-          }}
-        />
+        <UrlInput id="seerr-url" value={req.url} placeholder="http://seerr.local:5055" onCommit={commitUrl} />
       </SettingRow>
-      <SettingRow name={t('API key')} help={t('Stored on the server, never sent to browsers')}>
-        <div class="setting-controls is-10">
-          <span class="key-saved">
-            <Icon name="lock" size={16} />
-            {req.apiKeyHint ? t('Saved · ends in {hint}', { hint: req.apiKeyHint }) : t('No key saved')}
-          </span>
-          <button type="button" class="btn btn-secondary" onClick={() => setKeyOpen(true)}>{req.apiKeyHint ? t('Replace key') : t('Add key')}</button>
-        </div>
-      </SettingRow>
+      <ApiKeyRow name={t('API key')} help={t('Stored on the server, never sent to browsers')} hint={req.apiKeyHint} onOpen={() => setKeyOpen(true)} />
       <div class="setting is-last">
         <ConnState hasUrl={!!req.url} hasKey={!!req.apiKeyHint} />
         <div class="setting-controls">
-          <TestButton disabled={!req.url} />
-          {req.url ? (
-            <a class="btn btn-secondary" href={publicUrl ?? req.url} target="_blank" rel="noreferrer">{t('Open Seerr')}<Icon name="external" size={16} /></a>
-          ) : (
-            <button type="button" class="btn btn-secondary" disabled>{t('Open Seerr')}<Icon name="external" size={16} /></button>
-          )}
+          <TestButton disabled={!req.url} testing={test.state === 'testing'} onTest={() => void testSeerr()} />
+          <OpenAppButton href={req.url ? publicUrl ?? req.url : undefined} label={t('Open Seerr')} />
         </div>
       </div>
-      <KeySheet open={keyOpen} onClose={() => setKeyOpen(false)} replacing={!!req.apiKeyHint} />
+      <ApiKeySheet
+        open={keyOpen}
+        onClose={() => setKeyOpen(false)}
+        title={req.apiKeyHint ? t('Replace API key') : t('Add API key')}
+        text={t('Copy the key from Settings › General in Seerr. Seedy keeps it on the server and only shows its last four characters.')}
+        label={t('Seerr API key')}
+        formClass="key-sheet"
+        save={async (key) => {
+          const res = await adminSeerrSetKey(key);
+          mergeServerConfig(res, (server, local) => ({ ...local, requests: { ...local.requests, apiKeyHint: server.requests.apiKeyHint } }));
+        }}
+        onSaved={() => void testSeerr()}
+      />
     </Panel>
-  );
-}
-
-function TestButton({ disabled }: { disabled: boolean }) {
-  const test = useStore(seerrTestStore);
-  const testing = test.state === 'testing';
-  return (
-    <button type="button" class="btn btn-primary is-sm" disabled={disabled || testing} aria-busy={testing ? 'true' : undefined} onClick={() => void testSeerr()}>
-      {testing ? t('Testing…') : t('Test connection')}
-    </button>
   );
 }
 
@@ -174,60 +143,7 @@ function ConnState({ hasUrl, hasKey }: { hasUrl: boolean; hasKey: boolean }) {
     lead = t('Not tested yet.');
     rest = t('Test the connection to check the address and key.');
   }
-  return (
-    <span class="conn-state" role="status" aria-live="polite">
-      <span class={'dot ' + dot} />
-      <span><b>{lead}</b>{rest ? ' ' + rest : ''}</span>
-    </span>
-  );
-}
-
-function KeySheet({ open, onClose, replacing }: { open: boolean; onClose: () => void; replacing: boolean }) {
-  const [key, setKey] = useState('');
-  const [busy, setBusy] = useState(false);
-  useEffect(() => { if (open) setKey(''); }, [open]);
-
-  const submit = async (e: Event) => {
-    e.preventDefault();
-    const v = key.trim();
-    if (!v) return;
-    setBusy(true);
-    try {
-      await flushConfig().catch(() => { /* the key is saved separately */ });
-      const res = await adminSeerrSetKey(v);
-      mergeServerConfig(res, (server, local) => ({ ...local, requests: { ...local.requests, apiKeyHint: server.requests.apiKeyHint } }));
-      toast(t('API key saved'));
-      onClose();
-      void testSeerr();
-    } catch (err) {
-      toast(`${t('Couldn’t save the key.')} ${(err as Error).message || ''}`.trim(), 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Sheet open={open} onClose={onClose} label={replacing ? t('Replace API key') : t('Add API key')}>
-      <form class="key-sheet" style={{ display: 'contents' }} onSubmit={submit}>
-        <div class="sheet-head"><h2 class="sheet-title">{replacing ? t('Replace API key') : t('Add API key')}</h2></div>
-        <p class="sheet-text">{t('Copy the key from Settings › General in Seerr. Seedy keeps it on the server and only shows its last four characters.')}</p>
-        <input
-          class="field"
-          type="password"
-          value={key}
-          aria-label={t('Seerr API key')}
-          placeholder={t('Seerr API key')}
-          autoComplete="off"
-          spellcheck={false}
-          onInput={(e) => setKey((e.currentTarget as HTMLInputElement).value)}
-        />
-        <div class="sheet-actions">
-          <button type="button" class="btn btn-ghost is-light" onClick={onClose}>{t('Cancel')}</button>
-          <button type="submit" class="btn btn-primary is-sm" disabled={!key.trim() || busy}>{busy ? t('Saving…') : t('Save key')}</button>
-        </div>
-      </form>
-    </Sheet>
-  );
+  return <ConnLine dot={dot} lead={lead} rest={rest} />;
 }
 
 /* ── What Seedy shows / Who can request ── */
@@ -275,21 +191,6 @@ function WhoPanel({ req }: { req: Req }) {
 
 /* ── Accounts ── */
 
-function roleOf(a: SeerrAccount) {
-  if (a.isAdmin) return t('Administrator');
-  if (a.maxParentalRating) return t('Maturity limit: {rating}', { rating: a.maxParentalRating });
-  return t('User');
-}
-
-export function ProfileAvatar({ userId, name, imageTag, index }: { userId: string; name: string; imageTag?: string; index: number }) {
-  const img = imageTag ? userImageUrl({ Id: userId, PrimaryImageTag: imageTag }, 72) : undefined;
-  return (
-    <span class="avatar" aria-hidden="true" style={img ? undefined : { background: AVATAR_COLOURS[index % AVATAR_COLOURS.length] }}>
-      {img ? <img src={img} alt="" /> : name.trim().charAt(0).toUpperCase()}
-    </span>
-  );
-}
-
 function AccountsPanel() {
   const { data, error, loading } = useStore(accountsStore);
   const [matching, setMatching] = useState(false);
@@ -304,21 +205,21 @@ function AccountsPanel() {
       const n = list.filter((a) => a.seerrUserId !== undefined && a.seerrUserId !== null).length;
       toast(t('{n} of {total} profiles matched', { n, total: list.length }));
     } catch (e) {
-      toast(`${t('Couldn’t match accounts.')} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t match accounts.'), e);
     } finally {
       setMatching(false);
     }
   };
 
   const setCan = async (a: SeerrAccount, on: boolean) => {
-    accountsStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === a.userId ? { ...x, canRequest: on } : x)) }));
+    patchRow(accountsStore, a.userId, { canRequest: on });
     try {
       const list = await adminSetCanRequest(a.userId, on);
       refreshMe();
       accountsStore.set({ data: list, loading: false });
     } catch (e) {
-      accountsStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === a.userId ? { ...x, canRequest: !on } : x)) }));
-      toast(`${t('Couldn’t change {name}.', { name: a.name })} ${(e as Error).message || ''}`.trim(), 'error');
+      patchRow(accountsStore, a.userId, { canRequest: !on });
+      toastError(t('Couldn’t change {name}.', { name: a.name }), e);
     }
   };
 
@@ -329,7 +230,7 @@ function AccountsPanel() {
       refreshMe();
       toast(t('{name} unlinked', { name: a.name }));
     } catch (e) {
-      toast(`${t('Couldn’t unlink {name}.', { name: a.name })} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t unlink {name}.', { name: a.name }), e);
     } finally {
       setBusy(null);
     }
@@ -347,15 +248,9 @@ function AccountsPanel() {
         </button>
       </div>
       {!data && error ? (
-        <div class="admin-inline-error" role="alert">
-          <span class="dot is-danger" />
-          {t('Couldn’t load the accounts.')} {error.message}
-          <button type="button" class="btn btn-secondary is-sm" onClick={() => loadAccounts(true)}>{t('Try again')}</button>
-        </div>
+        <TableError text={t('Couldn’t load the accounts.')} error={error.message} onRetry={() => loadAccounts(true)} />
       ) : !data ? (
-        <div class="table-skel" aria-busy={loading ? 'true' : undefined}>
-          {[0, 1, 2, 3].map((i) => <span key={i} class="skel" />)}
-        </div>
+        <TableSkeleton busy={loading} />
       ) : (
         <div class="table-scroll">
           <div role="table" aria-label={t('Seerr accounts')} class="table acc-table">
@@ -444,7 +339,7 @@ function LinkSheet({ account, accounts, onClose }: { account: SeerrAccount | nul
       toast(t('{name} linked to {seerr}', { name: account.name, seerr: u.displayName }));
       onClose();
     } catch (e) {
-      toast(`${t('Couldn’t link the account.')} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t link the account.'), e);
     } finally {
       setBusy(false);
     }
@@ -460,9 +355,9 @@ function LinkSheet({ account, accounts, onClose }: { account: SeerrAccount | nul
       </div>
       <p class="sheet-text">{t('Pick the Seerr account {name} requests as. Their Seerr limits and auto-approval apply.', { name: account?.name ?? '' })}</p>
       {error ? (
-        <div class="admin-inline-error" role="alert"><span class="dot is-danger" />{t('Couldn’t load Seerr’s users.')} {error}</div>
+        <TableError text={t('Couldn’t load Seerr’s users.')} error={error} />
       ) : !users ? (
-        <div class="table-skel" aria-busy="true">{[0, 1, 2].map((i) => <span key={i} class="skel" />)}</div>
+        <TableSkeleton rows={3} busy />
       ) : users.length === 0 ? (
         <p class="sheet-text">{t('Seerr has no users yet.')}</p>
       ) : (
@@ -480,7 +375,7 @@ function LinkSheet({ account, accounts, onClose }: { account: SeerrAccount | nul
                 onClick={() => void pick(u)}
               >
                 <span class="lead">
-                  <span class="avatar" aria-hidden="true" style={{ background: AVATAR_COLOURS[i % AVATAR_COLOURS.length] }}>
+                  <span class="avatar" aria-hidden="true" style={{ background: PROFILE_COLOURS[i % PROFILE_COLOURS.length] }}>
                     {u.avatar ? <img src={u.avatar} alt="" /> : u.displayName.charAt(0).toUpperCase()}
                   </span>
                   <span class="two">

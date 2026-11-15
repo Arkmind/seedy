@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { t, tn } from '../../lib/i18n';
 import { safeLocal, saveLocal, useAsync } from '../../lib/store';
-import { NumField, Switch } from '../../ui/controls';
-import { Icon } from '../../ui/icons';
+import { NumField, SelectField, SettingRow, Switch } from '../../ui/controls';
 import { confirm, toast } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from '../admin/AdminLayout';
 import { type BrandingOptions, type CastReceiver, errText, getBranding, getLocalizationOptions, getServerConfig, getSystemInfo, type LocalizationOption, patchBranding, patchServerConfig, type PathSubstitution, restartServer, type ServerConfig, type SystemInfo, uploadSplashscreen } from './api';
-import { FolderPicker, PairsSheet, UnsavedBar, useFilePicker, useUnsavedGuard } from './parts';
+import { FolderPicker, PairsSheet, same, UnsavedBar, useFilePicker, useUnsavedGuard } from './parts';
 
 /* Server · Settings: Jellyfin's General and Branding pages on one page, saved explicitly. */
 
@@ -70,8 +69,6 @@ function toDraft(cfg: ServerConfig, branding: BrandingOptions, info: SystemInfo)
     customCss: branding.CustomCss ?? ''
   };
 }
-
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 function changedKeys(d: Draft, base: Draft): (keyof Draft)[] {
   return (Object.keys(d) as (keyof Draft)[]).filter((k) => {
@@ -176,7 +173,7 @@ export function ServerSettings() {
       wide
     >
       {!loaded.data && loaded.error ? (
-        <div class="srv-set-root"><LoadError error={loaded.error} onRetry={loaded.reload} what={t('the server settings')} /></div>
+        <div class="srv-set-root"><LoadError error={loaded.error} onRetry={loaded.reload} what="the server settings" /></div>
       ) : !d || !loaded.data ? (
         <div class="srv-set-root srv-stack"><PanelSkeletons count={4} rows={2} /></div>
       ) : (
@@ -230,19 +227,12 @@ function SettingsForm({ d, set, data }: {
     <>
       <section aria-labelledby="set-srv" class="panel srv-set-root">
         <h2 id="set-srv" class="panel-title srv-panel-h">{t('Server')}</h2>
-        <div class="setting">
-          <label for="server-name" class="setting-label"><span class="setting-name">{t('Server name')}</span><span class="setting-help">{t('Shown to apps when they find this server')}</span></label>
+        <SettingRow name={t('Server name')} help={t('Shown to apps when they find this server')} htmlFor="server-name">
           <input id="server-name" class="field srv-w300" value={d.serverName} placeholder={data.info.ServerName} onInput={(e) => set('serverName', (e.currentTarget as HTMLInputElement).value)} />
-        </div>
-        <div class="setting is-last">
-          <label for="server-lang" class="setting-label"><span class="setting-name">{t('Server language')}</span><span class="setting-help">{t('For notifications, logs and generated names')}</span></label>
-          <span class="select-wrap">
-            <select id="server-lang" class="select srv-w300" value={d.uiCulture} onChange={(e) => set('uiCulture', (e.currentTarget as HTMLSelectElement).value)}>
-              {langOptions.map((l) => <option key={l.Value} value={l.Value}>{l.Name}</option>)}
-            </select>
-            <Icon name="chevronDown" size={16} />
-          </span>
-        </div>
+        </SettingRow>
+        <SettingRow name={t('Server language')} help={t('For notifications, logs and generated names')} htmlFor="server-lang" last>
+          <SelectField id="server-lang" selectClass="srv-w300" value={d.uiCulture} options={langOptions.map((l) => ({ value: l.Value, label: l.Name }))} onChange={(v) => set('uiCulture', v)} />
+        </SettingRow>
       </section>
 
       <section aria-labelledby="set-paths" class="panel">
@@ -254,34 +244,30 @@ function SettingsForm({ d, set, data }: {
           ['cachePath', 'Cache', 'Images and other files Jellyfin can rebuild'],
           ['metadataPath', 'Metadata', 'Artwork and info downloaded for your library']
         ] as const).map(([key, name, help]) => (
-          <div key={key} class="setting">
-            <span class="setting-label"><span class="setting-name">{t(name)}</span><span class="setting-help">{t(help)}</span></span>
+          <SettingRow key={key} name={t(name)} help={t(help)}>
             <div class="srv-path-field">
               <input class="field srv-mono" aria-label={t(name)} value={d[key]} onInput={(e) => set(key, (e.currentTarget as HTMLInputElement).value)} />
               <button type="button" class="btn btn-secondary srv-browse" onClick={() => setBrowse(key)}>{t('Browse')}</button>
             </div>
-          </div>
+          </SettingRow>
         ))}
       </section>
 
       <section aria-labelledby="set-sign" class="panel">
         <h2 id="set-sign" class="panel-title srv-panel-h">{t('Sign-in')}</h2>
-        <div class="setting">
-          <span class="setting-label"><span class="setting-name">{t('Quick Connect')}</span><span class="setting-help">{t('Sign in on a TV with a code from a signed-in device')}</span></span>
+        <SettingRow name={t('Quick Connect')} help={t('Sign in on a TV with a code from a signed-in device')}>
           <Switch checked={d.quickConnect} onChange={(v) => set('quickConnect', v)} label={t('Quick Connect')} />
-        </div>
-        <div class="setting">
-          <span class="setting-label"><span class="setting-name">{t('Splash screen')}</span><span class="setting-help">{t('Image shown while apps load')}</span></span>
+        </SettingRow>
+        <SettingRow name={t('Splash screen')} help={t('Image shown while apps load')}>
           <div class="setting-controls is-12">
             {splashFile.input}
             <button type="button" class="btn btn-secondary is-sm" disabled={uploading} onClick={splashFile.open}>{uploading ? t('Uploading…') : t('Upload image')}</button>
             <Switch checked={d.splash} onChange={(v) => set('splash', v)} label={t('Splash screen')} />
           </div>
-        </div>
-        <div class="setting is-stack is-last srv-gap10">
-          <label for="disclaimer" class="setting-label"><span class="setting-name">{t('Sign-in message')}</span><span class="setting-help">{t('Shown under the sign-in form')}</span></label>
+        </SettingRow>
+        <SettingRow name={t('Sign-in message')} help={t('Shown under the sign-in form')} htmlFor="disclaimer" last stack class="srv-gap10">
           <textarea id="disclaimer" rows={2} class="srv-textarea" value={d.disclaimer} onInput={(e) => set('disclaimer', (e.currentTarget as HTMLTextAreaElement).value)} />
-        </div>
+        </SettingRow>
       </section>
 
       <section aria-labelledby="set-perf" class="panel">
@@ -296,21 +282,18 @@ function SettingsForm({ d, set, data }: {
         <NumRow name={t('Keep activity log for')} help={t('Sign-ins, playback and changes')} value={d.activityDays} unit={t('days')} min={1} max={3650} onChange={(v) => set('activityDays', v)} />
         <NumRow name={t('Keep log files for')} help={t('Server log files on disk')} value={d.logDays} unit={t('days')} min={1} max={3650} onChange={(v) => set('logDays', v)} />
         <NumRow name={t('Close idle sessions after')} help={t('0 never closes them')} value={d.idleMinutes} unit="min" max={10080} onChange={(v) => set('idleMinutes', v)} />
-        <div class="setting">
-          <span class="setting-label"><span class="setting-name">{t('Let apps upload their logs')}</span><span class="setting-help">{t('Helps when debugging a device')}</span></span>
+        <SettingRow name={t('Let apps upload their logs')} help={t('Helps when debugging a device')}>
           <Switch checked={d.clientLogs} onChange={(v) => set('clientLogs', v)} label={t('Let apps upload their logs')} />
-        </div>
-        <div class="setting">
-          <span class="setting-label"><span class="setting-name">{t('Warn about slow responses')}</span><span class="setting-help">{t('Logs requests slower than {ms} ms', { ms: d.slowMs })}</span></span>
+        </SettingRow>
+        <SettingRow name={t('Warn about slow responses')} help={t('Logs requests slower than {ms} ms', { ms: d.slowMs })}>
           <div class="setting-controls is-12">
             {d.slowWarn && <span class="srv-num"><NumField value={d.slowMs} min={50} max={60000} suffix="ms" ariaLabel={t('Slow response threshold, milliseconds')} width={72} onChange={(v) => set('slowMs', v)} /></span>}
             <Switch checked={d.slowWarn} onChange={(v) => set('slowWarn', v)} label={t('Warn about slow responses')} />
           </div>
-        </div>
-        <div class="setting">
-          <span class="setting-label"><span class="setting-name">{t('Metrics endpoint')}</span><span class="setting-help">{t('Prometheus metrics for monitoring tools')}</span></span>
+        </SettingRow>
+        <SettingRow name={t('Metrics endpoint')} help={t('Prometheus metrics for monitoring tools')}>
           <Switch checked={d.metrics} onChange={(v) => set('metrics', v)} label={t('Metrics endpoint')} />
-        </div>
+        </SettingRow>
       </section>
 
       <section aria-labelledby="set-exp" class="srv-expert">
@@ -324,28 +307,23 @@ function SettingsForm({ d, set, data }: {
         </button>
         {expert && (
           <div id="set-exp-body" class="srv-expert-body">
-            <div class="setting">
-              <label for="cors" class="setting-label"><span class="setting-name">{t('Allowed web origins')}</span><span class="setting-help">{t('Sites allowed to call this server from a browser. * allows all')}</span></label>
+            <SettingRow name={t('Allowed web origins')} help={t('Sites allowed to call this server from a browser. * allows all')} htmlFor="cors">
               <input id="cors" class="field srv-w300 srv-mono" value={d.cors} onInput={(e) => set('cors', (e.currentTarget as HTMLInputElement).value)} />
-            </div>
-            <div class="setting">
-              <span class="setting-label"><span class="setting-name">{t('Path substitution')}</span><span class="setting-help">{t('Rewrite server paths for apps that read files directly, like Kodi')}</span></span>
+            </SettingRow>
+            <SettingRow name={t('Path substitution')} help={t('Rewrite server paths for apps that read files directly, like Kodi')}>
               <button type="button" class="btn btn-secondary is-sm" onClick={() => setSubsOpen(true)}>{subsLabel}</button>
-            </div>
+            </SettingRow>
             <NumRow name={t('Wait after a file changes')} help={t('Before folder watching scans it')} value={d.monitorDelay} unit="s" max={3600} onChange={(v) => set('monitorDelay', v)} ariaLabel={t('Wait after a file changes, seconds')} />
-            <div class="setting">
-              <label for="sortwords" class="setting-label"><span class="setting-name">{t('Ignore when sorting')}</span><span class="setting-help">{t('Leading words skipped in A–Z order')}</span></label>
+            <SettingRow name={t('Ignore when sorting')} help={t('Leading words skipped in A–Z order')} htmlFor="sortwords">
               <input id="sortwords" class="field srv-w300 srv-plain" value={d.sortWords} onInput={(e) => set('sortWords', (e.currentTarget as HTMLInputElement).value)} />
-            </div>
+            </SettingRow>
             <NumRow name={t('Parallel metadata refreshes')} help={t('0 picks automatically')} value={d.metadataRefreshes} unit={t('items')} max={64} onChange={(v) => set('metadataRefreshes', v)} />
-            <div class="setting">
-              <span class="setting-label"><span class="setting-name">{t('Cast receiver apps')}</span><span class="setting-help">{t('Chromecast apps people can pick when casting')}</span></span>
+            <SettingRow name={t('Cast receiver apps')} help={t('Chromecast apps people can pick when casting')}>
               <button type="button" class="btn btn-secondary is-sm" onClick={() => setCastOpen(true)}>{castLabel}</button>
-            </div>
-            <div class="setting">
-              <span class="setting-label"><span class="setting-name">{t('Legacy authorization')}</span><span class="setting-help">{t('Accept the old sign-in header some older apps still send')}</span></span>
+            </SettingRow>
+            <SettingRow name={t('Legacy authorization')} help={t('Accept the old sign-in header some older apps still send')}>
               <Switch checked={d.legacyAuth} onChange={(v) => set('legacyAuth', v)} label={t('Legacy authorization')} />
-            </div>
+            </SettingRow>
           </div>
         )}
       </section>
@@ -407,9 +385,8 @@ function NumRow({ name, help, value, unit, min = 0, max, onChange, ariaLabel }: 
   name: string; help: string; value: number; unit: string; min?: number; max: number; onChange: (v: number) => void; ariaLabel?: string;
 }) {
   return (
-    <div class="setting">
-      <span class="setting-label"><span class="setting-name">{name}</span><span class="setting-help">{help}</span></span>
+    <SettingRow name={name} help={help}>
       <span class="srv-num"><NumField value={value} min={min} max={max} suffix={unit} ariaLabel={ariaLabel ?? name} width={56} onChange={onChange} /></span>
-    </div>
+    </SettingRow>
   );
 }

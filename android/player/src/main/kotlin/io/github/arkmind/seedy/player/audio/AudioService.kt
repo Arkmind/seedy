@@ -58,7 +58,9 @@ class AudioService : MediaSessionService() {
 
     private class Callback(private val engine: AudioEngine) : MediaSession.Callback {
         override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult =
-            MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+            MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
+                // Every controller gets every player command, as before Media3 told trusted and untrusted ones apart.
+                .setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
                 .setAvailableSessionCommands(
                     MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon().add(ShuffleCommand).add(RepeatCommand).add(FavoriteCommand).build(),
                 )

@@ -4,16 +4,19 @@ import { getEpisodes, getLocalTrailers, getSimilar, setPlayed } from '../../api/
 import { backdropUrl, cardArt } from '../../api/images';
 import type { BaseItem, Person } from '../../api/types';
 import { viewsStore } from '../../lib/app-state';
-import { fmtDate, fmtWeekdayDate, pct, plural, progressFraction, remainingSeconds, runtime, timeLeft, ratingLabel, dayOf, fitTitle } from '../../lib/format';
+import {
+  dayOf, fitTitle, fmtDate, fmtWeekdayDate, listText, pct, plural, progressFraction, ratingLabel, remainingSeconds, runtime, score as fmtScore,
+  timeLeft
+} from '../../lib/format';
 import { Link, href, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
-import { Art, CastCard, ItemCard, SkeletonCards, WatchedCheck, playPath } from '../../ui/cards';
+import { Art, CastCard, ItemCard, WatchedCheck, playPath } from '../../ui/cards';
 import { Icon } from '../../ui/icons';
 import { toast } from '../../ui/overlay';
 import { Row } from '../../ui/Row';
 import { CUSTOM, useCustom } from '../me/prefs';
 import { useThemeMedia } from '../me/theme';
-import { findView, isNewEpisode, join, yearOf } from './parts';
+import { findView, isNewEpisode, join, RowSkeleton, yearOf } from './parts';
 import { t } from '../../lib/i18n';
 import { ItemMenu } from './manage/menu';
 
@@ -39,13 +42,16 @@ export function useView(item?: BaseItem | null): BaseItem | undefined {
   return view;
 }
 
+/* "Play episode 3, The Pass, watched". */
+const episodeAria = (label: string, played: boolean) => (played ? t('{label}, watched', { label }) : label);
+
 export function fallbackLibraryName(item: BaseItem): string {
   switch (EXPECTED_TYPE[item.Type]) {
-    case 'tvshows': return 'Shows';
-    case 'movies': return 'Movies';
-    case 'boxsets': return 'Collections';
-    case 'music': return 'Music';
-    default: return 'Home';
+    case 'tvshows': return t('Shows');
+    case 'movies': return t('Movies');
+    case 'boxsets': return t('Collections');
+    case 'music': return t('Music');
+    default: return t('Home');
   }
 }
 
@@ -171,7 +177,7 @@ export function MetaLine({ parts, rating, score, genres }: { parts: (string | un
       {first && <span>{first}</span>}
       {rating && <span class="rating-badge">{ratingLabel(rating)}</span>}
       {rest.map((p) => <span key={p}>{p}</span>)}
-      {score ? <span class="score"><Icon name="star" size={15} />{score.toFixed(1)}</span> : null}
+      {score ? <span class="score"><Icon name="star" size={15} />{fmtScore(score)}</span> : null}
       {genres && genres.length > 0 && <span>{genres.join(' · ')}</span>}
     </>
   );
@@ -223,7 +229,7 @@ export function SimilarRow({ id, title: given }: { id: string; title?: string })
   if (loading && !data) {
     return (
       <div class="details-similar">
-        <section class="row"><div class="row-head"><h2 class="row-title">{title}</h2></div><div class="row-shell"><div class="row-scroller hscroll"><SkeletonCards count={6} width={300} /></div></div></section>
+        <RowSkeleton title={title} />
       </div>
     );
   }
@@ -248,7 +254,7 @@ export function TrailerButton({ item }: { item: BaseItem }) {
       if (list[0]) { navigate(playPath(list[0])); return; }
     }
     if (remote) window.open(remote, '_blank', 'noopener,noreferrer');
-    else toast("Couldn't find the trailer", 'error');
+    else toast(t("Couldn't find the trailer"), 'error');
   };
   return (
     <button type="button" class="btn btn-square" aria-label={t('Play trailer')} onClick={play}>
@@ -270,12 +276,11 @@ export function MoreActions({ item, children }: { item: BaseItem; children?: (cl
   return <ItemMenu item={item} shortcut>{children}</ItemMenu>;
 }
 
+/* "Mondays and Fridays", "daily": Jellyfin's air days ("Monday"), as a phrase. */
 export function airsPhrase(days?: string[]): string {
   if (!days?.length) return '';
-  const pluralDays = days.map((d) => d + 's');
-  if (pluralDays.length === 1) return pluralDays[0];
-  if (pluralDays.length === 7) return 'daily';
-  return pluralDays.slice(0, -1).join(', ') + ' and ' + pluralDays[pluralDays.length - 1];
+  if (days.length === 7) return t('daily');
+  return listText(days.map((d) => t(d + 's')));
 }
 
 export function seriesStatus(item: BaseItem): string | undefined {
@@ -287,7 +292,7 @@ export function seriesStatus(item: BaseItem): string | undefined {
     const end = item.EndDate ? dayOf(item.EndDate)!.getFullYear() : undefined;
     return end ? t('Ended · {year}', { year: end }) : t('Ended');
   }
-  return item.Status || undefined;
+  return item.Status ? t(item.Status) : undefined;
 }
 
 /* ───────── Seasons and episodes ───────── */
@@ -359,11 +364,11 @@ export function SeasonEpisodes({ series, seasons, selected, onSelect, upNextId, 
     setBusy(true);
     try {
       await setPlayed(selected, !allWatched);
-      toast(allWatched ? `Marked ${season?.Name ?? 'season'} as unwatched` : `Marked ${season?.Name ?? 'season'} as watched`);
+      toast(allWatched ? t('Marked {name} as unwatched', { name: season?.Name ?? t('season') }) : t('Marked {name} as watched', { name: season?.Name ?? t('season') }));
       setTick((t) => t + 1);
       onChanged?.();
     } catch {
-      toast("Couldn't update the season", 'error');
+      toast(t("Couldn't update the season"), 'error');
     } finally {
       setBusy(false);
     }
@@ -490,7 +495,7 @@ function EpisodeRow({ ep, isNext, isCurrent }: { ep: BaseItem; isNext: boolean; 
           </>
         )}
         {!inProgress && !upcoming && !missing && <div class="ep-hover" aria-hidden="true"><span class="play-disc is-48"><Icon name="playRound" size={20} /></span></div>}
-        {upcoming && premiere && <span class="tag ep-airs">Airs {fmtWeekdayDate(premiere)}</span>}
+        {upcoming && premiere && <span class="tag ep-airs">{t('Airs {date}', { date: fmtWeekdayDate(premiere) })}</span>}
         {missing && <span class="tag ep-airs">{t('Missing')}</span>}
       </div>
       <div class="ep-text">
@@ -509,7 +514,7 @@ function EpisodeRow({ ep, isNext, isCurrent }: { ep: BaseItem; isNext: boolean; 
     <a
       href={href(playPath(ep))}
       class={cls}
-      aria-label={`${inProgress ? t('Resume') : t('Play')} episode ${num}, ${ep.Name}${played ? ', watched' : ''}`}
+      aria-label={episodeAria(inProgress ? t('Resume episode {n}, {name}', { n: num, name: ep.Name ?? '' }) : t('Play episode {n}, {name}', { n: num, name: ep.Name ?? '' }), played)}
       onClick={(e) => {
         if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
         e.preventDefault();

@@ -3,7 +3,10 @@ package io.github.arkmind.seedy.ui.components
 import android.graphics.BlurMaskFilter
 import android.os.Build
 import android.provider.Settings
-import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Ease
+import androidx.compose.animation.core.EaseIn
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.Easing
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
@@ -27,6 +30,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.nativePaint
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -40,12 +44,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.withInfiniteAnimationFrameNanos
 import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
@@ -242,17 +244,12 @@ private object Art {
                 listOf(0f, .35f, 1f),
             )
             // Android turns a blur radius into sigma = radius × 0.57735 + 0.5; the filter follows the scale.
-            asFrameworkPaint().maskFilter = BlurMaskFilter((5f - .5f) / .57735f, BlurMaskFilter.Blur.NORMAL)
+            nativePaint.maskFilter = BlurMaskFilter((5f - .5f) / .57735f, BlurMaskFilter.Blur.NORMAL)
         }
     }
 }
 
 // ---- The boards' keyframes ------------------------------------------------------------------------------------
-
-private val EaseInOut = CubicBezierEasing(.42f, 0f, .58f, 1f)
-private val EaseDefault = CubicBezierEasing(.25f, .1f, .25f, 1f)
-private val EaseIn = CubicBezierEasing(.42f, 0f, 1f, 1f)
-private val EaseOut = CubicBezierEasing(0f, 0f, .58f, 1f)
 
 /** How far into its loop (0..1) an animation of [dur] seconds with CSS `animation-delay: [delay]` is at [t]. */
 internal fun loop(t: Double, dur: Double, delay: Double = 0.0): Float {
@@ -398,7 +395,7 @@ private fun DrawScope.drawBell(mood: MeduMood, t: Double?, floatDur: Double, acc
             }
             else -> {
                 val eyeY = if (mood == MeduMood.Think) 80f else 83f
-                val blink = if (t == null) 1f else track(loop(t, 5.0), floatArrayOf(0f, .93f, .96f, 1f), floatArrayOf(1f, 1f, .1f, 1f), EaseDefault)
+                val blink = if (t == null) 1f else track(loop(t, 5.0), floatArrayOf(0f, .93f, .96f, 1f), floatArrayOf(1f, 1f, .1f, 1f), Ease)
                 val look = if (t != null && mood == MeduMood.Search) {
                     track(loop(t, 3.4), floatArrayOf(0f, .18f, .42f, .64f, .88f, 1f), floatArrayOf(-4f, -4f, 4f, 4f, -4f, -4f), EaseInOut)
                 } else 0f

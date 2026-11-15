@@ -18,6 +18,8 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w390dp-h844dp-mdpi", sdk = [35])
 class LiveTvShots {
+    // The v2 rule queues effects (StandardTestDispatcher), which changes the recorded channel-number shot: keep v1 here.
+    @Suppress("DEPRECATION")
     @get:Rule val compose = createComposeRule()
 
     private fun shot(name: String, view: LiveView, over: @Composable () -> Unit = {}) {

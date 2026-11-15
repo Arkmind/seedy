@@ -6,12 +6,14 @@ import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { Icon } from '../../ui/icons';
 import {
-  categoryOf, fraction, isAiring, previewAllowed, isFavorite, lastChannelId, leftLabel, newTag, programTitle, programsChanged, recState, soonLabel,
-  startMs, timeRange, toggleFavorite, toggleRecord, tonightEnd, useChannels, useNow, useTimers, whenLine, type LiveChannel
+  airingNow, categoryOf, fraction, isAiring, isFavorite, lastChannelId, leftLabel, newTag, previewAllowed, programsChanged, programTitle,
+  recordLabel, recState, soonLabel, startClock, startMs, timeRange, toggleFavorite, toggleRecord, tonightEnd, useChannels, useNow, useTimers,
+  whenLine, type LiveChannel
 } from './data';
 import { LiveLayout, NoChannels } from './LiveLayout';
 import { ChannelLogo, HeartIcon, LivePill, ProgramArt, RecDot, SoundButton, TagPill, hasProgramArt, watch } from './parts';
 import { useLivePreview } from './preview';
+import { pct } from '../../lib/format';
 
 /* Live TV · On now (board "Live TV · On now"): the last watched channel with a muted live preview, then rows —
    on now on favourite channels, starting soon, and the guide's categories for tonight. */
@@ -49,7 +51,7 @@ export function LiveOnNow() {
     ?? list?.[0];
 
   const airing = programs.filter((p) => isAiring(p, now));
-  const airingOn = (c: LiveChannel) => airing.find((p) => p.ChannelId === c.Id) ?? (isAiring(c.CurrentProgram, now) ? c.CurrentProgram : undefined);
+  const airingOn = (c: LiveChannel) => airing.find((p) => p.ChannelId === c.Id) ?? airingNow(c, now);
   const tonight = tonightEnd(now);
   const upTo = (p: Program, until: number) => isAiring(p, now) || (startMs(p) > now && startMs(p) < until);
   const sortTime = (a: Program, b: Program) => startMs(a) - startMs(b) || order(a) - order(b);
@@ -123,7 +125,7 @@ function Hero({ channel, program, next, now, last, timers }: {
         {program ? (
           <div class="lt-hero-meta">
             <div class="lt-hero-line"><span>{[cat, timeRange(program)].filter(Boolean).join(' · ')}</span><b>{leftLabel(program, now)}</b></div>
-            <div class="lt-bar is-6"><i style={{ width: (fraction(program, now) * 100).toFixed(2) + '%' }} /></div>
+            <div class="lt-bar is-6"><i style={{ width: pct(fraction(program, now)) }} /></div>
           </div>
         ) : (
           <div class="lt-hero-line"><span>{t('No guide information')}</span></div>
@@ -135,7 +137,7 @@ function Hero({ channel, program, next, now, last, timers }: {
           </button>
           {program && (
             <button type="button" class="lt-btn is-48" onClick={() => void toggleRecord(program)} aria-pressed={rec ? 'true' : 'false'}>
-              <RecDot />{rec === 'now' ? t('Recording') : rec === 'set' ? t('Recording set') : t('Record')}
+              <RecDot />{recordLabel(rec)}
             </button>
           )}
           <button
@@ -148,13 +150,12 @@ function Hero({ channel, program, next, now, last, timers }: {
             <HeartIcon size={20} filled={fav} />
           </button>
         </div>
-        {next && <span class="lt-hero-next">{t('Next')} · <b>{clockOf(next)} {next.Name}</b></span>}
+        {next && <span class="lt-hero-next">{t('Next')} · <b>{startClock(next)} {next.Name}</b></span>}
       </div>
     </section>
   );
 }
 
-const clockOf = (p: Program) => timeRange(p).split(' – ')[0];
 
 function HeroSkeleton() {
   return (
@@ -186,8 +187,8 @@ function RowSkeleton() {
 /* ── A programme card (16:9, 320 px): LIVE or "In 10 min", New / Premiere, the channel's logo, recording state,
    progress while it airs, and a record button on what's still to come. ── */
 
-export function ProgramCard({ program, channel, now, timers, first, grid }: {
-  program?: Program; channel?: LiveChannel; now: number; timers: ReturnType<typeof useTimers>['timers']; first?: boolean; grid?: boolean;
+function ProgramCard({ program, channel, now, timers, first }: {
+  program?: Program; channel?: LiveChannel; now: number; timers: ReturnType<typeof useTimers>['timers']; first?: boolean;
 }) {
   const live = program ? isAiring(program, now) : !!channel;
   const tag = program ? newTag(program) : null;
@@ -203,7 +204,7 @@ export function ProgramCard({ program, channel, now, timers, first, grid }: {
     else if (program) navigate(`/livetv/guide?program=${program.Id}&at=${startMs(program)}`);
   };
   return (
-    <div class={'lt-card' + (grid ? ' is-grid' : '')}>
+    <div class="lt-card">
       <a
         href="#"
         class="lt-card-link"
@@ -219,8 +220,8 @@ export function ProgramCard({ program, channel, now, timers, first, grid }: {
             {tag && <TagPill kind={tag} />}
           </div>
           {art && <ChannelLogo channel={channel} size={34} radius={9} class="lt-card-logo" />}
-          {rec && <span class="lt-card-rec"><span class="lt-rec-dot" />{rec === 'now' ? t('Recording') : t('Recording set')}</span>}
-          {live && program && <div class="lt-card-bar"><i style={{ width: (fraction(program, now) * 100).toFixed(2) + '%' }} /></div>}
+          {rec && <span class="lt-card-rec"><span class="lt-rec-dot" />{recordLabel(rec)}</span>}
+          {live && program && <div class="lt-card-bar"><i style={{ width: pct(fraction(program, now)) }} /></div>}
         </div>
         <div class="lt-card-text">
           <span class="lt-card-title">{title}</span>

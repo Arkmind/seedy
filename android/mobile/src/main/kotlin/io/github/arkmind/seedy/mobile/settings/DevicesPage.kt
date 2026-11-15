@@ -1,15 +1,11 @@
 package io.github.arkmind.seedy.mobile.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -18,29 +14,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.admin.people.DeviceRow
-import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.settings.MyDevicesActions
 import io.github.arkmind.seedy.core.settings.MyDevicesState
 import io.github.arkmind.seedy.mobile.admin.CardNote
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
+import io.github.arkmind.seedy.mobile.admin.IconTile
+import io.github.arkmind.seedy.mobile.admin.LoadingDots
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.PillStyle
+import io.github.arkmind.seedy.mobile.admin.ShowMoreRow
 import io.github.arkmind.seedy.mobile.admin.SpacedDots
+import io.github.arkmind.seedy.mobile.admin.people.DeviceName
+import io.github.arkmind.seedy.mobile.admin.people.DevicePageSize
 import io.github.arkmind.seedy.mobile.admin.people.deviceIcon
 import io.github.arkmind.seedy.mobile.parts.Toast
-import io.github.arkmind.seedy.ui.icons.SIcon
-import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-
-/* Long-lived servers collect many devices; show them a page at a time (the server Devices page's step). */
-private const val Page = 40
 
 /**
  * Settings › Profile › Signed in on (the server Devices board's rows, for one person): every app signed in to this
@@ -50,7 +44,7 @@ private const val Page = 40
 fun MyDevicesPage(state: MyDevicesState, actions: MyDevicesActions, nav: SettingsNav) {
     var leaving by remember { mutableStateOf<DeviceRow?>(null) }
     var others by remember { mutableStateOf(false) }
-    var shown by remember { mutableIntStateOf(Page) }
+    var shown by remember { mutableIntStateOf(DevicePageSize) }
     val list = state.devices
     SettingsPage(
         t("Signed in on"),
@@ -81,7 +75,7 @@ fun MyDevicesPage(state: MyDevicesState, actions: MyDevicesActions, nav: Setting
         Card(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
             when {
                 list == null && state.error != null -> CardNote(state.error.orEmpty(), action = t("Try again"), onAction = actions::reload)
-                list == null -> SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3)
+                list == null -> LoadingDots()
                 list.isEmpty() -> CardNote(t("No devices are signed in to your profile."))
                 else -> list.take(shown).forEachIndexed { i, d ->
                     if (i > 0) RowLine()
@@ -89,13 +83,7 @@ fun MyDevicesPage(state: MyDevicesState, actions: MyDevicesActions, nav: Setting
                 }
             }
         }
-        if (list != null && list.size > shown) {
-            Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.Center) {
-                PillButton(t("Show more"), { shown += Page }, trailing = {
-                    SText(t("{n} more", "n" to formatNumber(list.size - shown)), size = 13.sp, weight = 600, color = SeedyColors.Text3, maxLines = 1)
-                })
-            }
-        }
+        if (list != null && list.size > shown) ShowMoreRow(list.size - shown) { shown += DevicePageSize }
         FootNote(t("To sign out this phone, use Sign out in Settings."))
     }
 }
@@ -108,14 +96,9 @@ private fun DeviceItem(d: DeviceRow, onSignOut: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Surface), contentAlignment = Alignment.Center) {
-            SIcon(deviceIcon(d.kind), size = 20.dp, color = SeedyColors.TextHero)
-        }
+        IconTile(deviceIcon(d.kind), SeedyColors.TextHero, 40.dp, 20.dp, radius = 12.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp), itemVerticalAlignment = Alignment.CenterVertically) {
-                SText(d.name, size = 15.sp, weight = 800, color = SeedyColors.White)
-                if (d.mine) DeviceTag()
-            }
+            DeviceName(d.name, d.mine, t("This phone"))
             SpacedDots(listOf(d.last, d.app), 12.sp, SeedyColors.Text3)
         }
         if (!d.mine) PillButton(t("Sign out"), onSignOut, style = PillStyle.Danger, height = 36.dp)

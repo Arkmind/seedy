@@ -1,4 +1,5 @@
 import { formatNumber, t } from '../../lib/i18n';
+import { joinNames } from '../../lib/format';
 
 /* Server · Overview storage: Jellyfin's folders (GET /System/Info/Storage) grouped by the disk they sit on, named
    after what they hold. The Android server page groups and names them the same way. */
@@ -102,12 +103,6 @@ export function fmtDisk(bytes: number): string {
   while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
   const digits = v >= 100 || i === 0 ? 0 : 1;
   return `${formatNumber(Number(v.toFixed(digits)), { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${units[i]}`;
-}
-
-/* "Movies, Shows and Music". */
-export function joinNames(names: string[]): string {
-  if (names.length <= 1) return names[0] ?? '';
-  return t('{list} and {last}', { list: names.slice(0, -1).join(', '), last: names[names.length - 1] });
 }
 
 /* The notice's second sentence: "1.6 TiB left on /config, where metadata and the cache live." */

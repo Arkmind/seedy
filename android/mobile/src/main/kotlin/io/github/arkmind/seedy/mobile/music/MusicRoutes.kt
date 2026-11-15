@@ -13,15 +13,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.arkmind.seedy.core.format.join
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.music.AlbumViewModel
 import io.github.arkmind.seedy.core.music.ArtistViewModel
-import io.github.arkmind.seedy.core.music.MusicApi
 import io.github.arkmind.seedy.core.music.MusicLibraryViewModel
 import io.github.arkmind.seedy.core.music.NowPlayingViewModel
 import io.github.arkmind.seedy.core.music.albumArtistOf
 import io.github.arkmind.seedy.core.music.artistsOf
-import io.github.arkmind.seedy.core.music.dot
 import io.github.arkmind.seedy.mobile.audio.LocalAudio
 import io.github.arkmind.seedy.mobile.audio.miniBarSpace
 import io.github.arkmind.seedy.mobile.audio.openOutputSwitcher
@@ -145,7 +145,7 @@ fun AlbumRoute(id: UUID) {
                 onMore = { if (item != null) menu = true },
                 onArtist = { artist?.let { c.nav.go(Route.Artist(it.id)) } },
                 onFavorite = vm::toggleFavorite,
-                onDownload = { c.download(tracks, dot(item?.let(::albumArtistOf), name)) },
+                onDownload = { c.download(tracks, join(item?.let(::albumArtistOf), name)) },
                 onQueue = { c.queue(tracks, false, name) },
                 onShuffle = { c.play(tracks, 0, source, shuffle = true) },
                 onPlay = { if (here) audio?.togglePlay() else c.play(tracks, 0, source) },
@@ -262,7 +262,7 @@ fun NowPlayingRoute() {
                 onClose = nav::back,
                 onSource = {
                     val src = state.source
-                    val sid = src?.id?.let { runCatching { UUID.fromString(MusicApi.dashed(it)) }.getOrNull() }
+                    val sid = uuidOf(src?.id)
                     when {
                         src == null || sid == null -> tk.albumId?.let { leaveTo(Route.Album(it)) }
                         src.kind == SourceKind.Album || src.kind == SourceKind.Playlist -> leaveTo(Route.Album(sid))
@@ -288,7 +288,7 @@ fun NowPlayingRoute() {
             ),
         )
         when (panel) {
-            "lyrics" -> LyricsPanel(tk.name.orEmpty(), dot(tk.name, artistsOf(tk)), lyrics, time.position, tint, audio::seek) { panel = null }
+            "lyrics" -> LyricsPanel(tk.name.orEmpty(), join(tk.name, artistsOf(tk)), lyrics, time.position, tint, audio::seek) { panel = null }
             "queue" -> QueueSheet(state, audio::jumpTo, audio::removeFromQueue, audio::moveInQueue, audio::clearQueue) { panel = null }
             "about" -> {
                 LaunchedEffect(tk.id) { vm.loadFacts(tk) }

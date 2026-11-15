@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.core.music
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.arkmind.seedy.core.format.favorited
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,20 +71,12 @@ class AlbumViewModel(session: UserSession, private val id: UUID) : ViewModel() {
     }
 
     fun patchFavorite(trackId: UUID, on: Boolean) = _state.update { s ->
-        s.copy(tracks = s.tracks?.map { if (it.id == trackId) it.copy(userData = it.userData?.copy(isFavorite = on)) else it })
+        s.copy(tracks = s.tracks?.favorited(trackId, on))
     }
 
     fun toggleFavorite() {
         val item = _state.value.item ?: return
-        val on = item.userData?.isFavorite != true
-        fun patch(v: Boolean) = _state.update { s -> s.copy(item = s.item?.copy(userData = s.item.userData?.copy(isFavorite = v))) }
-        patch(on)
-        viewModelScope.launch {
-            runCatching { music.setFavorite(item.id, on) }.onFailure {
-                patch(!on)
-                say(t("Couldn’t update {name}", "name" to item.name.orEmpty()))
-            }
-        }
+        flipFavorite(music, item, { on -> _state.update { s -> s.copy(item = s.item?.favorited(on)) } }, ::say)
     }
 
     /** Jellyfin's instant mix of the album (or its songs when it has none). */
@@ -113,4 +106,16 @@ class AlbumViewModel(session: UserSession, private val id: UUID) : ViewModel() {
 
     fun say(message: String) = _state.update { it.copy(message = message) }
     fun messageShown() = _state.update { it.copy(message = null) }
+}
+
+/** An album's or artist's heart: it flips at once, and back with a message when the server refuses. */
+internal fun ViewModel.flipFavorite(music: MusicApi, item: BaseItemDto, patch: (Boolean) -> Unit, say: (String) -> Unit) {
+    val on = item.userData?.isFavorite != true
+    patch(on)
+    viewModelScope.launch {
+        runCatching { music.setFavorite(item.id, on) }.onFailure {
+            patch(!on)
+            say(t("Couldn’t update {name}", "name" to item.name.orEmpty()))
+        }
+    }
 }

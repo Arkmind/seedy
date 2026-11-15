@@ -132,17 +132,7 @@ class MusicArtistViewModel(session: UserSession) : ViewModel() {
         val target = _state.value.target ?: return
         job?.cancel()
         job = viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                // coroutineScope: a failed lookup ends here, inside runCatching, instead of cancelling the page's scope.
-                runCatching {
-                    coroutineScope {
-                        val artist = async { api.musicArtist(target.mbid) }
-                        val options = async { api.options("music") }
-                        artist.await() to options.await()
-                    }
-                }
-            }
-            val (artist, options) = result.getOrNull() ?: run {
+            val (artist, options) = both({ api.musicArtist(target.mbid) }, { api.options("music") }) ?: run {
                 _state.update { it.copy(failed = true) }
                 return@launch
             }
@@ -192,16 +182,32 @@ class MusicArtistViewModel(session: UserSession) : ViewModel() {
         )
         _state.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
-            val res = withContext(Dispatchers.IO) { runCatching { api.create(body) } }.getOrNull()
-            if (res == null) {
-                _state.update { it.copy(busy = false, error = t("Couldn’t send the request.")) }
-                return@launch
-            }
-            _state.update { it.copy(busy = false) }
-            MediaAsked.note(res)
+            val res = send(api, body) { error -> _state.update { it.copy(busy = false, error = error) } } ?: return@launch
             onDone(if (res.status == "pending") t("Requested. An admin approves it first.") else t("Requested. Lidarr is on it."))
         }
     }
+}
+
+/**
+ * Two lookups side by side, off the main thread; null when either fails. coroutineScope: a failed lookup ends here,
+ * inside runCatching, instead of cancelling the page's scope.
+ */
+private suspend fun <A, B> both(a: suspend () -> A, b: suspend () -> B): Pair<A, B>? = withContext(Dispatchers.IO) {
+    runCatching {
+        coroutineScope {
+            val first = async { a() }
+            val second = async { b() }
+            first.await() to second.await()
+        }
+    }
+}.getOrNull()
+
+/** Sends a request off the main thread; [done] gets the error to show, or null once it's sent (and noted for the lists). */
+private suspend fun send(api: MediaRequestsApi, body: MediaCreate, done: (error: String?) -> Unit): MediaRequest? {
+    val res = withContext(Dispatchers.IO) { runCatching { api.create(body) } }.getOrNull()
+    done(if (res == null) t("Couldn’t send the request.") else null)
+    res?.let { MediaAsked.note(it) }
+    return res
 }
 
 /**
@@ -312,16 +318,7 @@ class BookRequestViewModel(session: UserSession) : ViewModel() {
         val target = _state.value.target ?: return
         job?.cancel()
         job = viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    coroutineScope {
-                        val details = async { api.bookDetails(target.card) }
-                        val options = async { api.options("book") }
-                        details.await() to options.await()
-                    }
-                }
-            }
-            val (book, options) = result.getOrNull() ?: run {
+            val (book, options) = both({ api.bookDetails(target.card) }, { api.options("book") }) ?: run {
                 _state.update { it.copy(failed = true) }
                 return@launch
             }
@@ -361,13 +358,7 @@ class BookRequestViewModel(session: UserSession) : ViewModel() {
         )
         _state.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
-            val res = withContext(Dispatchers.IO) { runCatching { api.create(body) } }.getOrNull()
-            if (res == null) {
-                _state.update { it.copy(busy = false, error = t("Couldn’t send the request.")) }
-                return@launch
-            }
-            _state.update { it.copy(busy = false) }
-            MediaAsked.note(res)
+            val res = send(api, body) { error -> _state.update { it.copy(busy = false, error = error) } } ?: return@launch
             onDone(if (res.status == "pending") t("Requested. An admin approves it first.") else t("Requested. {app} is on it.", "app" to MediaFormat.serviceName(res.service)))
         }
     }

@@ -1,11 +1,14 @@
 import {
-  ApiError, allowAdoption, blockAdoption, candidateSessions, getSession, sessionFromAuth, setSession, setUnauthorizedHandler, storedSession, type Session
+  ApiError, allowAdoption, blockAdoption, candidateSessions, currentUserId, sessionFromAuth, setSession, setUnauthorizedHandler, storedSession, type Session
 } from '../api/client';
 import { castTarget } from './cast';
 import * as jf from '../api/jellyfin';
 import * as seedy from '../api/seedy';
 import type { AuthResult, BaseItem, User } from '../api/types';
 import { createStore } from './store';
+
+/* Subtitles at the normal size, lifted above the controls while they show. */
+export const DEFAULT_SUBTITLES: seedy.SubtitlePrefs = { size: 'M', lift: true };
 
 export const DEFAULT_PLAYBACK: seedy.PlaybackPrefs = {
   skipIntro: 'button',
@@ -26,7 +29,7 @@ const fallbackMe = (): seedy.Me => ({
   isAdmin: false,
   branding: DEFAULT_BRANDING,
   prefs: {
-    playback: DEFAULT_PLAYBACK, subtitles: { size: 'M', lift: true }, adaptRowOrder: true, hiddenRows: [], hiddenSeeds: [],
+    playback: DEFAULT_PLAYBACK, subtitles: DEFAULT_SUBTITLES, adaptRowOrder: true, hiddenRows: [], hiddenSeeds: [],
     rowOrder: 'auto', rows: [], privacy: { personalRecs: true, countInTop10: true }, notifyRequests: true, custom: {}
   },
   defaults: DEFAULT_PLAYBACK,
@@ -37,6 +40,9 @@ const fallbackMe = (): seedy.Me => ({
 
 export const userStore = createStore<User | null>(null);
 export const meStore = createStore<seedy.Me>(fallbackMe());
+
+/* The profile's playback settings over the defaults. */
+export const playbackPrefs = (prefs: seedy.UserPrefs | undefined = meStore.get().prefs): seedy.PlaybackPrefs => ({ ...DEFAULT_PLAYBACK, ...(prefs?.playback ?? {}) });
 export const viewsStore = createStore<BaseItem[]>([]);
 export const brandingStore = createStore<seedy.Branding>(DEFAULT_BRANDING);
 /* 'offline': the server didn't answer (restarting, network down) — keep the session and offer a retry. */
@@ -168,4 +174,6 @@ export async function signOut() {
 }
 
 export const isAdmin = () => !!userStore.get()?.Policy?.IsAdministrator;
-export const currentUserId = () => getSession()?.userId ?? '';
+/* The profile may download original files (Jellyfin's "Download media"). */
+export const canDownload = (user = userStore.get()) => !!user?.Policy?.EnableContentDownloading;
+export { currentUserId };

@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 using Jellyfin.Plugin.Seedy.Services;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Common.Configuration;
-using Jellyfin.Server.Implementations.SystemBackupService;
-using MediaBrowser.Controller.SystemBackupService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -54,17 +52,14 @@ public sealed class BackupScheduleDto
 public class BackupsController : ControllerBase
 {
     private readonly IApplicationPaths _paths;
-    private readonly IBackupService _backups;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BackupsController"/> class.
     /// </summary>
     /// <param name="paths">Application paths.</param>
-    /// <param name="backups">Backup service.</param>
-    public BackupsController(IApplicationPaths paths, IBackupService backups)
+    public BackupsController(IApplicationPaths paths)
     {
         _paths = paths;
-        _backups = backups;
     }
 
     private string Folder => Path.Combine(_paths.DataPath, "backups");
@@ -162,7 +157,6 @@ public class BackupsController : ControllerBase
             ? string.Create(CultureInfo.InvariantCulture, $"{t.Hours:00}:{t.Minutes:00}")
             : "04:00";
         c.BackupKeep = Math.Clamp(body.Keep, 1, 52);
-        c.BackupDatabase = true; // A backup without the database can't restore a server.
         var options = body.Options ?? new BackupOptionsWire();
         c.BackupMetadata = options.Metadata;
         c.BackupSubtitles = options.Subtitles;

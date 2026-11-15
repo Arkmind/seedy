@@ -48,7 +48,7 @@ function parseLine(line: string, state: { i: boolean; b: boolean; u: boolean }):
   return spans;
 }
 
-export function parseVtt(src: string): Cue[] {
+function parseVtt(src: string): Cue[] {
   const text = src.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
   const blocks = text.split(/\n{2,}/);
   const cues: Cue[] = [];
@@ -68,10 +68,15 @@ export function parseVtt(src: string): Cue[] {
   return cues;
 }
 
-export async function loadCues(url: string, signal?: AbortSignal): Promise<Cue[]> {
+/* A subtitle file; a refused one fails with its status. */
+export async function fetchSubtitle(url: string, signal?: AbortSignal): Promise<Response> {
   const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`Subtitle request failed (${res.status})`);
-  return parseVtt(await res.text());
+  return res;
+}
+
+export async function loadCues(url: string, signal?: AbortSignal): Promise<Cue[]> {
+  return parseVtt(await (await fetchSubtitle(url, signal)).text());
 }
 
 /* "−0.2 s", "0.0 s", "+0.3 s" */

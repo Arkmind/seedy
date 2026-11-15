@@ -20,21 +20,21 @@ import io.github.arkmind.seedy.core.admin.people.UserEditActions
 import io.github.arkmind.seedy.core.admin.people.UserEditState
 import io.github.arkmind.seedy.core.admin.people.UserTab
 import io.github.arkmind.seedy.core.admin.people.bitrateOptions
-import io.github.arkmind.seedy.core.admin.people.flag
-import io.github.arkmind.seedy.core.admin.people.int
-import io.github.arkmind.seedy.core.admin.people.labelOf
 import io.github.arkmind.seedy.core.admin.people.lockOptions
-import io.github.arkmind.seedy.core.admin.people.long
 import io.github.arkmind.seedy.core.admin.people.streamOptions
 import io.github.arkmind.seedy.core.admin.people.syncPlayOptions
-import io.github.arkmind.seedy.core.admin.people.text
 import io.github.arkmind.seedy.core.admin.people.withValue
+import io.github.arkmind.seedy.core.data.bool
+import io.github.arkmind.seedy.core.data.int
+import io.github.arkmind.seedy.core.data.long
+import io.github.arkmind.seedy.core.data.str
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.settings.Choice
+import io.github.arkmind.seedy.core.settings.Choices
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
-import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.admin.leaveGuard
 import io.github.arkmind.seedy.mobile.admin.MenuItem
 import io.github.arkmind.seedy.mobile.admin.MenuSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
@@ -66,7 +66,7 @@ fun UserScreen(state: UserEditState, actions: UserEditActions, onBack: () -> Uni
     var photoMenu by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
     // Leaving with unsaved changes asks first.
-    val back = LeaveGuard(
+    val back = leaveGuard(
         state.changes > 0,
         t("Your changes to {name}’s account haven’t been saved yet. If you leave now, they’re lost.", "name" to state.savedName),
     ) { actions.discard(); onBack() }
@@ -129,7 +129,7 @@ fun UserScreen(state: UserEditState, actions: UserEditActions, onBack: () -> Uni
 @Composable
 private fun Identity(state: UserEditState) {
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        val disabled = state.policy.flag("IsDisabled")
+        val disabled = state.policy.bool("IsDisabled")
         AdminAvatar(
             state.name, if (disabled) SeedyColors.Text3 else avatarColour(state.index), 64.dp, 28.sp,
             imageUrl = state.image, online = state.online, dot = 14.dp, dotInset = 0.dp, ring = SeedyColors.Bg,
@@ -158,15 +158,15 @@ internal fun helpFor(state: UserEditState, key: String, help: String, was: () ->
 
 internal fun CardRows.switch(state: UserEditState, actions: UserEditActions, key: String, name: String, help: String, default: Boolean = false, enabled: Boolean = true) {
     row {
-        val on = state.policy.flag(key, default)
-        SwitchRow(name, helpFor(state, key, help) { if (state.saved.flag(key, default)) t("on") else t("off") }, on, enabled = enabled) { actions.setFlag(key, it) }
+        val on = state.policy.bool(key, default)
+        SwitchRow(name, helpFor(state, key, help) { if (state.saved.bool(key, default)) t("on") else t("off") }, on, enabled = enabled) { actions.setFlag(key, it) }
     }
 }
 
 internal fun <T> CardRows.pick(state: UserEditState, sheet: SheetState, key: String, name: String, help: String, options: List<Choice<T>>, value: T, was: T, onPick: (T) -> Unit) {
     row {
         val list = withValue(withValue(options, value), was)
-        PickRow(name, helpFor(state, key, help) { labelOf(list, was) }, labelOf(list, value)) { sheet.open(name, list, value, onPick) }
+        PickRow(name, helpFor(state, key, help) { Choices.label(list, was) }, Choices.label(list, value)) { sheet.open(name, list, value, onPick) }
     }
 }
 
@@ -180,8 +180,8 @@ private fun AccountTab(state: UserEditState, actions: UserEditActions, sheet: Sh
         switch(state, actions, "EnableRemoteAccess", t("Allow remote access"), t("Sign in from outside the home network"), default = true)
         switch(state, actions, "IsHidden", t("Hide from the sign-in screen"), t("{name} must type the name to sign in", "name" to name))
         // Not your own account; an administrator loses admin access first.
-        switch(state, actions, "IsDisabled", t("Disable account"), t("Blocks sign-in without deleting anything"), enabled = !state.isMe && !(p.flag("IsAdministrator") && !p.flag("IsDisabled")))
-        pick(state, sheet, "LoginAttemptsBeforeLockout", t("Lock after failed sign-ins"), t("Counts wrong passwords in a row"), lockOptions(p.flag("IsAdministrator")), p.int("LoginAttemptsBeforeLockout", -1), s.int("LoginAttemptsBeforeLockout", -1)) {
+        switch(state, actions, "IsDisabled", t("Disable account"), t("Blocks sign-in without deleting anything"), enabled = !state.isMe && !(p.bool("IsAdministrator") && !p.bool("IsDisabled")))
+        pick(state, sheet, "LoginAttemptsBeforeLockout", t("Lock after failed sign-ins"), t("Counts wrong passwords in a row"), lockOptions(p.bool("IsAdministrator")), p.int("LoginAttemptsBeforeLockout", -1), s.int("LoginAttemptsBeforeLockout", -1)) {
             actions.set("LoginAttemptsBeforeLockout", JsonPrimitive(it))
         }
         pick(state, sheet, "MaxActiveSessions", t("Simultaneous streams"), t("Devices playing at the same time"), streamOptions(), p.int("MaxActiveSessions"), s.int("MaxActiveSessions")) {
@@ -197,7 +197,7 @@ private fun AccountTab(state: UserEditState, actions: UserEditActions, sheet: Sh
         pick(state, sheet, "RemoteClientBitrateLimit", t("Remote streaming limit"), t("Caps quality outside the home network"), bitrateOptions(), p.long("RemoteClientBitrateLimit"), s.long("RemoteClientBitrateLimit")) {
             actions.set("RemoteClientBitrateLimit", JsonPrimitive(it))
         }
-        pick(state, sheet, "SyncPlayAccess", t("Watch together"), t("Synced playback with other people"), syncPlayOptions(), p.text("SyncPlayAccess") ?: "CreateAndJoinGroups", s.text("SyncPlayAccess") ?: "CreateAndJoinGroups") {
+        pick(state, sheet, "SyncPlayAccess", t("Watch together"), t("Synced playback with other people"), syncPlayOptions(), p.str("SyncPlayAccess") ?: "CreateAndJoinGroups", s.str("SyncPlayAccess") ?: "CreateAndJoinGroups") {
             actions.set("SyncPlayAccess", JsonPrimitive(it))
         }
     }

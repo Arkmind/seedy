@@ -11,6 +11,13 @@ import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.admin.normId
 import io.github.arkmind.seedy.core.admin.realDate
 import io.github.arkmind.seedy.core.admin.sameId
+import io.github.arkmind.seedy.core.admin.seedy.PlayLogProfile
+import io.github.arkmind.seedy.core.admin.seedy.SeerrAccount
+import io.github.arkmind.seedy.core.data.bool
+import io.github.arkmind.seedy.core.data.intOrNull
+import io.github.arkmind.seedy.core.data.json
+import io.github.arkmind.seedy.core.data.strings
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
@@ -105,10 +112,10 @@ data class UserEditState(
     val lede: String
         get() {
             if (!loaded) return ""
-            val role = if (saved.flag("IsAdministrator")) t("Administrator") else t("User")
+            val role = if (saved.bool("IsAdministrator")) t("Administrator") else t("User")
             val access = when {
-                saved.flag("IsDisabled") -> t("account disabled")
-                !saved.flag("EnableRemoteAccess", true) -> t("home network only")
+                saved.bool("IsDisabled") -> t("account disabled")
+                !saved.bool("EnableRemoteAccess", true) -> t("home network only")
                 else -> t("can sign in from anywhere")
             }
             return "$role · $access"
@@ -171,8 +178,6 @@ fun syncPlayOptions(): List<Choice<String>> = listOf(
 /** [options] with [value] added when it isn't one of them (a value set elsewhere). */
 fun <T> withValue(options: List<Choice<T>>, value: T): List<Choice<T>> =
     if (options.any { it.value == value }) options else options + Choice(value, value.toString())
-
-fun <T> labelOf(options: List<Choice<T>>, value: T): String = options.firstOrNull { it.value == value }?.label ?: value.toString()
 
 /** The ratings as one choice per score (and sub-score), lowest first, with "No limit" on top; and the current one. */
 fun ratingOptions(ratings: List<ParentalRating>, policy: JsonObject): Pair<List<Choice<String>>, String> {
@@ -399,8 +404,8 @@ class UserEditViewModel(
                     changed.remove("IsDisabled")
                     val own = session.api.deviceInfo.id
                     val enabled = s.policy.strings("EnabledDevices")
-                    if (!s.policy.flag("EnableAllDevices", true) && ("EnableAllDevices" in changed || "EnabledDevices" in changed) && own !in enabled) {
-                        changed["EnabledDevices"] = strings(enabled + own)
+                    if (!s.policy.bool("EnableAllDevices", true) && ("EnableAllDevices" in changed || "EnabledDevices" in changed) && own !in enabled) {
+                        changed["EnabledDevices"] = json(enabled + own)
                     }
                 }
                 if (changed.isNotEmpty()) patchUserPolicy(http, id, changed)

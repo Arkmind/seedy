@@ -1,12 +1,5 @@
 package io.github.arkmind.seedy.mobile.books
 
-import android.app.DownloadManager
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.os.Build
-import android.os.Environment
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -40,6 +33,7 @@ import io.github.arkmind.seedy.mobile.manage.rememberManageSheets
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Toast
+import io.github.arkmind.seedy.mobile.parts.downloadFile
 import io.github.arkmind.seedy.player.audio.PlayOptions
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.currentSession
@@ -65,7 +59,7 @@ fun BookDetailsRoute(id: UUID) {
     var menu by remember { mutableStateOf(false) }
     // Back from the reader or the player: the place may have moved.
     LaunchedEffect(Unit) { vm.refresh() }
-    val download = { w: BaseItemDto -> download(context, books.downloadUrl(w.id), fileName(w))?.let(vm::say) ?: Unit }
+    val download = { w: BaseItemDto -> downloadFile(context, books.downloadUrl(w.id), fileName(w))?.let(vm::say) ?: Unit }
     val listen = { w: BaseItemDto ->
         audio?.listenTo(w.id)
         nav.go(Route.AudiobookPlayer)
@@ -119,7 +113,7 @@ fun BookDetailsRoute(id: UUID) {
                 val fav = item.userData?.isFavorite == true
                 add(MenuEntry(if (fav) BookIcons.HeartFilled else BookIcons.Heart, if (fav) t("Remove from favorites") else t("Add to favorites"), run = vm::toggleFavorite))
                 if (state.canDownload && state.parts == null) {
-                    add(MenuEntry(BookIcons.Download, t("Download {format}", "format" to formatLabel(item)), run = { download(item) }))
+                    add(MenuEntry(BookIcons.Download, t("Download {format}", "format" to formatName(item)), run = { download(item) }))
                 }
                 if (perms.collections) add(MenuEntry(ManageIcons.Collection, t("Add to collection"), more = true, run = { sheets.show("collection", add) }))
                 if (perms.admin) {
@@ -145,12 +139,6 @@ private fun startedAt(state: BookViewModel.State): Boolean {
     return state.reading?.let { !it.finished && it.percent > 0 } == true
 }
 
-private fun formatLabel(item: BaseItemDto): String = when (val f = formatOf(item)) {
-    BookFormat.Audio -> t("Audiobook")
-    BookFormat.Other -> t("File")
-    else -> f.name.uppercase()
-}
-
 /** The file's own name (from its path), else the title with its format's extension. */
 private fun fileName(item: BaseItemDto): String {
     val path = item.path ?: item.mediaSources?.firstOrNull()?.path
@@ -161,28 +149,4 @@ private fun fileName(item: BaseItemDto): String {
         else -> f.name.lowercase()
     }
     return "${item.name.orEmpty().replace(Regex("[\\\\/:*?\"<>|]"), "_")}.$ext"
-}
-
-/**
- * Downloads the file into the phone's Downloads (Android 10+ via the download manager, older ones through the browser).
- * Returns what to tell the person, or null.
- */
-private fun download(context: Context, url: String, name: String): String? {
-    if (Build.VERSION.SDK_INT >= 29) {
-        val ok = runCatching {
-            val dm = context.getSystemService(DownloadManager::class.java)
-            dm.enqueue(
-                DownloadManager.Request(Uri.parse(url)).setTitle(name)
-                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                    .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name),
-            )
-        }.isSuccess
-        if (ok) return t("Downloading {name}", "name" to name)
-    }
-    return try {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        null
-    } catch (_: ActivityNotFoundException) {
-        t("Couldn’t download {name}", "name" to name)
-    }
 }

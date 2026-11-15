@@ -12,6 +12,8 @@ import { toast } from '../ui/overlay';
 import { openSearch } from '../ui/search/open';
 import { SAND_BACK, SAND_FRONT, Sea, Weed, type Bubble, type Fish, type Flake, type Ray } from '../ui/sea';
 import { seasonsLabel } from './browse/parts';
+import { hhmm24 } from '../lib/format';
+import { copyText } from '../lib/clipboard';
 import './not-found.css';
 
 // Not found (404) board: Medu searches the deep with a torch between the two 4s. Used for unknown pages and for
@@ -78,24 +80,20 @@ const pickMeta = (item: BaseItem) =>
   item.Type === 'Series' ? [t('Series'), seasonsLabel(item)].filter(Boolean).join(' · ')
     : [item.Type === 'Movie' ? t('Movie') : '', item.ProductionYear].filter(Boolean).join(' · ');
 
-const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-
-export function NotFound({ title = false, reason }: {
+export function NotFound({ title = false }: {
   /** A title link (/details/…) rather than a page. */
   title?: boolean;
-  /** What the server said, for the admins' line. */
-  reason?: string;
 }) {
   const loc = useLocation();
   const [at] = useState(() => new Date());
   const picks = usePicks();
-  const why = reason ?? (title ? t('no item with this ID in any library') : t('no page at this address'));
+  const why = title ? t('no item with this ID in any library') : t('no page at this address');
   // Item ids are shortened to their first 8 characters on screen; Copy details keeps the whole request.
   const shown = loc.path.replace(/^(\/details\/[0-9a-f]{8})[0-9a-f]{24}$/i, '$1');
   const query = loc.query.toString();
   const copy = () => {
     const full = [`GET ${loc.path}${query ? '?' + query : ''}`, why, at.toISOString(), navigator.userAgent].join(' · ');
-    navigator.clipboard?.writeText(full).then(() => toast(t('Details copied')), () => toast(t('Couldn’t copy the details')));
+    void copyText(full).then((ok) => toast(ok ? t('Details copied') : t('Couldn’t copy the details')));
   };
   return (
     <div class="page">
@@ -131,7 +129,7 @@ export function NotFound({ title = false, reason }: {
           {isAdmin() && (
             <div class="nf-admin">
               <span class="nf-admin-tag">{t('Admins only')}</span>
-              <span class="nf-admin-line">GET {shown} · {why} · {hhmm(at)}</span>
+              <span class="nf-admin-line">GET {shown} · {why} · {hhmm24(at)}</span>
               <button type="button" class="nf-admin-copy" onClick={copy}>{t('Copy details')}</button>
             </div>
           )}

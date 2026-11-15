@@ -1,4 +1,5 @@
-import { ApiError, authHeader, del, deviceId, get, getSession, JELLYFIN_WEB, post, request, url } from '../../api/client';
+import { ApiError, authHeader, del, deviceId, get, getSession, JELLYFIN_WEB, post, request, sessionToken, url } from '../../api/client';
+import { fileBase64 } from '../../api/images';
 import type { BaseItem, ItemsResult, User, UserConfiguration } from '../../api/types';
 import { t } from '../../lib/i18n';
 import { createStore } from '../../lib/store';
@@ -161,12 +162,7 @@ export function patchNamedConfig<T extends object>(key: string, patch: Partial<T
 
 /* Images go up as base64 with the image's own content type (Jellyfin's AcceptsImageFile endpoints). */
 async function postImage(path: string, file: File, query?: Record<string, string>): Promise<void> {
-  const data = await new Promise<string>((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result).replace(/^data:[^,]*,/, ''));
-    r.onerror = () => reject(r.error ?? new Error(t('The file could not be read')));
-    r.readAsDataURL(file);
-  });
+  const data = await fileBase64(file);
   const res = await fetch(url(path, query), {
     method: 'POST',
     headers: { Authorization: authHeader(), 'Content-Type': file.type || 'image/png' },
@@ -310,7 +306,7 @@ export const resetUserPassword = (id: string) => post<void>('/Users/Password', {
 
 /* ── Libraries ── */
 
-export interface MediaPathInfo { Path: string; NetworkPath?: string }
+interface MediaPathInfo { Path: string; NetworkPath?: string }
 export interface TypeOptions {
   Type: string;
   MetadataFetchers: string[];
@@ -409,7 +405,7 @@ export const getItemCounts = (signal?: AbortSignal) => get<ItemCounts>('/Items/C
 /* ── Playback: EncodingOptions (/System/Configuration/encoding) ── */
 
 export type HwAccel = 'none' | 'amf' | 'qsv' | 'nvenc' | 'v4l2m2m' | 'vaapi' | 'videotoolbox' | 'rkmpp';
-export type TonemapAlgorithm = 'none' | 'clip' | 'linear' | 'gamma' | 'reinhard' | 'hable' | 'mobius' | 'bt2390';
+type TonemapAlgorithm = 'none' | 'clip' | 'linear' | 'gamma' | 'reinhard' | 'hable' | 'mobius' | 'bt2390';
 export type EncoderPreset = 'auto' | 'placebo' | 'veryslow' | 'slower' | 'slow' | 'medium' | 'fast' | 'faster' | 'veryfast' | 'superfast' | 'ultrafast';
 
 export interface EncodingOptions extends Rest {
@@ -795,7 +791,7 @@ export const configPageUrl = (name: string) => JELLYFIN_WEB + '#/configurationpa
 
 /* ── Scheduled tasks ── */
 
-export type TriggerType = 'DailyTrigger' | 'WeeklyTrigger' | 'IntervalTrigger' | 'StartupTrigger';
+type TriggerType = 'DailyTrigger' | 'WeeklyTrigger' | 'IntervalTrigger' | 'StartupTrigger';
 export type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
 
 export interface TaskTrigger {
@@ -869,7 +865,7 @@ export const seedyBackupSchedule = () => get<BackupSchedule>('/Seedy/Admin/Backu
 export const saveSeedyBackupSchedule = (s: BackupSchedule) => post<BackupSchedule>('/Seedy/Admin/BackupSchedule', s);
 export const deleteSeedyBackup = (fileName: string) => del<void>(`/Seedy/Admin/BackupFiles/${encodeURIComponent(fileName)}`);
 export const seedyBackupDownloadUrl = (fileName: string) =>
-  url(`/Seedy/Admin/BackupFiles/${encodeURIComponent(fileName)}/File`, { ApiKey: getSession()?.token ?? '' });
+  url(`/Seedy/Admin/BackupFiles/${encodeURIComponent(fileName)}/File`, { ApiKey: sessionToken() });
 
 /* ── Logs ── */
 

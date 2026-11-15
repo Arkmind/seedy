@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,6 +40,7 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.settings.Choices
 import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.OffRing
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
@@ -109,7 +111,7 @@ fun BoxScope.MobileDataSheet(id: UUID, device: DeviceSettings, onPlay: (DataChoi
         }
     }
     val choices = remember(device) { dataChoices(device) }
-    var picked by remember { mutableStateOf(choices.indexOfFirst { it.bitrate == device.qualityMobile }.coerceAtLeast(0)) }
+    var picked by remember { mutableIntStateOf(choices.indexOfFirst { it.bitrate == device.qualityMobile }.coerceAtLeast(0)) }
     var never by remember { mutableStateOf(false) }
     val accent = LocalAccent.current
     val seconds = loaded?.runTimeTicks?.let(::ticksToSeconds)?.takeIf { it > 0 }
@@ -144,7 +146,7 @@ fun BoxScope.MobileDataSheet(id: UUID, device: DeviceSettings, onPlay: (DataChoi
                 ) {
                     Box(
                         Modifier.size(20.dp).clip(CircleShape)
-                            .then(if (on) Modifier.background(accent).padding(6.dp).background(Color(0xFF1E1E1E), CircleShape) else Modifier.border(2.dp, Color(0xFF5A5A5A), CircleShape)),
+                            .then(if (on) Modifier.background(accent).padding(6.dp).background(Color(0xFF1E1E1E), CircleShape) else Modifier.border(2.dp, OffRing, CircleShape)),
                     )
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         SText(c.name, size = 15.sp, weight = 700, color = SeedyColors.White, maxLines = 1)
@@ -164,7 +166,7 @@ fun BoxScope.MobileDataSheet(id: UUID, device: DeviceSettings, onPlay: (DataChoi
                 SText(t("Don’t ask again"), size = 14.sp, weight = 700, color = SeedyColors.White)
                 SText(t("Plays at {quality} on mobile data from now on", "quality" to choice.name), size = 12.sp, color = SeedyColors.Text3)
             }
-            Box(Modifier.size(44.dp, 26.dp).clip(CircleShape).background(if (never) accent else Color(0xFF2A2A2A))) {
+            Box(Modifier.size(44.dp, 26.dp).clip(CircleShape).background(if (never) accent else SeedyColors.Surface2)) {
                 Box(Modifier.padding(start = if (never) 21.dp else 3.dp, top = 3.dp).size(20.dp).background(if (never) Color(0xFF1E1E1E) else SeedyColors.Text3, CircleShape))
             }
         }

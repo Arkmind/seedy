@@ -191,14 +191,6 @@ class ReaderViewModel(
         _state.update { s -> s.copy(epub = s.epub?.copy(settings = next)) }
     }
 
-    /** The bookmark on the page showing, if any. */
-    fun bookmarkHere(): Bookmark? {
-        val s = _state.value
-        val e = s.epub ?: return null
-        val page = e.where(s.info).page
-        return e.settings.bookmarks.firstOrNull { it.page == page }
-    }
-
     fun toggleBookmark() {
         val s = _state.value
         val e = s.epub ?: return

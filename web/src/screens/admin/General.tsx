@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { APP_BASE, SERVER_URL } from '../../api/client';
-import { adminRemoveLogo, adminUploadLogo, logoUrl, type AdminConfig, type MaxQuality, type PlaybackPrefs, type SkipMode } from '../../api/seedy';
+import { adminRemoveLogo, adminUploadLogo, brandLogoUrl, type AdminConfig, type MaxQuality, type PlaybackPrefs, type SkipMode } from '../../api/seedy';
 import { applyBranding } from '../../lib/app-state';
-import { NumField, Panel, RadioCards, SavedNote, Segmented, SelectField, SettingRow, Switch } from '../../ui/controls';
-import { toast } from '../../ui/overlay';
+import { NumField, Panel, RadioCards, SavedNote, Segmented, SelectField, SettingRow, Switch, tOpts } from '../../ui/controls';
+import { toast, toastError } from '../../ui/overlay';
 import { getLang, t } from '../../lib/i18n';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
 import { editConfig, flushConfig, mergeServerConfig, useAdminConfig } from './config';
@@ -42,9 +42,6 @@ const QUALITY_OPTIONS: { value: MaxQuality; label: string }[] = [
 ];
 
 const HEX = /^#[0-9a-f]{6}$/i;
-
-/* Option labels are English constants, translated at render. */
-const tr = <T,>(options: { value: T; label: string }[]) => options.map((o) => ({ ...o, label: t(o.label) }));
 
 export function AdminGeneral() {
   const { config, error, save, reload } = useAdminConfig();
@@ -178,7 +175,7 @@ function LogoRow({ branding }: { branding: AdminConfig['branding'] }) {
       takeBranding(await adminUploadLogo(file));
       toast(t('Logo updated'));
     } catch (e) {
-      toast(`${t('Couldn’t upload the logo.')} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t upload the logo.'), e);
     } finally {
       setBusy(false);
     }
@@ -190,7 +187,7 @@ function LogoRow({ branding }: { branding: AdminConfig['branding'] }) {
       takeBranding(await adminRemoveLogo());
       toast(t('Logo removed'));
     } catch (e) {
-      toast(`${t('Couldn’t remove the logo.')} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t remove the logo.'), e);
     } finally {
       setBusy(false);
     }
@@ -200,7 +197,7 @@ function LogoRow({ branding }: { branding: AdminConfig['branding'] }) {
     <SettingRow name={t('Logo')} help={t('SVG or PNG, square or wide')}>
       <div class="setting-controls is-12">
         <span class={'logo-box' + (busy ? ' is-busy' : '')} aria-hidden="true">
-          {branding.hasLogo ? <img src={logoUrl(branding.logoVersion)} alt="" /> : <span class="brand-mark">{initial}</span>}
+          {branding.hasLogo ? <img src={brandLogoUrl(branding.logoVersion)} alt="" /> : <span class="brand-mark">{initial}</span>}
         </span>
         <span class="logo-file" title={fileName}>{fileName}</span>
         <button type="button" class="btn btn-secondary is-sm" disabled={busy} onClick={() => input.current?.click()} aria-label={branding.hasLogo ? t('Replace logo') : t('Upload a logo')}>
@@ -305,7 +302,7 @@ function PlaybackPanel({ prefs }: { prefs: PlaybackPrefs }) {
     <Panel id="play" title={t('Playback defaults')} text={t('New profiles start with these. Each profile can change them in its own settings.')}>
       {SKIPS.map((s) => (
         <SettingRow key={s.key} name={t(s.name)} help={t(s.help)}>
-          <Segmented label={t(s.name)} value={prefs[s.key]} options={tr(SKIP_OPTIONS)} onChange={(v) => set({ [s.key]: v })} />
+          <Segmented label={t(s.name)} value={prefs[s.key]} options={tOpts(SKIP_OPTIONS)} onChange={(v) => set({ [s.key]: v })} />
         </SettingRow>
       ))}
       <SettingRow name={t('Auto-play next episode')} help={t('From the Up next card')}>
@@ -324,7 +321,7 @@ function PlaybackPanel({ prefs }: { prefs: PlaybackPrefs }) {
         </div>
       </SettingRow>
       <SettingRow name={t('Pause screen')} help={t('Shows title and synopsis while paused')} htmlFor="pause-delay">
-        <SelectField id="pause-delay" value={PAUSE_OPTIONS.some((o) => o.value === prefs.pauseScreenSeconds) ? prefs.pauseScreenSeconds : 10} options={tr(PAUSE_OPTIONS)} onChange={(v) => set({ pauseScreenSeconds: v })} />
+        <SelectField id="pause-delay" value={PAUSE_OPTIONS.some((o) => o.value === prefs.pauseScreenSeconds) ? prefs.pauseScreenSeconds : 10} options={tOpts(PAUSE_OPTIONS)} onChange={(v) => set({ pauseScreenSeconds: v })} />
       </SettingRow>
       <SettingRow name={t('Maximum streaming quality')} help={t("Jellyfin's per-user bitrate limits still apply")} htmlFor="max-quality" last>
         <SelectField id="max-quality" value={prefs.maxQuality} options={QUALITY_OPTIONS.map((o) => (o.value === 'auto' ? { ...o, label: t(o.label) } : o))} onChange={(v) => set({ maxQuality: v })} />

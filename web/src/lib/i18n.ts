@@ -77,12 +77,23 @@ const fill = (s: string, vars?: Record<string, string | number>) =>
 /* Translate English text. Placeholders like {n} or {name} are filled from vars (in both languages). */
 export function t(text: string, vars?: Record<string, string | number>): string {
   if (lang === 'en') return fill(text, vars);
-  const hit = dict[text];
-  if (hit === undefined && import.meta.env.DEV && !missing.has(text)) {
-    missing.add(text);
+  return fill(lookup(text) ?? text, vars);
+}
+
+/* A word whose translation depends on where it stands ("Series" the tab is plural in French, "Normal" agrees with
+   what it describes): the dictionary key is "Series|tab", English shows the text itself. */
+export function tc(text: string, context: string, vars?: Record<string, string | number>): string {
+  if (lang === 'en') return fill(text, vars);
+  return fill(lookup(`${text}|${context}`) ?? text, vars);
+}
+
+function lookup(key: string): string | undefined {
+  const hit = dict[key];
+  if (hit === undefined && import.meta.env.DEV && !missing.has(key)) {
+    missing.add(key);
     (window as unknown as { __i18nMissing?: Set<string> }).__i18nMissing = missing;
   }
-  return fill(hit ?? text, vars);
+  return hit;
 }
 
 /* Plural forms: tn(3, '{n} movie', '{n} movies'). The English forms are the keys; the language's own plural rule

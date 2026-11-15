@@ -1,3 +1,4 @@
+import { deviceId, keepalive } from '../api/client';
 import { PROFILE_DEFAULTS, buildDeviceProfile, type ProfileOptions } from './device-profile';
 
 /* Live TV streams convert to HLS in MPEG-TS segments. Jellyfin offers fMP4 segments only for tuners that allow them,
@@ -29,3 +30,8 @@ export function closesSettled(maxMs = 10_000): Promise<void> {
   if (!closing.size) return Promise.resolve();
   return Promise.race([Promise.all([...closing]).then(() => undefined), new Promise<void>((r) => window.setTimeout(r, maxMs))]);
 }
+
+/* The cleanup requests a closing tab must still send: end a conversion, close a live stream. */
+export const stopEncoding = (playSessionId: string) =>
+  keepalive('DELETE', `/Videos/ActiveEncodings?deviceId=${encodeURIComponent(deviceId())}&playSessionId=${encodeURIComponent(playSessionId)}`);
+export const closeLiveStream = (liveStreamId: string) => keepalive('POST', `/LiveStreams/Close?liveStreamId=${encodeURIComponent(liveStreamId)}`);

@@ -11,7 +11,10 @@ import io.github.arkmind.seedy.core.admin.dayDiff
 import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.admin.hhmm
 import io.github.arkmind.seedy.core.admin.realDate
+import io.github.arkmind.seedy.core.data.json
+import io.github.arkmind.seedy.core.data.str
 import io.github.arkmind.seedy.core.format.dayMonth
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
@@ -33,7 +36,6 @@ import kotlinx.serialization.json.put
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.model.api.ImageType
 import java.time.Clock
-import java.util.UUID
 
 /*
  * Server › Libraries (board "Android · Server · Libraries", web/src/screens/server/Libraries.tsx): a card per library
@@ -169,7 +171,7 @@ interface LibrariesActions : FolderPickerActions {
     fun messageShown() {}
 }
 
-class LibrariesViewModel(
+class AdminLibrariesViewModel(
     private val session: UserSession,
     private val clock: Clock = Clock.systemDefaultZone(),
 ) : ViewModel(), LibrariesActions {
@@ -230,7 +232,7 @@ class LibrariesViewModel(
     private fun publish() {
         val list = folders ?: return
         val (lede, cards) = librariesView(list, tasks, counts, clock) { f ->
-            f.primaryImageItemId?.let { id -> runCatching { session.api.imageApi.getItemImageUrl(UUID.fromString(dashed(id)), ImageType.PRIMARY, maxWidth = 240) }.getOrNull() }
+            uuidOf(f.primaryImageItemId)?.let { id -> session.api.imageApi.getItemImageUrl(id, ImageType.PRIMARY, maxWidth = 240) }
         }
         _state.update { it.copy(lede = lede, cards = cards, scanning = tasks?.firstOrNull { t -> t.key == "RefreshLibrary" }?.state == "Running") }
         _state.value.adding?.let { form -> _state.update { it.copy(adding = form.copy(taken = taken(form.name))) } }
@@ -333,7 +335,7 @@ fun librariesView(list: List<VirtualFolder>, tasks: List<TaskInfo>?, counts: Map
     val running = scanTask?.state == "Running"
     val lastEnd = scanTask?.lastExecutionResult?.endTimeUtc
     val status = when {
-        running -> t("scanning now") + (scanTask?.currentProgressPercentage?.let { " · " + percentLabel(it) } ?: "")
+        running -> t("scanning now") + (scanTask.currentProgressPercentage?.let { " · " + percentLabel(it) } ?: "")
         realDate(lastEnd) != null -> t("last full scan {when}", "when" to atLabel(realDate(lastEnd)!!, clock))
         else -> t("not scanned yet")
     }
@@ -343,7 +345,7 @@ fun librariesView(list: List<VirtualFolder>, tasks: List<TaskInfo>?, counts: Map
         "status" to status,
     )
     val cards = list.map { f ->
-        val progress = f.refreshProgress ?: if (f.refreshStatus == "Active") 0.0 else if (running) scanTask?.currentProgressPercentage ?: 0.0 else null
+        val progress = f.refreshProgress ?: if (f.refreshStatus == "Active") 0.0 else if (running) scanTask.currentProgressPercentage ?: 0.0 else null
         LibraryCard(
             id = f.itemId,
             name = f.name,
@@ -393,10 +395,4 @@ fun newLibraryOptions(avail: AvailableOptions, language: String?, country: Strin
             put("SimilarItemProviderOrder", json(t.similarItemProviders.map { it.name }))
         }
     }))
-}
-
-/** Jellyfin's ids come without dashes; UUID wants them. */
-fun dashed(id: String): String {
-    if (id.contains('-') || id.length != 32) return id
-    return "${id.substring(0, 8)}-${id.substring(8, 12)}-${id.substring(12, 16)}-${id.substring(16, 20)}-${id.substring(20)}"
 }

@@ -3,14 +3,12 @@ package io.github.arkmind.seedy.mobile.manage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -23,6 +21,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,7 +32,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -44,14 +42,18 @@ import io.github.arkmind.seedy.core.manage.MetaTab
 import io.github.arkmind.seedy.core.manage.MetadataActions
 import io.github.arkmind.seedy.core.manage.MetadataState
 import io.github.arkmind.seedy.core.manage.MetadataViewModel
+import io.github.arkmind.seedy.core.session.serverBase
 import io.github.arkmind.seedy.core.settings.Choice
+import io.github.arkmind.seedy.core.settings.Choices
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.AccentRow
 import io.github.arkmind.seedy.mobile.admin.BoardField
 import io.github.arkmind.seedy.mobile.admin.ChipFlow
 import io.github.arkmind.seedy.mobile.admin.ErrorCard
 import io.github.arkmind.seedy.mobile.admin.FieldSection
-import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.admin.PinnedBar
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
+import io.github.arkmind.seedy.mobile.admin.leaveGuard
 import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
@@ -60,17 +62,15 @@ import io.github.arkmind.seedy.mobile.admin.SearchPickSheet
 import io.github.arkmind.seedy.mobile.admin.TabPills
 import io.github.arkmind.seedy.mobile.admin.TextSheet
 import io.github.arkmind.seedy.mobile.admin.avatarColour
+import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.mobile.parts.Toast
-import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
 import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.FormSheet
 import io.github.arkmind.seedy.mobile.settings.RowLine
-import io.github.arkmind.seedy.mobile.settings.SectionFoot
 import io.github.arkmind.seedy.mobile.settings.Segmented
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
-import io.github.arkmind.seedy.ui.components.boxShadow
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
@@ -88,7 +88,7 @@ fun MetadataRoute(id: String, onBack: () -> Unit) {
     val session = currentSession()
     val vm = viewModel(key = "metadata:$id") { MetadataViewModel(session, id) }
     val state by vm.state.collectAsStateWithLifecycle()
-    val poster = session.api.baseUrl.orEmpty().trimEnd('/') + "/Items/$id/Images/Primary?maxWidth=160&quality=90"
+    val poster = session.api.serverBase + "/Items/$id/Images/Primary?maxWidth=160&quality=90"
     MetadataScreen(state, vm, poster, onBack)
 }
 
@@ -99,7 +99,7 @@ fun MetadataScreen(state: MetadataState, actions: MetadataActions, poster: Strin
     val focus = LocalFocusManager.current
     // A sheet takes the keyboard: the field behind it lets go first.
     LaunchedEffect(sheet) { if (sheet != null) focus.clearFocus() }
-    val back = LeaveGuard(state.dirty, t("Your changes to {name} aren’t saved yet.", "name" to state.name), onBack)
+    val back = leaveGuard(state.dirty, t("Your changes to {name} aren’t saved yet.", "name" to state.name), onBack)
     SettingsPage(
         t("Edit metadata"),
         lede = null,
@@ -135,8 +135,8 @@ fun MetadataScreen(state: MetadataState, actions: MetadataActions, poster: Strin
                         }
                     }
                     MetaTab.Display -> FieldSection(null, foot = t("What the providers are asked for when this title refreshes.")) {
-                        MetaField(t("Metadata language")) { SelectField(state.languages.firstOrNull { it.value == state.language }?.label ?: state.language, t("Library default")) { sheet = "language" } }
-                        MetaField(t("Country")) { SelectField(state.countries.firstOrNull { it.value == state.country }?.label ?: state.country, t("Library default")) { sheet = "country" } }
+                        MetaField(t("Metadata language")) { SelectField(Choices.label(state.languages, state.language), t("Library default")) { sheet = "language" } }
+                        MetaField(t("Country")) { SelectField(Choices.label(state.countries, state.country), t("Library default")) { sheet = "country" } }
                         if (state.isSeries) {
                             MetaField(t("Episode order")) {
                                 SelectField(t(MetadataViewModel.displayOrders.firstOrNull { it.first == state.displayOrder }?.second ?: "Aired"), "") { sheet = "order" }
@@ -165,7 +165,7 @@ fun ItemHead(poster: String?, name: String, facts: String) {
 @Composable
 private fun Details(state: MetadataState, actions: MetadataActions, open: (String) -> Unit) {
     FieldSection(null) {
-        MetaField(t("Title"), "Name", state, actions) { BoardField(state.title, { v -> actions.edit { it.copy(title = v) } }, autoCorrect = true) }
+        MetaField(t("Title"), lock = "Name", state = state, actions = actions) { BoardField(state.title, { v -> actions.edit { it.copy(title = v) } }, autoCorrect = true) }
         MetaField(t("Original title")) { BoardField(state.originalTitle, { v -> actions.edit { it.copy(originalTitle = v) } }, autoCorrect = true) }
         MetaField(t("Sort title")) { BoardField(state.sortTitle, { v -> actions.edit { it.copy(sortTitle = v) } }, placeholder = state.title) }
     }
@@ -176,20 +176,20 @@ private fun Details(state: MetadataState, actions: MetadataActions, open: (Strin
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (state.isSeries) MetaField(t("Status"), modifier = Modifier.weight(1f)) { SelectField(statusLabel(state.status), t("Unknown")) { open("status") } }
-            MetaField(t("Age rating"), "OfficialRating", state, actions, Modifier.weight(1f)) { SelectField(state.rating, t("None")) { open("rating") } }
+            MetaField(t("Age rating"), Modifier.weight(1f), "OfficialRating", state, actions) { SelectField(state.rating, t("None")) { open("rating") } }
         }
     }
     FieldSection(null) {
-        MetaField(t("Overview"), "Overview", state, actions) { BoardField(state.overview, { v -> actions.edit { it.copy(overview = v) } }, lines = 6, autoCorrect = true) }
+        MetaField(t("Overview"), lock = "Overview", state = state, actions = actions) { BoardField(state.overview, { v -> actions.edit { it.copy(overview = v) } }, lines = 6, autoCorrect = true) }
     }
     FieldSection(null) {
-        MetaField(t("Genres"), "Genres", state, actions) {
+        MetaField(t("Genres"), lock = "Genres", state = state, actions = actions) {
             ChipFlow(state.genres, { i -> actions.edit { s -> s.copy(genres = s.genres.filterIndexed { j, _ -> j != i }) } }, t("Add genre"), { open("genre") })
         }
-        MetaField(t("Tags"), "Tags", state, actions) {
+        MetaField(t("Tags"), lock = "Tags", state = state, actions = actions) {
             ChipFlow(state.tags, { i -> actions.edit { s -> s.copy(tags = s.tags.filterIndexed { j, _ -> j != i }) } }, t("Add tag"), { open("tag") })
         }
-        MetaField(t("Studios and networks"), "Studios", state, actions) {
+        MetaField(t("Studios and networks"), lock = "Studios", state = state, actions = actions) {
             ChipFlow(state.studios, { i -> actions.edit { s -> s.copy(studios = s.studios.filterIndexed { j, _ -> j != i }) } }, t("Add"), { open("studio") })
         }
     }
@@ -234,15 +234,15 @@ private fun People(state: MetadataState, actions: MetadataActions, open: (String
 @Composable
 private fun MetaField(
     label: String,
+    modifier: Modifier = Modifier,
     lock: String? = null,
     state: MetadataState? = null,
     actions: MetadataActions? = null,
-    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth().heightIn(min = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-            FieldLabel(label, Modifier.weight(1f))
+            FieldLabel(label, Modifier.weight(1f), color = SeedyColors.Text2)
             if (lock != null && state != null && actions != null) {
                 val locked = lock in state.locked
                 LockChip(locked, locked || lock in state.toggled) { actions.toggleLock(lock) }
@@ -259,7 +259,7 @@ fun LockChip(locked: Boolean, shown: Boolean, onClick: () -> Unit) {
     val accent = LocalAccent.current
     val ink = if (locked) accent else SeedyColors.Text3
     Row(
-        Modifier.height(24.dp).clip(RoundedCornerShape(7.dp)).background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.06f)).tap(onClick = onClick).padding(horizontal = 6.dp),
+        Modifier.height(24.dp).clip(RoundedCornerShape(7.dp)).background(Color.White.copy(alpha = 0.06f)).tap(onClick = onClick).padding(horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -304,16 +304,8 @@ private fun personType(type: String): String = when (type) {
 
 /** The pinned foot: Lock all fields, and Save changes. */
 @Composable
-private fun androidx.compose.foundation.layout.BoxScope.MetaFooter(state: MetadataState, actions: MetadataActions, onSave: () -> Unit) {
-    val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    Row(
-        Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-            .boxShadow(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f), blur = 30.dp, y = (-10).dp)
-            .background(SeedyColors.Row).blockTaps()
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = max(26.dp, nav + 12.dp)),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+private fun BoxScope.MetaFooter(state: MetadataState, actions: MetadataActions, onSave: () -> Unit) {
+    PinnedBar(12.dp) {
         BoardSwitch(state.lockAll, actions::setLockAll)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
             SText(t("Lock all fields"), size = 13.sp, weight = 700, color = SeedyColors.White, maxLines = 1)
@@ -362,6 +354,6 @@ private fun PersonSheet(onAdd: (MetaPerson) -> Unit, onDismiss: () -> Unit) {
         BoardField(name, { name = it }, placeholder = t("Name"), autoCorrect = false)
         BoardField(role, { role = it }, placeholder = t("Role (optional)"))
         Segmented(listOf(Choice("Actor", t("Actor")), Choice("Director", t("Director")), Choice("Writer", t("Writer")), Choice("Producer", t("Producer"))), type, { type = it })
-        io.github.arkmind.seedy.mobile.admin.SheetButtons(t("Add"), { onAdd(MetaPerson(name.trim(), role.trim(), type)); onDismiss() }, onDismiss, enabled = name.isNotBlank())
+        SheetButtons(t("Add"), { onAdd(MetaPerson(name.trim(), role.trim(), type)); onDismiss() }, onDismiss, enabled = name.isNotBlank())
     }
 }

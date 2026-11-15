@@ -1,10 +1,5 @@
 package io.github.arkmind.seedy.mobile.requests
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -14,23 +9,16 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
@@ -43,9 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -53,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -64,9 +48,9 @@ import io.github.arkmind.seedy.core.mediarequests.MediaOptions
 import io.github.arkmind.seedy.core.mediarequests.MusicArtistViewModel
 import io.github.arkmind.seedy.core.mediarequests.MusicRelease
 import io.github.arkmind.seedy.mobile.browse.Chip
+import io.github.arkmind.seedy.mobile.browse.TallSheet
 import io.github.arkmind.seedy.mobile.manage.BigButton
 import io.github.arkmind.seedy.mobile.parts.bleed
-import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.SeedySwitch
 import io.github.arkmind.seedy.ui.components.initialsOf
@@ -83,35 +67,6 @@ import io.github.arkmind.seedy.ui.theme.currentSession
  * RequestBook, in the frame of "Android · Request seasons"): over a dimmed page from 150 px down, the parts scroll over
  * a pinned foot with the approval line and the request button.
  */
-
-/** The sheet's frame: the dimmed page, the grabber, [content] scrolling over the pinned [footer]. */
-@Composable
-private fun RequestSheet(onDismiss: () -> Unit, footer: @Composable ColumnScope.() -> Unit, content: @Composable ColumnScope.() -> Unit) =
-    io.github.arkmind.seedy.ui.components.Overlay {
-        BackHandler(onBack = onDismiss)
-        val shown = remember { MutableTransitionState(false).apply { targetState = true } }
-        Box(Modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxSize().background(Color(0xA8050505)).tap(onClick = onDismiss))
-            AnimatedVisibility(shown, enter = slideInVertically { it / 3 } + fadeIn()) {
-                val shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
-                Column(Modifier.fillMaxSize().padding(top = 150.dp).shadow(40.dp, shape, ambientColor = Color.Black, spotColor = Color.Black).clip(shape).background(SeedyColors.Panel).blockTaps()) {
-                    Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp, bottom = 6.dp).size(36.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(SeedyColors.Stroke))
-                    Column(
-                        Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        content = content,
-                    )
-                    val bottom = max(26.dp, WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 12.dp)
-                    Column(
-                        Modifier.fillMaxWidth().drawBehind { drawLine(SeedyColors.Line, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }
-                            .padding(start = 16.dp, end = 16.dp, top = 13.dp, bottom = bottom),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        content = footer,
-                    )
-                }
-            }
-        }
-    }
 
 @Composable
 private fun Eyebrow(text: String) = SText(text, size = 11.sp, weight = 800, tracking = 0.1f, color = SeedyColors.Text2, uppercase = true, maxLines = 1)
@@ -225,7 +180,7 @@ class ArtistSheetActions(
 /** The artist window itself (stateless, for screenshot tests). */
 @Composable
 fun RequestArtistContent(state: MusicArtistViewModel.State, actions: ArtistSheetActions, onDismiss: () -> Unit) {
-    RequestSheet(
+    TallSheet(
         onDismiss,
         footer = { Foot(if (state.ready) state.note else null, state.error, state.label, state.canSend, actions.submit) },
     ) {
@@ -399,7 +354,7 @@ private fun formatInfo(f: String): FormatInfo = when (f) {
 fun RequestBookContent(state: BookRequestViewModel.State, actions: BookSheetActions, cover: (io.github.arkmind.seedy.core.mediarequests.BookCard) -> String?, onDismiss: () -> Unit) {
     val book = state.book ?: return
     val opts = state.options
-    RequestSheet(
+    TallSheet(
         onDismiss,
         footer = { Foot(if (opts != null) state.note else null, state.error, state.label, state.canSend, actions.submit) },
     ) {
@@ -425,7 +380,7 @@ fun RequestBookContent(state: BookRequestViewModel.State, actions: BookSheetActi
         }
         if (state.failed && state.details == null) {
             RetryNote(t("Couldn’t load this book."), actions.retry)
-            return@RequestSheet
+            return@TallSheet
         }
         Eyebrow(t("Formats"))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

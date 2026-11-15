@@ -10,7 +10,7 @@ import io.github.arkmind.seedy.ui.components.LocalOverlayHost
 import io.github.arkmind.seedy.ui.components.OverlayHost
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.arkmind.seedy.core.manage.AddTarget
@@ -103,13 +103,13 @@ class ManageShots {
     }
 
     @Composable
-    private fun details() = DetailsScreen(BrowseSamples.details, DetailsActions(onMore = {}), canRequest = true, bottomPadding = tabBarHeight())
+    private fun Details() = DetailsScreen(BrowseSamples.details, DetailsActions(onMore = {}), canRequest = true, bottomPadding = tabBarHeight())
 
     private val target = AddTarget(listOf("n"), "Northbound", "Series")
 
     @Test
     fun menu() = shot("AndroidItemMenu", Tab.Home) {
-        details()
+        Details()
         ItemMenuSheet(
             "Northbound",
             listOf(
@@ -129,7 +129,7 @@ class ManageShots {
 
     @Test
     fun addToPlaylist() = shot("AndroidAddToPlaylist", Tab.Home) {
-        details()
+        Details()
         AddToContent(
             AddToState(
                 ListKind.Playlist,
@@ -146,7 +146,7 @@ class ManageShots {
 
     @Test
     fun newPlaylist() = shot("AndroidNewPlaylist", Tab.Home) {
-        details()
+        Details()
         NewPlaylistContent(
             NewPlaylistState(
                 name = "Winter rewatch", startsWith = "Starts with Northbound", startsSub = "20 episodes on the server, in order", audience = Audience.People,
@@ -175,7 +175,7 @@ class ManageShots {
 
     @Test
     fun delete() = shot("AndroidDelete", Tab.Home) {
-        details()
+        Details()
         DeleteContent(DeleteViewModel.describe(northbound, continuing = true).copy(typed = "Northbound"), object : DeleteActions {}, {})
     }
 

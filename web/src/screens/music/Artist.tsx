@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'preact/hooks';
-import { get, getSession } from '../../api/client';
+import { get, currentUserId } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import { backdropUrl, imageUrl } from '../../api/images';
 import type { BaseItem, ItemsResult } from '../../api/types';
+import { dot, ticksToSeconds } from '../../lib/format';
 import { t, tn } from '../../lib/i18n';
 import { useAsync, useStore } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
@@ -11,20 +12,18 @@ import { ItemCard } from '../../ui/cards';
 import { toast } from '../../ui/overlay';
 import { toggleFavorite } from '../browse/parts';
 import { MoreActions, useView } from '../browse/details-parts';
-import { TRACK_FIELDS, artistTracks, instantMix, type Track } from '../../audio/api';
+import { TRACK_FIELDS, artistTracks, type Track } from '../../audio/api';
 import { Cover, useNearestPalette } from '../../audio/cover';
 import { audioStore, playLoaded, playedStore, togglePlay } from '../../audio/engine';
 import { AIcon, EqIcon } from '../../audio/icons';
 import { clock } from '../../audio/parts';
-import { AlbumCard, ArtistCard, SectionHead, dot, playsLabel, releaseOf, songsLabel, yearOf, type Release } from './parts';
-import { CardSkel, artistAlbums } from './MusicLibrary';
+import { AlbumCard, ArtistCard, SectionHead, playsLabel, releaseOf, songsLabel, yearOf, type Release, CardSkel, artistAlbums, startMix } from './parts';
 import './music.css';
 
 /* An artist (MusicArtist board): the name over their art; Play, Shuffle, Artist radio, favourite and ⋯; Most played
    here and About; the discography in albums, singles and EPs, albums they appear on and music videos; similar
    artists on the server. */
 
-const uid = () => getSession()?.userId ?? '';
 const nameSize = (name: string) => (name.length > 22 ? ' is-xlong' : name.length > 13 ? ' is-long' : '');
 
 type DiscTab = 'albums' | 'singles' | 'appears' | 'videos';
@@ -58,7 +57,7 @@ export function MusicArtistPage({ item: initial }: { item: BaseItem }) {
   const list = songs.data ?? [];
   const playsHere = list.reduce((sum, x) => sum + (x.UserData?.PlayCount ?? 0), 0);
   const top = (list.some((x) => x.UserData?.PlayCount) ? list.filter((x) => x.UserData?.PlayCount) : list).slice(0, 5);
-  const place = (item as BaseItem & { ProductionLocations?: string[] }).ProductionLocations?.[0];
+  const place = item.ProductionLocations?.[0];
   const source = { kind: 'artist' as const, id: item.Id, name: item.Name };
   const here = !!s.current && s.source?.id === item.Id;
   const fav = !!item.UserData?.IsFavorite;
@@ -71,14 +70,7 @@ export function MusicArtistPage({ item: initial }: { item: BaseItem }) {
       toast(t('Couldn’t start playback'), 'error');
     }
   };
-  const radio = async () => {
-    try {
-      const mixed = await instantMix(item.Id, 150);
-      await playLoaded(mixed, 0, { source: { kind: 'mix', id: item.Id, name: t('{name} radio', { name: item.Name }) } });
-    } catch {
-      toast(t('Couldn’t start the mix'), 'error');
-    }
-  };
+  const radio = () => startMix(item, t('{name} radio', { name: item.Name }));
 
   const d = disc.data;
   const tabs: { id: DiscTab; label: string; n: number }[] = d ? [
@@ -149,7 +141,7 @@ export function MusicArtistPage({ item: initial }: { item: BaseItem }) {
                       <span class="mu-tr-artists">{tk.Album}</span>
                     </span>
                     <span class="mu-pop-plays">{playsLabel(tk.UserData?.PlayCount)}</span>
-                    <span class="mu-pop-time">{tk.RunTimeTicks ? clock(tk.RunTimeTicks / 10_000_000) : ''}</span>
+                    <span class="mu-pop-time">{tk.RunTimeTicks ? clock(ticksToSeconds(tk.RunTimeTicks)) : ''}</span>
                   </div>
                 );
               })}
@@ -233,7 +225,7 @@ function About({ artist, albums }: { artist: BaseItem; albums: BaseItem[] }) {
 
 function Similar({ artist }: { artist: BaseItem }) {
   const data = useAsync(() =>
-    get<ItemsResult>(`/Artists/${artist.Id}/Similar`, { userId: uid(), limit: 7, fields: 'ItemCounts,ChildCount,PrimaryImageAspectRatio' })
+    get<ItemsResult>(`/Artists/${artist.Id}/Similar`, { userId: currentUserId(), limit: 7, fields: 'ItemCounts,ChildCount,PrimaryImageAspectRatio' })
       .then((r) => r.Items, () => [] as BaseItem[]),
   [artist.Id]);
   if (!data.data?.length) return null;

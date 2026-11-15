@@ -1,6 +1,11 @@
 package io.github.arkmind.seedy.player
 
+import io.github.arkmind.seedy.core.data.ioOrNull
+import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession
+import io.github.arkmind.seedy.core.session.queryString
+import io.github.arkmind.seedy.core.session.serverBase
+import io.github.arkmind.seedy.core.session.withApiKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.delete
@@ -21,10 +26,28 @@ import org.jellyfin.sdk.model.api.PlaybackStartInfo
 import org.jellyfin.sdk.model.api.PlaybackStopInfo
 import org.jellyfin.sdk.model.api.RepeatMode
 import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
-import java.net.URLEncoder
 
 /** Why playback couldn't start, with Jellyfin's codes ("NotAllowed", "NoCompatibleStream", "RateLimitExceeded"). */
 class PlaybackProblem(val code: String) : Exception(code)
+
+/** A problem's title and explanation for the player's error page: Jellyfin's codes and the player's own. */
+fun problemText(code: String): Pair<String, String> = when (code) {
+    "NotAllowed" -> t("Not allowed on this profile") to t("Your profile isn't allowed to play this title. Ask the server's admin if that's unexpected.")
+    "NoCompatibleStream" -> t("Can't play this here") to t("This device can't play the file and the server couldn't convert it.")
+    "RateLimitExceeded" -> t("Server is busy") to t("Too many streams are playing on this server right now. Try again in a moment.")
+    "network" -> t("Can't reach the server") to t("The stream stopped loading. Check your connection and try again.")
+    "media" -> t("Playback stopped") to t("The video couldn't be decoded on this device.")
+    "serverError" -> t("Couldn't start playback") to t("The server couldn't prepare this title for playback. Try again in a moment.")
+    "liveUnavailable" -> t("This channel isn't available right now") to t("The server couldn't open the channel's stream. Try another channel or come back later.")
+    else -> t("Couldn't start playback") to code
+}
+
+/** A subtitle or sound offset in the delay controls: "+0.5 s", "−1.0 s", "0 s". */
+fun offsetLabel(ms: Long): String = when {
+    ms > 0 -> "+%.1f s".format(ms / 1000.0)
+    ms < 0 -> "−%.1f s".format(-ms / 1000.0)
+    else -> "0 s"
+}
 
 /** What to ask the server for. Stream indexes are Jellyfin's; subtitle -1 is off. */
 data class StreamOptions(
@@ -67,8 +90,6 @@ class Streams(
     private val liveProfile: () -> DeviceProfile = { profile(null) },
 ) {
     private val api get() = session.api
-    private val base get() = api.baseUrl.orEmpty().trimEnd('/')
-    private val token get() = api.accessToken.orEmpty()
     private val deviceId get() = session.account.deviceId
 
     suspend fun request(item: BaseItemDto, opts: StreamOptions): ActiveStream = withContext(Dispatchers.IO) {
@@ -102,22 +123,14 @@ class Streams(
         val audioIndex = opts.audioIndex ?: source.defaultAudioStreamIndex
         if (source.supportsDirectPlay && directPlay) {
             val container = (source.container ?: "mp4").substringBefore(',')
-            val q = buildMap {
-                put("static", "true")
-                put("mediaSourceId", source.id.orEmpty())
-                put("deviceId", deviceId)
-                info.playSessionId?.let { put("PlaySessionId", it) }
-                source.eTag?.let { put("Tag", it) }
-                put("ApiKey", token)
-            }
             return@withContext ActiveStream(
                 playSessionId = info.playSessionId, source = source, method = PlayMethod.DIRECT_PLAY,
-                url = "$base/Videos/${item.id}/stream.$container?${query(q)}", isHls = false,
+                url = "${api.serverBase}/Videos/${item.id}/stream.$container?${session.fileQuery(source, info.playSessionId)}", isHls = false,
                 audioIndex = audioIndex, subtitleIndex = opts.subtitleIndex, burnIn = false, options = opts,
             )
         }
         val path = source.transcodingUrl ?: throw PlaybackProblem("NoCompatibleStream")
-        val url = withApiKey(path)
+        val url = api.withApiKey(path)
         val reasons = Regex("[?&]TranscodeReasons=([^&]*)").find(url)?.groupValues?.get(1).orEmpty()
         val videoReasons = Regex("Video|ContainerBitrateExceedsLimit|SubtitleCodecNotSupported|RefFrames|Anamorphic|Interlaced|Unknown")
         val sub = source.mediaStreams.orEmpty().firstOrNull { it.type == MediaStreamType.SUBTITLE && it.index == opts.subtitleIndex }
@@ -139,14 +152,8 @@ class Streams(
     fun subtitleUrl(item: BaseItemDto, source: MediaSourceInfo, stream: MediaStream): String {
         val url = stream.deliveryUrl
         if (url != null && stream.isExternalUrl == true) return url
-        if (url != null) return withApiKey(url.replace(Regex("/Stream\\.[a-z0-9]+(\\?|$)", RegexOption.IGNORE_CASE), "/Stream.vtt$1"))
-        return withApiKey("/Videos/${item.id}/${source.id}/Subtitles/${stream.index}/0/Stream.vtt")
-    }
-
-    fun withApiKey(path: String): String {
-        val full = if (path.startsWith("http")) path else base + path
-        if (Regex("[?&](ApiKey|api_key)=", RegexOption.IGNORE_CASE).containsMatchIn(full)) return full
-        return full + (if ('?' in full) "&" else "?") + "ApiKey=" + enc(token)
+        if (url != null) return api.withApiKey(url.replace(Regex("/Stream\\.[a-z0-9]+(\\?|$)", RegexOption.IGNORE_CASE), "/Stream.vtt$1"))
+        return api.withApiKey("/Videos/${item.id}/${source.id}/Subtitles/${stream.index}/0/Stream.vtt")
     }
 
     suspend fun reportStart(r: Report) = quietly {
@@ -205,11 +212,21 @@ class Streams(
     ) {
         val canSeek: Boolean get() = stream.source.liveStreamId == null
     }
+}
 
-    private suspend fun quietly(block: suspend () -> Unit) {
-        withContext(Dispatchers.IO) { runCatching { block() } }
-    }
+/** The query of a file streamed as it is ("static"), for Videos/{id}/stream and Audio/{id}/stream. */
+internal fun UserSession.fileQuery(source: MediaSourceInfo, playSessionId: String?): String = queryString(
+    buildMap {
+        put("static", "true")
+        put("mediaSourceId", source.id.orEmpty())
+        put("deviceId", account.deviceId)
+        playSessionId?.let { put("PlaySessionId", it) }
+        source.eTag?.let { put("Tag", it) }
+        put("ApiKey", api.accessToken.orEmpty())
+    },
+)
 
-    private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
-    private fun query(q: Map<String, String>) = q.entries.joinToString("&") { "${enc(it.key)}=${enc(it.value)}" }
+/** A playback report or session call: off the main thread, and a failure is dropped. */
+internal suspend fun quietly(block: suspend () -> Unit) {
+    ioOrNull { block() }
 }

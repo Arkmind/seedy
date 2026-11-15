@@ -66,7 +66,7 @@ object AudioIcons {
     // The triangles are filled without a stroke (as the boards draw them); the bars are 2.2 px round-capped lines.
     val Previous = IconDef(0f, listOf(IconPart("M18 5v14L8 12z", filled = true), IconPart("M4.9 5a1.1 1.1 0 0 1 2.2 0v14a1.1 1.1 0 0 1 -2.2 0z", filled = true)))
     val Next = IconDef(0f, listOf(IconPart("M6 5v14l10-7z", filled = true), IconPart("M16.9 5a1.1 1.1 0 0 1 2.2 0v14a1.1 1.1 0 0 1 -2.2 0z", filled = true)))
-    val Pause = IconDef(0f, listOf(IconPart("M7.2 4.5h1.6a1.2 1.2 0 0 1 1.2 1.2v12.6a1.2 1.2 0 0 1 -1.2 1.2h-1.6a1.2 1.2 0 0 1 -1.2 -1.2v-12.6a1.2 1.2 0 0 1 1.2 -1.2Z", filled = true), IconPart("M15.2 4.5h1.6a1.2 1.2 0 0 1 1.2 1.2v12.6a1.2 1.2 0 0 1 -1.2 1.2h-1.6a1.2 1.2 0 0 1 -1.2 -1.2v-12.6a1.2 1.2 0 0 1 1.2 -1.2Z", filled = true)))
+    val Pause = WebIcons.Pause
     val Play = WebIcons.Play
 }
 
@@ -121,7 +121,7 @@ fun MiniBar(state: AudioState, time: AudioTime, actions: MiniBarActions, modifie
                     SeekGlyph(back = true, seconds = 30, size = 24.dp, color = SeedyColors.White)
                 }
             } else {
-                BarButton(AudioIcons.Previous, t("Previous"), actions.onPrevious)
+                BarButton(AudioIcons.Previous, actions.onPrevious)
             }
             Box(
                 Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Inverse).tap(onClick = actions.onToggle),
@@ -129,7 +129,7 @@ fun MiniBar(state: AudioState, time: AudioTime, actions: MiniBarActions, modifie
             ) {
                 SIcon(if (state.playing) AudioIcons.Pause else AudioIcons.Play, size = 18.dp, color = SeedyColors.InkInverse)
             }
-            if (book == null) BarButton(AudioIcons.Next, t("Next"), actions.onNext)
+            if (book == null) BarButton(AudioIcons.Next, actions.onNext)
         }
         Box(Modifier.align(Alignment.BottomStart).padding(horizontal = 10.dp).fillMaxWidth().height(2.dp).background(Color(0x26FFFFFF))) {
             Box(Modifier.fillMaxHeight().fillMaxWidth(time.fraction).background(SeedyColors.White))
@@ -138,7 +138,7 @@ fun MiniBar(state: AudioState, time: AudioTime, actions: MiniBarActions, modifie
 }
 
 @Composable
-private fun BarButton(icon: IconDef, @Suppress("UNUSED_PARAMETER") label: String, onClick: () -> Unit) {
+private fun BarButton(icon: IconDef, onClick: () -> Unit) {
     Box(Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)).tap(onClick = onClick), contentAlignment = Alignment.Center) {
         SIcon(icon, size = 20.dp, color = SeedyColors.White)
     }

@@ -48,7 +48,6 @@ private fun IconDef.toVector(stroke: Float): ImageVector =
 
 /** Icons only the Android boards draw (the web set is in [WebIcons]). */
 object AppIcons {
-    val Home = IconDef(2f, "M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z")
     val Libraries = IconDef(
         2f,
         "M5.5 4h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5Z",
@@ -71,8 +70,13 @@ object AppIcons {
         "M5 4h14a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z",
         "M5 13h14a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2Z", "M7 7.5h.01", "M7 16.5h.01",
     )
-    /** "Resume from 41:20": a small solid play triangle. */
-    val Resume = IconDef(0f, listOf(IconPart("M8 5v14l11-7z", filled = true)))
+    /** A solid heart (a favourite channel). */
+    val HeartSolid = IconDef(0f, listOf(IconPart("M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z", filled = true)))
+    /** The players' Subtitles and audio. */
+    val Tracks = IconDef(2f, "M6 5h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z", "M7 11h3M13 11h4", "M7 15h6M15.5 15H17")
+    /** The players' Episodes (a stack of screens). */
+    val PlayerEpisodes = IconDef(2f, "M5 8h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z", "M6 5h12", "M9 2h6")
+    val Speed = IconDef(2f, "M12 21a9 9 0 1 1 9-9", "M12 12l4-4")
     /** The server finder's: two stacked boxes. */
     val ServerStack = IconDef(2.2f, "M4 4h16v6H4z", "M4 14h16v6H4z", "M8 7h.01", "M8 17h.01")
     val Mic = IconDef(2f, "M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Z", "M5 11a7 7 0 0 0 14 0", "M12 18v3")

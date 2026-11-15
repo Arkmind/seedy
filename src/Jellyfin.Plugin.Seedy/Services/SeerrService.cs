@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.Seedy.Api;
+using Jellyfin.Plugin.Seedy.Services.Media;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Seedy.Services;
@@ -237,10 +238,9 @@ public sealed class SeerrService
     {
         var c = ConfigMapper.Current;
         var saved = string.IsNullOrWhiteSpace(url) && string.IsNullOrWhiteSpace(apiKey);
-        var address = (string.IsNullOrWhiteSpace(url) ? c.SeerrUrl : url!).Trim().TrimEnd('/');
-        var key = string.IsNullOrWhiteSpace(apiKey) ? c.SeerrApiKey : apiKey!.Trim();
+        var (address, key) = ServiceHttp.TestTarget(url, apiKey, c.SeerrUrl, c.SeerrApiKey);
         var result = new SeerrTestResultDto();
-        if (string.IsNullOrEmpty(address) || !Uri.TryCreate(address, UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
+        if (!ServiceHttp.IsHttpUrl(address))
         {
             result.Message = "Add Seerr's address, such as http://seerr:5055.";
         }
@@ -367,7 +367,7 @@ public sealed class SeerrService
 
             list.Add(new SeerrUserDto
             {
-                Id = Int(u["id"]) ?? 0,
+                Id = J.Int(u["id"]) ?? 0,
                 DisplayName = UserName(u) ?? Str(u["email"]) ?? "Seerr user",
                 Email = Str(u["email"]),
                 JellyfinUserId = NormalizeId(Str(u["jellyfinUserId"])),
@@ -428,7 +428,7 @@ public sealed class SeerrService
         }
 
         var uid = user.Id.ToString("N");
-        var stored = (c.SeerrProfiles ?? []).FirstOrDefault(p => string.Equals(p.UserId, uid, StringComparison.OrdinalIgnoreCase));
+        var stored = ConfigMapper.FindProfile(c.SeerrProfiles, uid);
         return c.RequestWho == "selected" ? stored?.CanRequest == true : stored?.CanRequest ?? true;
     }
 
@@ -451,16 +451,16 @@ public sealed class SeerrService
         // Newest first; keep the most recent request that is still waiting or approved.
         foreach (var r in node?["results"]?.AsArray() ?? [])
         {
-            var tmdb = Int(r?["media"]?["tmdbId"]);
+            var tmdb = J.Int(r?["media"]?["tmdbId"]);
             var type = Str(r?["type"]);
-            if (tmdb is null || type is null || Int(r?["status"]) is not (1 or 2 or 5))
+            if (tmdb is null || type is null || J.Int(r?["status"]) is not (1 or 2 or 5))
             {
                 continue;
             }
 
             var key = type + ":" + tmdb.Value.ToString(CultureInfo.InvariantCulture);
             var by = r?["requestedBy"];
-            map.TryAdd(key, (UserName(by) ?? "someone", Int(by?["id"]) ?? 0));
+            map.TryAdd(key, (UserName(by) ?? "someone", J.Int(by?["id"]) ?? 0));
         }
 
         return map;
@@ -539,7 +539,7 @@ public sealed class SeerrService
         }
 
         await Enrich(list, me, ct).ConfigureAwait(false);
-        return (list, Int(node?["totalResults"]) ?? list.Count);
+        return (list, J.Int(node?["totalResults"]) ?? list.Count);
     }
 
     /// <summary>Movies that were requested but aren't out yet, soonest first.</summary>
@@ -555,12 +555,12 @@ public sealed class SeerrService
         foreach (var r in requests?["results"]?.AsArray() ?? [])
         {
             // Available already, or a request that was declined (3) or failed (4): not coming.
-            if (Str(r?["type"]) != "movie" || Int(r?["media"]?["status"]) == 5 || Int(r?["status"]) is 3 or 4)
+            if (Str(r?["type"]) != "movie" || J.Int(r?["media"]?["status"]) == 5 || J.Int(r?["status"]) is 3 or 4)
             {
                 continue;
             }
 
-            var id = Int(r?["media"]?["tmdbId"]);
+            var id = J.Int(r?["media"]?["tmdbId"]);
             if (id is not null && !ids.Contains(id.Value))
             {
                 ids.Add(id.Value);
@@ -619,14 +619,17 @@ public sealed class SeerrService
 
         foreach (var s in servers?.AsArray() ?? [])
         {
-            if (s is null || Bool(s["is4k"]))
+            if (s is null || J.Bool(s["is4k"]))
             {
                 continue;
             }
 
-            var scheme = Bool(s["useSsl"]) ? "https" : "http";
-            var baseUrl = (Str(s["baseUrl"]) ?? string.Empty).TrimEnd('/');
-            var url = $"{scheme}://{Str(s["hostname"])}:{Int(s["port"]) ?? 7878}{baseUrl}/api/v3/calendar?start={today:yyyy-MM-dd}&end={today.AddDays(150):yyyy-MM-dd}&unmonitored=false";
+            if (ArrBase(s, 7878) is not { } arrBase)
+            {
+                continue;
+            }
+
+            var url = string.Create(CultureInfo.InvariantCulture, $"{arrBase}/api/v3/calendar?start={today:yyyy-MM-dd}&end={today.AddDays(150):yyyy-MM-dd}&unmonitored=false");
             JsonNode? cal;
             if (_cache.TryGetValue("radarr:" + url, out var hit) && DateTime.UtcNow - hit.At < ListTtl)
             {
@@ -649,8 +652,8 @@ public sealed class SeerrService
 
             foreach (var m in cal?.AsArray() ?? [])
             {
-                var id = Int(m?["tmdbId"]);
-                if (m is null || id is null || found.ContainsKey(id.Value) || Bool(m["hasFile"]))
+                var id = J.Int(m?["tmdbId"]);
+                if (m is null || id is null || found.ContainsKey(id.Value) || J.Bool(m["hasFile"]))
                 {
                     continue;
                 }
@@ -660,7 +663,7 @@ public sealed class SeerrService
                 string? kind = null;
                 foreach (var (field, k) in candidates)
                 {
-                    var d = Date(m[field]);
+                    var d = J.Date(m[field]);
                     if (d is not null && d.Value.Date >= today && (date is null || d < date))
                     {
                         date = d;
@@ -680,7 +683,7 @@ public sealed class SeerrService
                         TmdbId = id.Value,
                         MediaType = "movie",
                         Title = Str(m["title"]) ?? "Untitled",
-                        Year = Int(m["year"])?.ToString(CultureInfo.InvariantCulture),
+                        Year = J.Int(m["year"])?.ToString(CultureInfo.InvariantCulture),
                         PosterPath = Str(poster?["remoteUrl"]) ?? Str(poster?["url"]),
                         Overview = Str(m["overview"]),
                         Status = "processing"
@@ -745,11 +748,11 @@ public sealed class SeerrService
         var s = sort == "modified" ? "modified" : "added";
         var path = string.Create(CultureInfo.InvariantCulture, $"/request?take={Math.Clamp(take, 1, 100)}&skip={Math.Max(0, skip)}&filter={f}&sort={s}");
         var node = await Api(HttpMethod.Get, all ? path : path + "&requestedBy=" + me.ToString(CultureInfo.InvariantCulture), asUser: me, ct: ct).ConfigureAwait(false);
-        var list = (node?["results"]?.AsArray() ?? []).Where(r => r is not null && (all || Int(r["requestedBy"]?["id"]) is not { } by || by == me)).ToList();
+        var list = (node?["results"]?.AsArray() ?? []).Where(r => r is not null && (all || J.Int(r["requestedBy"]?["id"]) is not { } by || by == me)).ToList();
         return new RequestListDto
         {
             Results = await MapRequestsAsync(list, me, ct).ConfigureAwait(false),
-            Total = Int(node?["pageInfo"]?["results"]) ?? list.Count
+            Total = J.Int(node?["pageInfo"]?["results"]) ?? list.Count
         };
     }
 
@@ -768,12 +771,12 @@ public sealed class SeerrService
 
         // "unavailable": waiting for approval, or approved and not in the library yet.
         var open = await Api(HttpMethod.Get, $"/request?take=1&skip=0&filter=unavailable&requestedBy={me}", asUser: me, ct: ct).ConfigureAwait(false);
-        summary.Open = Int(open?["pageInfo"]?["results"]) ?? 0;
+        summary.Open = J.Int(open?["pageInfo"]?["results"]) ?? 0;
         if (summary.CanViewAll)
         {
             // Seerr counts everyone's requests whoever asks, so only people who may see them get the number.
             var count = await Api(HttpMethod.Get, "/request/count", ct: ct).ConfigureAwait(false);
-            summary.Pending = Int(count?["pending"]) ?? 0;
+            summary.Pending = J.Int(count?["pending"]) ?? 0;
         }
 
         return summary;
@@ -788,7 +791,7 @@ public sealed class SeerrService
     public async Task<RequestDto?> UpdateRequestAsync(int requestId, string action, int me, CancellationToken ct)
     {
         var node = await Api(HttpMethod.Post, string.Create(CultureInfo.InvariantCulture, $"/request/{requestId}/{action}"), asUser: me, ct: ct).ConfigureAwait(false);
-        ForgetRequests(Str(node?["type"]), Int(node?["media"]?["tmdbId"]));
+        ForgetRequests(Str(node?["type"]), J.Int(node?["media"]?["tmdbId"]));
         return node is null ? null : (await MapRequestsAsync([node], me, ct).ConfigureAwait(false)).FirstOrDefault();
     }
 
@@ -814,7 +817,7 @@ public sealed class SeerrService
     {
         var node = await Api(HttpMethod.Get, TitlePath(mediaType, tmdbId), ct: ct).ConfigureAwait(false);
         var info = node?["mediaInfo"];
-        if (Int(info?["id"]) is not { } mediaId)
+        if (J.Int(info?["id"]) is not { } mediaId)
         {
             return null;
         }
@@ -823,7 +826,7 @@ public sealed class SeerrService
         var kind = mediaType == "tv" ? "sonarr" : "radarr";
         foreach (var (service, external) in new[] { ("serviceId", "externalServiceId"), ("serviceId4k", "externalServiceId4k") })
         {
-            if (Int(info?[service]) is not { } serverId || Int(info?[external]) is not { } arrId)
+            if (J.Int(info?[service]) is not { } serverId || J.Int(info?[external]) is not { } arrId)
             {
                 continue;
             }
@@ -836,6 +839,19 @@ public sealed class SeerrService
         return state;
     }
 
+    // Sonarr's or Radarr's address as Seerr keeps it in its server settings; null without a hostname.
+    private static string? ArrBase(JsonNode server, int defaultPort)
+    {
+        if (NullIfEmpty(Str(server["hostname"])) is not { } host)
+        {
+            return null;
+        }
+
+        var scheme = J.Bool(server["useSsl"]) ? "https" : "http";
+        var baseUrl = (Str(server["baseUrl"]) ?? string.Empty).TrimEnd('/');
+        return string.Create(CultureInfo.InvariantCulture, $"{scheme}://{host}:{J.Int(server["port"]) ?? defaultPort}{baseUrl}");
+    }
+
     /* Asks Sonarr or Radarr (with the address and key Seerr keeps for it) whether it still monitors a title.
        Null when it can't tell. */
     private async Task<bool?> ArrMonitoredAsync(string kind, int serverId, int arrId, CancellationToken ct)
@@ -843,18 +859,14 @@ public sealed class SeerrService
         try
         {
             var servers = await Cached("/settings/" + kind, ListTtl, ct).ConfigureAwait(false);
-            var server = servers?.AsArray().FirstOrDefault(x => Int(x?["id"]) == serverId);
-            var host = Str(server?["hostname"]);
+            var server = servers?.AsArray().FirstOrDefault(x => J.Int(x?["id"]) == serverId);
             var key = Str(server?["apiKey"]);
-            if (server is null || host is null || key is null)
+            if (server is null || key is null || ArrBase(server, kind == "sonarr" ? 8989 : 7878) is not { } arrBase)
             {
                 return null;
             }
 
-            var scheme = server["useSsl"]?.GetValue<bool>() == true ? "https" : "http";
-            var baseUrl = (Str(server["baseUrl"]) ?? string.Empty).TrimEnd('/');
-            var path = (kind == "sonarr" ? "/api/v3/series/" : "/api/v3/movie/") + arrId.ToString(CultureInfo.InvariantCulture);
-            var url = string.Create(CultureInfo.InvariantCulture, $"{scheme}://{host}:{Int(server["port"]) ?? (kind == "sonarr" ? 8989 : 7878)}{baseUrl}{path}");
+            var url = arrBase + (kind == "sonarr" ? "/api/v3/series/" : "/api/v3/movie/") + arrId.ToString(CultureInfo.InvariantCulture);
             var title = await Send(HttpMethod.Get, url, key, null, null, ct, failFast: false).ConfigureAwait(false);
             return title?["monitored"]?.GetValue<bool>();
         }
@@ -934,7 +946,7 @@ public sealed class SeerrService
         }
 
         var node = await Cached(string.Create(CultureInfo.InvariantCulture, $"{row.Path}?page={Math.Max(1, page)}&language=en"), ListTtl, ct).ConfigureAwait(false);
-        result.Pages = Int(node?["totalPages"]) ?? 1;
+        result.Pages = J.Int(node?["totalPages"]) ?? 1;
         foreach (var r in node?["results"]?.AsArray() ?? [])
         {
             var item = MapResult(r, me, row.Type);
@@ -967,13 +979,13 @@ public sealed class SeerrService
         foreach (var r in requests?["results"]?.AsArray() ?? [])
         {
             // Declined (3) and failed (4) requests aren't coming.
-            if (Str(r?["type"]) != "tv" || Int(r?["status"]) is 3 or 4 || Int(r?["media"]?["tmdbId"]) is not { } id)
+            if (Str(r?["type"]) != "tv" || J.Int(r?["status"]) is 3 or 4 || J.Int(r?["media"]?["tmdbId"]) is not { } id)
             {
                 continue;
             }
 
             var by = r?["requestedBy"];
-            var mine = me is not null && Int(by?["id"]) == me;
+            var mine = me is not null && J.Int(by?["id"]) == me;
             if (!series.TryGetValue(id, out var known) || (mine && !known.Mine))
             {
                 series[id] = (UserName(by) ?? "someone", mine);
@@ -1000,17 +1012,17 @@ public sealed class SeerrService
             }
 
             var next = (tv["seasons"]?.AsArray() ?? [])
-                .Where(s => (Int(s?["seasonNumber"]) ?? 0) > 0 && (Date(s?["airDate"]) is not { } d || d.Date > today))
-                .OrderBy(s => Int(s?["seasonNumber"]))
+                .Where(s => (J.Int(s?["seasonNumber"]) ?? 0) > 0 && (J.Date(s?["airDate"]) is not { } d || d.Date > today))
+                .OrderBy(s => J.Int(s?["seasonNumber"]))
                 .FirstOrDefault();
             if (next is null)
             {
                 continue;
             }
 
-            var airs = Date(next["airDate"]);
+            var airs = J.Date(next["airDate"]);
             var title = Title(basic, airs?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-            title.Season = Int(next["seasonNumber"]);
+            title.Season = J.Int(next["seasonNumber"]);
             title.PosterPath = Str(next["posterPath"]) ?? basic.PosterPath;
             title.RequestedBy = who.Name;
             title.RequestedByMe = who.Mine;
@@ -1043,7 +1055,7 @@ public sealed class SeerrService
     {
         var type = Str(r?["type"]) == "tv" ? "tv" : "movie";
         var media = r?["media"];
-        if (r is null || Int(media?["tmdbId"]) is not { } tmdb)
+        if (r is null || J.Int(media?["tmdbId"]) is not { } tmdb)
         {
             return null;
         }
@@ -1058,23 +1070,23 @@ public sealed class SeerrService
             // Keep the request even when Seerr can't describe the title.
         }
 
-        var is4k = Bool(r["is4k"]);
+        var is4k = J.Bool(r["is4k"]);
         var basic = MapResult(details, me, type) ?? new SeerrItemDto { TmdbId = tmdb, MediaType = type, Title = "Unknown title" };
         var mediaStatus = MediaStatus(media, is4k);
-        var requestStatus = Int(r["status"]) switch { 2 => "approved", 3 => "declined", 4 => "failed", 5 => "completed", _ => "pending" };
+        var requestStatus = J.Int(r["status"]) switch { 2 => "approved", 3 => "declined", 4 => "failed", 5 => "completed", _ => "pending" };
         var by = r["requestedBy"];
         var request = As<RequestDto>(basic);
         request.Status = mediaStatus ?? basic.Status;
         request.RequestedBy = UserName(by) ?? "someone";
-        request.RequestedByMe = Int(by?["id"]) == me;
+        request.RequestedByMe = J.Int(by?["id"]) == me;
         request.JellyfinItemId = NormalizeId(Str(media?[is4k ? "jellyfinMediaId4k" : "jellyfinMediaId"])) ?? NormalizeId(Str(media?["jellyfinMediaId"])) ?? basic.JellyfinItemId;
-        request.RequestId = Int(r["id"]) ?? 0;
-        request.RequestedAt = Date(r["createdAt"]) ?? DateTime.UtcNow;
-        request.UpdatedAt = Date(r["updatedAt"]);
+        request.RequestId = J.Int(r["id"]) ?? 0;
+        request.RequestedAt = J.Date(r["createdAt"]) ?? DateTime.UtcNow;
+        request.UpdatedAt = J.Date(r["updatedAt"]);
         request.RequestStatus = requestStatus;
         request.Is4k = is4k;
-        request.Seasons = type == "tv" ? (r["seasons"]?.AsArray() ?? []).Select(s => Int(s?["seasonNumber"]) ?? 0).Where(n => n > 0).ToList() : null;
-        request.AvailableAt = mediaStatus is "available" or "partial" ? Date(media?["mediaAddedAt"]) ?? Date(media?["updatedAt"]) : null;
+        request.Seasons = type == "tv" ? (r["seasons"]?.AsArray() ?? []).Select(s => J.Int(s?["seasonNumber"]) ?? 0).Where(n => n > 0).ToList() : null;
+        request.AvailableAt = mediaStatus is "available" or "partial" ? J.Date(media?["mediaAddedAt"]) ?? J.Date(media?["updatedAt"]) : null;
         request.Download = Download(media?[is4k ? "downloadStatus4k" : "downloadStatus"]);
 
         // Approved and still to come: which requested seasons haven't aired, or when the movie comes out.
@@ -1084,8 +1096,8 @@ public sealed class SeerrService
             if (type == "tv")
             {
                 var unaired = (details?["seasons"]?.AsArray() ?? [])
-                    .Where(s => Int(s?["seasonNumber"]) is { } n && request.Seasons!.Contains(n) && (Date(s?["airDate"]) is not { } d || d.Date > today))
-                    .Select(s => Int(s?["seasonNumber"])!.Value)
+                    .Where(s => J.Int(s?["seasonNumber"]) is { } n && request.Seasons!.Contains(n) && (J.Date(s?["airDate"]) is not { } d || d.Date > today))
+                    .Select(s => J.Int(s?["seasonNumber"])!.Value)
                     .ToList();
                 request.Unaired = unaired.Count > 0 ? unaired : null;
             }
@@ -1110,11 +1122,11 @@ public sealed class SeerrService
         double size = 0, left = 0;
         foreach (var d in items)
         {
-            size += Double(d!["size"]) ?? 0;
-            left += Double(d["sizeLeft"]) ?? 0;
+            size += J.Double(d!["size"]) ?? 0;
+            left += J.Double(d["sizeLeft"]) ?? 0;
         }
 
-        var seasons = items.Select(d => Int(d!["episode"]?["seasonNumber"])).Distinct().ToList();
+        var seasons = items.Select(d => J.Int(d!["episode"]?["seasonNumber"])).Distinct().ToList();
         return new RequestDownloadDto
         {
             Fraction = size > 0 ? Math.Clamp((size - left) / size, 0, 1) : 0,
@@ -1186,13 +1198,13 @@ public sealed class SeerrService
         var d = As<SeerrDetailsDto>(basic);
         d.Tagline = NullIfEmpty(Str(node["tagline"]));
         d.Genres = (node["genres"]?.AsArray() ?? []).Select(g => Str(g?["name"])).Where(g => g is not null).Select(g => g!).ToList();
-        d.Runtime = tv ? Int(node["episodeRunTime"]?.AsArray().FirstOrDefault()) : Int(node["runtime"]);
+        d.Runtime = tv ? J.Int(node["episodeRunTime"]?.AsArray().FirstOrDefault()) : J.Int(node["runtime"]);
         d.ReleaseDate = Str(node[tv ? "firstAirDate" : "releaseDate"]);
         d.Status4k = MediaStatus(node["mediaInfo"], true);
         d.Certification = tv ? TvRating(node) : MovieCertification(node);
         foreach (var c in (node["credits"]?["cast"]?.AsArray() ?? []).Take(16))
         {
-            d.Cast.Add(new SeerrCastDto { Id = Int(c?["id"]) ?? 0, Name = Str(c?["name"]) ?? string.Empty, Character = NullIfEmpty(Str(c?["character"])), ProfilePath = Str(c?["profilePath"]) });
+            d.Cast.Add(new SeerrCastDto { Id = J.Int(c?["id"]) ?? 0, Name = Str(c?["name"]) ?? string.Empty, Character = NullIfEmpty(Str(c?["character"])), ProfilePath = Str(c?["profilePath"]) });
         }
 
         if (tv)
@@ -1203,14 +1215,14 @@ public sealed class SeerrService
             }
 
             d.Networks = (node["networks"]?.AsArray() ?? []).Select(n => Str(n?["name"])).Where(n => n is not null).Select(n => n!).ToList();
-            d.NumberOfSeasons = Int(node["numberOfSeasons"]);
+            d.NumberOfSeasons = J.Int(node["numberOfSeasons"]);
             var seasonStatus = new Dictionary<int, (string Std, string FourK)>();
             foreach (var s in node["mediaInfo"]?["seasons"]?.AsArray() ?? [])
             {
-                var n = Int(s?["seasonNumber"]);
+                var n = J.Int(s?["seasonNumber"]);
                 if (n is not null)
                 {
-                    seasonStatus[n.Value] = (StatusName(Int(s?["status"])), StatusName(Int(s?["status4k"])));
+                    seasonStatus[n.Value] = (StatusName(J.Int(s?["status"])), StatusName(J.Int(s?["status4k"])));
                 }
             }
 
@@ -1218,19 +1230,19 @@ public sealed class SeerrService
             var asked = new Dictionary<(int Season, bool FourK), (string Name, int Id, bool Approved)>();
             foreach (var r in node["mediaInfo"]?["requests"]?.AsArray() ?? [])
             {
-                var rs = Int(r?["status"]);
+                var rs = J.Int(r?["status"]);
                 if (rs is not (1 or 2))
                 {
                     continue;
                 }
 
                 var by = r?["requestedBy"];
-                var who = (UserName(by) ?? "someone", Int(by?["id"]) ?? 0, rs == 2);
+                var who = (UserName(by) ?? "someone", J.Int(by?["id"]) ?? 0, rs == 2);
                 foreach (var s in r?["seasons"]?.AsArray() ?? [])
                 {
-                    if (Int(s?["seasonNumber"]) is { } n)
+                    if (J.Int(s?["seasonNumber"]) is { } n)
                     {
-                        asked.TryAdd((n, Bool(r?["is4k"])), who);
+                        asked.TryAdd((n, J.Bool(r?["is4k"])), who);
                     }
                 }
             }
@@ -1238,7 +1250,7 @@ public sealed class SeerrService
             // While a season is airing, Seerr knows the last episode out and the next one due.
             var last = node["lastEpisodeToAir"];
             var next = node["nextEpisodeToAir"];
-            var airing = Int(next?["seasonNumber"]) is { } ns && Int(last?["seasonNumber"]) == ns ? ns : (int?)null;
+            var airing = J.Int(next?["seasonNumber"]) is { } ns && J.Int(last?["seasonNumber"]) == ns ? ns : (int?)null;
 
             string Status(int n, bool fourK, string known)
             {
@@ -1251,21 +1263,21 @@ public sealed class SeerrService
             }
 
             d.Seasons = (node["seasons"]?.AsArray() ?? [])
-                .Where(s => (Int(s?["seasonNumber"]) ?? 0) > 0)
+                .Where(s => (J.Int(s?["seasonNumber"]) ?? 0) > 0)
                 .Select(s =>
                 {
-                    var n = Int(s?["seasonNumber"]) ?? 0;
+                    var n = J.Int(s?["seasonNumber"]) ?? 0;
                     var known = seasonStatus.TryGetValue(n, out var st) ? st : ("none", "none");
                     var season = new SeerrSeasonDto
                     {
                         SeasonNumber = n,
                         Name = Str(s?["name"]) ?? "Season",
-                        EpisodeCount = Int(s?["episodeCount"]) ?? 0,
+                        EpisodeCount = J.Int(s?["episodeCount"]) ?? 0,
                         AirDate = NullIfEmpty(Str(s?["airDate"])),
                         PosterPath = Str(s?["posterPath"]),
                         Status = Status(n, false, known.Item1),
                         Status4k = Status(n, true, known.Item2),
-                        AiredEpisodes = airing == n ? Int(last?["episodeNumber"]) : null
+                        AiredEpisodes = airing == n ? J.Int(last?["episodeNumber"]) : null
                     };
                     if (asked.TryGetValue((n, false), out var a))
                     {
@@ -1342,7 +1354,7 @@ public sealed class SeerrService
         ForgetRequests(body.MediaType, body.TmdbId);
 
         // Request status 2 = approved (auto-approval); 1 = waiting for an admin.
-        return Int(node?["status"]) == 2 ? "processing" : "pending";
+        return J.Int(node?["status"]) == 2 ? "processing" : "pending";
     }
 
     // Seerr's permission bits (server/lib/permissions.ts). ADMIN has every permission.
@@ -1386,7 +1398,7 @@ public sealed class SeerrService
     public async Task<int> PermissionsAsync(int me, CancellationToken ct)
     {
         var user = await Api(HttpMethod.Get, "/user/" + me.ToString(CultureInfo.InvariantCulture), ct: ct).ConfigureAwait(false);
-        return Int(user?["permissions"]) ?? 0;
+        return J.Int(user?["permissions"]) ?? 0;
     }
 
     /// <summary>What the request dialog needs: the person's quota and approval, 4K, and (for admins) server choices.</summary>
@@ -1408,10 +1420,10 @@ public sealed class SeerrService
         try
         {
             var quota = (await Api(HttpMethod.Get, "/user/" + id + "/quota", ct: ct).ConfigureAwait(false))?[tv ? "tv" : "movie"];
-            if (Int(quota?["limit"]) is { } limit and > 0)
+            if (J.Int(quota?["limit"]) is { } limit and > 0)
             {
-                var used = Int(quota?["used"]) ?? 0;
-                o.Quota = new RequestQuotaDto { Limit = limit, Days = Int(quota?["days"]) ?? 7, Used = used, Remaining = Int(quota?["remaining"]) ?? Math.Max(0, limit - used) };
+                var used = J.Int(quota?["used"]) ?? 0;
+                o.Quota = new RequestQuotaDto { Limit = limit, Days = J.Int(quota?["days"]) ?? 7, Used = used, Remaining = J.Int(quota?["remaining"]) ?? Math.Max(0, limit - used) };
             }
         }
         catch (SeerrException ex)
@@ -1431,7 +1443,7 @@ public sealed class SeerrService
 
         var list = servers?.AsArray() ?? [];
         o.Can4k = ConfigMapper.Current.Allow4k
-            && list.Any(s => Bool(s?["is4k"]))
+            && list.Any(s => J.Bool(s?["is4k"]))
             && Has(perms, PermRequest4k, tv ? PermRequest4kTv : PermRequest4kMovie);
 
         if (!CanPickServer(perms))
@@ -1442,7 +1454,7 @@ public sealed class SeerrService
         var adv = new RequestAdvancedDto { Me = me };
         foreach (var s in list)
         {
-            var sid = Int(s?["id"]);
+            var sid = J.Int(s?["id"]);
             if (sid is null)
             {
                 continue;
@@ -1452,9 +1464,9 @@ public sealed class SeerrService
             {
                 Id = sid.Value,
                 Name = Str(s?["name"]) ?? (tv ? "Sonarr" : "Radarr"),
-                Is4k = Bool(s?["is4k"]),
-                IsDefault = Bool(s?["isDefault"]),
-                ProfileId = Int(s?["activeProfileId"]),
+                Is4k = J.Bool(s?["is4k"]),
+                IsDefault = J.Bool(s?["isDefault"]),
+                ProfileId = J.Int(s?["activeProfileId"]),
                 RootFolder = Str(s?["activeDirectory"])
             };
             try
@@ -1462,7 +1474,7 @@ public sealed class SeerrService
                 var detail = await Cached((tv ? "/service/sonarr/" : "/service/radarr/") + sid.Value.ToString(CultureInfo.InvariantCulture), ListTtl, ct).ConfigureAwait(false);
                 foreach (var p in detail?["profiles"]?.AsArray() ?? [])
                 {
-                    if (Int(p?["id"]) is { } pid)
+                    if (J.Int(p?["id"]) is { } pid)
                     {
                         server.Profiles.Add(new RequestProfileDto { Id = pid, Name = Str(p?["name"]) ?? pid.ToString(CultureInfo.InvariantCulture) });
                     }
@@ -1472,7 +1484,7 @@ public sealed class SeerrService
                 {
                     if (Str(f?["path"]) is { } path)
                     {
-                        server.RootFolders.Add(new RequestFolderDto { Path = path, FreeSpace = f?["freeSpace"] is JsonValue v && v.TryGetValue<long>(out var free) ? free : null });
+                        server.RootFolders.Add(new RequestFolderDto { Path = path, FreeSpace = J.Long(f?["freeSpace"]) });
                     }
                 }
             }
@@ -1503,7 +1515,7 @@ public sealed class SeerrService
 
     // ── Mapping ──
 
-    private SeerrItemDto? MapResult(JsonNode? r, int? me, string? forcedType = null)
+    private static SeerrItemDto? MapResult(JsonNode? r, int? me, string? forcedType = null)
     {
         if (r is null)
         {
@@ -1516,7 +1528,7 @@ public sealed class SeerrService
             return null;
         }
 
-        var id = Int(r["id"]);
+        var id = J.Int(r["id"]);
         if (id is null)
         {
             return null;
@@ -1526,9 +1538,9 @@ public sealed class SeerrService
         var date = Str(r[tv ? "firstAirDate" : "releaseDate"]);
         var info = r["mediaInfo"];
         var requests = info?["requests"]?.AsArray();
-        var firstRequest = requests?.FirstOrDefault(q => Int(q?["status"]) is 1 or 2) ?? requests?.FirstOrDefault();
+        var firstRequest = requests?.FirstOrDefault(q => J.Int(q?["status"]) is 1 or 2) ?? requests?.FirstOrDefault();
         var requester = firstRequest?["requestedBy"];
-        var vote = Double(r["voteAverage"]);
+        var vote = J.Double(r["voteAverage"]);
         return new SeerrItemDto
         {
             TmdbId = id.Value,
@@ -1541,7 +1553,7 @@ public sealed class SeerrService
             Overview = NullIfEmpty(Str(r["overview"])),
             Status = MediaStatus(info, false) ?? "none",
             RequestedBy = UserName(requester),
-            RequestedByMe = me is not null && Int(requester?["id"]) == me,
+            RequestedByMe = me is not null && J.Int(requester?["id"]) == me,
             JellyfinItemId = NormalizeId(Str(info?["jellyfinMediaId"]))
         };
     }
@@ -1553,17 +1565,17 @@ public sealed class SeerrService
             return fourK ? null : "none";
         }
 
-        var status = Int(info[fourK ? "status4k" : "status"]);
+        var status = J.Int(info[fourK ? "status4k" : "status"]);
         var name = StatusName(status);
         if (name == "none" && !fourK)
         {
             var requests = info["requests"]?.AsArray();
-            if (requests?.Any(q => Int(q?["status"]) is 1 or 2) == true)
+            if (requests?.Any(q => J.Int(q?["status"]) is 1 or 2) == true)
             {
                 return "pending";
             }
 
-            if (requests?.Any(q => Int(q?["status"]) == 3) == true)
+            if (requests?.Any(q => J.Int(q?["status"]) == 3) == true)
             {
                 return "declined";
             }
@@ -1596,8 +1608,8 @@ public sealed class SeerrService
         {
             foreach (var rd in country?["release_dates"]?.AsArray() ?? [])
             {
-                var kind = Int(rd?["type"]) switch { 4 => "digital", 5 => "physical", 3 => "theatrical", _ => null };
-                if (kind is null || Date(rd?["release_date"]) is not { } d)
+                var kind = J.Int(rd?["type"]) switch { 4 => "digital", 5 => "physical", 3 => "theatrical", _ => null };
+                if (kind is null || J.Date(rd?["release_date"]) is not { } d)
                 {
                     continue;
                 }
@@ -1606,7 +1618,7 @@ public sealed class SeerrService
             }
         }
 
-        if (cinema.Count == 0 && Date(movie?["releaseDate"]) is { } primary)
+        if (cinema.Count == 0 && J.Date(movie?["releaseDate"]) is { } primary)
         {
             cinema.Add((primary, "theatrical"));
         }
@@ -1675,31 +1687,4 @@ public sealed class SeerrService
 
         return v.TryGetValue<double>(out var d) ? d.ToString(CultureInfo.InvariantCulture) : null;
     }
-
-    private static int? Int(JsonNode? n)
-    {
-        if (n is not JsonValue v)
-        {
-            return null;
-        }
-
-        if (v.TryGetValue<int>(out var i))
-        {
-            return i;
-        }
-
-        if (v.TryGetValue<double>(out var d))
-        {
-            return (int)d;
-        }
-
-        return v.TryGetValue<string>(out var s) && int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var p) ? p : null;
-    }
-
-    private static double? Double(JsonNode? n) => n is JsonValue v && v.TryGetValue<double>(out var d) ? d : null;
-
-    private static bool Bool(JsonNode? n) => n is JsonValue v && v.TryGetValue<bool>(out var b) && b;
-
-    private static DateTime? Date(JsonNode? n)
-        => Str(n) is { } s && DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var d) ? d : null;
 }

@@ -43,6 +43,9 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// <summary>Gets the running plugin instance.</summary>
     public static Plugin? Instance { get; private set; }
 
+    /// <summary>Gets the running plugin instance, for code that can't run without it.</summary>
+    public static Plugin Required => Instance ?? throw new InvalidOperationException("Seedy isn't loaded.");
+
     /// <summary>Gets the folder for the play log database and the uploaded logo.</summary>
     public string SeedyDataPath { get; }
 

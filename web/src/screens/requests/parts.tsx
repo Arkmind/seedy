@@ -1,67 +1,40 @@
-import { useEffect, useState } from 'preact/hooks';
 import { tmdbImage } from '../../api/images';
 import {
   approveRequest, declineRequest, removeRequest, requestSummary, retryRequest,
   type RequestSummary, type SeerrRequest, type SeerrTitle
 } from '../../api/seedy';
-import { dayOf, daysFromToday, fmtDate, fmtMonthYear, fmtWeekdayDate } from '../../lib/format';
+import { dayOf, daysFromToday } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link } from '../../lib/router';
-import { createStore, useStore } from '../../lib/store';
+import { createSummary } from '../../lib/store';
 import { PosterCard, Progress, seerrTarget } from '../../ui/cards';
 import { Icon } from '../../ui/icons';
-import { confirm, toast } from '../../ui/overlay';
+import { confirm } from '../../ui/overlay';
 import type { useRequests } from '../browse/parts';
 import { seasonList } from '../browse/request-seasons';
+import { useBusyRun } from './busy-run';
 import './requests.css';
+import { Chip, DecideButtons, type ChipState } from './media-parts';
+import { actLine, aheadDate, requesterName } from './wording';
 
 /* Shared pieces of the Requests page (Requests board): the tabs' counts, request rows with their wording, state chips
    and actions, and the posters on its rows. */
 
 /* ── The tabs' counts and what the person may do: fresh each time a Requests page opens, and after any change. ── */
 
-const summaryStore = createStore<RequestSummary | null>(null);
-let summaryAt = 0;
-export function refreshSummary(): Promise<void> {
-  summaryAt = Date.now();
-  return requestSummary().then((s) => summaryStore.set(s), () => { /* the tabs keep their last counts */ });
-}
+const summary = createSummary<RequestSummary>(requestSummary);
+export const refreshSummary = summary.refresh;
 /* The pieces of one page share a single call. */
-export function useSummary(enabled = true): RequestSummary | null {
-  const s = useStore(summaryStore);
-  useEffect(() => { if (enabled && Date.now() - summaryAt > 3000) void refreshSummary(); }, [enabled]);
-  return enabled ? s : null;
-}
+export const useSummary = summary.use;
 
 /* ── Wording ── */
-
-/* "Fri 31 Oct" within the next month, else "Nov 2026". */
-const aheadDate = (d: Date) => (daysFromToday(d) <= 31 ? fmtWeekdayDate(d) : fmtMonthYear(d));
-
-const ACTS = {
-  asked: ['asked today', 'asked yesterday', 'asked {date}'],
-  approved: ['approved today', 'approved yesterday', 'approved {date}'],
-  declined: ['declined today', 'declined yesterday', 'declined {date}'],
-  askedBy: ['asked by {name} today', 'asked by {name} yesterday', 'asked by {name} {date}']
-} as const;
-
-/* "asked Sat 17 Oct", "approved today", "asked by Mia yesterday". */
-function actLine(act: keyof typeof ACTS, iso: string | undefined, name = ''): string {
-  const d = iso ? new Date(iso) : undefined;
-  if (!d || Number.isNaN(d.getTime())) return '';
-  const ago = -daysFromToday(d);
-  const date = d.getFullYear() === new Date().getFullYear() ? fmtWeekdayDate(d) : fmtDate(d);
-  return t(ACTS[act][ago <= 0 ? 0 : ago === 1 ? 1 : 2], { date, name });
-}
-
-const requester = (r: SeerrRequest) => (r.requestedByMe ? t('you') : r.requestedBy || t('someone'));
 
 /* The line under a request's title: what was asked for, when (and by whom, on everyone's list), and what's still to
    come. "Seasons 2 and 4 · approved Mon 19 Oct · Season 4 downloads when it airs". */
 function requestLine(r: SeerrRequest, everyone: boolean): string {
   const parts = [r.mediaType === 'tv' ? (r.seasons?.length ? seasonList(r.seasons) : t('All seasons')) : t('Movie')];
   if (r.is4k) parts.push('4K');
-  if (everyone) parts.push(actLine('askedBy', r.requestedAt, requester(r)));
+  if (everyone) parts.push(actLine('askedBy', r.requestedAt, requesterName(r)));
   else if (r.requestStatus === 'declined') parts.push(actLine('declined', r.updatedAt ?? r.requestedAt));
   else if ((r.requestStatus === 'approved' || r.requestStatus === 'completed') && r.status !== 'available' && r.updatedAt) parts.push(actLine('approved', r.updatedAt));
   else parts.push(actLine('asked', r.requestedAt));
@@ -75,10 +48,8 @@ function requestLine(r: SeerrRequest, everyone: boolean): string {
   return parts.filter(Boolean).join(' · ');
 }
 
-interface State { text: string; tone: 'ok' | 'pending' | 'accent' | 'muted' | 'danger'; fraction?: number }
-
 /* Where a request is now, for its chip (and its bar while it downloads). */
-function requestState(r: SeerrRequest): State {
+function requestState(r: SeerrRequest): ChipState {
   if (r.status === 'available') return { text: t('On the server'), tone: 'ok' };
   if (r.requestStatus === 'declined') return { text: t('Declined'), tone: 'danger' };
   if (r.requestStatus === 'failed') return { text: t('Couldn’t be added'), tone: 'danger' };
@@ -101,12 +72,8 @@ function Thumb({ r }: { r: SeerrRequest }) {
   return <span class="reqs-thumb" aria-hidden="true">{src && <img src={src} alt="" loading="lazy" />}</span>;
 }
 
-function Chip({ state }: { state: State }) {
-  return <span class={'reqs-chip is-' + state.tone}><span class="reqs-chip-dot" aria-hidden="true" />{state.text}</span>;
-}
-
 /* Title, the line under it, and the bar while it downloads. In rows that hold buttons the title is the link. */
-function RowText({ r, state, everyone, link }: { r: SeerrRequest; state: State; everyone: boolean; link?: boolean }) {
+function RowText({ r, state, everyone, link }: { r: SeerrRequest; state: ChipState; everyone: boolean; link?: boolean }) {
   return (
     <span class={'reqs-text' + (link ? ' is-wrap' : '')}>
       {link ? <Link to={seerrTarget(r)} class="reqs-name">{r.title}</Link> : <span class="reqs-name">{r.title}</span>}
@@ -168,22 +135,6 @@ export function ListRow({ r, actions, everyone, canManage }: { r: SeerrRequest; 
   );
 }
 
-export function RowSkeletons({ count, approval }: { count: number; approval?: boolean }) {
-  return (
-    <>
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} class={'reqs-row' + (approval ? ' is-approval' : '')} aria-hidden="true">
-          <span class="reqs-thumb skel" />
-          <span class="reqs-text">
-            <span class="skel skel-line" style={{ width: '38%' }} />
-            <span class="skel skel-line" style={{ width: '62%' }} />
-          </span>
-        </div>
-      ))}
-    </>
-  );
-}
-
 /* ── Actions ── */
 
 export interface RequestActions {
@@ -197,19 +148,7 @@ export interface RequestActions {
 /* Approve, decline, retry and remove, as Seerr allows the person. `onChange` gets the request as it is after the action
    (null once it's gone); the tabs' counts refresh. */
 export function useRequestActions(onChange: (r: SeerrRequest, next: SeerrRequest | null) => void): RequestActions {
-  const [busy, setBusy] = useState<Record<number, boolean>>({});
-  const run = async (r: SeerrRequest, call: () => Promise<SeerrRequest | null>, done: string, failed: string) => {
-    setBusy((b) => ({ ...b, [r.requestId]: true }));
-    try {
-      onChange(r, await call());
-      toast(done);
-      void refreshSummary();
-    } catch (e) {
-      toast(failed + ((e as Error)?.message ? ': ' + (e as Error).message : ''), 'error');
-    } finally {
-      setBusy((b) => { const n = { ...b }; delete n[r.requestId]; return n; });
-    }
-  };
+  const { run, busy } = useBusyRun<SeerrRequest, SeerrRequest | null>((r) => r.requestId, onChange, refreshSummary);
   // Approve, decline and retry answer with the request as it is now.
   const change = (call: (id: number) => Promise<SeerrRequest | undefined>, done: string, failed: string) => (r: SeerrRequest) =>
     run(r, async () => ({ ...r, ...(await call(r.requestId)) }), t(done, { title: r.title }), t(failed, { title: r.title }));
@@ -224,24 +163,14 @@ export function useRequestActions(onChange: (r: SeerrRequest, next: SeerrRequest
         : { title: t('Remove this request?'), text: t('The request for {title} is removed from Seerr. Anything already downloaded stays on the server.', { title: r.title }), action: t('Remove'), danger: true });
       if (ok) await run(r, async () => { await removeRequest(r.requestId); return null; }, own ? t('Request withdrawn') : t('Request removed'), t('Couldn’t remove {title}', { title: r.title }));
     },
-    busy: (r) => !!busy[r.requestId]
+    busy
   };
 }
 
 function ApproveButtons({ r, actions }: { r: SeerrRequest; actions: RequestActions }) {
-  const p = { title: r.title, name: requester(r) };
+  const p = { title: r.title, name: requesterName(r) };
   const busy = actions.busy(r);
-  return (
-    <span class="reqs-decide">
-      <button type="button" class="btn reqs-decline" disabled={busy} aria-label={t('Decline {title} for {name}', p)} onClick={() => actions.decline(r)}>
-        {t('Decline')}
-      </button>
-      <button type="button" class="btn btn-primary is-sm reqs-approve" disabled={busy} aria-label={t('Approve {title} for {name}', p)} onClick={() => actions.approve(r)}>
-        <Icon name="check" size={16} stroke={2.8} />
-        {t('Approve')}
-      </button>
-    </span>
-  );
+  return <DecideButtons {...p} busy={busy} onDecline={() => actions.decline(r)} onApprove={() => actions.approve(r)} />;
 }
 
 /* ── Titles on the rows ── */

@@ -44,9 +44,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.arkmind.seedy.core.admin.sameId
 import io.github.arkmind.seedy.core.music.Mix
 import io.github.arkmind.seedy.core.music.artistsOf
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.mobile.audio.AudioIcons
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.player.audio.AudioState
@@ -60,6 +62,8 @@ import io.github.arkmind.seedy.ui.components.webId
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.IconPart
 import io.github.arkmind.seedy.ui.icons.SIcon
+import io.github.arkmind.seedy.ui.icons.SettingsIcons
+import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.SText
@@ -72,7 +76,7 @@ import java.util.UUID
 /** The music boards' icons, path for path (web/src/audio/icons.tsx). */
 object MusicIcons {
     val Back = IconDef(2.2f, "M15 5l-7 7 7 7")
-    val Down = IconDef(2.2f, "M6 9l6 6 6-6")
+    val Down = WebIcons.ChevronDown
     val Search = IconDef(2.2f, "M4 11a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z", "M20 20l-4-4")
     val Cast = IconDef(2.2f, "M3 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6", "M3 12a8 8 0 0 1 8 8", "M3 16a4 4 0 0 1 4 4", "M3 20h.01")
     val More = IconDef(
@@ -91,27 +95,21 @@ object MusicIcons {
     val PlaylistAdd = IconDef(2.2f, "M4 6h12", "M4 11h12", "M4 16h7", "M18 14v7", "M14.5 17.5h7")
     val Shuffle = IconDef(2.2f, "M16 3h5v5", "M4 20L21 3", "M21 16v5h-5", "M15 15l6 6", "M4 4l5 5")
     val Repeat = IconDef(2.2f, "M17 2l3 3-3 3", "M4 11V9a4 4 0 0 1 4-4h12", "M7 22l-3-3 3-3", "M20 13v2a4 4 0 0 1-4 4H4")
-    val Play = IconDef(0f, listOf(IconPart("M7 4.5v15l12-7.5z", filled = true)))
+    val Play = AudioIcons.Play
     val Previous = io.github.arkmind.seedy.mobile.audio.AudioIcons.Previous
     val Next = io.github.arkmind.seedy.mobile.audio.AudioIcons.Next
-    val Pause = IconDef(
-        0f,
-        listOf(
-            IconPart("M7.2 4.5h1.6a1.2 1.2 0 0 1 1.2 1.2v12.6a1.2 1.2 0 0 1 -1.2 1.2h-1.6a1.2 1.2 0 0 1 -1.2 -1.2v-12.6a1.2 1.2 0 0 1 1.2 -1.2Z", filled = true),
-            IconPart("M15.2 4.5h1.6a1.2 1.2 0 0 1 1.2 1.2v12.6a1.2 1.2 0 0 1 -1.2 1.2h-1.6a1.2 1.2 0 0 1 -1.2 -1.2v-12.6a1.2 1.2 0 0 1 1.2 -1.2Z", filled = true),
-        ),
-    )
+    val Pause = AudioIcons.Pause
     val Radio = IconDef(2.2f, "M10 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0Z", "M8.5 8.5a5 5 0 0 0 0 7", "M15.5 8.5a5 5 0 0 1 0 7", "M5.6 5.6a9 9 0 0 0 0 12.8", "M18.4 5.6a9 9 0 0 1 0 12.8")
     val Mix = IconDef(2.2f, "M3 12h3l3-7 4 14 3-7h5")
     val Lyrics = IconDef(2.2f, "M4 6h10", "M4 11h7", "M4 16h5", "M14 16a3 3 0 1 0 6 0a3 3 0 1 0 -6 0Z", "M20 16V6l-3 1")
     val Album = IconDef(2.2f, "M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0Z", "M9.5 12a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0Z")
-    val Artist = IconDef(2.2f, "M8 8a4 4 0 1 0 8 0a4 4 0 1 0 -8 0Z", "M4 21a8 8 0 0 1 16 0")
+    val Artist = WebIcons.Person
     val Info = IconDef(2.2f, "M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0Z", "M12 11v5", "M12 8h.01")
     val Close = IconDef(2.4f, "M6 6l12 12", "M18 6L6 18")
-    val Handle = IconDef(2.2f, "M5 9h14", "M5 15h14")
+    val Handle = SettingsIcons.Grip
     val Trash = IconDef(2.2f, "M4 7h16", "M10 11v6", "M14 11v6", "M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12", "M9 7V4h6v3")
-    val Sort = IconDef(2f, "M7 4v16", "M3 16l4 4 4-4", "M12 6h9", "M12 11h6", "M12 16h3")
-    val Check = IconDef(2.2f, "M5 12.5l4.5 4.5L19 7.5")
+    val Sort = WebIcons.Sort
+    val Check = WebIcons.Check
     val Plus = IconDef(2.4f, "M12 5v14", "M5 12h14")
 }
 
@@ -127,14 +125,12 @@ data class Playing(
     fun isTrack(id: UUID?) = id != null && id == trackId
 
     /** Whether the queue plays from [id] (an album, playlist or artist). */
-    fun isSource(id: UUID?): Boolean = id != null && trackId != null && sameId(sourceId, id)
+    fun isSource(id: UUID?): Boolean = id != null && trackId != null && sameId(sourceId, id.toString())
 
     companion object {
         fun of(s: AudioState): Playing = Playing(
             s.current?.track?.id, s.source?.id, s.source?.kind, s.current?.track?.albumId, s.playing,
         )
-
-        fun sameId(a: String?, b: UUID): Boolean = a != null && a.replace("-", "").equals(b.toString().replace("-", ""), ignoreCase = true)
     }
 }
 
@@ -212,30 +208,6 @@ fun EqBars(playing: Boolean, modifier: Modifier = Modifier, size: Dp = 16.dp, co
 
 /** Whether the eq bars move (off in screenshot tests). */
 val LocalMusicMotion = androidx.compose.runtime.staticCompositionLocalOf { true }
-
-/** A music page's 36 px chip (board "Android · Music": 12 px corners). */
-@Composable
-fun MusicChip(label: String, on: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
-        modifier.height(36.dp).clip(RoundedCornerShape(12.dp)).background(if (on) SeedyColors.Inverse else SeedyColors.Surface)
-            .tap(onClick = onClick).padding(horizontal = 14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        SText(label, size = 13.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.InkInverse else SeedyColors.Text, maxLines = 1)
-    }
-}
-
-/** A section's title and its link ("See all"), 22 px above and 10 under. */
-@Composable
-fun SectionHead(title: String, modifier: Modifier = Modifier, link: String? = null, onLink: () -> Unit = {}, top: Dp = 22.dp, bottom: Dp = 10.dp) {
-    Row(
-        modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = top, bottom = bottom),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        SText(title, Modifier.weight(1f).alignByBaseline(), size = 17.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
-        if (link != null) SText(link, Modifier.alignByBaseline().tap(onClick = onLink), size = 13.sp, weight = 600, color = SeedyColors.Text2, maxLines = 1)
-    }
-}
 
 /** The music pages' header: Back, a title (22 px black), then [actions] (44 px buttons). */
 @Composable
@@ -457,7 +429,7 @@ private fun MoreButton(onClick: () -> Unit) {
 }
 
 /** "Ada Vale · 3:42": a song's artists and length. */
-fun trackSub(track: BaseItemDto): String = io.github.arkmind.seedy.core.music.dot(artistsOf(track), io.github.arkmind.seedy.core.music.trackTime(track))
+fun trackSub(track: BaseItemDto): String = io.github.arkmind.seedy.core.format.join(artistsOf(track), io.github.arkmind.seedy.core.music.trackTime(track))
 
 /** A light 48 px button with an icon and a label (the artist's Play), or a dark one ([light] off: Radio). */
 @Composable

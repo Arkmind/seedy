@@ -113,10 +113,6 @@ class LiveTvViewModel(private val session: UserSession, private val store: AppSt
         viewModelScope.launch { store.update { d -> d.copy(lastChannel = d.lastChannel + (key to channel.toString())) } }
     }
 
-    /** What [channel] shows at [time] (from the guide when loaded, else its current programme). */
-    fun programAt(channel: LiveChannel, time: LocalDateTime): BaseItemDto? =
-        _state.value.programs[channel.id]?.firstOrNull { p -> LiveTv.isAiring(p, time) } ?: channel.current?.takeIf { LiveTv.isAiring(it, time) }
-
     companion object {
         fun halfHourBefore(t: LocalDateTime): LocalDateTime = t.withMinute(if (t.minute >= 30) 30 else 0).withSecond(0).withNano(0)
     }

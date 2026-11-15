@@ -39,12 +39,12 @@ import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.format.libraryMetaLong
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
-import io.github.arkmind.seedy.tv.browse.FocusWhen
+import io.github.arkmind.seedy.tv.parts.FocusWhen
 import io.github.arkmind.seedy.tv.browse.TvCardSkeleton
 import io.github.arkmind.seedy.tv.browse.TvGridCard
 import io.github.arkmind.seedy.tv.browse.TvMessage
 import io.github.arkmind.seedy.tv.browse.TvTab
-import io.github.arkmind.seedy.tv.browse.maybeFocus
+import io.github.arkmind.seedy.tv.parts.maybeFocus
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
 import io.github.arkmind.seedy.tv.parts.TvPressable
 import io.github.arkmind.seedy.tv.parts.bp

@@ -41,21 +41,23 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import io.github.arkmind.seedy.core.feature.AdvancedActions
 import io.github.arkmind.seedy.core.feature.RequestSeasonsViewModel
 import io.github.arkmind.seedy.core.feature.SeasonsResult
 import io.github.arkmind.seedy.core.feature.SeasonsTarget
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.seedy.SeerrDetails
+import io.github.arkmind.seedy.tv.parts.FocusWhen
 import io.github.arkmind.seedy.tv.parts.TvPressable
 import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusRing
 import io.github.arkmind.seedy.tv.parts.focusScale
-import io.github.arkmind.seedy.tv.parts.focusSoon
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -64,6 +66,7 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
+import io.github.arkmind.seedy.ui.theme.seasonPillColours
 
 /**
  * Board "Android TV · Request seasons": the dialog that asks Seerr for a series' seasons, over any page (a series'
@@ -100,14 +103,12 @@ fun TvRequestSeasonsDialog(
     TvRequestSeasonsContent(
         state,
         onToggle = vm::toggle, onToggleAll = vm::toggleAll, on4k = vm::set4k,
-        advanced = TvAdvancedActions(vm::setServer, vm::setProfile, vm::setFolder, vm::setUser),
+        advanced = AdvancedActions(vm::setServer, vm::setProfile, vm::setFolder, vm::setUser),
         onRetry = vm::retry,
         onSubmit = { vm.submit { r -> onDone(r); onDismiss() } },
         onDismiss = onDismiss,
     )
 }
-
-class TvAdvancedActions(val server: (Int) -> Unit, val profile: (Int) -> Unit, val folder: (String) -> Unit, val user: (Int) -> Unit)
 
 /** The dialog itself over the dimmed page (stateless, for screenshot tests). */
 @Composable
@@ -116,7 +117,7 @@ fun TvRequestSeasonsContent(
     onToggle: (Int) -> Unit,
     onToggleAll: () -> Unit,
     on4k: (Boolean) -> Unit,
-    advanced: TvAdvancedActions,
+    advanced: AdvancedActions,
     onRetry: () -> Unit,
     onSubmit: () -> Unit,
     onDismiss: () -> Unit,
@@ -166,7 +167,7 @@ fun TvRequestSeasonsContent(
             Footer(state, onSubmit, onDismiss)
         }
     }
-    LaunchedEffect(state.details != null || state.failed) { if (state.details != null || state.failed) firstFocus.focusSoon() }
+    FocusWhen(state.details != null || state.failed, firstFocus)
 }
 
 @Composable
@@ -246,12 +247,7 @@ private fun SeasonRow(row: RequestSeasonsViewModel.Row, on: Boolean, onClick: ()
 
 @Composable
 private fun StatusPill(row: RequestSeasonsViewModel.Row) {
-    val (bg, ink, dot) = when (row.kind) {
-        RequestSeasonsViewModel.Kind.Server -> Triple(SeedyColors.Ok.copy(alpha = 0.1f), SeedyColors.Ok, SeedyColors.Ok)
-        RequestSeasonsViewModel.Kind.Pending -> Triple(SeedyColors.Pending.copy(alpha = 0.1f), SeedyColors.Pending, SeedyColors.Pending)
-        RequestSeasonsViewModel.Kind.Blocked -> Triple(Color(0xFF262626), SeedyColors.TextHero, SeedyColors.Danger)
-        else -> Triple(Color(0xFF262626), SeedyColors.TextHero, Color(0xFF6A6A6A))
-    }
+    val (bg, ink, dot) = seasonPillColours(row.kind)
     Row(
         Modifier.clip(CircleShape).background(bg).padding(horizontal = 14.bp, vertical = 6.bp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.bp),
@@ -283,13 +279,13 @@ private fun Option(title: String, sub: String, onClick: () -> Unit, modifier: Mo
 private fun TvSwitch(on: Boolean) {
     val knob by animateDpAsState(if (on) 31.bp else 5.bp, label = "knob")
     Box(Modifier.size(60.bp, 34.bp).clip(CircleShape).background(if (on) LocalAccent.current else SeedyColors.Surface2)) {
-        Box(Modifier.align(Alignment.CenterStart).offset(x = knob).size(24.bp).background(if (on) SeedyColors.InkInverse else SeedyColors.Text3, CircleShape))
+        Box(Modifier.align(Alignment.CenterStart).offset { IntOffset(knob.roundToPx(), 0) }.size(24.bp).background(if (on) SeedyColors.InkInverse else SeedyColors.Text3, CircleShape))
     }
 }
 
 /** Advanced: "HD-1080p · /data/tv · as you"; OK opens its choices, each OK moves to the next option. */
 @Composable
-private fun Advanced(state: RequestSeasonsViewModel.State, actions: TvAdvancedActions, modifier: Modifier) {
+private fun Advanced(state: RequestSeasonsViewModel.State, actions: AdvancedActions, modifier: Modifier) {
     var open by remember { mutableStateOf(false) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.bp)) {
         Option(t("Advanced"), state.advancedSummary, { open = !open }) {

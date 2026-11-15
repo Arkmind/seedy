@@ -3,9 +3,13 @@ package io.github.arkmind.seedy.player.audio
 import android.content.Context
 import io.github.arkmind.seedy.core.format.TICKS_PER_SECOND
 import io.github.arkmind.seedy.core.session.UserSession
+import io.github.arkmind.seedy.core.session.serverBase
+import io.github.arkmind.seedy.core.session.withApiKey
 import io.github.arkmind.seedy.player.CapabilitiesCache
 import io.github.arkmind.seedy.player.PlaybackProblem
 import io.github.arkmind.seedy.player.Profiles
+import io.github.arkmind.seedy.player.fileQuery
+import io.github.arkmind.seedy.player.quietly
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
@@ -19,7 +23,6 @@ import org.jellyfin.sdk.model.api.PlaybackStartInfo
 import org.jellyfin.sdk.model.api.PlaybackStopInfo
 import org.jellyfin.sdk.model.api.QueueItem
 import org.jellyfin.sdk.model.api.RepeatMode
-import java.net.URLEncoder
 import java.util.UUID
 import kotlin.math.roundToLong
 
@@ -41,8 +44,6 @@ internal data class AudioReport(
 /** PlaybackInfo → an audio stream, and the Sessions/Playing reports around it (web/src/audio/api.ts). */
 internal class AudioStreams(private val context: Context, private val session: UserSession) {
     private val api get() = session.api
-    private val base get() = api.baseUrl.orEmpty().trimEnd('/')
-    private val token get() = api.accessToken.orEmpty()
 
     /** Asks the server how to play [id] here: the file as it is when the phone can, otherwise a conversion. */
     suspend fun open(id: UUID, startSeconds: Double, convert: Boolean): AudioStream = withContext(Dispatchers.IO) {
@@ -59,27 +60,13 @@ internal class AudioStreams(private val context: Context, private val session: U
         info.errorCode?.let { throw PlaybackProblem(it.serialName) }
         val source = info.mediaSources.firstOrNull() ?: throw PlaybackProblem("NoCompatibleStream")
         if (!convert && source.supportsDirectPlay) {
-            val q = buildMap {
-                put("static", "true")
-                put("mediaSourceId", source.id.orEmpty())
-                put("deviceId", session.account.deviceId)
-                info.playSessionId?.let { put("PlaySessionId", it) }
-                source.eTag?.let { put("Tag", it) }
-                put("ApiKey", token)
-            }
-            return@withContext AudioStream("$base/Audio/$id/stream?${query(q)}", PlayMethod.DIRECT_PLAY, source, info.playSessionId, 0.0)
+            return@withContext AudioStream("${api.serverBase}/Audio/$id/stream?${session.fileQuery(source, info.playSessionId)}", PlayMethod.DIRECT_PLAY, source, info.playSessionId, 0.0)
         }
         val path = source.transcodingUrl ?: throw PlaybackProblem("NoCompatibleStream")
-        var url = withApiKey(path.replace(Regex("^/audio/"), "/Audio/"))
+        var url = api.withApiKey(path.replace(Regex("^/audio/"), "/Audio/"))
         if (startTicks > 0 && !Regex("StartTimeTicks=", RegexOption.IGNORE_CASE).containsMatchIn(url)) url += "&StartTimeTicks=$startTicks"
         val copy = Regex("AudioCodec=copy|static=true", RegexOption.IGNORE_CASE).containsMatchIn(url) || source.supportsDirectStream
         AudioStream(url, if (copy && !convert) PlayMethod.DIRECT_STREAM else PlayMethod.TRANSCODE, source, info.playSessionId, if (startTicks > 0) startSeconds else 0.0)
-    }
-
-    private fun withApiKey(path: String): String {
-        val full = if (path.startsWith("http")) path else base + path
-        if (Regex("[?&](ApiKey|api_key)=", RegexOption.IGNORE_CASE).containsMatchIn(full)) return full
-        return full + (if ('?' in full) "&" else "?") + "ApiKey=" + enc(token)
     }
 
     suspend fun reportStart(r: AudioReport) = quietly {
@@ -111,16 +98,9 @@ internal class AudioStreams(private val context: Context, private val session: U
         )
     }
 
-    private suspend fun quietly(block: suspend () -> Unit) {
-        withContext(Dispatchers.IO) { runCatching { block() } }
-    }
-
     private val Repeat.jellyfin get() = when (this) {
         Repeat.Off -> RepeatMode.REPEAT_NONE
         Repeat.All -> RepeatMode.REPEAT_ALL
         Repeat.One -> RepeatMode.REPEAT_ONE
     }
-
-    private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
-    private fun query(q: Map<String, String>) = q.entries.joinToString("&") { "${enc(it.key)}=${enc(it.value)}" }
 }

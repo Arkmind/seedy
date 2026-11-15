@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.mobile
 
+import io.github.arkmind.seedy.core.feature.AdvancedActions
 import io.github.arkmind.seedy.mobile.player.MobileDataSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -8,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import androidx.compose.ui.unit.dp
@@ -26,7 +27,6 @@ import io.github.arkmind.seedy.mobile.search.SearchScreen
 import io.github.arkmind.seedy.mobile.parts.Tab
 import io.github.arkmind.seedy.mobile.parts.TabBar
 import io.github.arkmind.seedy.mobile.parts.tabBarHeight
-import io.github.arkmind.seedy.mobile.seasons.AdvancedActions
 import io.github.arkmind.seedy.mobile.seasons.RequestSeasonsContent
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.SeedyColors

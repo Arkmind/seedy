@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { primaryUrl } from '../../../api/images';
 import type { BaseItem, ItemKind } from '../../../api/types';
-import { locale, t, tn } from '../../../lib/i18n';
+import { t, tn } from '../../../lib/i18n';
 import { Icon } from '../../../ui/icons';
 import { toast } from '../../../ui/overlay';
 import {
@@ -9,6 +9,7 @@ import {
   searchKind, type ExternalIdInfo, type RemoteSearchResult
 } from './api';
 import { ItemButton, ItemCheck, ItemDialog, ItemField } from './dialog';
+import { listText } from '../../../lib/format';
 import './identify.css';
 
 /* Identify (ItemIdentify board): look the item up by name, year or an id, pick the right match, and Jellyfin
@@ -31,18 +32,18 @@ function question(type: ItemKind): string {
 
 const norm = (s?: string) => (s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
+const resultYear = (r: RemoteSearchResult) => r.ProductionYear ?? (r.PremiereDate ? Number(r.PremiereDate.slice(0, 4)) : undefined);
+
 /* How far a result is from what was asked: an id that was typed wins, then the name, then the year. Ties keep the
    order the providers gave. */
 function distance(r: RemoteSearchResult, name: string, year: number | undefined, ids: Record<string, string>): number {
   const idHit = Object.entries(ids).some(([k, v]) => r.ProviderIds?.[k] === v);
   const a = norm(r.Name), b = norm(name);
   const named = !b ? 1 : a === b ? 0 : a.startsWith(b) || b.startsWith(a) ? 1 : a.includes(b) || b.includes(a) ? 2 : 3;
-  const y = r.ProductionYear ?? (r.PremiereDate ? Number(r.PremiereDate.slice(0, 4)) : undefined);
+  const y = resultYear(r);
   const dated = !year || !y ? 0.5 : Math.min(Math.abs(y - year), 10) / 5;
   return (idHit ? -10 : 0) + named + dated;
 }
-
-const resultYear = (r: RemoteSearchResult) => r.ProductionYear ?? (r.PremiereDate ? Number(r.PremiereDate.slice(0, 4)) : undefined);
 
 /* "2010 · A Cold War relic returns…": the year, the artist when there is one, then the start of the overview. */
 function metaLine(r: RemoteSearchResult): string {
@@ -54,10 +55,6 @@ function metaLine(r: RemoteSearchResult): string {
   if (r.Overview) parts.push(r.Overview.trim());
   if (!parts.length && r.SearchProviderName) parts.push(providerName(r.SearchProviderName));
   return parts.join(' · ');
-}
-
-function listOf(names: string[]): string {
-  try { return new Intl.ListFormat(locale(), { type: 'conjunction' }).format(names); } catch { return names.join(', '); }
 }
 
 export function IdentifyDialog({ item, onClose, onDone }: { item: BaseItem; onClose: () => void; onDone: () => void }) {
@@ -185,7 +182,7 @@ export function IdentifyDialog({ item, onClose, onDone }: { item: BaseItem; onCl
           </form>
           <div class="idf-count" aria-live="polite">
             <span class="idf-count-n">{searching && !results ? t('Searching…') : tn(results?.length ?? 0, '{n} match', '{n} matches')}</span>
-            {!!providers.length && <span class="idf-count-from">{t('From {providers} · sorted by how close they are', { providers: listOf(providers) })}</span>}
+            {!!providers.length && <span class="idf-count-from">{t('From {providers} · sorted by how close they are', { providers: listText(providers) })}</span>}
           </div>
           {results && !results.length && !searching ? (
             <p class="idf-note">{t('Nothing matched. Try the original title, leave the year out, or paste an ID.')}</p>

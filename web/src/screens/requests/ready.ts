@@ -3,6 +3,7 @@ import { requestList, type SeerrRequest } from '../../api/seedy';
 import { currentUserId, meStore, viewsStore } from '../../lib/app-state';
 import { t } from '../../lib/i18n';
 import { navigate } from '../../lib/router';
+import { safeLocal, saveLocal } from '../../lib/store';
 import { seerrTarget } from '../../ui/cards';
 import { meduToast } from '../../ui/medu-toast';
 import { ago } from '../server/format';
@@ -15,14 +16,10 @@ const EVERY = 5 * 60_000;
 const key = () => `seedy.readySeen.${currentUserId()}`;
 
 function seenSet(): Set<number> | null {
-  try {
-    const raw = window.localStorage.getItem(key());
-    return raw ? new Set(JSON.parse(raw) as number[]) : null;
-  } catch { return null; }
+  const ids = safeLocal<unknown>(key(), null);
+  return Array.isArray(ids) ? new Set(ids as number[]) : null;
 }
-function saveSeen(ids: Set<number>) {
-  try { window.localStorage.setItem(key(), JSON.stringify([...ids].slice(-300))); } catch { /* private window */ }
-}
+const saveSeen = (ids: Set<number>) => saveLocal(key(), [...ids].slice(-300));
 
 const seasonOf = (r: SeerrRequest) => (r.mediaType === 'tv' && r.seasons?.length ? Math.max(...r.seasons) : undefined);
 

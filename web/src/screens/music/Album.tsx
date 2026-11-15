@@ -1,27 +1,26 @@
 import { useEffect, useState } from 'preact/hooks';
-import { SERVER_URL, del, getSession } from '../../api/client';
+import { del, downloadUrl } from '../../api/client';
 import { getItem, getItems } from '../../api/jellyfin';
 import { imageUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
-import { userStore, viewsStore } from '../../lib/app-state';
-import { dayOf } from '../../lib/format';
+import { canDownload, userStore, viewsStore } from '../../lib/app-state';
+import { dayOf, dot, TICKS_PER_SECOND, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
 import { Header } from '../../ui/navbar/Header';
 import { MenuItem, toast } from '../../ui/overlay';
-import { EmptyPlaylist, EmptyState } from '../browse/parts';
-import { toggleFavorite } from '../browse/parts';
+import { EmptyPlaylist, EmptyState, toggleFavorite } from '../browse/parts';
 import { MoreActions, useView } from '../browse/details-parts';
 import { manageChanged } from '../browse/manage/host';
-import { albumTracks, audioStreamOf, instantMix, playlistTracks, qualityLabel, type Track } from '../../audio/api';
+import { albumTracks, audioStreamOf, playlistTracks, qualityLabel, type Track } from '../../audio/api';
 import { Cover, initialsOf, paletteOf, useCoverTint } from '../../audio/cover';
 import { addToQueue, audioStore, playLoaded, playedStore, togglePlay } from '../../audio/engine';
 import { AIcon } from '../../audio/icons';
 import { sizeLabel } from '../../audio/NowPlaying';
 import {
-  AlbumCard, SectionHead, TrackTable, TracksSkeleton, dot, lengthLabel, longDate, playlistCovers, releaseLabel, releaseOf, songsLabel, yearOf
+  AlbumCard, SectionHead, TrackTable, TracksSkeleton, lengthLabel, longDate, playlistCovers, releaseLabel, releaseOf, songsLabel, yearOf, startMix
 } from './parts';
 import './music.css';
 
@@ -40,11 +39,10 @@ function usePlaysVersion(ids: string[] | undefined): number {
 
 /* Every song of the album, one file after the other (the browser asks once). */
 function downloadAll(tracks: Track[]) {
-  const token = getSession()?.token ?? '';
   tracks.forEach((tk, i) => {
     window.setTimeout(() => {
       const a = document.createElement('a');
-      a.href = `${SERVER_URL}/Items/${tk.Id}/Download?ApiKey=${encodeURIComponent(token)}`;
+      a.href = downloadUrl(tk.Id);
       a.download = '';
       a.rel = 'noreferrer';
       document.body.appendChild(a);
@@ -75,27 +73,20 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
   const tint = useCoverTint(playlist ? list[0] : item);
   const artist = (item as Track).AlbumArtists?.[0] ?? item.ArtistItems?.[0];
   const artistName = artist?.Name ?? item.AlbumArtist;
-  const total = list.reduce((sum, x) => sum + (x.RunTimeTicks ?? 0), 0) / 10_000_000;
+  const total = ticksToSeconds(list.reduce((sum, x) => sum + (x.RunTimeTicks ?? 0), 0));
   const quality = qualityLabel(audioStreamOf(list.find((x) => audioStreamOf(x))));
   const bytes = list.reduce((sum, x) => sum + (x.MediaSources?.[0]?.Size ?? 0), 0);
   const source = { kind: playlist ? 'playlist' as const : 'album' as const, id: item.Id, name: item.Name };
   const here = !!s.current && (s.source?.id === item.Id || (!playlist && s.current.track.AlbumId === item.Id && s.source?.kind === 'album'));
   const playing = here && s.playing;
-  const canDownload = !!(user?.Policy as { EnableContentDownloading?: boolean } | undefined)?.EnableContentDownloading;
+  const mayDownload = canDownload(user);
   const fav = !!item.UserData?.IsFavorite;
 
   const play = () => {
     if (here) { togglePlay(); return; }
     if (list.length) void playLoaded(list, 0, { source });
   };
-  const mix = async () => {
-    try {
-      const mixed = await instantMix(item.Id, 150);
-      await playLoaded(mixed.length ? mixed : list, 0, { source: { kind: 'mix', id: item.Id, name: t('{name} mix', { name: item.Name }) } });
-    } catch {
-      toast(t('Couldn’t start the mix'), 'error');
-    }
-  };
+  const mix = () => startMix(item, t('{name} mix', { name: item.Name }), list);
   const remove = async (tk: Track & { PlaylistItemId?: string }) => {
     if (!tk.PlaylistItemId) return;
     try {
@@ -128,7 +119,7 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
             <span class="mu-al-cover mu-pl-grid">{[0, 1, 2, 3].map((i) => <Cover key={i} item={covers[i % covers.length]} width={300} class="mu-pl-cell" />)}</span>
           ) : <Cover item={playlist && !item.ImageTags?.Primary ? covers[0] ?? item : item} width={600} title={item.Name} class="mu-al-cover" />}
           <div class="mu-al-text">
-            <span class="mu-over">{playlist ? t('Playlist') : releaseLabel(releaseOf({ ...item, ChildCount: list.length || item.ChildCount, RunTimeTicks: total ? total * 10_000_000 : item.RunTimeTicks }))}</span>
+            <span class="mu-over">{playlist ? t('Playlist') : releaseLabel(releaseOf({ ...item, ChildCount: list.length || item.ChildCount, RunTimeTicks: total ? total * TICKS_PER_SECOND : item.RunTimeTicks }))}</span>
             <h1 id="mu-al-h" class={'mu-al-title' + titleSize(item.Name)}>{item.Name}</h1>
             <span class="mu-al-meta">
               {!playlist && artist && (
@@ -155,7 +146,7 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
                 aria-label={fav ? t('Remove from favorites') : t('Add to favorites')} onClick={() => void toggleFavorite(item, setItem)}>
                 <AIcon name="heart" size={20} filled={fav} />
               </button>
-              {canDownload && !playlist && (
+              {mayDownload && !playlist && (
                 <button type="button" class="mu-btn is-icon" aria-label={t('Download album')} disabled={!list.length} onClick={() => downloadAll(list)}>
                   <AIcon name="download" size={20} />
                 </button>

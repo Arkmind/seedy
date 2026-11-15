@@ -46,15 +46,13 @@ import io.github.arkmind.seedy.core.feature.LiveTvViewModel
 import io.github.arkmind.seedy.core.format.dayMonth
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.format.runtime
-import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.livetv.LiveChannel
 import io.github.arkmind.seedy.core.livetv.LiveTv
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.components.ChannelLogo
-import io.github.arkmind.seedy.ui.icons.IconDef
-import io.github.arkmind.seedy.ui.icons.IconPart
+import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
@@ -68,8 +66,6 @@ import java.time.LocalDateTime
 
 private val Live = Color(0xFFD63C3C)
 private val RecRed = Color(0xFFFF5C5C)
-private val FilledHeart = IconDef(0f, listOf(IconPart("M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z", filled = true)))
-
 /** Live TV's four views, in the boards' order. */
 enum class LiveView(val label: String) { OnNow("On now"), Guide("Guide"), Channels("Channels"), Recordings("Recordings") }
 
@@ -100,7 +96,7 @@ private fun FavoritesFilter(on: Boolean, onChange: (Boolean) -> Unit, boxed: Boo
                 .tap { open = true }.padding(start = if (boxed) 12.dp else 4.dp, end = if (boxed) 10.dp else 4.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            if (on) SIcon(FilledHeart, size = 13.dp, color = LocalAccent.current)
+            if (on) SIcon(AppIcons.HeartSolid, size = 13.dp, color = LocalAccent.current)
             SText(if (on) t("Favorites") else t("All channels"), size = 13.sp, weight = 700, color = if (boxed) SeedyColors.Text else SeedyColors.Text2)
             SIcon(WebIcons.ChevronDown, size = 14.dp, color = if (boxed) SeedyColors.Text else SeedyColors.Text2, stroke = 2.4f)
         }
@@ -312,11 +308,7 @@ fun GuideView(
 private fun DayPicker(day: LocalDate, onDay: (LocalDate) -> Unit) {
     var open by remember { mutableStateOf(false) }
     val today = LocalDate.now()
-    fun label(d: LocalDate) = when (d) {
-        today -> t("Today, {day}", "day" to weekdayDate(d).substringBeforeLast(' '))
-        today.plusDays(1) -> t("Tomorrow, {day}", "day" to weekdayDate(d).substringBeforeLast(' '))
-        else -> weekdayDate(d)
-    }
+    fun label(d: LocalDate) = LiveTv.dayLabel(d, today)
     Box {
         Row(
             Modifier.height(40.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Row).tap { open = true }.padding(start = 12.dp, end = 10.dp),
@@ -374,7 +366,7 @@ fun ChannelsView(state: LiveTvViewModel.State, bottom: Dp, onFavorite: (LiveChan
         items(state.channels, key = { it.id }) { c ->
             ChannelRow(c, state, state.now, trailing = {
                 Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).tap { onFavorite(c) }, contentAlignment = Alignment.Center) {
-                    SIcon(if (c.favorite) FilledHeart else WebIcons.Heart, size = 20.dp, color = if (c.favorite) accent else SeedyColors.Text2)
+                    SIcon(if (c.favorite) AppIcons.HeartSolid else WebIcons.Heart, size = 20.dp, color = if (c.favorite) accent else SeedyColors.Text2)
                 }
             }) { onWatch(c) }
         }

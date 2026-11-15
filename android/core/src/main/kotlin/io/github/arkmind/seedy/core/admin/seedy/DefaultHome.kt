@@ -6,6 +6,7 @@ import io.github.arkmind.seedy.core.admin.AdminHttp
 import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.format.Images
 import io.github.arkmind.seedy.core.format.join
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.format.yearRange
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession

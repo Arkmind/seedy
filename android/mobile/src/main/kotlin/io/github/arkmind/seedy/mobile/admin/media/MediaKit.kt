@@ -35,7 +35,9 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.admin.BoardField
 import io.github.arkmind.seedy.mobile.admin.FolderItem
 import io.github.arkmind.seedy.mobile.admin.FolderSheet
+import io.github.arkmind.seedy.mobile.admin.LoadingDots
 import io.github.arkmind.seedy.mobile.admin.PillButton
+import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.RoundButton
 import io.github.arkmind.seedy.mobile.admin.SheetButtons
 import io.github.arkmind.seedy.mobile.parts.SeedyField
@@ -77,6 +79,17 @@ fun MediaSheetHost(sheets: MediaSheets, onNumber: (String, Double) -> Unit) {
     sheets.number?.let { n -> NumberSheet(n, { onNumber(n.key, it) }, { sheets.number = null }) }
 }
 
+/** A page that couldn't load: the error and Try again. */
+@Composable
+fun PageLoadError(error: String, onRetry: () -> Unit) {
+    SText(error, Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp), size = 13.sp, color = SeedyColors.Danger)
+    PillRow { PillButton(t("Try again"), onRetry) }
+}
+
+/** A page still loading. */
+@Composable
+fun PageLoading() = LoadingDots(20.dp)
+
 /** Cards of setting rows, a section each. */
 @Composable
 fun SettingCards(groups: List<SettingsGroup>, actions: SettingActions, sheets: MediaSheets) {
@@ -114,7 +127,7 @@ fun NumberSheet(n: NumberSetting, onSave: (Double) -> Unit, onDismiss: () -> Uni
     var text by remember(n.key) { mutableStateOf(numberText(n.number).replace(' ', ' ')) }
     val value = text.trim().replace(',', '.').replace(" ", "").toDoubleOrNull()
     val ok = value != null && value >= n.min && value <= n.max && (n.decimals || value % 1.0 == 0.0)
-    val submit = { if (ok) { onSave(value!!); onDismiss() } }
+    val submit = { if (ok) { onSave(value); onDismiss() } }
     FormSheet(n.name, n.text ?: n.help, onDismiss, scroll = true) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SeedyField(text, { text = it }, Modifier.weight(1f), keyboard = if (n.decimals) KeyboardType.Decimal else KeyboardType.Number, onDone = submit)

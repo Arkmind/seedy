@@ -9,6 +9,8 @@ import { Header } from '../../ui/navbar/Header';
 import { EmptyState } from '../browse/parts';
 import { SERVICE_NAMES, useMediaSummary } from './media-parts';
 import { useSummary } from './parts';
+import { capitalize, listText } from '../../lib/format';
+import { BackLink, ListFrame } from '../browse/Lists';
 
 /* The Requests page's frame (Requests, RequestsMusic, RequestsBooks, RequestsMine boards): the title with the
    Movies and shows · Music · Books tabs (only for the services the server has), the line saying where requests go,
@@ -38,11 +40,10 @@ function booksLine(formats: { format: string; service: string }[]): string {
   const words: Record<string, string> = { ebook: t('ebooks'), audiobook: t('audiobooks'), comic: t('comics and manga') };
   const parts = [...by.entries()].map(([service, fs]) => {
     const list = fs.map((f) => words[f] ?? f);
-    const what = list.length > 1 ? t('{a} and {b}', { a: list.slice(0, -1).join(', '), b: list[list.length - 1]! }) : list[0]!;
+    const what = listText(list);
     return t('{formats} from {service}', { formats: what, service: SERVICE_NAMES[service as keyof typeof SERVICE_NAMES] ?? service });
   });
-  const line = parts.join(' · ');
-  return line.charAt(0).toLocaleUpperCase() + line.slice(1);
+  return capitalize(parts.join(' · '));
 }
 
 function useServiceLine(service: Service | null): { line: string; open?: { url: string; name: string } } {
@@ -67,7 +68,7 @@ function useServiceLine(service: Service | null): { line: string; open?: { url: 
     ...(services.includes('music') ? ['Lidarr'] : []),
     ...[...new Set(Object.values(me.media?.bookRoutes ?? {}))].map((s) => SERVICE_NAMES[s as keyof typeof SERVICE_NAMES])
   ].filter(Boolean);
-  const list = names.length > 1 ? t('{a} and {b}', { a: names.slice(0, -1).join(', '), b: names[names.length - 1]! }) : names[0] ?? 'Seerr';
+  const list = names.length ? listText(names) : 'Seerr';
   return { line: t('Everything you asked for, from {services}', { services: list }) };
 }
 
@@ -202,5 +203,27 @@ export function Frame({ service, tab, placeholder, label, results, children }: {
       </div>
       {query ? results(query) : children}
     </Shell>
+  );
+}
+
+/* "Results for “abba”" over what a search found. */
+export function ResultsSection({ query, sub, children }: { query: string; sub?: ComponentChildren; children: ComponentChildren }) {
+  return (
+    <section class="reqs-pad reqs-results" aria-labelledby="reqs-results-h">
+      <div class="reqs-col-head">
+        <h2 id="reqs-results-h" class="row-title">{t('Results for “{query}”', { query })}</h2>
+        {sub}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/* A Discover row's See all page, with the way back to its Discover page. */
+export function BrowseFrame({ title, back, backLabel, children }: { title: string; back: string; backLabel: string; children: ComponentChildren }) {
+  return (
+    <ListFrame active="requests" title={title} lede={<BackLink to={back} label={backLabel} />}>
+      {children}
+    </ListFrame>
   );
 }

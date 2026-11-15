@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { get, getSession } from '../../api/client';
+import { currentUserId, get } from '../../api/client';
 import type { BaseItem } from '../../api/types';
-import { episodeTag } from '../../lib/format';
+import { dayKey, daysFromToday, episodeTag, fmtMonthShort, fmtWeekdayShort, hhmm24, startOfDay } from '../../lib/format';
 import { getLang, t, tn, tx } from '../../lib/i18n';
 import { on, send } from '../../lib/remote';
 import { Link } from '../../lib/router';
 import { Icon } from '../../ui/icons';
 import { confirm, toast } from '../../ui/overlay';
+import { SelectField, tOpts } from '../../ui/controls';
 import { AdminLayout } from '../admin/AdminLayout';
 import { type ActivityEntry, errText, type FullUser, getActivity, getNetwork, getServerConfig, getUser, getUsers, saveNetwork, saveUserPolicy } from './api';
-import { LoadFailed, Select, tOpts, useLoad } from './parts';
-import { dayShort, monthShort } from './format';
+import { LoadFailed, useLoad } from './parts';
+import { saveBlob } from '../../lib/clipboard';
 
 /* ── Turning Jellyfin's log lines into the board's rows ──
    The server writes English sentences ("Alex is playing X on Y", "IP address: …"); rows are rebuilt from those, and
@@ -19,8 +20,6 @@ import { dayShort, monthShort } from './format';
 type Level = 'info' | 'ok' | 'warn' | 'error';
 type Category = 'people' | 'playback' | 'signin' | 'system';
 const TAG: Record<Category, string> = { people: 'People', playback: 'Playback', signin: 'Sign-in', system: 'System' };
-/* Levels as the CSV export writes them. */
-const LEVEL_NAME: Record<Level, string> = { info: 'info', ok: 'ok', warn: 'warn', error: 'error' };
 
 interface Row {
   key: string;
@@ -39,7 +38,7 @@ interface Row {
 const ipOf = (e?: ActivityEntry | null) => /IP address: (.+)$/.exec(e?.ShortOverview ?? '')?.[1]?.trim();
 const cleanIp = (ip: string) => ip.replace(/^::ffff:/i, '').replace(/^\[|\]$/g, '').replace(/:\d+$/, (m) => (ip.includes('.') ? '' : m));
 
-export function isPrivateIp(raw: string): boolean {
+function isPrivateIp(raw: string): boolean {
   const ip = cleanIp(raw);
   const v4 = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(ip);
   if (v4) {
@@ -190,7 +189,7 @@ function collapse(rows: Row[]): Row[] {
     out.push({ ...r });
   }
   return out.map((r) => (r.times
-    ? { ...r, detail: [r.detail, hm(r.last!) !== hm(r.date) ? t('{n} times since {time}', { n: r.times, time: hm(r.last!) }) : t('{n} times', { n: r.times })].filter(Boolean).join(' · ') }
+    ? { ...r, detail: [r.detail, hhmm24(r.last!) !== hhmm24(r.date) ? t('{n} times since {time}', { n: r.times, time: hhmm24(r.last!) }) : t('{n} times', { n: r.times })].filter(Boolean).join(' · ') }
     : r));
 }
 
@@ -221,13 +220,11 @@ function matches(r: Row, type: TypeFilter, level: LevelFilter, person: FullUser 
 
 /* ── Day labels: "Today · Mon 19 Oct", "Yesterday · Sun 18 Oct", "Fri 16 Oct" ── */
 
-const startOfDay = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 function dayLabel(d: Date): string {
-  const wd = `${dayShort(d)} ${d.getDate()} ${monthShort(d)}${d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : ''}`;
-  const diff = Math.round((startOfDay(new Date()).getTime() - startOfDay(d).getTime()) / 86_400_000);
+  const wd = `${fmtWeekdayShort(d)} ${d.getDate()} ${fmtMonthShort(d)}${d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : ''}`;
+  const diff = -daysFromToday(d);
   return diff === 0 ? t('Today · {date}', { date: wd }) : diff === 1 ? t('Yesterday · {date}', { date: wd }) : wd;
 }
-const hm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
 /* ── Page ── */
 
@@ -258,7 +255,7 @@ export function ServerActivity() {
   const fetchItems = (list: ActivityEntry[]) => {
     const ids = [...new Set(list.filter((e) => e.ItemId && PLAY_TYPES.has(e.Type)).map((e) => e.ItemId!))].filter((id) => !items.has(id));
     if (!ids.length) return;
-    const uid = getSession()?.userId;
+    const uid = currentUserId();
     for (let i = 0; i < ids.length; i += 60) {
       get<{ Items: BaseItem[] }>('/Items', { ids: ids.slice(i, i + 60), userId: uid, enableImages: false, enableUserData: false, fields: ['SeriesName'] }).then(
         (r) => setItems((m) => { const n = new Map(m); for (const it of r.Items) n.set(it.Id, it); return n; }),
@@ -430,17 +427,9 @@ export function ServerActivity() {
       const lines = [['Date', 'Time', 'Type', 'Level', 'What happened', 'Details', 'Person', 'Server message'].map((h) => esc(t(h))).join(',')];
       for (const r of out) {
         const d = r.date;
-        const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        lines.push([day, hm(d), t(TAG[r.category]), t(LEVEL_NAME[r.level]), r.title, r.detail, r.userName ?? '', r.entry.Name].map((v) => esc(String(v ?? ''))).join(','));
+        lines.push([dayKey(d), hhmm24(d), t(TAG[r.category]), t(r.level), r.title, r.detail, r.userName ?? '', r.entry.Name].map((v) => esc(String(v ?? ''))).join(','));
       }
-      const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `activity-log-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      saveBlob(`activity-log-${new Date().toISOString().slice(0, 10)}.csv`, new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), 2000);
       toast(tn(out.length, 'Exported {n} entry', 'Exported {n} entries'));
     } catch (e) {
       toast(errText(e, t('Couldn’t export the log.')), 'error');
@@ -494,9 +483,9 @@ export function ServerActivity() {
           ))}
         </nav>
         <div class="srv-selects">
-          <Select label={t('Person')} minWidth={150} value={personId}
+          <SelectField label={t('Person')} minWidth={150} value={personId}
             options={[{ value: 'all', label: t('Everyone') }, ...userList.map((u) => ({ value: u.Id, label: u.Name }))]} onChange={setPersonId} />
-          <Select label={t('Level')} minWidth={170} value={level} options={tOpts(LEVELS)} onChange={setLevel} />
+          <SelectField label={t('Level')} minWidth={170} value={level} options={tOpts(LEVELS)} onChange={setLevel} />
         </div>
       </div>
 
@@ -522,7 +511,7 @@ export function ServerActivity() {
             <div class="srv-events">
               {g.rows.map((r) => (
                 <div key={r.key} class={'srv-event' + (r.level === 'error' ? ' is-error' : '') + (fresh.has(r.entry.Id) ? ' srv-event-new' : '')}>
-                  <span class="srv-event-time">{hm(r.date)}</span>
+                  <span class="srv-event-time">{hhmm24(r.date)}</span>
                   <span class={'srv-event-dot is-' + r.level} role="img" aria-label={r.level === 'error' ? t('Error') : r.level === 'warn' ? t('Warning') : r.level === 'ok' ? t('Done') : t('Information')} />
                   <span class="srv-event-text">
                     <span class="srv-event-title">{r.title}</span>

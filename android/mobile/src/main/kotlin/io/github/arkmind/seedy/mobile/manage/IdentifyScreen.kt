@@ -8,11 +8,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -29,13 +26,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -50,13 +45,13 @@ import io.github.arkmind.seedy.mobile.admin.FieldSection
 import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
+import io.github.arkmind.seedy.mobile.admin.PinnedBar
 import io.github.arkmind.seedy.mobile.admin.SaveBarRoom
+import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.mobile.parts.Toast
-import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.ui.components.Artwork
-import io.github.arkmind.seedy.ui.components.boxShadow
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
@@ -93,11 +88,11 @@ fun IdentifyScreen(state: IdentifyState, actions: IdentifyActions, onBack: () ->
                 FieldSection(null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            FieldLabel(t("Name"))
+                            FieldLabel(t("Name"), color = SeedyColors.Text2)
                             BoardField(state.name, actions::setName, onDone = actions::search)
                         }
                         Column(Modifier.weight(0.42f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            FieldLabel(t("Year"))
+                            FieldLabel(t("Year"), color = SeedyColors.Text2)
                             BoardField(state.year, actions::setYear, keyboard = KeyboardType.Number, onDone = actions::search)
                         }
                     }
@@ -119,7 +114,7 @@ fun IdentifyScreen(state: IdentifyState, actions: IdentifyActions, onBack: () ->
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom) {
                             for (f in row) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    FieldLabel(t("{provider} ID", "provider" to f.label))
+                                    FieldLabel(t("{provider} ID", "provider" to f.label), color = SeedyColors.Text2)
                                     BoardField(f.value, { actions.setId(f.key, it) }, placeholder = if (f.key.equals("Imdb", true)) "tt…" else t("Optional"), onDone = actions::search)
                                 }
                             }
@@ -200,15 +195,7 @@ private fun BoxScope.CurrentTag() {
 /** The pinned foot: Replace the existing artwork, and Use this match. */
 @Composable
 private fun BoxScope.IdentifyFooter(state: IdentifyState, actions: IdentifyActions, onApply: () -> Unit) {
-    val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    Row(
-        Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-            .boxShadow(Color.Black.copy(alpha = 0.5f), blur = 30.dp, y = (-10).dp)
-            .background(SeedyColors.Row).blockTaps()
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = max(26.dp, nav + 12.dp)),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    PinnedBar(12.dp) {
         Row(Modifier.weight(1f).tap(role = Role.Checkbox) { actions.setReplaceImages(!state.replaceImages) }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CheckBox(state.replaceImages)
             SText(t("Replace the existing artwork"), size = 13.sp, weight = 700, color = SeedyColors.White, maxLines = 2)

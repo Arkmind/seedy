@@ -14,7 +14,12 @@ import io.github.arkmind.seedy.core.admin.mbps
 import io.github.arkmind.seedy.core.admin.realDate
 import io.github.arkmind.seedy.core.admin.sameId
 import io.github.arkmind.seedy.core.admin.shortDate
-import io.github.arkmind.seedy.core.format.fullDate
+import io.github.arkmind.seedy.core.data.array
+import io.github.arkmind.seedy.core.data.bool
+import io.github.arkmind.seedy.core.data.int
+import io.github.arkmind.seedy.core.data.long
+import io.github.arkmind.seedy.core.data.str
+import io.github.arkmind.seedy.core.data.strings
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
@@ -25,19 +30,13 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.longOrNull
 import org.jellyfin.sdk.api.client.HttpMethod
 import java.time.Clock
 import java.time.Instant
 import java.time.format.TextStyle
-import java.util.UUID
 import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
@@ -76,14 +75,6 @@ data class ApiKeyInfo(
     val dateLastActivity: String? = null,
 )
 
-/** GET /Seedy/Admin/Seerr/Accounts (camelCase). */
-@Serializable
-data class SeerrAccount(val userId: String = "", val name: String = "", val seerrUserId: Int? = null, val seerrName: String? = null, val canRequest: Boolean = false)
-
-/** GET /Seedy/Admin/PlayLog/Profiles (camelCase). */
-@Serializable
-data class PlayLogProfile(val userId: String = "", val name: String = "", val plays: Int = 0, val top10: Boolean = true, val history: Boolean = true)
-
 /** GET /Localization/ParentalRatings: a rating's name and score (Jellyfin 12 nests the score as camelCase). */
 data class ParentalRating(val name: String, val score: Int?, val subScore: Int?)
 
@@ -91,7 +82,7 @@ fun parseRatings(e: JsonElement): List<ParentalRating> = (e as? JsonArray).orEmp
     val o = r as? JsonObject ?: return@mapNotNull null
     val rs = o["RatingScore"] as? JsonObject
     ParentalRating(
-        name = o.text("Name").orEmpty(),
+        name = o.str("Name").orEmpty(),
         score = (rs?.get("score") as? JsonPrimitive)?.intOrNull ?: (o["Value"] as? JsonPrimitive)?.intOrNull,
         subScore = (rs?.get("subScore") as? JsonPrimitive)?.intOrNull,
     )
@@ -125,24 +116,8 @@ suspend fun loadPeople(http: AdminHttp): PeopleData = coroutineScope {
 
 /* ── Reading a policy ── */
 
-fun JsonObject.flag(key: String, default: Boolean = false): Boolean = (this[key] as? JsonPrimitive)?.booleanOrNull ?: default
-fun JsonObject.long(key: String, default: Long = 0): Long = (this[key] as? JsonPrimitive)?.let { it.longOrNull ?: it.doubleOrNull?.toLong() } ?: default
-fun JsonObject.int(key: String, default: Int = 0): Int = long(key, default.toLong()).toInt()
-fun JsonObject.intOrNull(key: String): Int? = (this[key] as? JsonPrimitive)?.takeIf { it !is JsonNull }?.let { it.intOrNull ?: it.doubleOrNull?.toInt() }
-fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive)?.takeIf { it !is JsonNull }?.contentOrNull
-fun JsonObject.strings(key: String): List<String> = (this[key] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty()
-fun JsonObject.array(key: String): JsonArray = this[key] as? JsonArray ?: JsonArray(emptyList())
-
 fun JsonObject.schedules(): List<AccessSchedule> =
     runCatching { JellyfinJson.decodeFromJsonElement(ListSerializer(AccessSchedule.serializer()), array("AccessSchedules")) }.getOrDefault(emptyList())
-
-fun strings(list: List<String>): JsonArray = JsonArray(list.map(::JsonPrimitive))
-
-/** Jellyfin's ids come without dashes; the SDK's image URLs want a UUID. */
-fun uuidOf(id: String): UUID? = runCatching {
-    val h = id.replace("-", "")
-    UUID.fromString("${h.substring(0, 8)}-${h.substring(8, 12)}-${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20, 32)}")
-}.getOrNull()
 
 /* ── Wording ── */
 
@@ -185,7 +160,7 @@ fun ratingName(score: Int?, ratings: List<ParentalRating>): String? {
 
 /** "All libraries", "Movies, Shows", "No libraries". */
 fun libraryLine(p: JsonObject, folders: List<VirtualFolder>): String {
-    if (p.flag("EnableAllFolders", true)) return t("All libraries")
+    if (p.bool("EnableAllFolders", true)) return t("All libraries")
     val enabled = p.strings("EnabledFolders")
     val names = folders.filter { f -> enabled.any { sameId(it, f.itemId) } }.map { it.name }
     return if (names.isNotEmpty()) names.joinToString(", ") else t("No libraries")
@@ -194,13 +169,13 @@ fun libraryLine(p: JsonObject, folders: List<VirtualFolder>): String {
 /** "No limits", "Remote: 8 Mbps", "No remote access · 9:00–20:00", "Locked after 3 failed sign-ins". */
 fun limitsLine(p: JsonObject): String {
     val attempts = p.int("LoginAttemptsBeforeLockout", -1)
-    if (p.flag("IsDisabled") && attempts > 0 && p.int("InvalidLoginAttemptCount") >= attempts) {
+    if (p.bool("IsDisabled") && attempts > 0 && p.int("InvalidLoginAttemptCount") >= attempts) {
         // English says "sign-ins" for any number; the {count} key gives French its singular.
         return tn(attempts, "Locked after {count} failed sign-ins", "Locked after {n} failed sign-ins", "count" to formatNumber(attempts))
     }
     val parts = mutableListOf<String>()
     val rate = p.long("RemoteClientBitrateLimit")
-    if (!p.flag("EnableRemoteAccess", true)) parts += t("No remote access")
+    if (!p.bool("EnableRemoteAccess", true)) parts += t("No remote access")
     else if (rate > 0) parts += t("Remote: {rate}", "rate" to mbps(rate))
     val streams = p.int("MaxActiveSessions")
     if (streams > 0) parts += tn(streams, "Up to {n} stream", "Up to {n} streams")
@@ -209,7 +184,7 @@ fun limitsLine(p: JsonObject): String {
         val day = ShortDays[s.dayOfWeek] ?: s.dayOfWeek
         parts += (if (day.isNotEmpty()) t(day) + " " else "") + "${hourLabel(s.startHour)}–${hourLabel(s.endHour)}" + (if (schedules.size > 1) " +${schedules.size - 1}" else "")
     }
-    if (!p.flag("EnableMediaPlayback", true)) parts += t("Can’t play")
+    if (!p.bool("EnableMediaPlayback", true)) parts += t("Can’t play")
     return if (parts.isNotEmpty()) parts.joinToString(" · ") else t("No limits")
 }
 
@@ -241,13 +216,6 @@ fun lastActive(d: Instant?, clock: Clock): String {
         1L -> t("Yesterday, {time}", "time" to hhmm(d, clock))
         else -> shortDate(d, clock)
     }
-}
-
-/** A key's "Created": "Today", "Yesterday", "2 Mar 2026". */
-fun createdDay(d: Instant, clock: Clock): String = when (dayDiff(d, clock)) {
-    0L -> t("Today")
-    1L -> t("Yesterday")
-    else -> fullDate(d.atZone(clock.zone).toLocalDate())
 }
 
 /** "March 2024" ("mars 2024"). */

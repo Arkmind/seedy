@@ -93,7 +93,7 @@ fun SText(
     val boxed = tight && !wraps
     BasicText(
         text = if (uppercase) text.uppercase() else text,
-        modifier = if (boxed) modifier.cssLineBox(size, lineHeight!!) else modifier,
+        modifier = if (boxed) modifier.cssLineBox(size, lineHeight) else modifier,
         style = BaseText.copy(
             fontSize = size,
             fontWeight = FontWeight(weight),
@@ -111,7 +111,7 @@ fun SText(
 }
 
 /** Shrinks a text box from Noto's natural line height to [ratio] × [size], keeping the glyphs centred. */
-private fun Modifier.cssLineBox(size: TextUnit, ratio: Float): Modifier = this.layout { measurable, constraints ->
+fun Modifier.cssLineBox(size: TextUnit, ratio: Float): Modifier = this.layout { measurable, constraints ->
     val placeable = measurable.measure(constraints)
     val px = size.toPx()
     val cut = ((NotoLineRatio - ratio) * px).coerceAtLeast(0f)

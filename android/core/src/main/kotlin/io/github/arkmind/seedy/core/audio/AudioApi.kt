@@ -1,8 +1,7 @@
 package io.github.arkmind.seedy.core.audio
 
+import io.github.arkmind.seedy.core.data.io
 import io.github.arkmind.seedy.core.session.UserSession
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
@@ -64,15 +63,6 @@ data class Reading(
 class AudioApi(private val session: UserSession) {
     private val api get() = session.api
     private val userId get() = session.userId
-
-    suspend fun tracks(ids: List<UUID>): List<BaseItemDto> = io {
-        ids.chunked(150).flatMap { chunk ->
-            val found = api.libraryApi.getItems(
-                userId = userId, ids = chunk, fields = TrackFields, enableImageTypes = listOf(ImageType.PRIMARY), recursive = true, enableUserData = true,
-            ).content.items.associateBy { it.id }
-            chunk.mapNotNull { found[it] }
-        }
-    }
 
     suspend fun albumTracks(albumId: UUID): List<BaseItemDto> = io {
         api.libraryApi.getItems(
@@ -175,8 +165,6 @@ class AudioApi(private val session: UserSession) {
         if (item.type != BaseItemKind.AUDIO_BOOK) item else mergePlace(item, reading(item.id))
 
     suspend fun lyrics(id: UUID): LyricDto? = io { runCatching { api.lyricApi.getLyrics(id).content }.getOrNull() }
-
-    private suspend fun <T> io(block: suspend () -> T): T = withContext(Dispatchers.IO) { block() }
 
     companion object {
         /** What a track row, the queue and the players need. */

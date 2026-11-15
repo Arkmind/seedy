@@ -13,15 +13,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import java.text.NumberFormat
 import kotlin.math.floor
 
@@ -77,27 +68,7 @@ data class LocalizationOption(val name: String = "", val value: String = "")
 @Serializable
 data class FsEntry(val name: String = "", val path: String = "", val type: String = "Directory")
 
-/** GET /System/Logs. */
-@Serializable
-data class LogFile(val dateCreated: String = "", val dateModified: String = "", val size: Long = 0, val name: String = "")
-
-/* ── Settings kept as JSON ── */
-
-fun JsonObject.bool(key: String, default: Boolean = false): Boolean = (this[key] as? JsonPrimitive)?.booleanOrNull ?: default
-fun JsonObject.int(key: String, default: Int = 0): Int = (this[key] as? JsonPrimitive)?.let { it.intOrNull ?: it.doubleOrNull?.toInt() } ?: default
-fun JsonObject.double(key: String, default: Double = 0.0): Double = (this[key] as? JsonPrimitive)?.doubleOrNull ?: default
-fun JsonObject.str(key: String): String? = (this[key] as? JsonPrimitive)?.takeIf { it !is JsonNull }?.contentOrNull
-fun JsonObject.strings(key: String): List<String> = (this[key] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty()
-fun JsonObject.objects(key: String): List<JsonObject> = (this[key] as? JsonArray)?.filterIsInstance<JsonObject>().orEmpty()
-fun JsonObject.obj(key: String): JsonObject = this[key] as? JsonObject ?: JsonObject(emptyMap())
-
-fun json(v: Boolean): JsonElement = JsonPrimitive(v)
-fun json(v: Number): JsonElement = JsonPrimitive(v)
-fun json(v: String?): JsonElement = if (v == null) JsonNull else JsonPrimitive(v)
-fun json(v: List<String>): JsonElement = JsonArray(v.map { JsonPrimitive(it) })
-
-/** A copy with [key] set. */
-fun JsonObject.with(key: String, value: JsonElement): JsonObject = JsonObject(this + (key to value))
+/* ── Wording ── */
 
 /** "42%" ("42 %" in French), from 0–100. */
 fun percentLabel(p: Double): String = NumberFormat.getPercentInstance(I18n.locale).format(floor(p) / 100)

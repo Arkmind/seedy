@@ -1,4 +1,4 @@
-import { SERVER_URL, del, get, getSession, post, request } from '../../api/client';
+import { get, request, withApiKey } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import { asBook, listAudiobooks } from '../../audio/api';
 import type { BaseItem } from '../../api/types';
@@ -11,29 +11,10 @@ export type BookFormat = 'epub' | 'pdf' | 'cbz' | 'cbr' | 'other';
 export interface BookChapter { Title: string; Href: string; Page: number }
 export interface BookInfo { Format: BookFormat; Pages: number; Words: number; Minutes: number; Chapters: BookChapter[] }
 
-/* Reader settings saved with the place in each book (any JSON the reader likes; see reader/settings.ts). */
-export type ReadingSettings = Record<string, unknown>;
 
-export interface Reading {
-  ItemId: string;
-  /* An EPUB CFI, or a page index (from 0) for comics. */
-  Locator?: string;
-  Percent: number;
-  Chapter?: string;
-  ChapterIndex?: number;
-  ChapterCount?: number;
-  Finished: boolean;
-  Settings?: ReadingSettings | null;
-  UpdatedAt?: string;
-}
-
-export type ReadingPatch = Omit<Reading, 'ItemId' | 'UpdatedAt'>;
-
-const token = () => getSession()?.token ?? '';
-
-export const bookFileUrl = (id: string) => `${SERVER_URL}/Seedy/Books/${id}/File?ApiKey=${encodeURIComponent(token())}`;
-export const comicPageUrl = (id: string, index: number) => `${SERVER_URL}/Seedy/Books/${id}/Pages/${index}?ApiKey=${encodeURIComponent(token())}`;
-export const downloadUrl = (id: string) => `${SERVER_URL}/Items/${id}/Download?ApiKey=${encodeURIComponent(token())}`;
+export const bookFileUrl = (id: string) => withApiKey(`/Seedy/Books/${id}/File`);
+export const comicPageUrl = (id: string, index: number) => withApiKey(`/Seedy/Books/${id}/Pages/${index}`);
+export { downloadUrl } from '../../api/client';
 
 /* Book info rarely changes; one request per book per page load. */
 const infoCache = new Map<string, Promise<BookInfo>>();
@@ -52,47 +33,26 @@ export async function getBookFile(id: string, signal?: AbortSignal): Promise<Arr
   return res.arrayBuffer();
 }
 
-export const listReading = (finished = false, limit = 40) => get<Reading[]>('/Seedy/Reading', { finished, limit });
-
-/* 204 (never opened) comes back as undefined. */
-export const getReading = (id: string) => get<Reading | undefined>(`/Seedy/Reading/${id}`).then((r) => (r && typeof r === 'object' ? r : undefined));
-
-export const saveReading = (id: string, patch: ReadingPatch) => post<Reading>(`/Seedy/Reading/${id}`, patch);
-
-/* Fire-and-forget save that survives the page closing. */
-export function saveReadingOnExit(id: string, patch: ReadingPatch) {
-  const session = getSession();
-  if (!session) return;
-  try {
-    void fetch(`${SERVER_URL}/Seedy/Reading/${id}?ApiKey=${encodeURIComponent(session.token)}`, {
-      method: 'POST',
-      keepalive: true,
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(patch)
-    });
-  } catch { /* the debounced save already ran */ }
-}
-
-export const deleteReading = (id: string) => del<void>(`/Seedy/Reading/${id}`);
+/* This profile's place in each book lives in the Seedy API (shared with the audiobook player). */
+export {
+  deleteReading, getReading, listReading, saveReading, saveReadingOnExit, type Reading, type ReadingPatch, type ReadingSettings
+} from '../../api/seedy';
 
 /* ───────── What a library item is ───────── */
 
 export const isAudioBook = (item: Pick<BaseItem, 'Type'>) => item.Type === 'AudioBook';
 
-type WithPath = BaseItem & { Path?: string; Container?: string; MediaSources?: { Path?: string; Container?: string; Size?: number }[] };
-
 export function formatOf(item: BaseItem): BookFormat | 'audio' {
   if (isAudioBook(item)) return 'audio';
-  const it = item as WithPath;
-  const path = it.Path ?? it.MediaSources?.[0]?.Path ?? '';
-  const ext = (/\.([a-z0-9]+)$/i.exec(path)?.[1] ?? it.Container ?? '').toLowerCase();
+  const path = item.Path ?? item.MediaSources?.[0]?.Path ?? '';
+  const ext = (/\.([a-z0-9]+)$/i.exec(path)?.[1] ?? item.Container ?? '').toLowerCase();
   if (ext === 'epub' || ext === 'pdf' || ext === 'cbz' || ext === 'cbr') return ext;
   return 'other';
 }
 
 export const isComic = (item: BaseItem) => { const f = formatOf(item); return f === 'cbz' || f === 'cbr'; };
 
-export const fileSize = (item: BaseItem): number | undefined => (item as WithPath).MediaSources?.[0]?.Size;
+export const fileSize = (item: BaseItem): number | undefined => item.MediaSources?.[0]?.Size;
 
 /* Who wrote it: Jellyfin keeps book authors as people (Author, or Writer from ComicInfo), audiobook authors as
    album artists or artists. */

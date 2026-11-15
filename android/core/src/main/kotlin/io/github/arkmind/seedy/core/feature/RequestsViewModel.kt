@@ -2,6 +2,8 @@ package io.github.arkmind.seedy.core.feature
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.arkmind.seedy.core.data.ioOrNull
+import io.github.arkmind.seedy.core.data.plusNew
 import io.github.arkmind.seedy.core.format.daysFromToday
 import io.github.arkmind.seedy.core.format.parseDay
 import io.github.arkmind.seedy.core.i18n.t
@@ -11,13 +13,11 @@ import io.github.arkmind.seedy.core.requests.SeerrRequest
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.requests.TitlesKind
 import io.github.arkmind.seedy.core.session.UserSession
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Requests for both screen sets (web: screens/requests): Discover's rows of Seerr titles, the person's own requests
@@ -77,13 +77,13 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
 
     fun refresh() {
         viewModelScope.launch {
-            val summary = io { api.summary() }
+            val summary = ioOrNull { api.summary() }
             _state.update { it.copy(summary = summary ?: it.summary) }
         }
         viewModelScope.launch { loadLatest() }
         for (kind in TitlesKind.entries) {
             viewModelScope.launch {
-                val titles = io { api.titles(kind).results }.orEmpty()
+                val titles = ioOrNull { api.titles(kind).results }.orEmpty()
                 _state.update { s -> s.copy(rows = s.rows.map { if (it.kind == kind) it.copy(items = titles) else it }) }
             }
         }
@@ -91,7 +91,7 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
     }
 
     private suspend fun loadLatest() {
-        val latest = io { api.mine().results }
+        val latest = ioOrNull { api.mine().results }
         _state.update { it.copy(latest = latest ?: it.latest ?: emptyList()) }
     }
 
@@ -119,15 +119,14 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
         val take = if (reset) shown.coerceIn(PageSize, 100) else PageSize
         setPage(tab) { it.copy(loading = true) }
         viewModelScope.launch {
-            val r = io { api.list(scope = if (tab == Tab.All) "all" else "mine", take = take, skip = skip) }
+            val r = ioOrNull { api.list(scope = if (tab == Tab.All) "all" else "mine", take = take, skip = skip) }
             setPage(tab) { p ->
                 when {
                     r == null -> p.copy(loading = false, items = p.items ?: emptyList())
                     reset -> Page(r.results, r.total, loading = false)
                     else -> {
                         // A request can move between pages while the list is open: don't show it twice.
-                        val seen = p.items.orEmpty().map { it.requestId }.toSet()
-                        Page(p.items.orEmpty() + r.results.filter { it.requestId !in seen }, r.total, loading = false)
+                        Page(p.items.orEmpty().plusNew(r.results) { it.requestId }, r.total, loading = false)
                     }
                 }
             }
@@ -148,19 +147,17 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
     private fun act(r: SeerrRequest, done: String, failed: String, call: suspend (Int) -> Unit) {
         _state.update { it.copy(busy = it.busy + r.requestId) }
         viewModelScope.launch {
-            val ok = io { call(r.requestId); true } ?: false
+            val ok = ioOrNull { call(r.requestId); true } ?: false
             _state.update { it.copy(busy = it.busy - r.requestId, message = if (ok) done else failed) }
             loadLatest()
             reloadPages()
-            io { api.summary() }?.let { s -> _state.update { it.copy(summary = s) } }
+            ioOrNull { api.summary() }?.let { s -> _state.update { it.copy(summary = s) } }
         }
     }
 
-    fun clearMessage() = _state.update { it.copy(message = null) }
+    fun messageShown() = _state.update { it.copy(message = null) }
 
     companion object {
         private const val PageSize = 30
     }
-
-    private suspend fun <T> io(block: suspend () -> T): T? = withContext(Dispatchers.IO) { runCatching { block() }.getOrNull() }
 }

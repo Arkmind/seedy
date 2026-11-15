@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.player
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.hardware.display.DisplayManager
 import android.media.MediaCodecInfo
@@ -62,6 +63,7 @@ data class Capabilities(
             video("vc1", "video/wvc1") { 0 }
 
             val hevc10 = caps("video/hevc").any { c -> c.profileLevels.any { it.profile == PL.HEVCProfileMain10 || it.profile == PL.HEVCProfileMain10HDR10 } }
+            @SuppressLint("InlinedApi") // API 29 constants, only compared: older systems never report them
             val av1Main10 = caps("video/av01").any { c -> c.profileLevels.any { it.profile == PL.AV1ProfileMain10 || it.profile == PL.AV1ProfileMain10HDR10 } }
 
             // HDR only where the screen shows it: elsewhere the server converts to SDR rather than the picture looking washed out.
@@ -79,7 +81,7 @@ data class Capabilities(
                 if ("hevc" in levels) add("DOVIWithSDR")
             }
 
-            val audio = AudioCapabilities.getCapabilities(context, AudioAttributes.DEFAULT, null)
+            val audio = AudioCapabilities.getCapabilities(context, AudioAttributes.DEFAULT, null, emptyList())
             val audioCodecs = buildSet {
                 addAll(listOf("aac", "mp3", "mp2", "flac", "opus", "vorbis", "pcm_s16le", "pcm_s24le", "pcm_f32le"))
                 fun has(mime: String) = infos(mime).isNotEmpty()

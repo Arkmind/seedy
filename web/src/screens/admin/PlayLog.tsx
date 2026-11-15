@@ -2,13 +2,14 @@ import { useEffect, useState } from 'preact/hooks';
 import { request } from '../../api/client';
 import { adminClearPlayLog, adminPlayLogProfile, type AdminConfig, type PlayLogProfile } from '../../api/seedy';
 import { useStore } from '../../lib/store';
-import { Panel, SavedNote, SelectField, SettingRow, Switch } from '../../ui/controls';
+import { Panel, SavedNote, SelectField, SettingRow, Switch, tOpts } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
-import { confirm, toast } from '../../ui/overlay';
+import { confirm, toast, toastError } from '../../ui/overlay';
 import { formatNumber, t } from '../../lib/i18n';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
-import { ProfileAvatar } from './Requests';
+import { patchRow, ProfileAvatar, TableError, TableSkeleton } from './parts';
 import { editConfig, loadProfiles, profilesStore, statusStore, useAdminConfig } from './config';
+import { saveBlob } from '../../lib/clipboard';
 
 type Log = AdminConfig['playLog'];
 
@@ -55,7 +56,7 @@ export function AdminPlayLog() {
                 id="retention"
                 minWidth={180}
                 value={RETENTION.some((o) => o.value === config.playLog.retentionDays) ? config.playLog.retentionDays : 365}
-                options={RETENTION.map((o) => ({ ...o, label: t(o.label) }))}
+                options={tOpts(RETENTION)}
                 onChange={(v) => set({ retentionDays: v })}
               />
             </SettingRow>
@@ -83,15 +84,7 @@ export function AdminPlayLog() {
 
 async function exportPlays(p: PlayLogProfile) {
   const res = await request<Response>('GET', '/Seedy/Admin/PlayLog/Export', { query: { userId: p.userId }, raw: true });
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `seedy-plays-${p.name.trim().replace(/[\\/:*?"<>|\s]+/g, '-') || p.userId}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  saveBlob(`seedy-plays-${p.name.trim().replace(/[\\/:*?"<>|\s]+/g, '-') || p.userId}.csv`, await res.blob());
 }
 
 function ProfilesPanel() {
@@ -99,12 +92,12 @@ function ProfilesPanel() {
   const [busy, setBusy] = useState<string | null>(null);
 
   const toggle = async (p: PlayLogProfile, key: 'top10' | 'history', on: boolean) => {
-    profilesStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === p.userId ? { ...x, [key]: on } : x)) }));
+    patchRow(profilesStore, p.userId, { [key]: on });
     try {
       profilesStore.set({ data: await adminPlayLogProfile(p.userId, { [key]: on }), loading: false });
     } catch (e) {
-      profilesStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === p.userId ? { ...x, [key]: !on } : x)) }));
-      toast(`${t('Couldn’t change {name}.', { name: p.name })} ${(e as Error).message || ''}`.trim(), 'error');
+      patchRow(profilesStore, p.userId, { [key]: !on });
+      toastError(t('Couldn’t change {name}.', { name: p.name }), e);
     }
   };
 
@@ -113,7 +106,7 @@ function ProfilesPanel() {
     try {
       await exportPlays(p);
     } catch (e) {
-      toast(`${t('Couldn’t export {name}’s plays.', { name: p.name })} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t export {name}’s plays.', { name: p.name }), e);
     } finally {
       setBusy(null);
     }
@@ -133,7 +126,7 @@ function ProfilesPanel() {
       toast(t('{name}’s plays cleared', { name: p.name }));
       loadProfiles(true);
     } catch (e) {
-      toast(`${t('Couldn’t clear {name}’s plays.', { name: p.name })} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t clear {name}’s plays.', { name: p.name }), e);
     } finally {
       setBusy(null);
     }
@@ -142,15 +135,9 @@ function ProfilesPanel() {
   return (
     <Panel id="prof" title={t('Profiles')} text={t('Leave a profile out of the Top 10, hide its history page, or export and clear its plays.')} gap={14}>
       {!data && error ? (
-        <div class="admin-inline-error" role="alert">
-          <span class="dot is-danger" />
-          {t('Couldn’t load the profiles.')} {error.message}
-          <button type="button" class="btn btn-secondary is-sm" onClick={() => loadProfiles(true)}>{t('Try again')}</button>
-        </div>
+        <TableError text={t('Couldn’t load the profiles.')} error={error.message} onRetry={() => loadProfiles(true)} />
       ) : !data ? (
-        <div class="table-skel" aria-busy={loading ? 'true' : undefined}>
-          {[0, 1, 2, 3].map((i) => <span key={i} class="skel" />)}
-        </div>
+        <TableSkeleton busy={loading} />
       ) : (
         <div class="table-scroll">
           <div role="table" aria-label={t('Play log by profile')} class="table log-table">
@@ -211,7 +198,7 @@ function DangerZone() {
       loadProfiles(true);
       statusStore.set((s) => (s.data ? { ...s, data: { ...s.data, playLog: { ...s.data.playLog, plays: 0 } } } : s));
     } catch (e) {
-      toast(`${t('Couldn’t clear the play log.')} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t clear the play log.'), e);
     } finally {
       setBusy(false);
     }

@@ -1,7 +1,9 @@
 package io.github.arkmind.seedy.player
 
+import androidx.annotation.OptIn
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.util.UnstableApi
 import org.jellyfin.sdk.model.api.PlayMethod
 
 /** The part of a stream this device failed on: the picture, the sound, or the file around them. */
@@ -12,6 +14,7 @@ enum class FailedPart { Video, Audio, File }
  * reading the stream broke ([unreadable]). Null when the error isn't about the stream itself (the network, the
  * server's answer).
  */
+@OptIn(UnstableApi::class)
 fun failedPart(errorCode: Int, rendererMime: String?, unreadable: Boolean = false): FailedPart? = when {
     MimeTypes.isVideo(rendererMime) -> FailedPart.Video
     MimeTypes.isAudio(rendererMime) || errorCode in AudioOutputErrors -> FailedPart.Audio

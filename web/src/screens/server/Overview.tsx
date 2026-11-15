@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { cardArt } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { userStore } from '../../lib/app-state';
-import { episodeTag, pct } from '../../lib/format';
+import { episodeTag, joinNames, pct } from '../../lib/format';
 import { formatNumber, t, tn, tx } from '../../lib/i18n';
-import { Link, href, navigate } from '../../lib/router';
+import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { Art } from '../../ui/cards';
 import { Icon } from '../../ui/icons';
@@ -13,8 +13,9 @@ import { meduToast } from '../../ui/medu-toast';
 import { Sheet, confirm, toast } from '../../ui/overlay';
 import { AdminLayout } from '../admin/AdminLayout';
 import { type ActivityEntry, errText, type FullUser, getActivity, getItemCounts, getPackages, getPlugins, getSessions, getStorage, getSystemInfo, getTasks, getUsers, type ItemCounts, type PackageInfo, type PluginInfo, restartingStore, restartServer, sameId, scanAllLibraries, seedyBackups, sendSessionMessage, type Session, shutdownServer, stopSession, type SystemInfo, type TaskInfo } from './api';
+import { Glyph } from './glyphs';
 import { InlineError, Notice, usePoll, UserAvatar } from './parts';
-import { activityWhen, dayDiff, fmtSize, hhmm, majorMinor, platformLabel, playDetail, playMethod, shortDate, uptime } from './format';
+import { activityWhen, dayDiff, fmtSize, hhmm, majorMinor, percent, platformLabel, playDetail, playMethod, shortDate, uptime } from './format';
 import { countPluginUpdates, pluginTargetAbi } from './plugins';
 import { sentenceCase, serverStartFromTasks } from './tasks';
 import { pluginUpdatesStore } from './status';
@@ -120,7 +121,7 @@ export function ServerOverview() {
       actions={
         <>
           <button type="button" class="btn btn-primary is-sm srv-btn-16" disabled={scanning || restarting} onClick={() => void scanAll()}>
-            <ScanIcon />
+            <Glyph name="refresh" size={17} />
             {scanning ? t('Scanning…') : t('Scan all libraries')}
           </button>
           <button type="button" class="btn btn-secondary" disabled={restarting} onClick={() => void restart()}>{restarting ? t('Restarting…') : t('Restart')}</button>
@@ -166,14 +167,6 @@ export function ServerOverview() {
   );
 }
 
-function ScanIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="17" height="17" class="ic" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
-      <path d="M20 12a8 8 0 1 1-2.3-5.6" /><path d="M20 4v5h-5" />
-    </svg>
-  );
-}
-
 /* ── Notices ── */
 
 function Notices({ info, plugins, packages, disks: diskList, restarting, onRestart }: {
@@ -191,7 +184,7 @@ function Notices({ info, plugins, packages, disks: diskList, restarting, onResta
       why = t('It was built for Jellyfin {built}; {server} needs a rebuilt version.', { built: majorMinor(abi), server });
     else why = t('It stopped with an error while starting. The server log has the details.');
     items.push(
-      <Notice key={p.Id} tone="warn" action={t('Open plugins')} href={href('/admin/plugins')} onAction={() => navigate('/admin/plugins')}>
+      <Notice key={p.Id} tone="warn" action={t('Open plugins')} to="/admin/plugins">
         <b>{t('{name} won’t load.', { name: p.Name })}</b> {why}
       </Notice>
     );
@@ -210,7 +203,7 @@ function Notices({ info, plugins, packages, disks: diskList, restarting, onResta
   }
   if (updates > 0) {
     items.push(
-      <Notice key="updates" tone="accent" action={t('Review')} href={href('/admin/plugins')} onAction={() => navigate('/admin/plugins')}>
+      <Notice key="updates" tone="accent" action={t('Review')} to="/admin/plugins">
         {tx(updates === 1 ? '{updates} is ready to install.' : '{updates} are ready to install.', {
           updates: <b>{tn(updates, '{n} plugin update', '{n} plugin updates')}</b>
         })}
@@ -350,7 +343,7 @@ function TasksPanel({ tasks }: { tasks: Data<TaskInfo[]> & { reload: () => void 
       ) : (
         running.map((task) => {
           const p = task.CurrentProgressPercentage;
-          const label = task.State === 'Cancelling' ? t('Stopping') : p === undefined || p === null ? t('Starting') : formatNumber(Math.floor(p) / 100, { style: 'percent' });
+          const label = task.State === 'Cancelling' ? t('Stopping') : p === undefined || p === null ? t('Starting') : percent(p);
           return (
             <div key={task.Id} class="srv-task">
               <div class="srv-task-line"><span class="srv-task-name">{sentenceCase(task.Name)}</span><span class="srv-task-state">{label}</span></div>
@@ -422,7 +415,7 @@ function DiskIcon({ ram }: { ram: boolean }) {
 
 function StoragePanel({ list, error, onRetry }: { list?: Disk[]; error: boolean; onRetry: () => void }) {
   return (
-    <section aria-labelledby="ov-storage" class="srv-box srv-storage">
+    <section aria-labelledby="ov-storage" class="srv-box">
       <div class="srv-box-head">
         <h2 id="ov-storage" class="srv-box-title">{t('Storage')}{list && <span> · {tn(list.length, '{n} disk', '{n} disks')}</span>}</h2>
         <Link to="/admin/settings" class="srv-box-link">{t('Change paths in Settings')}</Link>
@@ -572,7 +565,7 @@ function FirstScan({ scan, counts, serverId }: { scan?: TaskInfo; counts?: ItemC
     counts.AlbumCount ? tn(counts.AlbumCount, '{n} album', '{n} albums') : '',
     counts.BookCount ? tn(counts.BookCount, '{n} book', '{n} books') : ''
   ].filter(Boolean);
-  const list = found.length > 1 ? t('{list} and {last}', { list: found.slice(0, -1).join(', '), last: found[found.length - 1] }) : found[0] ?? '';
+  const list = joinNames(found);
   const minutes = Math.max(1, Math.round((Date.parse(done.EndTimeUtc) - Date.parse(done.StartTimeUtc)) / 60_000));
   const took = minutes < 60 ? tn(minutes, '{n} minute', '{n} minutes')
     : t('{h} h {m} min', { h: Math.floor(minutes / 60), m: minutes % 60 });

@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -41,10 +42,13 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
+import androidx.media3.common.text.Cue
 import io.github.arkmind.seedy.core.format.clock
 import io.github.arkmind.seedy.core.format.duration
+import io.github.arkmind.seedy.core.format.hourMinute
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.player.PlayerState
@@ -55,8 +59,8 @@ import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusRing
 import io.github.arkmind.seedy.ui.components.SeekGlyph
+import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.IconDef
-import io.github.arkmind.seedy.ui.icons.IconPart
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.BaseText
@@ -66,18 +70,20 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.MediaSegmentType
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 
 /** The TV player's tools, in the board's order. */
 enum class TvTool { Subtitles, Audio, Chapters, Episodes, Settings }
 
 internal object TvPlayerIcons {
-    val Subtitles = IconDef(2f, "M6 5h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z", "M7 11h3M13 11h4", "M7 15h6M15.5 15H17")
     val Audio = IconDef(2f, "M4 10v4M8 7v10", "M12 4v16", "M16 8v8M20 11v2")
     val Chapters = IconDef(2f, "M9 6h11M9 12h11M9 18h11", "M4 6h.01M4 12h.01", "M4 18h.01")
-    val Episodes = IconDef(2f, "M5 8h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z", "M6 5h12", "M9 2h6")
     val Settings = IconDef(2f, "M4 7h9M17 7h3", "M4 17h3M11 17h9", "M15 5a2 2 0 1 1 0 4a2 2 0 1 1 0-4zM9 15a2 2 0 1 1 0 4a2 2 0 1 1 0-4z")
-    val Next = IconDef(2.2f, listOf(IconPart("M6 5v14l10-7z", filled = true), IconPart("M18.5 5v14")))
+
+    /* The settings panel's rows. */
+    val Quality = IconDef(2f, "M3 6h18v12H3z", "M7 10v4M11 10v4M15 10h2v4h-2")
+    val Picture = IconDef(2f, "M4 9V4h5M20 9V4h-5", "M4 15v5h5M20 15v5h-5")
+    val ChapterList = IconDef(2f, "M9 6h11M9 12h11M9 18h11", "M4 6h.01M4 12h.01M4 18h.01")
+    val Info = IconDef(2f, "M12 3a9 9 0 1 1 0 18a9 9 0 1 1 0-18z", "M12 11v5M12 8h.01")
 }
 
 /** What the TV player's controls do. */
@@ -219,16 +225,16 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
                         ToolButton({ actions.onSeekBy(-seekBack * 1000L) }) { ink -> SeekGlyph(back = true, seconds = seekBack, size = 34.bp, color = ink) }
                         ToolButton({ actions.onSeekBy(seekForward * 1000L) }) { ink -> SeekGlyph(back = false, seconds = seekForward, size = 34.bp, color = ink) }
                     }
-                    if (state.next != null) ToolButton(actions.onNext) { ink -> SIcon(TvPlayerIcons.Next, size = 30.bp, color = ink) }
+                    if (state.next != null) ToolButton(actions.onNext) { ink -> SIcon(WebIcons.NextEpisode, size = 30.bp, color = ink) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.bp), verticalAlignment = Alignment.CenterVertically) {
                     @Composable
                     fun Tool(tool: TvTool, icon: IconDef, dot: Boolean = false) =
-                        ToolButton({ actions.onTool(tool) }, dot, Modifier.focusRequester(focus.tools.getValue(tool))) { ink -> SIcon(icon, size = 30.bp, color = ink) }
-                    Tool(TvTool.Subtitles, TvPlayerIcons.Subtitles, dot = state.subtitleIndex >= 0)
+                        ToolButton({ actions.onTool(tool) }, Modifier.focusRequester(focus.tools.getValue(tool)), dot = dot) { ink -> SIcon(icon, size = 30.bp, color = ink) }
+                    Tool(TvTool.Subtitles, AppIcons.Tracks, dot = state.subtitleIndex >= 0)
                     if (state.audio.size > 1) Tool(TvTool.Audio, TvPlayerIcons.Audio)
                     if (!item?.chapters.isNullOrEmpty()) Tool(TvTool.Chapters, TvPlayerIcons.Chapters)
-                    if (item?.type == BaseItemKind.EPISODE) Tool(TvTool.Episodes, TvPlayerIcons.Episodes)
+                    if (item?.type == BaseItemKind.EPISODE) Tool(TvTool.Episodes, AppIcons.PlayerEpisodes)
                     Tool(TvTool.Settings, TvPlayerIcons.Settings)
                 }
             }
@@ -243,7 +249,7 @@ private fun streamLabel(label: String): String =
 /** "Ends at 22:41 · 50 min left" (allowing for the playback speed). */
 private fun endsLine(state: PlayerState, now: LocalTime): String {
     val leftMs = ((state.durationMs - state.positionMs) / state.speed.coerceAtLeast(0.25f)).toLong().coerceAtLeast(0)
-    val ends = now.plusSeconds(leftMs / 1000).format(DateTimeFormatter.ofPattern("HH:mm"))
+    val ends = hourMinute(now.plusSeconds(leftMs / 1000))
     return join(t("Ends at {time}", "time" to ends), t("{time} left", "time" to duration(leftMs / 1000.0)))
 }
 
@@ -254,7 +260,7 @@ private fun liveLine(state: PlayerState): String {
 }
 
 @Composable
-private fun ToolButton(onClick: () -> Unit, dot: Boolean = false, modifier: Modifier = Modifier, icon: @Composable (Color) -> Unit) {
+private fun ToolButton(onClick: () -> Unit, modifier: Modifier = Modifier, dot: Boolean = false, icon: @Composable (Color) -> Unit) {
     TvPressable(onClick, modifier) { focused ->
         Box(
             Modifier.size(64.bp).clip(RoundedCornerShape(17.bp)).background(if (focused) SeedyColors.Inverse else Color.Transparent),
@@ -344,20 +350,26 @@ private fun TimeText(text: String) {
     BasicText(text, style = BaseText.copy(fontSize = 18.bsp, fontWeight = FontWeight(600), color = SeedyColors.Text, fontFeatureSettings = "tnum"))
 }
 
+/** The file's picture subtitles (PGS, DVD) where it places them, else [bottomGap] above the bottom edge. */
+@Composable
+private fun BoxWithConstraintsScope.PictureCues(cues: List<Cue>, bottomGap: Dp) {
+    val w = maxWidth
+    val h = maxHeight
+    for (cue in cues) {
+        val bitmap = cue.bitmap ?: continue
+        val width = if (cue.size > 0f) w * cue.size else w * 0.5f
+        val height = if (cue.bitmapHeight > 0f) h * cue.bitmapHeight else width * (bitmap.height.toFloat() / bitmap.width)
+        val x = if (cue.position >= 0f) w * cue.position - width * (if (cue.positionAnchor == 1) 0.5f else if (cue.positionAnchor == 2) 1f else 0f) else (w - width) / 2
+        val y = if (cue.line >= 0f && cue.lineType == 0) h * cue.line else h - height - bottomGap
+        androidx.compose.foundation.Image(bitmap.asImageBitmap(), null, Modifier.offset(x, y).size(width, height))
+    }
+}
+
 /** Subtitles in this TV's look (Settings · Subtitles): [bottom] above the bottom edge, or at the top. */
 @Composable
 private fun LookSubtitles(state: PlayerState, look: ResolvedStyle, bottom: androidx.compose.ui.unit.Dp) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val w = maxWidth
-        val h = maxHeight
-        for (cue in state.pictureCues) {
-            val bitmap = cue.bitmap ?: continue
-            val width = if (cue.size > 0f) w * cue.size else w * 0.5f
-            val height = if (cue.bitmapHeight > 0f) h * cue.bitmapHeight else width * (bitmap.height.toFloat() / bitmap.width)
-            val x = if (cue.position >= 0f) w * cue.position - width * (if (cue.positionAnchor == 1) 0.5f else if (cue.positionAnchor == 2) 1f else 0f) else (w - width) / 2
-            val y = if (cue.line >= 0f && cue.lineType == 0) h * cue.line else h - height - 48.bp
-            androidx.compose.foundation.Image(bitmap.asImageBitmap(), null, Modifier.offset(x, y).size(width, height))
-        }
+        PictureCues(state.pictureCues, 48.bp)
         if (state.lines.isNotEmpty()) {
             val size = when (look.size) {
                 "small" -> 32.bsp
@@ -378,16 +390,7 @@ private fun LookSubtitles(state: PlayerState, look: ResolvedStyle, bottom: andro
 @Composable
 private fun Subtitles(state: PlayerState, bottom: androidx.compose.ui.unit.Dp, size: TextUnit) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val w = maxWidth
-        val h = maxHeight
-        for (cue in state.pictureCues) {
-            val bitmap = cue.bitmap ?: continue
-            val width = if (cue.size > 0f) w * cue.size else w * 0.5f
-            val height = if (cue.bitmapHeight > 0f) h * cue.bitmapHeight else width * (bitmap.height.toFloat() / bitmap.width)
-            val x = if (cue.position >= 0f) w * cue.position - width * (if (cue.positionAnchor == 1) 0.5f else if (cue.positionAnchor == 2) 1f else 0f) else (w - width) / 2
-            val y = if (cue.line >= 0f && cue.lineType == 0) h * cue.line else h - height - 48.bp
-            androidx.compose.foundation.Image(bitmap.asImageBitmap(), null, Modifier.offset(x, y).size(width, height))
-        }
+        PictureCues(state.pictureCues, 48.bp)
         if (state.lines.isNotEmpty()) {
             BasicText(
                 state.lines.joinToString("\n"),

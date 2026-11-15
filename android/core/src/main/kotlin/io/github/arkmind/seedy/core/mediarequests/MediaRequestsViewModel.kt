@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.core.mediarequests
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.arkmind.seedy.core.data.ioOrNull
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.Dispatchers
@@ -22,9 +23,9 @@ enum class MediaTab { Discover, Mine, All }
 data class MediaProgress(val requests: List<MediaRequest>, val waiting: Int, val downloading: Int, val searching: Int, val ready: Int)
 
 /**
- * The Requests tab's Music and Books (web: screens/requests/music.tsx, books.tsx, mine.tsx): Discover's rows, the
- * person's requests (and everyone's for those who manage them) with approve, decline, search again, accept a lesser
- * quality and cancel.
+ * The Requests tab's Music and Books (web: screens/requests/RequestsMusic.tsx, RequestsBooks.tsx, RequestsMine.tsx):
+ * Discover's rows, the person's requests (and everyone's for those who manage them) with approve, decline, search
+ * again, accept a lesser quality and cancel.
  */
 class MediaRequestsViewModel(session: UserSession) : ViewModel() {
     val api = MediaRequestsApi(session.api)
@@ -103,7 +104,7 @@ class MediaRequestsViewModel(session: UserSession) : ViewModel() {
 
     private fun loadSummary() {
         viewModelScope.launch {
-            io { api.summary() }?.let { s -> _state.update { it.copy(summary = s) } }
+            ioOrNull { api.summary() }?.let { s -> _state.update { it.copy(summary = s) } }
         }
     }
 
@@ -117,7 +118,7 @@ class MediaRequestsViewModel(session: UserSession) : ViewModel() {
     private fun loadLists(music: Boolean) {
         val kind = if (music) "music" else "book"
         viewModelScope.launch {
-            val mine = io { api.list("mine", kind).results }
+            val mine = ioOrNull { api.list("mine", kind).results }
             setLists(music) { it.copy(mine = mine ?: it.mine ?: emptyList(), failed = mine == null && it.mine == null) }
         }
         if (_state.value.tab == MediaTab.All || _state.value.lists(music).all != null) loadAll(music)
@@ -125,7 +126,7 @@ class MediaRequestsViewModel(session: UserSession) : ViewModel() {
 
     private fun loadAll(music: Boolean) {
         viewModelScope.launch {
-            val all = io { api.list("all", if (music) "music" else "book").results }
+            val all = ioOrNull { api.list("all", if (music) "music" else "book").results }
             setLists(music) { it.copy(all = all ?: it.all ?: emptyList()) }
         }
     }
@@ -134,13 +135,13 @@ class MediaRequestsViewModel(session: UserSession) : ViewModel() {
     private fun loadRows(music: Boolean) {
         if (music) {
             for (row in MusicRow.entries) viewModelScope.launch {
-                val items = io { api.musicRow(row).results }
+                val items = ioOrNull { api.musicRow(row).results }
                 if (items == null) rowsLoaded.remove(true)
                 _state.update { s -> s.copy(musicRows = s.musicRows.map { if (it.row == row) it.copy(items = items ?: it.items ?: emptyList()) else it }) }
             }
         } else {
             for (row in BookRow.entries) viewModelScope.launch {
-                val r = io { api.bookRow(row) }
+                val r = ioOrNull { api.bookRow(row) }
                 if (r == null) rowsLoaded.remove(false)
                 _state.update { s -> s.copy(bookRows = s.bookRows.map { if (it.row == row) it.copy(items = r?.results ?: it.items ?: emptyList(), source = r?.source ?: it.source) else it }) }
             }
@@ -201,7 +202,5 @@ class MediaRequestsViewModel(session: UserSession) : ViewModel() {
 
     fun say(message: String?) = _state.update { it.copy(message = message) }
 
-    fun clearMessage() = _state.update { it.copy(message = null) }
-
-    private suspend fun <T> io(block: suspend () -> T): T? = withContext(Dispatchers.IO) { runCatching { block() }.getOrNull() }
+    fun messageShown() = _state.update { it.copy(message = null) }
 }

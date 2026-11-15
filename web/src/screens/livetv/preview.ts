@@ -1,25 +1,13 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { SERVER_URL, authHeader, deviceId, getSession } from '../../api/client';
+import { withApiKey } from '../../api/client';
 import { getPlaybackInfo } from '../../api/jellyfin';
-import { closesSettled, liveDeviceProfile, trackClose } from '../../player/live-profile';
+import { closeLiveStream, closesSettled, liveDeviceProfile, stopEncoding, trackClose } from '../../player/live-profile';
 
 /* The heroes' muted live preview: opens the channel's live stream through PlaybackInfo (AutoOpenLiveStream),
    plays it muted with hls.js, and closes the stream and its remux when the hero changes or the page goes.
    It reports no playback, so a preview never counts as watching. */
 
 export type PreviewState = 'idle' | 'loading' | 'playing' | 'failed';
-
-const withKey = (path: string) => {
-  const p = path.replace(/^\/videos\//, '/Videos/');
-  if (/[?&]ApiKey=/i.test(p)) return SERVER_URL + p;
-  return SERVER_URL + p + (p.includes('?') ? '&' : '?') + 'ApiKey=' + encodeURIComponent(getSession()?.token ?? '');
-};
-
-function fire(method: string, path: string): Promise<unknown> | undefined {
-  try {
-    return fetch(SERVER_URL + path, { method, keepalive: true, headers: { Authorization: authHeader(), Accept: 'application/json' } }).catch(() => undefined);
-  } catch { return undefined; /* page closing */ }
-}
 
 const saveData = () => !!(navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
 
@@ -53,7 +41,7 @@ export function useLivePreview(channelId: string | undefined, enabled = true) {
         session = { play: res.PlaySessionId, live: src?.LiveStreamId };
         if (!alive) return;
         if (res.ErrorCode || !src?.TranscodingUrl) throw new Error(res.ErrorCode ?? 'NoStream');
-        const url = withKey(src.TranscodingUrl);
+        const url = withApiKey(src.TranscodingUrl);
         el.muted = true;
         if (el.canPlayType('application/vnd.apple.mpegurl') && !/Chrome|Firefox/.test(navigator.userAgent)) {
           el.src = url;
@@ -77,8 +65,8 @@ export function useLivePreview(channelId: string | undefined, enabled = true) {
     // Closing the tab closes the stream too (the effect's cleanup doesn't run then).
     const onHide = () => {
       if (!session) return;
-      fire('DELETE', `/Videos/ActiveEncodings?deviceId=${encodeURIComponent(deviceId())}&playSessionId=${encodeURIComponent(session.play)}`);
-      if (session.live) fire('POST', `/LiveStreams/Close?liveStreamId=${encodeURIComponent(session.live)}`);
+      void stopEncoding(session.play);
+      if (session.live) void closeLiveStream(session.live);
       session = null;
     };
     window.addEventListener('pagehide', onHide);
@@ -94,8 +82,8 @@ export function useLivePreview(channelId: string | undefined, enabled = true) {
         try { el.pause(); el.removeAttribute('src'); el.load(); } catch { /* detached */ }
       }
       if (session) {
-        fire('DELETE', `/Videos/ActiveEncodings?deviceId=${encodeURIComponent(deviceId())}&playSessionId=${encodeURIComponent(session.play)}`);
-        if (session.live) trackClose(fire('POST', `/LiveStreams/Close?liveStreamId=${encodeURIComponent(session.live)}`));
+        void stopEncoding(session.play);
+        if (session.live) trackClose(closeLiveStream(session.live));
       }
     };
   }, [channelId, enabled]);

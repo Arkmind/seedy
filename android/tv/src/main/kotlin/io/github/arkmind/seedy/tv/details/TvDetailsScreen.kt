@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -27,6 +28,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import io.github.arkmind.seedy.core.format.seasonEpisodeMeta
+import io.github.arkmind.seedy.tv.parts.FocusWhen
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,15 +57,12 @@ import io.github.arkmind.seedy.core.format.isNewEpisode
 import io.github.arkmind.seedy.core.format.isVirtual
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.format.playLabel
-import io.github.arkmind.seedy.core.format.premiereDay
 import io.github.arkmind.seedy.core.format.progress
 import io.github.arkmind.seedy.core.format.rating
 import io.github.arkmind.seedy.core.format.remainingSeconds
 import io.github.arkmind.seedy.core.format.runtime
 import io.github.arkmind.seedy.core.format.score
 import io.github.arkmind.seedy.core.format.timeLeft
-import io.github.arkmind.seedy.core.format.dayMonth
-import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.format.year
 import io.github.arkmind.seedy.core.format.yearRange
 import io.github.arkmind.seedy.core.i18n.t
@@ -115,15 +115,7 @@ fun TvDetailsScreen(state: DetailsViewModel.State, actions: TvDetailsActions, ca
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
         val art = item?.let { viewer.images?.backdrop(it, 1920) } ?: state.children?.firstNotNullOfOrNull { viewer.images?.backdrop(it, 1920) }
         if (art != null && item?.type != BaseItemKind.PERSON && viewer.backdrops) AsyncImage(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.horizontalGradient(0f to SeedyColors.Bg, 0.32f to SeedyColors.Bg.copy(alpha = 0.92f), 0.62f to SeedyColors.Bg.copy(alpha = 0.4f), 1f to SeedyColors.Bg.copy(alpha = 0.1f)),
-            ),
-        )
-        Box(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(520.bp)
-                .background(Brush.verticalGradient(0f to Color.Transparent, 0.6f to SeedyColors.Bg, 1f to SeedyColors.Bg)),
-        )
+        TvHeroShade()
         if (item == null) {
             if (!state.loading) {
                 SText(
@@ -152,7 +144,7 @@ fun TvDetailsScreen(state: DetailsViewModel.State, actions: TvDetailsActions, ca
             }
         }
     }
-    LaunchedEffect(item != null) { if (item != null) playFocus.focusSoon() }
+    FocusWhen(item != null, playFocus)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -171,7 +163,7 @@ private fun Hero(
     val gaps = state.gaps
     Column(Modifier.padding(start = 96.bp, top = 96.bp).width(1240.bp), verticalArrangement = Arrangement.spacedBy(20.bp)) {
         val name = item.name.orEmpty()
-        SText(name, size = titleSize(name), weight = 900, lineHeight = 0.9f, tracking = -0.02f, color = SeedyColors.White, uppercase = true, maxLines = 2)
+        SText(name, size = tvHeroTitleSize(name), weight = 900, lineHeight = 0.9f, tracking = -0.02f, color = SeedyColors.White, uppercase = true, maxLines = 2)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(18.bp), verticalArrangement = Arrangement.spacedBy(8.bp), itemVerticalAlignment = Alignment.CenterVertically) {
             val first = if (isSeries) item.yearRange else item.year?.toString()
             if (!first.isNullOrEmpty()) SText(first, size = 21.bsp, weight = 500, color = SeedyColors.TextHero)
@@ -223,25 +215,39 @@ private fun Hero(
     }
 }
 
+/** The hero's shading over the backdrop: dark on the text's side, fading in towards the rows below. */
+@Composable
+internal fun BoxScope.TvHeroShade() {
+    Box(
+        Modifier.fillMaxSize().background(
+            Brush.horizontalGradient(0f to SeedyColors.Bg, 0.32f to SeedyColors.Bg.copy(alpha = 0.92f), 0.62f to SeedyColors.Bg.copy(alpha = 0.4f), 1f to SeedyColors.Bg.copy(alpha = 0.1f)),
+        ),
+    )
+    Box(
+        Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(520.bp)
+            .background(Brush.verticalGradient(0f to Color.Transparent, 0.6f to SeedyColors.Bg, 1f to SeedyColors.Bg)),
+    )
+}
+
 /** 92 px, smaller (down to 60) so the title fits its 1240 px on one line (Noto Sans Black capitals run about 0.72 em). */
-private fun titleSize(title: String): TextUnit {
+internal fun tvHeroTitleSize(title: String): TextUnit {
     val fit = 1240f / (title.length.coerceAtLeast(4) * 0.72f)
     return (fit.coerceIn(60f, 92f) / 2f).sp
 }
 
 /** The board's 66 px hero buttons: translucent, the main one light; light with the white ring when focused. */
 @Composable
-private fun HeroButton(label: String?, icon: IconDef, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false, iconColor: Color? = null) {
+private fun HeroButton(label: String?, icon: IconDef, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false) {
     TvPressable(onClick, modifier) { focused ->
         val light = primary || focused
         Row(
             Modifier.focusScale(focused, 1.04f).focusRing(focused, radius = 19.bp, gap = 5.bp, ring = 5.bp).height(66.bp).clip(RoundedCornerShape(19.bp))
                 .background(if (light) SeedyColors.Inverse else Color.White.copy(alpha = 0.14f))
-                .padding(horizontal = if (label == null) 26.bp else if (primary) 34.bp else 26.bp),
+                .padding(horizontal = if (primary && label != null) 34.bp else 26.bp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.bp),
         ) {
             val ink = if (light) SeedyColors.InkInverse else SeedyColors.White
-            SIcon(icon, size = 26.bp, color = iconColor ?: ink, stroke = if (icon.stroke > 0f) 2.2f else 0f)
+            SIcon(icon, size = 26.bp, color = ink, stroke = if (icon.stroke > 0f) 2.2f else 0f)
             if (label != null) SText(label, size = 22.bsp, weight = if (primary) 800 else 700, color = ink, maxLines = 1)
         }
     }
@@ -377,24 +383,10 @@ private fun EpisodeCard(ep: BaseItemDto, today: LocalDate, onPlay: () -> Unit, m
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.bp)) {
                 SText(join(ep.episodeNumber, ep.name), size = 20.bsp, weight = 700, color = if (upcoming) SeedyColors.Text2 else SeedyColors.White, maxLines = 1)
-                SText(tvEpisodeMeta(ep, today), size = 16.bsp, color = SeedyColors.Text3, maxLines = 1)
+                SText(seasonEpisodeMeta(ep, today, showWatched = true), size = 16.bsp, color = SeedyColors.Text3, maxLines = 1)
             }
         }
     }
-}
-
-/** "54 min · Watched", "52 min · 34 min left", "49 min · 9 Oct", "Airs Fri 23 Oct". */
-fun tvEpisodeMeta(ep: BaseItemDto, today: LocalDate): String {
-    val day = ep.premiereDay
-    if (ep.isVirtual) return day?.let { if (it.isAfter(today)) t("Airs {date}", "date" to weekdayDate(it)) else dayMonth(it) }.orEmpty()
-    return join(
-        ep.runtime,
-        when {
-            ep.userData?.played == true -> t("Watched")
-            ep.inProgress -> timeLeft(ep.remainingSeconds)
-            else -> day?.let(::dayMonth)
-        },
-    )
 }
 
 @Composable

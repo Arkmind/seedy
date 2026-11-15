@@ -137,26 +137,24 @@ public sealed partial class SeedyDatabase
         Mode = r.GetString(5),
         ForeignId = r.GetString(6),
         Title = r.GetString(7),
-        Subtitle = r.IsDBNull(8) ? null : r.GetString(8),
-        CoverUrl = r.IsDBNull(9) ? null : r.GetString(9),
+        Subtitle = StrOrNull(r, 8),
+        CoverUrl = StrOrNull(r, 9),
         Units = r.GetInt32(10),
         Data = r.GetString(11),
         Parts = r.GetString(12),
         Status = r.GetString(13),
-        Note = r.IsDBNull(14) ? null : r.GetString(14),
-        Progress = r.IsDBNull(15) ? null : r.GetDouble(15),
+        Note = StrOrNull(r, 14),
+        Progress = DoubleOrNull(r, 15),
         Attention = r.GetInt64(16) != 0,
-        ItemId = r.IsDBNull(17) ? null : r.GetString(17),
+        ItemId = StrOrNull(r, 17),
         CreatedAt = FromMs(r.GetInt64(18)),
         UpdatedAt = FromMs(r.GetInt64(19)),
-        DecidedAt = r.IsDBNull(20) ? null : FromMs(r.GetInt64(20)),
-        DecidedBy = r.IsDBNull(21) ? null : r.GetString(21),
-        SentAt = r.IsDBNull(22) ? null : FromMs(r.GetInt64(22)),
-        SearchedAt = r.IsDBNull(23) ? null : FromMs(r.GetInt64(23)),
-        ReadyAt = r.IsDBNull(24) ? null : FromMs(r.GetInt64(24))
+        DecidedAt = DateOrNull(r, 20),
+        DecidedBy = StrOrNull(r, 21),
+        SentAt = DateOrNull(r, 22),
+        SearchedAt = DateOrNull(r, 23),
+        ReadyAt = DateOrNull(r, 24)
     };
-
-    private static long? MsOrNull(DateTime? d) => d is null ? null : Ms(d.Value);
 
     /// <summary>Saves a request, adding it or replacing the stored one.</summary>
     /// <param name="q">The request.</param>
@@ -236,14 +234,7 @@ public sealed partial class SeedyDatabase
         cmd.CommandText = $"SELECT {RequestColumns} FROM media_requests"
             + (where.Count > 0 ? " WHERE " + string.Join(" AND ", where) : string.Empty)
             + " ORDER BY created_at DESC LIMIT " + Math.Clamp(limit, 1, 5000).ToString(CultureInfo.InvariantCulture);
-        var list = new List<MediaRequestRecord>();
-        using var r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            list.Add(ReadRequest(r));
-        }
-
-        return list;
+        return ReadAll(cmd, ReadRequest);
     }
 
     /// <summary>Removes a request.</summary>

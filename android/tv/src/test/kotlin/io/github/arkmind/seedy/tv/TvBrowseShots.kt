@@ -8,9 +8,10 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalInputModeManager
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.arkmind.seedy.core.feature.AdvancedActions
 import io.github.arkmind.seedy.tv.details.TvDetailsActions
 import io.github.arkmind.seedy.tv.details.TvDetailsScreen
 import io.github.arkmind.seedy.tv.favorites.TvFavoritesScreen
@@ -20,7 +21,6 @@ import io.github.arkmind.seedy.tv.requests.TvRequestsActions
 import io.github.arkmind.seedy.tv.requests.TvRequestsScreen
 import io.github.arkmind.seedy.tv.search.TvSearchActions
 import io.github.arkmind.seedy.tv.search.TvSearchScreen
-import io.github.arkmind.seedy.tv.seasons.TvAdvancedActions
 import io.github.arkmind.seedy.tv.seasons.TvRequestSeasonsContent
 import io.github.arkmind.seedy.tv.shell.TvPlace
 import io.github.arkmind.seedy.tv.shell.TvRail
@@ -82,7 +82,7 @@ class TvBrowseShots {
     fun requestSeasons() = shot("TVRequestSeasons") {
         TvDetailsScreen(TvBrowseSamples.details, TvDetailsActions(), canRequest = true, today = TvBrowseSamples.today)
         TvRequestSeasonsContent(
-            TvBrowseSamples.harrowgate, onToggle = {}, onToggleAll = {}, on4k = {}, advanced = TvAdvancedActions({}, {}, {}, {}),
+            TvBrowseSamples.harrowgate, onToggle = {}, onToggleAll = {}, on4k = {}, advanced = AdvancedActions({}, {}, {}, {}),
             onRetry = {}, onSubmit = {}, onDismiss = {}, focusSeason = 3,
         )
     }

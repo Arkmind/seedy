@@ -209,9 +209,6 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Gets or sets how many automatic backups to keep.</summary>
     public int BackupKeep { get; set; } = 4;
 
-    /// <summary>Gets or sets whether automatic backups include the database.</summary>
-    public bool BackupDatabase { get; set; } = true;
-
     /// <summary>Gets or sets whether automatic backups include metadata.</summary>
     public bool BackupMetadata { get; set; } = true;
 
@@ -295,7 +292,7 @@ public class HomeRowSetting
 }
 
 /// <summary>A profile's Seerr account link.</summary>
-public class SeerrProfile
+public class SeerrProfile : IUserProfile
 {
     /// <summary>Gets or sets the Jellyfin user id ("N" format).</summary>
     public string UserId { get; set; } = string.Empty;
@@ -311,7 +308,7 @@ public class SeerrProfile
 }
 
 /// <summary>A profile's play log switches.</summary>
-public class PlayLogProfile
+public class PlayLogProfile : IUserProfile
 {
     /// <summary>Gets or sets the Jellyfin user id ("N" format).</summary>
     public string UserId { get; set; } = string.Empty;
@@ -324,7 +321,7 @@ public class PlayLogProfile
 }
 
 /// <summary>A profile's music and book request limits.</summary>
-public class MediaRequestProfile
+public class MediaRequestProfile : IUserProfile
 {
     /// <summary>Gets or sets the Jellyfin user id ("N" format).</summary>
     public string UserId { get; set; } = string.Empty;

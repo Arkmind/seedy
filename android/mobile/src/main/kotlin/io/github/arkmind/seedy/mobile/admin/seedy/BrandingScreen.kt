@@ -1,6 +1,5 @@
 package io.github.arkmind.seedy.mobile.admin.seedy
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -19,14 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.toColorInt
 import io.github.arkmind.seedy.core.admin.seedy.AccentSwatches
 import io.github.arkmind.seedy.core.admin.seedy.AdminConfig
 import io.github.arkmind.seedy.core.admin.seedy.BrandingActions
@@ -51,8 +47,12 @@ import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SheetState
 import io.github.arkmind.seedy.mobile.settings.StackRow
+import io.github.arkmind.seedy.mobile.settings.Swatch
+import io.github.arkmind.seedy.mobile.settings.SwatchDot
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
+import io.github.arkmind.seedy.mobile.settings.choices
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
+import io.github.arkmind.seedy.mobile.settings.withValue
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
@@ -176,7 +176,7 @@ private fun AccentColourRow(accent: String, actions: BrandingActions) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(Modifier.padding(start = 2.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 for ((label, value) in AccentSwatches) {
-                    AccentDot(Color(android.graphics.Color.parseColor(value)), value.equals(accent, ignoreCase = true), t(label)) {
+                    SwatchDot(Swatch(value, t(label), value.toColorInt().toLong() and 0xFFFFFFFFL), value.equals(accent, ignoreCase = true)) {
                         hex = value
                         actions.setAccent(value)
                     }
@@ -201,22 +201,6 @@ private fun AccentColourRow(accent: String, actions: BrandingActions) {
                 )
             }
         }
-    }
-}
-
-/** A 34 px accent swatch; the chosen one has the white ring of the settings boards. */
-@Composable
-private fun AccentDot(color: Color, on: Boolean, label: String, onClick: () -> Unit) {
-    val stroke = SeedyColors.Stroke
-    Canvas(Modifier.size(34.dp).tap(role = Role.RadioButton, onClick = onClick)) {
-        val r = size.minDimension / 2
-        val c = Offset(size.width / 2, size.height / 2)
-        if (on) {
-            drawCircle(Color.White, r + 5.dp.toPx(), c)
-            drawCircle(SeedyColors.Panel, r + 3.dp.toPx(), c)
-        }
-        drawCircle(color, r, c)
-        if (!on) drawCircle(stroke, r - 0.75.dp.toPx(), c, style = Stroke(1.5.dp.toPx()))
     }
 }
 

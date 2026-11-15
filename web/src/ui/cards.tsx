@@ -4,7 +4,7 @@ import { cardArt, personImageUrl, tmdbImage, type CardArt } from '../api/images'
 import type { BaseItem } from '../api/types';
 import type { SeerrItem } from '../api/seedy';
 import { Link, href, navigate } from '../lib/router';
-import { pct, progressFraction } from '../lib/format';
+import { initials, pct, progressFraction, score } from '../lib/format';
 import { useStore } from '../lib/store';
 import { tvActive } from '../screens/me/effects';
 import { isAudioItem } from '../audio/api';
@@ -273,9 +273,12 @@ export function SeerrStatusPill({ status }: { status: SeerrItem['status'] }) {
   return null;
 }
 
+/* "movie" / "series" inside a poster's spoken name. */
+const kindWord = (item: Pick<SeerrItem, 'mediaType'>) => (item.mediaType === 'movie' ? t('movie') : t('series'));
+
 export function TypePill({ type }: { type: 'movie' | 'tv' | 'upcoming' }) {
   const cls = type === 'movie' ? 'is-movie' : type === 'tv' ? 'is-series' : 'is-upcoming';
-  return <span class={'type-pill ' + cls}>{type === 'movie' ? 'Movie' : type === 'tv' ? t('Series') : t('Upcoming')}</span>;
+  return <span class={'type-pill ' + cls}>{type === 'movie' ? t('Movie') : type === 'tv' ? t('Series') : t('Upcoming')}</span>;
 }
 
 export const seerrPath = (s: Pick<SeerrItem, 'mediaType' | 'tmdbId'>) => `/request/${s.mediaType}/${s.tmdbId}`;
@@ -310,7 +313,7 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
   return (
     <div class="card poster-card" style={style}>
       <div class="card-media is-poster" tabIndex={-1}>
-        <Link to={target} class="poster-link" aria-label={`${title}, ${item.mediaType === 'movie' ? 'movie' : 'series'}${item.year && !upcoming ? ', ' + item.year : ''}`}>
+        <Link to={target} class="poster-link" aria-label={item.year && !upcoming ? t('{title}, {kind}, {year}', { title, kind: kindWord(item), year: item.year }) : t('{title}, {kind}', { title, kind: kindWord(item) })}>
           {poster ? <Img src={poster} class="art" /> : <span aria-hidden="true" class="art-title">{title}</span>}
         </Link>
         <TypePill type={upcoming ? 'upcoming' : item.mediaType} />
@@ -333,14 +336,14 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
           <span class="card-meta" style={{ fontWeight: 600, color: metaAccent ? 'var(--seedy-accent)' : undefined }}>{meta}</span>
         ) : (
           <span class="card-meta is-score">
-            {item.rating ? <><Icon name="star" size={13} color="var(--seedy-accent)" />{item.rating.toFixed(1)}</> : null}
+            {item.rating ? <><Icon name="star" size={13} color="var(--seedy-accent)" />{score(item.rating)}</> : null}
             {item.rating && item.year ? ' · ' : ''}
             {item.year}
           </span>
         )}
       </Link>
       {showRequestButton && requestable && (
-        <button type="button" class="btn btn-primary is-sm is-block" aria-label={`Request ${item.title} (${item.mediaType === 'movie' ? 'movie' : 'series'}${item.year ? ', ' + item.year : ''})`} aria-haspopup={item.mediaType === 'tv' ? 'dialog' : undefined} disabled={requesting} onClick={() => onRequest(item)}>
+        <button type="button" class="btn btn-primary is-sm is-block" aria-label={item.year ? t('Request {title} ({kind}, {year})', { title: item.title, kind: kindWord(item), year: item.year }) : t('Request {title} ({kind})', { title: item.title, kind: kindWord(item) })} aria-haspopup={item.mediaType === 'tv' ? 'dialog' : undefined} disabled={requesting} onClick={() => onRequest(item)}>
           <Icon name="plus" size={18} stroke={2.6} />
           {requesting ? t('Requesting…') : t('Request')}
         </button>
@@ -395,8 +398,8 @@ export function Top10Card({ rank, item, meta, onOpen }: { rank: number; item: Ba
 }
 
 /* My media: one tile per library. */
-export function LibraryTile({ view, width = 300, artSrc }: { view: BaseItem & { Covers?: string[] }; width?: number; artSrc?: string }) {
-  const art = artSrc ? { src: artSrc, titleOnArt: false } : cardArt(view, 640);
+export function LibraryTile({ view, width = 300 }: { view: BaseItem & { Covers?: string[] }; width?: number }) {
+  const art = cardArt(view, 640);
   const covers = !art.src && view.Covers?.length ? view.Covers : null;
   return (
     <Link to={`/library/${view.Id}`} class={'lib-tile' + (covers ? ' has-covers' + (view.CollectionType === 'books' ? ' is-books' : '') : '')} style={{ flex: `0 0 ${width}px`, width: width + 'px' }}>
@@ -414,14 +417,15 @@ export function LibraryTile({ view, width = 300, artSrc }: { view: BaseItem & { 
 
 const CAST_BG = ['#3d2424', '#26362b', '#3f3322', '#2f2840', '#1f3a3c', '#3d2436', '#2e2e2e', '#24313d'];
 const CAST_INK = ['#f0b9a0', '#d9e3b5', '#f2cf86', '#e3c4ff', '#a8e6df', '#ffb3e6', '#e0e0e0', '#c9d6e3'];
+/* A cast face's colours while there's no photo, taking turns down the list. */
+export const castFace = (index: number) => ({ background: CAST_BG[index % CAST_BG.length], color: CAST_INK[index % CAST_INK.length] });
 
 export function CastCard({ person, index, role }: { person: { Id: string; Name: string; PrimaryImageTag?: string }; index: number; role?: string }) {
   const img = personImageUrl(person, 280);
-  const initials = person.Name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   return (
     <Link to={`/details/${person.Id}`} class="cast-card">
-      <span aria-hidden="true" class="cast-face" style={{ background: CAST_BG[index % CAST_BG.length], color: CAST_INK[index % CAST_INK.length] }}>
-        {img ? <Img src={img} class="art" /> : initials}
+      <span aria-hidden="true" class="cast-face" style={castFace(index)}>
+        {img ? <Img src={img} class="art" /> : initials(person.Name)}
       </span>
       <span class="cast-text">
         <span class="cast-name">{person.Name}</span>
@@ -431,16 +435,16 @@ export function CastCard({ person, index, role }: { person: { Id: string; Name: 
   );
 }
 
-/* Skeleton placeholders sized like the real cards. */
-export function SkeletonCards({ count, width, poster }: { count: number; width: number; poster?: boolean }) {
+/* Skeleton placeholders sized like the real cards: [width] for a row's fixed cards, none in a grid. */
+export function SkeletonCards({ count, width, poster, second = '45%' }: { count: number; width?: number; poster?: boolean; second?: string }) {
   return (
     <>
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} class="card" style={{ flex: `0 0 ${width}px`, width: width + 'px' }} aria-hidden="true">
+        <div key={i} class="card" style={width ? { flex: `0 0 ${width}px`, width: width + 'px' } : undefined} aria-hidden="true">
           <div class={'card-media skel' + (poster ? ' is-poster' : '')} />
           <div class="card-text" style={{ gap: '8px' }}>
             <span class="skel skel-line" style={{ width: '70%' }} />
-            <span class="skel skel-line" style={{ width: '45%' }} />
+            <span class="skel skel-line" style={{ width: second }} />
           </div>
         </div>
       ))}

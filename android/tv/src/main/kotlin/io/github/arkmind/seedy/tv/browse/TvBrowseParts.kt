@@ -28,7 +28,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -191,12 +190,6 @@ fun TvMessage(title: String, text: String, modifier: Modifier = Modifier) {
     }
 }
 
-/** Focuses [requester] once [ready]. */
-@Composable
-fun FocusWhen(ready: Boolean, requester: FocusRequester) {
-    LaunchedEffect(ready) { if (ready) requester.focusSoon() }
-}
-
 /**
  * Room for the focus ring around a row that clips (a lazy row): the row is [room] bigger on every side than the place
  * it takes, so give it contentPadding of [room] and its cards sit exactly where the board has them.
@@ -212,5 +205,3 @@ fun Modifier.ringRoom(room: Dp): Modifier = this.layout { measurable, c ->
     layout(p.width - 2 * r, p.height - 2 * r) { p.place(-r, -r) }
 }
 
-/** Attaches [requester] when there is one. */
-fun Modifier.maybeFocus(requester: FocusRequester?): Modifier = if (requester != null) focusRequester(requester) else this

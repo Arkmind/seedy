@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,10 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.feature.SeasonsTarget
@@ -42,14 +38,17 @@ import io.github.arkmind.seedy.core.feature.SeerrTitleViewModel.Companion.reques
 import io.github.arkmind.seedy.core.format.duration
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.format.parseDay
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.seedy.SeerrDetails
-import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.core.seedy.tmdbImage
+import io.github.arkmind.seedy.tv.details.TvHeroShade
+import io.github.arkmind.seedy.tv.details.tvHeroTitleSize
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
 import io.github.arkmind.seedy.tv.nav.TvRoute
 import io.github.arkmind.seedy.tv.parts.TvPressable
+import io.github.arkmind.seedy.tv.parts.TvToast
 import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusRing
@@ -64,6 +63,7 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
+import io.github.arkmind.seedy.ui.theme.seerrToneColour
 import java.util.Locale
 
 /** What the TV Seerr title page does; the route wires these to the view model and navigation. */
@@ -87,7 +87,7 @@ fun TvSeerrTitleRoute(mediaType: String, tmdbId: Int) {
     var seasons by remember { mutableStateOf(false) }
     val primary = remember { FocusRequester() }
     val d = state.details
-    val local = libraryUuid(d?.jellyfinItemId)
+    val local = uuidOf(d?.jellyfinItemId)
     TvSeerrTitleScreen(
         state, canRequest = vm.canRequest, allow4k = vm.allow4k,
         actions = TvSeerrTitleActions(
@@ -97,7 +97,7 @@ fun TvSeerrTitleRoute(mediaType: String, tmdbId: Int) {
             onLibrary = { local?.let { nav.go(TvRoute.Details(it)) } },
             onPlay = { local?.let { nav.go(TvRoute.Player(it)) } },
             onRetry = vm::load,
-            onMessageShown = vm::clearMessage,
+            onMessageShown = vm::messageShown,
         ),
         primaryFocus = primary,
     )
@@ -125,15 +125,7 @@ fun TvSeerrTitleScreen(
     val d = state.details
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
         if (d != null) Artwork(tmdbImage(d.backdropPath, "w1280"), Modifier.fillMaxSize(), placeholder = SeedyColors.Bg)
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.horizontalGradient(0f to SeedyColors.Bg, 0.32f to SeedyColors.Bg.copy(alpha = 0.92f), 0.62f to SeedyColors.Bg.copy(alpha = 0.4f), 1f to SeedyColors.Bg.copy(alpha = 0.1f)),
-            ),
-        )
-        Box(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(520.bp)
-                .background(Brush.verticalGradient(0f to Color.Transparent, 0.6f to SeedyColors.Bg, 1f to SeedyColors.Bg)),
-        )
+        TvHeroShade()
         if (d == null) {
             if (!state.loading) {
                 Column(Modifier.padding(start = 96.bp, top = 96.bp).width(1100.bp), verticalArrangement = Arrangement.spacedBy(20.bp)) {
@@ -148,18 +140,7 @@ fun TvSeerrTitleScreen(
         } else {
             Hero(d, state, canRequest, allow4k, actions, primaryFocus)
         }
-        state.message?.let { message ->
-            LaunchedEffect(message) {
-                kotlinx.coroutines.delay(3200)
-                actions.onMessageShown()
-            }
-            SText(
-                message,
-                Modifier.align(Alignment.BottomStart).padding(start = 96.bp, bottom = 48.bp).clip(RoundedCornerShape(16.bp)).background(SeedyColors.Surface)
-                    .padding(horizontal = 24.bp, vertical = 16.bp),
-                size = 20.bsp, weight = 600, color = SeedyColors.Text,
-            )
-        }
+        TvToast(state.message, actions.onMessageShown, start = 96.bp)
     }
     LaunchedEffect(d != null, state.loading) { if (d != null || !state.loading) primaryFocus.focusSoon() }
 }
@@ -184,12 +165,12 @@ private fun Hero(d: SeerrDetails, state: SeerrTitleViewModel.State, canRequest: 
                     Modifier.height(36.bp).clip(CircleShape).background(SeedyColors.Scrim).padding(horizontal = 14.bp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.bp),
                 ) {
-                    Box(Modifier.size(9.bp).background(toneOf(tone), CircleShape))
+                    Box(Modifier.size(9.bp).background(seerrToneColour(tone), CircleShape))
                     SText(label, size = 16.bsp, weight = 700, color = SeedyColors.Text, maxLines = 1)
                 }
             }
         }
-        SText(d.title, Modifier.width(1240.bp), size = titleSize(d.title), weight = 900, lineHeight = 0.9f, tracking = -0.02f, color = SeedyColors.White, uppercase = true, maxLines = 2)
+        SText(d.title, Modifier.width(1240.bp), size = tvHeroTitleSize(d.title), weight = 900, lineHeight = 0.9f, tracking = -0.02f, color = SeedyColors.White, uppercase = true, maxLines = 2)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(18.bp), verticalArrangement = Arrangement.spacedBy(8.bp), itemVerticalAlignment = Alignment.CenterVertically) {
             (d.year ?: parseDay(d.releaseDate)?.year?.toString())?.let { SText(it, size = 21.bsp, weight = 500, color = SeedyColors.TextHero) }
             d.certification?.takeIf { it.isNotBlank() }?.let {
@@ -256,7 +237,7 @@ private fun Hero(d: SeerrDetails, state: SeerrTitleViewModel.State, canRequest: 
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.bp),
                     ) {
                         SText(t("Season {n}", "n" to s.seasonNumber), size = 18.bsp, weight = 700, color = SeedyColors.White, maxLines = 1)
-                        Box(Modifier.size(8.bp).background(toneOf(tone), CircleShape))
+                        Box(Modifier.size(8.bp).background(seerrToneColour(tone), CircleShape))
                         SText(join(label, s.episodeCount.takeIf { it > 0 }?.let { tn(it, "{n} episode", "{n} episodes") }), size = 16.bsp, color = SeedyColors.Text2, maxLines = 1)
                     }
                 }
@@ -264,19 +245,6 @@ private fun Hero(d: SeerrDetails, state: SeerrTitleViewModel.State, canRequest: 
         }
         Box(Modifier.height(96.bp))
     }
-}
-
-private fun toneOf(tone: String): Color = when (tone) {
-    "ok" -> SeedyColors.Ok
-    "pending" -> SeedyColors.Pending
-    "danger" -> SeedyColors.Danger
-    else -> SeedyColors.Text3
-}
-
-/** 92 px, smaller (down to 60) so the title fits 1240 px on one line, as on the details page. */
-private fun titleSize(title: String): TextUnit {
-    val fit = 1240f / (title.length.coerceAtLeast(4) * 0.72f)
-    return (fit.coerceIn(60f, 92f) / 2f).sp
 }
 
 /** The details page's 66 px hero button: translucent, the main one light; light with the ring when focused. */

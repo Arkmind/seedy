@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -20,7 +18,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -37,11 +34,13 @@ import io.github.arkmind.seedy.mobile.browse.Chip
 import io.github.arkmind.seedy.mobile.browse.ChipRow
 import io.github.arkmind.seedy.mobile.browse.GridCard
 import io.github.arkmind.seedy.mobile.browse.GridCardSkeleton
+import io.github.arkmind.seedy.mobile.browse.Message
 import io.github.arkmind.seedy.mobile.browse.Portrait
 import io.github.arkmind.seedy.mobile.browse.TabHeader
-import io.github.arkmind.seedy.mobile.library.Message
+import io.github.arkmind.seedy.mobile.browse.fullLine
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
+import io.github.arkmind.seedy.mobile.parts.bleed
 import io.github.arkmind.seedy.mobile.parts.tabBarHeight
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.theme.SText
@@ -80,8 +79,8 @@ fun FavoritesScreen(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        full("top") {
-            Column(Modifier.bleed(20.dp)) {
+        fullLine("top") {
+            Column(Modifier.bleed(20.dp, 20.dp)) {
                 TabHeader(t("Favorites"), onSearch, count = if (state.loading) null else tn(state.total, "{n} favorite", "{n} favorites"))
                 if (state.present.size > 1) {
                     ChipRow(Modifier.padding(top = 12.dp)) {
@@ -93,14 +92,14 @@ fun FavoritesScreen(
         }
         when {
             state.loading -> items(6) { GridCardSkeleton() }
-            state.present.isEmpty() -> full("empty") { Message(t("No favorites yet"), t("Tap the heart on any title, episode or person and it will be kept here.")) }
+            state.present.isEmpty() -> fullLine("empty") { Message(t("No favorites yet"), t("Tap the heart on any title, episode or person and it will be kept here.")) }
             else -> for ((group, list) in state.shown) section(group, list, onOpen)
         }
     }
 }
 
 private fun LazyGridScope.section(group: FavoritesViewModel.Group, list: List<BaseItemDto>, onOpen: (BaseItemDto) -> Unit) {
-    full("head:$group") {
+    fullLine("head:$group") {
         Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SText(t(group.label), size = 16.sp, weight = 800, color = SeedyColors.White)
             SText(
@@ -112,7 +111,7 @@ private fun LazyGridScope.section(group: FavoritesViewModel.Group, list: List<Ba
     if (group == FavoritesViewModel.Group.People) {
         // Three portraits a row.
         for (row in list.chunked(3)) {
-            full("p:${row.first().id}") {
+            fullLine("p:${row.first().id}") {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     for (person in row) {
                         Column(Modifier.weight(1f).tap { onOpen(person) }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -129,12 +128,4 @@ private fun LazyGridScope.section(group: FavoritesViewModel.Group, list: List<Ba
             GridCard(item, { onOpen(item) }, meta = if (item.type == BaseItemKind.EPISODE) join(item.seriesName, item.episodeTag) else item.libraryMeta)
         }
     }
-}
-
-private fun LazyGridScope.full(key: String, content: @Composable () -> Unit) = item(key = key, span = { GridItemSpan(maxLineSpan) }) { content() }
-
-private fun Modifier.bleed(h: Dp): Modifier = this.layout { measurable, constraints ->
-    val extra = h.roundToPx()
-    val p = measurable.measure(constraints.copy(minWidth = constraints.minWidth + extra * 2, maxWidth = constraints.maxWidth + extra * 2))
-    layout(p.width - extra * 2, p.height) { p.place(-extra, 0) }
 }

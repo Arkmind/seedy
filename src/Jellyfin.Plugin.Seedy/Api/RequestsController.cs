@@ -64,6 +64,16 @@ public class RequestsController : ControllerBase
         }
     }
 
+    private async Task<ActionResult> RunNoContent(Func<Jellyfin.Database.Implementations.Entities.User, int?, Task> body, CancellationToken ct)
+    {
+        var result = await Run<bool>(async (user, me) =>
+        {
+            await body(user, me).ConfigureAwait(false);
+            return true;
+        }, ct).ConfigureAwait(false);
+        return result.Result ?? NoContent();
+    }
+
     /// <summary>Popular titles that aren't in the library.</summary>
     /// <param name="page">Page.</param>
     /// <param name="ct">Cancellation.</param>
@@ -169,15 +179,8 @@ public class RequestsController : ControllerBase
     /// <param name="ct">Cancellation.</param>
     /// <returns>Nothing.</returns>
     [HttpDelete("{requestId:int}")]
-    public async Task<ActionResult> Remove([FromRoute] int requestId, CancellationToken ct)
-    {
-        var result = await Run<bool>(async (_, me) =>
-        {
-            await _seerr.DeleteRequestAsync(requestId, me ?? throw NoAccount(), ct).ConfigureAwait(false);
-            return true;
-        }, ct).ConfigureAwait(false);
-        return result.Result ?? NoContent();
-    }
+    public Task<ActionResult> Remove([FromRoute] int requestId, CancellationToken ct)
+        => RunNoContent((_, me) => _seerr.DeleteRequestAsync(requestId, me ?? throw NoAccount(), ct), ct);
 
     private Task<ActionResult<RequestDto?>> Update(int requestId, string action, CancellationToken ct)
         => Run((_, me) => _seerr.UpdateRequestAsync(requestId, action, me ?? throw NoAccount(), ct), ct);
@@ -211,15 +214,8 @@ public class RequestsController : ControllerBase
     /// <param name="ct">Cancellation.</param>
     /// <returns>Nothing.</returns>
     [HttpDelete("Media/{mediaType}/{tmdbId:int}")]
-    public async Task<ActionResult> ClearMedia([FromRoute] string mediaType, [FromRoute] int tmdbId, CancellationToken ct)
-    {
-        var result = await Run<bool>(async (_, me) =>
-        {
-            await _seerr.ClearMediaAsync(mediaType == "tv" ? "tv" : "movie", tmdbId, me ?? throw NoAccount(), ct).ConfigureAwait(false);
-            return true;
-        }, ct).ConfigureAwait(false);
-        return result.Result ?? NoContent();
-    }
+    public Task<ActionResult> ClearMedia([FromRoute] string mediaType, [FromRoute] int tmdbId, CancellationToken ct)
+        => RunNoContent((_, me) => _seerr.ClearMediaAsync(mediaType == "tv" ? "tv" : "movie", tmdbId, me ?? throw NoAccount(), ct), ct);
 
     /// <summary>What the request dialog offers the signed-in person: quota, approval, 4K and the advanced choices Seerr allows them.</summary>
     /// <param name="mediaType">movie or tv.</param>
@@ -236,52 +232,34 @@ public class RequestsController : ControllerBase
     /// <param name="ct">Cancellation.</param>
     /// <returns>The title's new status.</returns>
     [HttpPost]
-    public async Task<ActionResult<RequestResultDto>> CreateRequest([FromBody] RequestBody body, CancellationToken ct)
-    {
-        var user = User.GetUser(_users);
-        if (user is null)
+    public Task<ActionResult<RequestResultDto>> CreateRequest([FromBody] RequestBody body, CancellationToken ct)
+        => Run<RequestResultDto>(async (user, me) =>
         {
-            return Unauthorized();
-        }
-
-        if (!SeerrService.IsConfigured)
-        {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Requests aren't set up on this server." });
-        }
-
-        if (user.MaxParentalRatingScore is not null)
-        {
-            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Requests aren't available on profiles with a maturity limit." });
-        }
-
-        if (body.TmdbId <= 0 || body.MediaType is not ("movie" or "tv"))
-        {
-            return BadRequest(new { message = "Unknown title." });
-        }
-
-        try
-        {
-            var (account, _) = await _seerr.AccountFor(user, ct).ConfigureAwait(false);
-            if (account is null)
+            if (body.TmdbId <= 0 || body.MediaType is not ("movie" or "tv"))
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new { message = "This profile has no Seerr account. Ask an admin to link one." });
+                throw new SeerrException("Unknown title.", HttpStatusCode.BadRequest);
+            }
+
+            if (me is not { } account)
+            {
+                throw NoAccount();
             }
 
             if (!SeerrService.CanRequest(user, true))
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Requests are switched off for this profile." });
+                throw new SeerrException("Requests are switched off for this profile.", HttpStatusCode.Forbidden);
             }
 
             if (body.Is4k && !ConfigMapper.Current.Allow4k)
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new { message = "4K requests are switched off." });
+                throw new SeerrException("4K requests are switched off.", HttpStatusCode.Forbidden);
             }
 
             // Server, profile, folder and "request for" follow the person's Seerr permissions, as in Seerr itself;
             // without them the request gets Seerr's defaults.
             if (body.ServerId is not null || body.ProfileId is not null || body.RootFolder is not null || body.UserId is not null)
             {
-                var perms = await _seerr.PermissionsAsync(account.Id, ct).ConfigureAwait(false);
+                var perms = await _seerr.PermissionsAsync(account, ct).ConfigureAwait(false);
                 if (!SeerrService.CanPickServer(perms))
                 {
                     body.ServerId = null;
@@ -296,12 +274,6 @@ public class RequestsController : ControllerBase
             }
 
             body.Seasons = body.Seasons?.Where(s => s > 0).Distinct().ToList();
-            var status = await _seerr.RequestAsync(body, account.Id, ct).ConfigureAwait(false);
-            return new RequestResultDto { Status = status };
-        }
-        catch (SeerrException ex)
-        {
-            return StatusCode((int)ex.Status, new { message = ex.Message });
-        }
-    }
+            return new RequestResultDto { Status = await _seerr.RequestAsync(body, account, ct).ConfigureAwait(false) };
+        }, ct);
 }

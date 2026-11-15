@@ -4,9 +4,9 @@ import { primaryUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { partsOf } from '../../audio/api';
 import { playAudiobook } from '../../audio/engine';
-import { userStore } from '../../lib/app-state';
-import { dayOf, duration, pct, ticksToSeconds, timeLeft } from '../../lib/format';
-import { formatNumber, locale, t, tn } from '../../lib/i18n';
+import { canDownload, userStore } from '../../lib/app-state';
+import { capitalize, dayOf, displayLanguage, dot, itemYear, longDate, pct, runtime, ticksToSeconds, timeLeft } from '../../lib/format';
+import { formatNumber, locale, t, tc, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
@@ -19,10 +19,10 @@ import {
   authorLine, authorsOf, bookFileUrl, deleteReading, downloadUrl, fileSize, formatOf, getBookInfo, getReading, isAudioBook, narratorOf,
   normalize, saveReading, seriesOf, isComic, type Reading
 } from './api';
-import { useBooksData, VolumeCard } from './BooksLibrary';
+import { useBooksData } from './library-data';
 import { epubLanguage } from './epub-meta';
 import { AudioCover, BookCover } from './covers';
-import { BookCard, HeadphonesIcon, plainText, roughTime, yearOfBook } from './parts';
+import { BookCard, HeadphonesIcon, plainText, roughTime, VolumeCard, chapterIndexAt, fileExt } from './parts';
 import './books.css';
 import './details.css';
 
@@ -40,7 +40,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
   const info = useAsync(() => (audio ? Promise.resolve(undefined) : getBookInfo(item.Id).catch(() => undefined)), [item.Id]);
   const reading = useAsync(() => (audio ? Promise.resolve(undefined) : getReading(item.Id).catch(() => undefined)), [item.Id, readingTick]);
   const me = useStore(userStore);
-  const policyDownload = !!(me?.Policy as { EnableContentDownloading?: boolean } | undefined)?.EnableContentDownloading;
+  const policyDownload = canDownload(me);
 
   /* Every file of this work in the library: the EPUB, the PDF, the audiobook… */
   const work = useMemo(() => {
@@ -73,7 +73,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
     return lib.data.all
       .filter((o) => !isAudioBook(o) && !inSeries.has(o.Id) && authorsOf(o).some((a) => normalize(a.Name) === k))
       .filter((o) => { const n = normalize(o.Name); if (seen.has(n)) return false; seen.add(n); return true; })
-      .sort((a, b) => (yearOfBook(b) ?? 0) - (yearOfBook(a) ?? 0));
+      .sort((a, b) => (itemYear(b) ?? 0) - (itemYear(a) ?? 0));
   }, [lib.data, author?.Name, series, item.Name]);
 
   const r = reading.data;
@@ -87,11 +87,10 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
     const total = item.RunTimeTicks ?? 0;
     if (pos > 0 && total && !item.UserData?.Played) {
       const chapters = item.Chapters ?? [];
-      let ci = -1;
-      chapters.forEach((c, i) => { if (c.StartPositionTicks <= pos) ci = i; });
+      const ci = chapterIndexAt(chapters, pos);
       progress = {
         fraction: pos / total,
-        text: [`${Math.round((pos / total) * 100)}%`, ci >= 0 && chapters.length > 1 ? t('Chapter {n} of {total}', { n: ci + 1, total: chapters.length }) : '', timeLeft(ticksToSeconds(total - pos))].filter(Boolean).join(' · ')
+        text: dot(`${Math.round((pos / total) * 100)}%`, ci >= 0 && chapters.length > 1 ? t('Chapter {n} of {total}', { n: ci + 1, total: chapters.length }) : '', timeLeft(ticksToSeconds(total - pos)))
       };
     }
   } else if (r && !r.Finished && r.Percent > 0) {
@@ -101,31 +100,31 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
     const pages = info.data?.Pages ?? 0;
     progress = {
       fraction,
-      text: [
+      text: dot(
         `${Math.round(r.Percent)}%`,
         comic && pages ? t('Page {n} of {total}', { n: Math.min(pages, (Number(r.Locator) || 0) + 1), total: pages })
           : r.ChapterIndex && r.ChapterCount ? t('Chapter {n} of {total}', { n: r.ChapterIndex, total: r.ChapterCount }) : '',
         minutes ? t('about {time} left', { time: roughTime(minutes) }) : comic && pages ? tn(pages - (Number(r.Locator) || 0) - 1, '{n} page left', '{n} pages left') : ''
-      ].filter(Boolean).join(' · ')
+      )
     };
   }
 
   /* ── Meta line: author · 2023 · 412 pages · English ★ 4.3 ── */
   const self = lib.data?.all.find((o) => o.Id === item.Id) ?? item;
   // Jellyfin says per title whether this profile may download it; the policy is the fallback.
-  const canDownload = (self as BaseItem & { CanDownload?: boolean }).CanDownload ?? policyDownload;
-  const year = yearOfBook(item);
+  const mayDownload = self.CanDownload ?? policyDownload;
+  const year = itemYear(item);
   // The language comes from the EPUB of this work (the PDF and the audiobook share it).
   const epubId = (formatOf(self) === 'epub' ? self : work.find((o) => formatOf(o) === 'epub'))?.Id;
   const fileLang = useAsync(() => (epubId ? epubLanguage(epubId) : Promise.resolve(undefined)), [epubId]);
   const lang = languageName(fileLang.data);
   const meta = [
     year ? String(year) : '',
-    audio ? (item.RunTimeTicks ? duration(ticksToSeconds(item.RunTimeTicks)) : '') : info.data?.Pages ? tn(info.data.Pages, '{n} page', '{n} pages') : '',
+    audio ? runtime(item) : info.data?.Pages ? tn(info.data.Pages, '{n} page', '{n} pages') : '',
     lang
   ].filter(Boolean);
 
-  const listenLabel = audioTwin?.RunTimeTicks ? t('Listen · {time}', { time: duration(ticksToSeconds(audioTwin.RunTimeTicks)) }) : t('Listen');
+  const listenLabel = audioTwin?.RunTimeTicks ? t('Listen · {time}', { time: runtime(audioTwin) }) : t('Listen');
   const listen = () => { if (audioTwin) void playAudiobook(audioTwin.Id, { open: true }); };
   const readLabel = (rec?: Reading) => (rec && !rec.Finished && rec.Percent > 0 ? t('Continue reading') : t('Read'));
 
@@ -156,7 +155,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
   const fav = !!item.UserData?.IsFavorite;
   const format = formatOf(self);
   const isbn = item.ProviderIds?.Isbn ?? item.ProviderIds?.ISBN ?? item.ProviderIds?.isbn;
-  const added = item.DateCreated ? longDate(item.DateCreated) : undefined;
+  const added = item.DateCreated ? longDay(item.DateCreated) : undefined;
   const rows: { label: string; value?: ComponentChildren }[] = [
     { label: t('Publisher'), value: (item.Studios?.length ? item : source).Studios?.map((s) => s.Name).join(', ') },
     { label: t('Narrator'), value: audio ? narratorOf(item) : undefined },
@@ -241,7 +240,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
               <button type="button" class="bk-icon-btn" aria-pressed={fav ? 'true' : 'false'} aria-label={fav ? t('Remove from favorites') : t('Add to favorites')} onClick={() => toggleFavorite(item, setItem)}>
                 <svg viewBox="0 0 24 24" width="20" height="20" class="bk-ic" aria-hidden="true" style={{ fill: fav ? 'currentColor' : 'none' }}><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>
               </button>
-              {canDownload && (
+              {mayDownload && (
                 <a class="bk-icon-btn" href={downloadUrl(item.Id)} download aria-label={t('Download {format}', { format: formatName(self) })}>
                   <svg viewBox="0 0 24 24" width="20" height="20" class="bk-ic" aria-hidden="true"><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M5 20h14" /></svg>
                 </a>
@@ -251,7 +250,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
             {item.Overview && <p class="bkd-overview">{plainText(item.Overview)}</p>}
             {work.length > 1 || format !== 'other' ? (
               <div class="bkd-formats">
-                {work.map((w) => <FormatCard key={w.Id} item={w} current={w.Id === item.Id} canDownload={canDownload} />)}
+                {work.map((w) => <FormatCard key={w.Id} item={w} current={w.Id === item.Id} canDownload={mayDownload} />)}
               </div>
             ) : null}
             {rows.length > 0 && (
@@ -280,12 +279,12 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
         {author && more.length > 0 && (
           <section class="bk-sec" aria-labelledby="bkd-by">
             <div class="bk-sec-head">
-              <h2 id="bkd-by" class="bk-sec-title">{t('More by {name}', { name: author.Name })}</h2>
+              <h2 id="bkd-by" class="bk-sec-title">{tc('More by {name}', 'author', { name: author.Name })}</h2>
               <Link to={`${libPath}?tab=authors&author=${encodeURIComponent(author.Name)}`} class="bk-sec-link">{t('See all')}</Link>
             </div>
             <div class="bk-grid">
               {more.slice(0, 16).map((o) => (
-                <div key={o.Id} class="bk-slot"><BookCard item={o} sub={[o.Genres?.[0], yearOfBook(o)].filter(Boolean).join(' · ')} /></div>
+                <div key={o.Id} class="bk-slot"><BookCard item={o} sub={dot(o.Genres?.[0], itemYear(o))} /></div>
               ))}
             </div>
           </section>
@@ -317,13 +316,13 @@ function FormatCard({ item, current, canDownload }: { item: BaseItem; current: b
   const audio = f === 'audio';
   // A book in several files (an MP3 per chapter) says so: "MP3 · 8 files".
   const parts = partsOf(item);
-  const container = (parts ? (item as { Container?: string }).Container ?? '' : /\.(\w+)$/.exec((item as { Path?: string }).Path ?? '')?.[1] ?? '').toUpperCase();
+  const container = (parts ? item.Container ?? '' : fileExt(item)).toUpperCase();
   const narrator = audio ? narratorOf(item) : undefined;
-  const note = audio ? (narrator ? t('narrated by {name}', { name: narrator }) : item.RunTimeTicks ? duration(ticksToSeconds(item.RunTimeTicks)) : '')
+  const note = audio ? (narrator ? t('narrated by {name}', { name: narrator }) : runtime(item))
     : f === 'epub' || f === 'cbz' ? t('reads in Seedy')
     : f === 'pdf' ? t('print edition')
     : f === 'cbr' ? t('download to read') : '';
-  const sub = [audio ? container || 'M4B' : size, parts ? tn(parts.length, '{n} file', '{n} files') : '', note].filter(Boolean).join(' · ');
+  const sub = dot(audio ? container || 'M4B' : size, parts ? tn(parts.length, '{n} file', '{n} files') : '', note);
   const body = (
     <>
       <span aria-hidden="true" class={'bkd-format-icon' + (audio ? ' is-accent' : '')}>
@@ -368,19 +367,16 @@ function useFileSize(item: BaseItem): string {
     : `${formatNumber(Math.max(1, Math.round(bytes / 1024)))} KB`;
 }
 
-function longDate(s: string): string {
+function longDay(s: string): string {
   const d = dayOf(s);
-  if (!d) return '';
-  try { return new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'long', year: 'numeric' }).format(d); } catch { return d.toDateString(); }
+  return d ? longDate(d) : '';
 }
 
 /* "English" for "en". */
 function languageName(code?: string): string {
   if (!code) return '';
-  try {
-    const name = new Intl.DisplayNames([locale()], { type: 'language' }).of(code);
-    return name ? name.charAt(0).toLocaleUpperCase() + name.slice(1) : '';
-  } catch { return ''; }
+  const name = displayLanguage(code, locale());
+  return name ? capitalize(name) : '';
 }
 
 /* The glow behind the hero takes the cover's hue, at the board's strength (its violet when there's no art to read). */
@@ -423,5 +419,3 @@ function useCoverGlow(item: BaseItem): string {
   }, [src]);
   return glow;
 }
-
-export { BookIcon };

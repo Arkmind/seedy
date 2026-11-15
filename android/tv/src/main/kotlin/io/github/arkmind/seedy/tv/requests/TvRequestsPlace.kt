@@ -3,7 +3,6 @@ package io.github.arkmind.seedy.tv.requests
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,28 +40,30 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.feature.RequestsViewModel
 import io.github.arkmind.seedy.core.format.join
+import io.github.arkmind.seedy.core.format.starRating
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.requests.RequestFormat
-import io.github.arkmind.seedy.core.requests.RequestState
 import io.github.arkmind.seedy.core.requests.SeerrRequest
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.requests.TitlesKind
-import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.core.seedy.tmdbImage
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
 import io.github.arkmind.seedy.tv.nav.TvNav
 import io.github.arkmind.seedy.tv.nav.TvRoute
+import io.github.arkmind.seedy.tv.parts.CardRowRingRoom
+import io.github.arkmind.seedy.tv.parts.FocusWhen
+import io.github.arkmind.seedy.tv.parts.NoFocusScroll
 import io.github.arkmind.seedy.tv.parts.TvPressable
+import io.github.arkmind.seedy.tv.parts.TvToast
 import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusRing
 import io.github.arkmind.seedy.tv.parts.focusScale
-import io.github.arkmind.seedy.tv.parts.focusSoon
 import io.github.arkmind.seedy.tv.shell.RailInset
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -71,9 +72,9 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
+import io.github.arkmind.seedy.ui.theme.toneColour
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.util.Locale
 
 /** What OK does on a Discover card. */
 enum class TitleAction { Open, Details }
@@ -100,14 +101,14 @@ fun TvRequestsPlace(onSearch: () -> Unit) {
             onSearch = onSearch,
             onTitle = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
             onRequest = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
-            onMessageShown = vm::clearMessage,
+            onMessageShown = vm::messageShown,
         ),
     )
 }
 
 /** A Seerr title opens its library page when it's on the server, else its Seerr page. */
 fun TvNav.openSeerr(mediaType: String, tmdbId: Int, jellyfinItemId: String?) {
-    val local = libraryUuid(jellyfinItemId)
+    val local = uuidOf(jellyfinItemId)
     go(if (local != null) TvRoute.Details(local) else TvRoute.SeerrTitle(mediaType, tmdbId))
 }
 
@@ -115,14 +116,6 @@ fun TvNav.openSeerr(mediaType: String, tmdbId: Int, jellyfinItemId: String?) {
 fun titleAction(title: SeerrTitle): TitleAction =
     if (title.status == "available" && title.jellyfinItemId != null) TitleAction.Open else TitleAction.Details
 
-/** Space kept around a card row so the focused card's ring (9 px) isn't clipped. */
-private val RingRoom = 12.bp
-
-/** The list scrolls itself to the row in use (as on Home), so it ignores focus. */
-@OptIn(ExperimentalFoundationApi::class)
-private object NoFocusScroll : BringIntoViewSpec {
-    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
-}
 
 /**
  * The title and Search Seerr; the person's requests as wide cards with where each one is; then Discover's rows of
@@ -153,10 +146,10 @@ fun TvRequestsScreen(
                 Modifier.fillMaxSize(),
                 state = list,
                 contentPadding = PaddingValues(start = RailInset, top = 72.bp, bottom = 300.bp),
-                verticalArrangement = Arrangement.spacedBy(40.bp - RingRoom * 2),
+                verticalArrangement = Arrangement.spacedBy(40.bp - CardRowRingRoom * 2),
             ) {
                 item(key = "head") {
-                    Row(Modifier.fillMaxWidth().padding(end = 96.bp, bottom = RingRoom), verticalAlignment = Alignment.Bottom) {
+                    Row(Modifier.fillMaxWidth().padding(end = 96.bp, bottom = CardRowRingRoom), verticalAlignment = Alignment.Bottom) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.bp)) {
                             SText(t("Requests"), size = 44.bsp, weight = 900, lineHeight = 1f, color = SeedyColors.White, maxLines = 1)
                             SText(t("From Seerr · ask for anything the server doesn’t have"), size = 19.bsp, color = SeedyColors.Text3, maxLines = 1)
@@ -166,13 +159,13 @@ fun TvRequestsScreen(
                 }
                 if (mine.isNotEmpty()) {
                     item(key = "mine") {
-                        Column(Modifier.padding(top = RingRoom), verticalArrangement = Arrangement.spacedBy(16.bp - RingRoom)) {
+                        Column(Modifier.padding(top = CardRowRingRoom), verticalArrangement = Arrangement.spacedBy(16.bp - CardRowRingRoom)) {
                             SText(t("Your requests"), size = 24.bsp, weight = 800, color = SeedyColors.White, maxLines = 1)
                             CompositionLocalProvider(LocalBringIntoViewSpec provides cardRows) {
                                 LazyRow(
-                                    Modifier.offset(x = -RingRoom),
+                                    Modifier.offset(x = -CardRowRingRoom),
                                     horizontalArrangement = Arrangement.spacedBy(24.bp),
-                                    contentPadding = PaddingValues(start = RingRoom, end = 96.bp, top = RingRoom, bottom = RingRoom),
+                                    contentPadding = PaddingValues(start = CardRowRingRoom, end = 96.bp, top = CardRowRingRoom, bottom = CardRowRingRoom),
                                 ) {
                                     items(mine, key = { "req:${it.requestId}" }) { r ->
                                         RequestCard(r, today, { actions.onRequest(r) }, Modifier.onFocusChanged { if (it.isFocused) { activeRow = -1; focusAt(1) } })
@@ -184,15 +177,15 @@ fun TvRequestsScreen(
                 }
                 itemsIndexed(rows, key = { _, r -> "row:${r.kind.key}" }) { i, row ->
                     val index = rowBase + i
-                    Column(Modifier.padding(top = RingRoom), verticalArrangement = Arrangement.spacedBy(16.bp - RingRoom)) {
+                    Column(Modifier.padding(top = CardRowRingRoom), verticalArrangement = Arrangement.spacedBy(16.bp - CardRowRingRoom)) {
                         SText(if (row.kind == TitlesKind.Trending) t("Trending on Seerr") else t(row.kind.title), size = 24.bsp, weight = 800, color = if (activeRow == i) SeedyColors.White else SeedyColors.TextHero, maxLines = 1)
                         val items = row.items
                         CompositionLocalProvider(LocalBringIntoViewSpec provides cardRows) {
                             LazyRow(
-                                Modifier.offset(x = -RingRoom),
+                                Modifier.offset(x = -CardRowRingRoom),
                                 horizontalArrangement = Arrangement.spacedBy(24.bp),
                                 verticalAlignment = Alignment.Top,
-                                contentPadding = PaddingValues(start = RingRoom, end = 96.bp, top = RingRoom, bottom = RingRoom),
+                                contentPadding = PaddingValues(start = CardRowRingRoom, end = 96.bp, top = CardRowRingRoom, bottom = CardRowRingRoom),
                             ) {
                                 if (items == null) {
                                     items(7) { Box(Modifier.width(196.bp).aspectRatio(2f / 3f).clip(RoundedCornerShape(16.bp)).background(SeedyColors.Surface)) }
@@ -212,21 +205,10 @@ fun TvRequestsScreen(
                 }
             }
         }
-        state.message?.let { message ->
-            LaunchedEffect(message) {
-                kotlinx.coroutines.delay(3200)
-                actions.onMessageShown()
-            }
-            SText(
-                message,
-                Modifier.align(Alignment.BottomStart).padding(start = RailInset, bottom = 48.bp).clip(RoundedCornerShape(16.bp)).background(SeedyColors.Surface)
-                    .padding(horizontal = 24.bp, vertical = 16.bp),
-                size = 20.bsp, weight = 600, color = SeedyColors.Text,
-            )
-        }
+        TvToast(state.message, actions.onMessageShown, start = RailInset)
     }
     val firstLoaded = rows.firstOrNull()?.items?.firstOrNull()
-    LaunchedEffect(firstLoaded != null) { if (firstLoaded != null) firstCard.focusSoon() }
+    FocusWhen(firstLoaded != null, firstCard)
 }
 
 /** The board's 60 px "Search Seerr" button, translucent at rest, light when focused. */
@@ -243,15 +225,6 @@ private fun SearchButton(onClick: () -> Unit, modifier: Modifier) {
             SText(t("Search Seerr"), size = 20.bsp, weight = 700, color = ink, maxLines = 1)
         }
     }
-}
-
-@Composable
-private fun toneColour(tone: RequestState.Tone): Color = when (tone) {
-    RequestState.Tone.Ok -> SeedyColors.Ok
-    RequestState.Tone.Pending -> SeedyColors.Pending
-    RequestState.Tone.Accent -> LocalAccent.current
-    RequestState.Tone.Danger -> SeedyColors.Danger
-    RequestState.Tone.Muted -> SeedyColors.Text3
 }
 
 /** The board's 500 px request card: poster, title, what was asked and when, where it is (and its download bar). */
@@ -337,7 +310,7 @@ fun TitleCard(
             }
             Column(verticalArrangement = Arrangement.spacedBy(3.bp)) {
                 SText(title.title, size = if (focused) 20.bsp else 18.bsp, weight = 800, color = SeedyColors.White, maxLines = 1)
-                val (meta, soon) = if (upcoming) RequestFormat.upcoming(title, today) else join(title.year, title.rating?.takeIf { it > 0 }?.let { "★ " + String.format(Locale.US, "%.1f", it) }) to false
+                val (meta, soon) = if (upcoming) RequestFormat.upcoming(title, today) else join(title.year, starRating(title.rating)) to false
                 SText(meta, size = 16.bsp, color = if (soon) LocalAccent.current else SeedyColors.Text3, maxLines = 1)
                 if (focused) {
                     val hint = when (action) {

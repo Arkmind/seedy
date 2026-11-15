@@ -6,6 +6,7 @@ import io.github.arkmind.seedy.core.admin.AdminHttp
 import io.github.arkmind.seedy.core.admin.SeedyJson
 import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.format.Images
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.CancellationException
@@ -167,9 +168,5 @@ class PlayLogAdminViewModel(private val session: UserSession) : ViewModel(), Pla
 
     override fun messageShown() = extra.update { it.copy(message = null) }
 
-    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
-    override fun onCleared() {
-        kotlinx.coroutines.GlobalScope.launch { runCatching { store.flush() } }
-        super.onCleared()
-    }
+    override fun onCleared() = store.flushDetached()
 }

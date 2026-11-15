@@ -1,3 +1,4 @@
+import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { Link } from '../lib/router';
 import { t } from '../lib/i18n';
@@ -5,12 +6,13 @@ import { useStore } from '../lib/store';
 import { Cover } from './cover';
 import {
   audioStore, chapterAt, cycleRepeat, next, openPlayer, previous, seek, setVolume, skip, stop, timeStore, toggleMute, togglePlay, toggleShuffle,
-  toggleTrackFavorite
+  toggleTrackFavorite, type AudioState
 } from './engine';
 import { BarPanel, type BarPanelKind } from './BarPanel';
 import { AIcon, Skip30 } from './icons';
 import { CastMenu, SeekBar, VolumeBar, artistLink, artistsOf, clock, remaining, volumeIcon } from './parts';
 import { SleepButton, SpeedButton } from './book-controls';
+import type { Track } from './api';
 
 /* The player bar at the bottom of every page while something plays (Music boards: song, transport and progress,
    lyrics, queue, cast, volume, open; Books board: the book and its chapter, ±30 s, speed, sleep timer, chapters,
@@ -43,9 +45,7 @@ export function MiniBar() {
     return (
       <div role="region" aria-label={t('Now listening')} class="ap-bar is-book">
         <div class="ap-bar-left">
-          <button type="button" class="ap-bar-cover-btn" aria-label={t('Open the player')} onClick={() => openPlayer(true)}>
-            <Cover item={tk} width={112} class="ap-bar-cover" />
-          </button>
+          <BarCover tk={tk} />
           <span class="ap-bar-text">
             <Link to={`/details/${book.id}`} class="ap-bar-title">{book.name}</Link>
             {ch && book.chapters.length > 1 && <span class="ap-bar-sub">{t('Chapter {n} · {name}', { n: ch.index + 1, name: ch.name })}</span>}
@@ -69,14 +69,7 @@ export function MiniBar() {
           <SpeedButton variant="bar" />
           <SleepButton variant="bar" />
           <button type="button" class="ap-bar-btn is-soft" data-tip={t('Chapters')} aria-label={t('Chapters')} onClick={() => openPlayer(true)}><AIcon name="chapters" size={18} /></button>
-          <span class="ap-bar-volume is-book">
-            <button type="button" class="ap-bar-mute" data-tip={s.muted ? t('Unmute') : t('Mute')} aria-label={s.muted ? t('Unmute') : t('Mute')} onClick={toggleMute}>
-              <AIcon name={volumeIcon(s.volume, s.muted)} size={18} />
-            </button>
-            <VolumeBar volume={s.volume} muted={s.muted} onChange={setVolume} />
-          </span>
-          <button type="button" class={'ap-bar-btn is-soft' + (close ? '' : ' ap-tip-end')} data-tip={t('Open the player')} aria-label={t('Open the player')} onClick={() => openPlayer(true)}><AIcon name="expand" size={16} /></button>
-          {close}
+          <BarEnd s={s} book close={close} />
         </div>
       </div>
     );
@@ -88,9 +81,7 @@ export function MiniBar() {
   return (
     <div role="region" aria-label={t('Now playing')} class="ap-bar">
       <div class="ap-bar-left">
-        <button type="button" class="ap-bar-cover-btn" aria-label={t('Open the player')} onClick={() => openPlayer(true)}>
-          <Cover item={tk} width={112} class="ap-bar-cover" />
-        </button>
+        <BarCover tk={tk} />
         <span class="ap-bar-text">
           {tk.AlbumId ? <Link to={`/details/${tk.AlbumId}`} class="ap-bar-title">{tk.Name}</Link> : <span class="ap-bar-title">{tk.Name}</span>}
           {toArtist ? <Link to={toArtist} class="ap-bar-sub">{artist}</Link> : <span class="ap-bar-sub">{artist}</span>}
@@ -123,21 +114,36 @@ export function MiniBar() {
         <button type="button" class={'ap-bar-btn is-soft' + (panel === 'queue' ? ' is-active' : '')} data-bar-panel data-tip={t('Up next')} aria-label={t('Up next')}
           aria-expanded={panel === 'queue' ? 'true' : 'false'} onClick={() => toggle('queue')}><AIcon name="queue" size={18} /></button>
         <CastMenu class="ap-bar-btn is-soft" />
-        <span class="ap-bar-volume">
-          <button type="button" class="ap-bar-mute" data-tip={s.muted ? t('Unmute') : t('Mute')} aria-label={s.muted ? t('Unmute') : t('Mute')} onClick={toggleMute}>
-            <AIcon name={volumeIcon(s.volume, s.muted)} size={18} />
-          </button>
-          <VolumeBar volume={s.volume} muted={s.muted} onChange={setVolume} />
-        </span>
-        <button type="button" class={'ap-bar-btn is-soft' + (close ? '' : ' ap-tip-end')} data-tip={t('Open the player')} aria-label={t('Open the player')} onClick={() => openPlayer(true)}><AIcon name="expand" size={16} /></button>
-        {close}
+        <BarEnd s={s} close={close} />
       </div>
       {panel && <BarPanel kind={panel} onClose={() => setPanel(null)} />}
     </div>
   );
 }
 
-function PlayButton({ playing, loading, size = 44, icon = 20, class: cls = 'ap-bar-play' }: { playing: boolean; loading: boolean; size?: number; icon?: number; class?: string }) {
+const BarCover = ({ tk }: { tk: Track }) => (
+  <button type="button" class="ap-bar-cover-btn" aria-label={t('Open the player')} onClick={() => openPlayer(true)}>
+    <Cover item={tk} width={112} class="ap-bar-cover" />
+  </button>
+);
+
+/* Volume, Open the player and (while nothing plays) Close, at the right end of both bars. */
+function BarEnd({ s, book, close }: { s: AudioState; book?: boolean; close: JSX.Element | false }) {
+  return (
+    <>
+      <span class={'ap-bar-volume' + (book ? ' is-book' : '')}>
+        <button type="button" class="ap-bar-mute" data-tip={s.muted ? t('Unmute') : t('Mute')} aria-label={s.muted ? t('Unmute') : t('Mute')} onClick={toggleMute}>
+          <AIcon name={volumeIcon(s.volume, s.muted)} size={18} />
+        </button>
+        <VolumeBar volume={s.volume} muted={s.muted} onChange={setVolume} />
+      </span>
+      <button type="button" class={'ap-bar-btn is-soft' + (close ? '' : ' ap-tip-end')} data-tip={t('Open the player')} aria-label={t('Open the player')} onClick={() => openPlayer(true)}><AIcon name="expand" size={16} /></button>
+      {close}
+    </>
+  );
+}
+
+export function PlayButton({ playing, loading, size = 44, icon = 20, class: cls = 'ap-bar-play' }: { playing: boolean; loading: boolean; size?: number; icon?: number; class?: string }) {
   return (
     <button type="button" class={cls + (loading ? ' is-loading' : '')} style={size !== 44 ? { width: size + 'px', height: size + 'px' } : undefined}
       aria-label={playing ? t('Pause') : t('Play')} onClick={togglePlay}>
@@ -145,8 +151,6 @@ function PlayButton({ playing, loading, size = 44, icon = 20, class: cls = 'ap-b
     </button>
   );
 }
-
-export { PlayButton };
 
 export function RepeatButton({ class: cls, size }: { class: string; size: number }) {
   const s = useStore(audioStore);

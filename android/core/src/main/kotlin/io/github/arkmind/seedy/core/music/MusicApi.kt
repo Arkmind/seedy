@@ -2,14 +2,15 @@ package io.github.arkmind.seedy.core.music
 
 import io.github.arkmind.seedy.core.audio.AudioApi
 import io.github.arkmind.seedy.core.browse.Browse
+import io.github.arkmind.seedy.core.data.io
+import io.github.arkmind.seedy.core.format.join
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.session.UserSession
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.artistApi
 import org.jellyfin.sdk.api.client.extensions.genreApi
 import org.jellyfin.sdk.api.client.extensions.instantMixApi
@@ -142,15 +143,12 @@ class MusicApi(private val session: UserSession) {
     suspend fun count(parentId: UUID, kind: BaseItemKind): Int =
         query(parentId, listOf(kind), limit = 0, fields = emptyList(), images = emptyList()).totalRecordCount
 
-    suspend fun albumArtistsCount(parentId: UUID): Int = io {
-        api.artistApi.getAlbumArtists(userId = userId, parentId = parentId, limit = 0, enableTotalRecordCount = true, enableImages = false).content.totalRecordCount
-    }
-
     /* ── Tabs ── */
 
     suspend fun albums(parentId: UUID, sort: MusicSort, favorites: Boolean, start: Int, limit: Int, genreId: UUID? = null): BaseItemDtoQueryResult =
         query(parentId, listOf(BaseItemKind.MUSIC_ALBUM), sort.by, sort.descending, start, limit, favorites = favorites.takeIf { it }, genreIds = genreId?.let(::listOf))
 
+    @Suppress("DEPRECATION") // /Artists/AlbumArtists has no album-artist-only replacement; the web calls the same endpoint
     suspend fun albumArtists(parentId: UUID, sort: MusicSort, favorites: Boolean, start: Int, limit: Int): BaseItemDtoQueryResult = io {
         api.artistApi.getAlbumArtists(
             userId = userId, parentId = parentId, startIndex = start, limit = limit, sortBy = sort.by,
@@ -180,6 +178,7 @@ class MusicApi(private val session: UserSession) {
         query(parentId, listOf(BaseItemKind.MUSIC_ALBUM), listOf(ItemSortBy.DATE_CREATED), true, limit = 6, fields = emptyList(), genreIds = listOf(genreId), count = false)
             .items.let { list -> list.firstOrNull { it.id !in skip } ?: list.firstOrNull() }
 
+    @Suppress("DEPRECATION") // no replacement for a genre's instant mix; the web calls the same endpoint
     suspend fun genreMix(genreId: UUID, limit: Int = 120): List<BaseItemDto> = io {
         api.instantMixApi.getInstantMixFromMusicGenreById(
             id = genreId, userId = userId, limit = limit, fields = AudioApi.TrackFields, enableImageTypes = listOf(ImageType.PRIMARY), imageTypeLimit = 1, enableUserData = true,
@@ -213,7 +212,7 @@ class MusicApi(private val session: UserSession) {
         val played = query(viewId, listOf(BaseItemKind.AUDIO), listOf(ItemSortBy.DATE_PLAYED), true, limit = 80, fields = listOf(ItemFields.PARENT_ID),
             filters = listOf(ItemFilter.IS_PLAYED), images = emptyList(), count = false).items
         val seen = played.mapNotNull { tk -> tk.albumId?.let { it.toString() to lastPlayedAt(tk) } } + recent
-        val ids = seen.sortedByDescending { it.second }.map { it.first }.distinct().mapNotNull { runCatching { UUID.fromString(dashed(it)) }.getOrNull() }.take(limit)
+        val ids = seen.sortedByDescending { it.second }.map { it.first }.distinct().mapNotNull(::uuidOf).take(limit)
         return items(ids, MusicFields + ItemFields.CHILD_COUNT)
     }
 
@@ -230,6 +229,7 @@ class MusicApi(private val session: UserSession) {
         return items(ids, MusicFields).map { TopArtist(it, plays[it.id] ?: 0) }
     }
 
+    @Suppress("DEPRECATION") // /Artists/AlbumArtists has no album-artist-only replacement; the web calls the same endpoint
     suspend fun albumArtistsList(parentId: UUID, random: Boolean, limit: Int): List<BaseItemDto> = io {
         api.artistApi.getAlbumArtists(
             userId = userId, parentId = parentId, limit = limit, sortBy = listOf(if (random) ItemSortBy.RANDOM else ItemSortBy.SORT_NAME),
@@ -333,8 +333,8 @@ class MusicApi(private val session: UserSession) {
         val mine = own.await().map { it.id }.toSet()
         val releases = own.await().filter { it.id != album.id }.map { it to releaseOf(it) }
             .sortedBy { if (it.second == Release.Album) 0 else 1 }
-            .map { (a, r) -> a to dot(releaseLabel(r), yearOf(a)) }
-        val appears = all.await().filter { it.id !in mine && it.id != album.id }.map { it to dot(t("Appears on"), yearOf(it)) }
+            .map { (a, r) -> a to join(releaseLabel(r), yearOf(a)) }
+        val appears = all.await().filter { it.id !in mine && it.id != album.id }.map { it to join(t("Appears on"), yearOf(it)) }
         (releases + appears).take(6)
     }
 
@@ -388,16 +388,10 @@ class MusicApi(private val session: UserSession) {
         Unit
     }
 
-    private suspend fun <T> io(block: suspend () -> T): T = withContext(Dispatchers.IO) { block() }
-
     companion object {
         val MusicFields = listOf(
             ItemFields.PRIMARY_IMAGE_ASPECT_RATIO, ItemFields.GENRES, ItemFields.CHILD_COUNT, ItemFields.DATE_CREATED, ItemFields.SORT_NAME,
         )
         val ReleaseFields = listOf(ItemFields.CHILD_COUNT, ItemFields.SORT_NAME, ItemFields.TAGS)
-
-        /** "7e64e319657a9516ec78490da03edccb" → a UUID string. */
-        fun dashed(id: String): String =
-            if (id.length == 32 && '-' !in id) "${id.substring(0, 8)}-${id.substring(8, 12)}-${id.substring(12, 16)}-${id.substring(16, 20)}-${id.substring(20)}" else id
     }
 }

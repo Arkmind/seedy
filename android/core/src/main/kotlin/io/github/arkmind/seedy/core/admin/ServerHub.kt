@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.arkmind.seedy.core.format.Images
 import io.github.arkmind.seedy.core.format.episodeTag
+import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
@@ -335,22 +336,22 @@ class ServerHubViewModel(
         val updates = if (d.plugins != null && d.packages != null && d.info != null) pluginUpdates(d.plugins, d.packages, d.info.version).size else 0
         val server = listOf(
             HubLink("settings", t("Settings"), t("Name, paths, sign-in and logging")),
-            HubLink("users", t("Users"), if (users != null) listOf(tn(users.size, "{n} user", "{n} users"), signedInToday?.takeIf { it > 0 }?.let { t("{n} signed in today", "n" to it) }).joinNotNull() else t("Who can sign in and what they can do")),
+            HubLink("users", t("Users"), if (users != null) join(tn(users.size, "{n} user", "{n} users"), signedInToday?.takeIf { it > 0 }?.let { t("{n} signed in today", "n" to it) }) else t("Who can sign in and what they can do")),
             HubLink("libraries", t("Libraries"), s.libraries?.let { libs ->
-                listOf(tn(libs.size, "{n} library", "{n} libraries"), libs.firstOrNull { it.refreshStatus == "Running" }?.let { t("scanning {name}", "name" to it.name) }).joinNotNull()
+                join(tn(libs.size, "{n} library", "{n} libraries"), libs.firstOrNull { it.refreshStatus == "Running" }?.let { t("scanning {name}", "name" to it.name) })
             } ?: t("Folders, metadata and scans")),
             HubLink("playback", t("Playback"), s.encoding?.let { e ->
-                listOf(accelName(e["HardwareAccelerationType"]?.jsonPrimitive?.contentOrNull), transcodes.takeIf { it > 0 }?.let { tn(it, "{n} transcode", "{n} transcodes") }).joinNotNull()
+                join(accelName(e["HardwareAccelerationType"]?.jsonPrimitive?.contentOrNull), transcodes.takeIf { it > 0 }?.let { tn(it, "{n} transcode", "{n} transcodes") })
             } ?: t("Transcoding and hardware acceleration")),
             HubLink("networking", t("Networking"), s.network?.let { n ->
                 val remote = n["EnableRemoteAccess"]?.jsonPrimitive?.booleanOrNull != false
                 val https = n["EnableHttps"]?.jsonPrimitive?.booleanOrNull == true
-                listOf(if (remote) t("Remote access on") else t("Remote access off"), if (https) "HTTPS" else null).joinNotNull()
+                join(if (remote) t("Remote access on") else t("Remote access off"), if (https) "HTTPS" else null)
             } ?: t("Remote access, ports and addresses")),
             HubLink("livetv", t("Live TV"), when (val tuners = s.tuners) {
                 null -> t("Tuners and guide data")
                 0 -> t("No tuners yet")
-                else -> listOf(tn(tuners, "{n} tuner", "{n} tuners"), s.channels?.let { tn(it, "{n} channel", "{n} channels") }).joinNotNull()
+                else -> join(tn(tuners, "{n} tuner", "{n} tuners"), s.channels?.let { tn(it, "{n} channel", "{n} channels") })
             }),
         )
         val seedy = if (session.seedyApi == null) null else listOf(
@@ -518,8 +519,6 @@ fun errorText(e: Throwable): String = when (e) {
     }
     else -> t("The server didn’t answer.")
 }
-
-private fun List<String?>.joinNotNull(): String = filterNotNull().filter { it.isNotEmpty() }.joinToString(" · ")
 
 /** Settings › Server's line: the server's name, what's playing and plugin updates ("seedy-server · 3 playing · 2 plugin updates"). */
 suspend fun serverSummary(session: UserSession): String = coroutineScope {

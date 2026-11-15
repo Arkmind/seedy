@@ -1,14 +1,15 @@
 import type { ComponentChildren, JSX, RefObject } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { get } from '../../api/client';
+import { get, currentUserId } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
-import { locale, t, tn } from '../../lib/i18n';
+import { dot, itemYear, ticksToSeconds } from '../../lib/format';
+import { t, tc, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { Popover, toast } from '../../ui/overlay';
-import { TRACK_FIELDS, instantMix, type Track } from '../../audio/api';
-import { Cover, initialsOf, useNearestPalette } from '../../audio/cover';
+import { TRACK_FIELDS, instantMix, playlistTracks, type Track } from '../../audio/api';
+import { Cover, initialsOf, PALETTES, useNearestPalette } from '../../audio/cover';
 import {
   addToQueue, audioStore, favoriteStore, playItem, playLoaded, toggleTrackFavorite, togglePlay, type PlayOptions
 } from '../../audio/engine';
@@ -17,11 +18,9 @@ import { artistsOf, clock } from '../../audio/parts';
 import { PlaylistPicker } from '../browse/manage/menu';
 import { addToPlaylist } from '../browse/manage/actions';
 import { openManage } from '../browse/manage/host';
-import { getSession } from '../../api/client';
 
 /* Pieces shared by the music library, album and artist pages (Music boards). */
 
-const uid = () => getSession()?.userId ?? '';
 
 export const MUSIC_FIELDS = ['PrimaryImageAspectRatio', 'ProductionYear', 'PremiereDate', 'Genres', 'ChildCount', 'DateCreated', 'SortName', 'AlbumArtist'];
 
@@ -47,19 +46,9 @@ export const releaseLabel = (r: Release | 'appears') =>
   r === 'single' ? t('Single') : r === 'ep' ? t('EP') : r === 'appears' ? t('Appears on') : t('Album');
 
 export const albumArtist = (a: Pick<Track, 'AlbumArtist' | 'AlbumArtists' | 'Artists'>) => a.AlbumArtist || a.AlbumArtists?.[0]?.Name || a.Artists?.[0] || '';
-export const yearOf = (a: Pick<BaseItem, 'ProductionYear' | 'PremiereDate'>) => (a.ProductionYear ? String(a.ProductionYear) : a.PremiereDate ? a.PremiereDate.slice(0, 4) : '');
-/* "12 March 2024", "12 mars 2024". */
-export function longDate(d: Date): string {
-  try { return new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'long', year: 'numeric' }).format(d); } catch { return d.toDateString(); }
-}
+export const yearOf = (a: Pick<BaseItem, 'ProductionYear' | 'PremiereDate'>) => String(itemYear(a) ?? '');
+export { longDate } from '../../lib/format';
 
-export const dot = (...parts: (string | number | undefined | null | false)[]) => parts.filter((p) => p !== undefined && p !== null && p !== false && p !== '').join(' · ');
-
-/* A word that means something else elsewhere ("Time" of day): its dictionary key says which, English shows [en]. */
-export function inContext(key: string, en: string): string {
-  const v = t(key);
-  return v === key ? en : v;
-}
 
 /* ───────── Section heads ───────── */
 
@@ -215,7 +204,7 @@ export function NewPlaylistTile({ hint = true }: { hint?: boolean }) {
 /* "48 songs · 3 h 12 min" */
 export function playlistSub(pl: BaseItem & { CumulativeRunTimeTicks?: number }, count?: number): string {
   const n = count ?? pl.ChildCount ?? 0;
-  const secs = (pl.CumulativeRunTimeTicks ?? pl.RunTimeTicks ?? 0) / 10_000_000;
+  const secs = ticksToSeconds(pl.CumulativeRunTimeTicks ?? pl.RunTimeTicks);
   return dot(songsLabel(n), secs ? lengthLabel(secs) : '');
 }
 
@@ -232,8 +221,8 @@ export function lengthLabel(seconds: number): string {
 export const GENRE_ORDER = [0, 8, 2, 6, 4, 3, 1, 7, 5];
 
 export function GenreTile({ genre, index, sample, to }: { genre: BaseItem; index: number; sample?: Track | null; to: string }) {
-  const bg = paletteOfIndex(GENRE_ORDER[index % GENRE_ORDER.length])[1];
-  const count = (genre as BaseItem & { AlbumCount?: number }).AlbumCount ?? genre.ChildCount;
+  const bg = PALETTES[GENRE_ORDER[index % GENRE_ORDER.length] % PALETTES.length][1];
+  const count = genre.AlbumCount ?? genre.ChildCount;
   return (
     <Link to={to} class="mu-genre" style={{ background: bg }}>
       <span class="mu-genre-name">{genre.Name}</span>
@@ -242,12 +231,6 @@ export function GenreTile({ genre, index, sample, to }: { genre: BaseItem; index
     </Link>
   );
 }
-
-const PALETTE_HEX = [
-  ['#1c2a3a', '#2f4a66'], ['#3a1d2e', '#6b2f4f'], ['#13302b', '#1f5a4d'], ['#2b2118', '#5c3b22'], ['#1d1d2e', '#3b3b6b'],
-  ['#262626', '#444444'], ['#36200f', '#a3471f'], ['#0f2233', '#1b6f8f'], ['#2a1035', '#7a3fd1']
-];
-const paletteOfIndex = (i: number) => PALETTE_HEX[i % PALETTE_HEX.length];
 
 /* Jump back in: an album, playlist or artist played lately. */
 export function JumpCard({ item, sub, current }: { item: BaseItem; sub: string; current?: { playing: boolean } }) {
@@ -394,7 +377,7 @@ export function TrackTable({ tracks, cols = 'album', source, numbers, extra, lab
     const current = tk.Id === curId;
     const fav = isFav(tk);
     const n = numbers === 'position' || cols === 'list' ? i + 1 : tk.IndexNumber ?? i + 1;
-    const time = tk.RunTimeTicks ? clock(tk.RunTimeTicks / 10_000_000) : '';
+    const time = tk.RunTimeTicks ? clock(ticksToSeconds(tk.RunTimeTicks)) : '';
     rows.push(
       <div key={tk.Id + ':' + i} role="row" class={'mu-tr is-' + cols + (current ? ' is-current' : '')} draggable
         onDragStart={(e) => dragItems(e as DragEvent, [tk])}
@@ -435,7 +418,7 @@ export function TrackTable({ tracks, cols = 'album', source, numbers, extra, lab
         <span role="columnheader">{t('Title')}</span>
         {cols === 'list' && <span role="columnheader">{t('Album')}</span>}
         <span role="columnheader">{t('Plays')}</span>
-        <span role="columnheader" class="is-right">{inContext('Time (song length)', 'Time')}</span>
+        <span role="columnheader" class="is-right">{tc('Time', 'song length')}</span>
         <span role="columnheader"><span class="sr-only">{t('Favorite')}</span></span>
       </div>
       {rows}
@@ -456,7 +439,7 @@ export function TracksSkeleton({ rows = 8 }: { rows?: number }) {
 /* ───────── Data ───────── */
 
 export const albumArtistsCount = (parentId: string) =>
-  get<ItemsResult>('/Artists/AlbumArtists', { userId: uid(), parentId, limit: 0, enableTotalRecordCount: true, enableImages: false }).then((r) => r.TotalRecordCount);
+  get<ItemsResult>('/Artists/AlbumArtists', { userId: currentUserId(), parentId, limit: 0, enableTotalRecordCount: true, enableImages: false }).then((r) => r.TotalRecordCount);
 
 export async function countOf(parentId: string, type: string): Promise<number> {
   const r = await getItems({ parentId, includeItemTypes: [type], recursive: true, limit: 0, enableImageTypes: [], fields: [] });
@@ -465,3 +448,45 @@ export async function countOf(parentId: string, type: string): Promise<number> {
 
 export const songsOf = (q: Parameters<typeof getItems>[0]) => getItems({ ...q, includeItemTypes: ['Audio'], recursive: true, fields: TRACK_FIELDS }).then((r) => r.Items as Track[]);
 
+/* ───────── Pieces the library tabs and artist pages share ───────── */
+
+export function CardSkel({ round }: { round?: boolean }) {
+  return (
+    <div class="mu-card" aria-hidden="true">
+      <span class={'skel mu-skel-art' + (round ? ' is-round' : '')} />
+      <span class="skel skel-line" style={{ width: '70%' }} />
+    </div>
+  );
+}
+
+export interface PlaylistPreview { playlist: BaseItem; covers: Track[]; sub: string }
+
+export async function playlistPreview(pl: BaseItem): Promise<PlaylistPreview> {
+  const tracks = await playlistTracks(pl.Id).catch(() => [] as Track[]);
+  const secs = tracks.reduce((s, x) => s + (x.RunTimeTicks ?? 0), 0);
+  return { playlist: pl, covers: playlistCovers(tracks), sub: playlistSub({ ...pl, CumulativeRunTimeTicks: secs || undefined } as BaseItem, tracks.length || pl.ChildCount) };
+}
+
+export const audioPlaylists = (limit?: number) =>
+  getItems({ includeItemTypes: ['Playlist'], recursive: true, mediaTypes: ['Audio'], sortBy: ['DateCreated', 'SortName'], sortOrder: 'Descending', limit, fields: ['ChildCount', 'DateCreated'] });
+
+/* "12 albums" under an artist, nothing when the server doesn't say. */
+export const artistAlbums = (a: BaseItem) => {
+  const n = a.AlbumCount ?? a.ChildCount;
+  return n ? albumsLabel(n) : '';
+};
+
+/* A library's genres with their counts. */
+export const musicGenres = (viewId: string) =>
+  get<ItemsResult>('/MusicGenres', { userId: currentUserId(), parentId: viewId, fields: 'ItemCounts', enableImages: false, sortBy: 'SortName' });
+
+/* An instant mix from an album or artist, named after it ("Album mix", "Artist radio"); [fallback] plays when the
+   server has no mix for it. */
+export async function startMix(seed: BaseItem, name: string, fallback: Track[] = []) {
+  try {
+    const mixed = await instantMix(seed.Id, 150);
+    await playLoaded(mixed.length || !fallback.length ? mixed : fallback, 0, { source: { kind: 'mix', id: seed.Id, name } });
+  } catch {
+    toast(t('Couldn’t start the mix'), 'error');
+  }
+}

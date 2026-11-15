@@ -46,7 +46,6 @@ import io.github.arkmind.seedy.core.admin.PlayKind
 import io.github.arkmind.seedy.core.admin.ServerHubActions
 import io.github.arkmind.seedy.core.admin.ServerHubState
 import io.github.arkmind.seedy.core.admin.ServerHubViewModel
-import io.github.arkmind.seedy.core.admin.Tone
 import io.github.arkmind.seedy.core.admin.label
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
@@ -196,22 +195,13 @@ fun ServerHubScreen(state: ServerHubState, actions: ServerHubActions, onBack: ()
 
 @Composable
 private fun Alert(a: HubAlert, accent: Color, onAction: () -> Unit) {
-    val tone = a.tone?.let { toneColor(it) }
+    val tone = a.tone?.let { toneColor(it, normal = SeedyColors.Text3) }
     NoticeCard(
         a.title, a.help, a.action,
         dot = tone ?: if (a.danger) SeedyColors.Danger else if (a.key == "updates") accent else SeedyColors.Pending,
         background = tone?.copy(alpha = 0.08f) ?: if (a.danger) SeedyColors.Danger.copy(alpha = 0.08f) else SeedyColors.Panel,
         onAction = onAction,
     )
-}
-
-@Composable
-private fun toneColor(tone: Tone): Color = when (tone) {
-    Tone.Danger -> SeedyColors.Danger
-    Tone.Pending -> SeedyColors.Pending
-    Tone.Ok -> SeedyColors.Ok
-    Tone.Accent -> LocalAccent.current
-    Tone.Normal -> SeedyColors.Text3
 }
 
 /** The server's disks: what each holds, how full it is (green, amber from 85 %, red from 95 %). */
@@ -244,14 +234,14 @@ private fun DiskLine(d: Disk?) {
             }
             if (d != null) {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    val level = toneColor(d.level)
+                    val level = toneColor(d.level, normal = SeedyColors.Text3)
                     SText(t("{size} free", "size" to diskSize(d.free)), size = 13.sp, weight = 800, color = if (d.pct >= DiskWarnAt) level else SeedyColors.White, maxLines = 1)
                     SText(t("{used} of {total}", "used" to diskSize(d.used), "total" to diskSize(d.total)), size = 11.sp, color = SeedyColors.Text3, maxLines = 1)
                 }
             }
         }
         Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(SeedyColors.Surface2)) {
-            if (d != null) Box(Modifier.fillMaxWidth((d.pct / 100f).coerceIn(0f, 1f)).height(6.dp).clip(RoundedCornerShape(3.dp)).background(toneColor(d.level)))
+            if (d != null) Box(Modifier.fillMaxWidth((d.pct / 100f).coerceIn(0f, 1f)).height(6.dp).clip(RoundedCornerShape(3.dp)).background(toneColor(d.level, normal = SeedyColors.Text3)))
         }
         val holds = d?.holds.orEmpty()
         if (holds.isNotEmpty()) SText(holds, Modifier.cssText(12, 1.4f), size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
@@ -260,7 +250,7 @@ private fun DiskLine(d: Disk?) {
 
 @Composable
 private fun Link(link: HubLink, onClick: () -> Unit) {
-    LinkRow(link.name, link.sub, onClick, toneColor(link.tone), link.badge)
+    LinkRow(link.name, link.sub, onClick, toneColor(link.tone, normal = SeedyColors.Text3), link.badge)
 }
 
 @Composable
@@ -311,7 +301,7 @@ private fun SessionCard(s: NowPlaying, onMenu: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Dot(MethodDots.getValue(s.kind), 6.dp)
+                Dot(MethodDots.getValue(s.kind), size = 6.dp)
                 SText(t(s.kind.label()), size = 12.sp, weight = 700, lineHeight = 1.4f, color = SeedyColors.Text, maxLines = 1)
             }
             SText(s.detail, Modifier.weight(1f).onSizeChanged { lines = maxOf(1, (it.height / 17f).roundToInt()) }, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)

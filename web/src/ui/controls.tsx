@@ -56,8 +56,11 @@ export function Segmented<T extends string | number>({
   );
 }
 
+/* Select options whose labels are English keys: translated where they're rendered. */
+export const tOpts = <T,>(opts: { value: T; label: string }[]) => opts.map((o) => ({ ...o, label: t(o.label) }));
+
 export function SelectField<T extends string | number>({
-  id, value, options, onChange, minWidth, label
+  id, value, options, onChange, minWidth, label, disabled, class: cls, selectClass
 }: {
   id?: string;
   value: T;
@@ -65,13 +68,18 @@ export function SelectField<T extends string | number>({
   onChange: (v: T) => void;
   minWidth?: number;
   label?: string;
+  disabled?: boolean;
+  /* Extra classes on the wrapper and on the <select> itself. */
+  class?: string;
+  selectClass?: string;
 }) {
   return (
-    <span class="select-wrap">
+    <span class={'select-wrap' + (cls ? ' ' + cls : '')}>
       <select
         id={id}
-        class="select"
+        class={'select' + (selectClass ? ' ' + selectClass : '')}
         aria-label={label}
+        disabled={disabled}
         style={minWidth ? { minWidth: minWidth + 'px' } : undefined}
         value={String(value)}
         onChange={(e) => {
@@ -153,12 +161,12 @@ export function Panel({ title, text, id, children, gap, class: cls }: { title?: 
   );
 }
 
-export function SettingRow({ name, help, htmlFor, children, last, stack }: {
-  name: ComponentChildren; help?: ComponentChildren; htmlFor?: string; children?: ComponentChildren; last?: boolean; stack?: boolean;
+export function SettingRow({ name, help, htmlFor, children, last, stack, class: cls }: {
+  name: ComponentChildren; help?: ComponentChildren; htmlFor?: string; children?: ComponentChildren; last?: boolean; stack?: boolean; class?: string;
 }) {
   const Label = htmlFor ? 'label' : 'span';
   return (
-    <div class={'setting' + (last ? ' is-last' : '') + (stack ? ' is-stack' : '')}>
+    <div class={'setting' + (last ? ' is-last' : '') + (stack ? ' is-stack' : '') + (cls ? ' ' + cls : '')}>
       <Label {...(htmlFor ? { for: htmlFor } : {})} class="setting-label">
         <span class="setting-name">{name}</span>
         {help && <span class="setting-help">{help}</span>}
@@ -186,7 +194,9 @@ export function RadioCards<T extends string>({ name, value, options, onChange, l
   );
 }
 
-export function SavedNote({ state }: { state: 'saved' | 'saving' | 'error'; }) {
+export type SaveState = 'saved' | 'saving' | 'error';
+
+export function SavedNote({ state }: { state: SaveState }) {
   if (state === 'error') return <span class="saved-note is-error"><Icon name="alert" size={16} />{t("Couldn't save. Check the server log.")}</span>;
   if (state === 'saving') return <span class="saved-note"><span class="dot is-pending" />{t('Saving…')}</span>;
   return <span class="saved-note"><Icon name="check" size={16} stroke={2.6} color="var(--seedy-ok)" />{t('All changes saved')}</span>;

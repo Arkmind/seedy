@@ -31,10 +31,10 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,6 +72,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
+import io.github.arkmind.seedy.core.admin.Tone
+import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
@@ -81,6 +83,9 @@ import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.CssBox
 import io.github.arkmind.seedy.mobile.settings.CssColumn
+import io.github.arkmind.seedy.mobile.settings.Faint
+import io.github.arkmind.seedy.mobile.settings.OffRing
+import io.github.arkmind.seedy.mobile.settings.SheetList
 import io.github.arkmind.seedy.mobile.settings.cssRow
 import io.github.arkmind.seedy.mobile.settings.FormSheet
 import io.github.arkmind.seedy.mobile.settings.PickOption
@@ -182,7 +187,7 @@ fun MenuPill(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
 /** Live: a green dot while new lines show up as they happen, grey while paused. */
 @Composable
 fun LivePill(on: Boolean, onClick: () -> Unit, onLabel: String = t("Live"), offLabel: String = t("Paused"), enabled: Boolean = true) {
-    PillButton(if (on) onLabel else offLabel, onClick, enabled = enabled, leading = { Dot(if (on) SeedyColors.Ok else Color(0xFF5A5A5A)) })
+    PillButton(if (on) onLabel else offLabel, onClick, enabled = enabled, leading = { Dot(if (on) SeedyColors.Ok else OffRing) })
 }
 
 /**
@@ -248,11 +253,43 @@ fun <T> TabPills(options: List<Pair<T, String>>, value: T, onPick: (T) -> Unit, 
     }
 }
 
+/** A 36 px tile around an icon (the menu's playlists, the audience options). */
+@Composable
+fun IconTile(icon: IconDef, tint: Color = SeedyColors.Text2, size: Dp = 36.dp, iconSize: Dp = 18.dp, background: Color = SeedyColors.Surface, radius: Dp = 10.dp) {
+    Box(Modifier.size(size).clip(RoundedCornerShape(radius)).background(background), contentAlignment = Alignment.Center) {
+        SIcon(icon, size = iconSize, color = tint)
+    }
+}
+
+/** "Show more · {n} more" under a list shown a page at a time, [left] being what's not shown yet. */
+@Composable
+fun ShowMoreRow(left: Int, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.Center) {
+        PillButton(t("Show more"), onClick, trailing = {
+            SText(t("{n} more", "n" to formatNumber(left)), size = 13.sp, weight = 600, color = SeedyColors.Text3, maxLines = 1)
+        })
+    }
+}
+
 /* ── Dots and lines ── */
+
+/** "…" in a card (or a page, with a wider [padding]) while it loads. */
+@Composable
+fun LoadingDots(padding: Dp = 16.dp) = SText("…", Modifier.padding(padding), size = 13.sp, color = SeedyColors.Text3)
+
+/** A dot's colour for a status tone; Normal is the grey "not yet" ([normal]). */
+@Composable
+fun toneColor(tone: Tone, normal: Color = Faint): Color = when (tone) {
+    Tone.Ok -> SeedyColors.Ok
+    Tone.Pending -> SeedyColors.Pending
+    Tone.Danger -> SeedyColors.Danger
+    Tone.Accent -> LocalAccent.current
+    Tone.Normal -> normal
+}
 
 /** A status dot. */
 @Composable
-fun Dot(color: Color, size: Dp = 7.dp, modifier: Modifier = Modifier) = Box(modifier.size(size).background(color, CircleShape))
+fun Dot(color: Color, modifier: Modifier = Modifier, size: Dp = 7.dp) = Box(modifier.size(size).background(color, CircleShape))
 
 /** "● Active": a 6 px dot and a short label (12 px bold by default). */
 @Composable
@@ -266,7 +303,7 @@ fun StatusLine(
     gap: Dp = 6.dp,
 ) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(gap)) {
-        Dot(dot, 6.dp)
+        Dot(dot, size = 6.dp)
         SText(label, size = size, weight = weight, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -317,6 +354,7 @@ fun ErrorCard(title: String, onRetry: () -> Unit, modifier: Modifier = Modifier,
 
 /** An empty list: a title and a line, in a card (16 px sides unless [modifier] says otherwise). */
 @Composable
+@Suppress("ModifierParameter") // the default sets the page's 16 dp sides; a caller's modifier replaces them
 fun EmptyCard(title: String, text: String?, modifier: Modifier = Modifier.padding(horizontal = 16.dp), action: (@Composable () -> Unit)? = null) {
     Card(modifier, padding = 16.dp, gap = 2.dp) {
         SText(title, size = 13.sp, weight = 700, color = SeedyColors.White)
@@ -429,7 +467,7 @@ fun NameTag(label: String, color: Color = SeedyColors.TextHero, dot: Color? = nu
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        if (dot != null) Dot(dot, 6.dp)
+        if (dot != null) Dot(dot, size = 6.dp)
         SText(label, size = 10.sp, weight = 800, color = color, maxLines = 1)
     }
 }
@@ -450,7 +488,7 @@ fun RadioDot(on: Boolean) {
     Box(
         Modifier.size(22.dp).drawBehind {
             val w = 2.dp.toPx()
-            drawCircle(if (on) accent else Color(0xFF5A5A5A), radius = size.minDimension / 2 - w / 2, style = androidx.compose.ui.graphics.drawscope.Stroke(w))
+            drawCircle(if (on) accent else OffRing, radius = size.minDimension / 2 - w / 2, style = Stroke(w))
         },
         contentAlignment = Alignment.Center,
     ) { if (on) Box(Modifier.size(10.dp).background(accent, CircleShape)) }
@@ -539,7 +577,7 @@ val Mono = BaseText.copy(fontFamily = FontFamily.Monospace)
 /** A path in monospace ("/media/movies"). */
 @Composable
 fun MonoText(text: String, modifier: Modifier = Modifier, size: TextUnit = 13.sp, color: Color = SeedyColors.Text, maxLines: Int = Int.MAX_VALUE) {
-    androidx.compose.foundation.text.BasicText(
+    BasicText(
         text,
         modifier,
         style = Mono.copy(fontSize = size, fontWeight = FontWeight(500), color = color),
@@ -584,7 +622,7 @@ fun RemovableChip(label: String, small: Boolean = false, onRemove: () -> Unit) {
 /** The "+ Add" chip: dashed, or the people pages' 32 px ringed one when [small]. */
 @Composable
 fun AddChip(label: String, onClick: () -> Unit, small: Boolean = false, icon: IconDef = WebIcons.Plus) {
-    val ring = Color(0xFF4A4A4A)
+    val ring = SeedyColors.Stroke
     val ink = if (small) SeedyColors.Text2 else SeedyColors.Text
     Row(
         Modifier.height(if (small) 32.dp else 34.dp).clip(CircleShape)
@@ -665,7 +703,7 @@ fun BoardField(
         contentAlignment = if (multi) Alignment.TopStart else Alignment.CenterStart,
     ) {
         if (value.isEmpty() && placeholder.isNotEmpty()) {
-            androidx.compose.foundation.text.BasicText(placeholder, style = style.copy(color = SeedyColors.Text3), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            BasicText(placeholder, style = style.copy(color = SeedyColors.Text3), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         BasicTextField(
             value = value,
@@ -749,6 +787,21 @@ fun FormError(text: String, modifier: Modifier = Modifier) {
 @Composable
 fun SaveBarRoom() = Spacer(Modifier.height(110.dp))
 
+/** A bar pinned to the foot of the page, over its scrolling content, its items [gap] apart. Draw it in the page's overlay. */
+@Composable
+fun BoxScope.PinnedBar(gap: Dp, minHeight: Dp = 0.dp, content: @Composable RowScope.() -> Unit) {
+    val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    Row(
+        Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            .boxShadow(Color.Black.copy(alpha = 0.5f), blur = 30.dp, y = (-10).dp)
+            .background(SeedyColors.Row).blockTaps()
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = max(26.dp, nav + 12.dp)).heightIn(min = minHeight),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(gap),
+        content = content,
+    )
+}
+
 /**
  * The unsaved-changes bar pinned to the foot of the page: what changed (in the pending colour, with a [note] under
  * it), Discard and [saveLabel]; [busy] puts a line in place of it all ("Restarting the server…"). Draw it in the
@@ -768,19 +821,11 @@ fun BoxScope.SaveBar(
     /** Tighter buttons, for a long [saveLabel] ("Save and restart"). */
     compact: Boolean = false,
 ) {
-    val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    Row(
-        Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-            .boxShadow(Color.Black.copy(alpha = 0.5f), blur = 30.dp, y = (-10).dp)
-            .background(SeedyColors.Row).blockTaps()
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = max(26.dp, nav + 12.dp)).heightIn(min = 44.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    PinnedBar(8.dp, minHeight = 44.dp) {
         if (busy != null) {
             Dot(SeedyColors.Pending)
             SText(busy, Modifier.weight(1f), size = 13.sp, weight = 700, color = SeedyColors.Pending)
-            return@Row
+            return@PinnedBar
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             if (text.isNotEmpty()) SText(text, size = 13.sp, weight = 700, color = SeedyColors.Pending)
@@ -800,7 +845,7 @@ fun BoxScope.SaveBar(
  * back arrow does to ask the same.
  */
 @Composable
-fun LeaveGuard(dirty: Boolean, text: String, onLeave: () -> Unit): () -> Unit {
+fun leaveGuard(dirty: Boolean, text: String, onLeave: () -> Unit): () -> Unit {
     var asking by remember { mutableStateOf(false) }
     BackHandler(enabled = dirty && !asking) { asking = true }
     if (asking) {
@@ -927,7 +972,7 @@ fun <T> SearchPickSheet(
     BottomSheet(onDismiss) {
         SheetHead(title, text)
         if (options.size > 8) BoardField(q, { q = it }, Modifier.padding(start = 20.dp, end = 20.dp, bottom = 8.dp), placeholder = searchLabel)
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+        SheetList {
             for (o in shown) PickOption(o.label, o.value == value, sub(o.value)) { onPick(o.value); onDismiss() }
             if (shown.isEmpty()) SText(empty, Modifier.padding(12.dp), size = 13.sp, color = SeedyColors.Text3)
         }
@@ -963,7 +1008,7 @@ fun FolderSheet(
         }
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(SeedyColors.Row)) {
             when {
-                entries == null -> SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3)
+                entries == null -> LoadingDots()
                 entries.isEmpty() -> SText(error ?: t("No folders in here."), Modifier.padding(16.dp), size = 13.sp, color = if (error != null) SeedyColors.Danger else SeedyColors.Text3)
                 else -> entries.forEachIndexed { i, e ->
                     if (i > 0) RowLine()

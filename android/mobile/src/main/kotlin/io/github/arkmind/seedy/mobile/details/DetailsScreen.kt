@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -37,29 +36,25 @@ import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.arkmind.seedy.core.feature.DetailsViewModel
-import io.github.arkmind.seedy.core.format.dayMonth
 import io.github.arkmind.seedy.core.format.episodeNumber
 import io.github.arkmind.seedy.core.format.inProgress
 import io.github.arkmind.seedy.core.format.isVirtual
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.format.playLabel
-import io.github.arkmind.seedy.core.format.premiereDay
 import io.github.arkmind.seedy.core.format.progress
 import io.github.arkmind.seedy.core.format.rating
 import io.github.arkmind.seedy.core.format.remainingSeconds
 import io.github.arkmind.seedy.core.format.runtime
 import io.github.arkmind.seedy.core.format.score
+import io.github.arkmind.seedy.core.format.seasonEpisodeMeta
 import io.github.arkmind.seedy.core.format.timeLeft
-import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.format.year
 import io.github.arkmind.seedy.core.format.yearRange
 import io.github.arkmind.seedy.core.i18n.t
@@ -68,7 +63,10 @@ import io.github.arkmind.seedy.mobile.browse.GridCard
 import io.github.arkmind.seedy.mobile.browse.NoticeCard
 import io.github.arkmind.seedy.mobile.browse.Portrait
 import io.github.arkmind.seedy.mobile.browse.topInset
+import io.github.arkmind.seedy.mobile.parts.GlassButton
+import io.github.arkmind.seedy.mobile.parts.HeroScrims
 import io.github.arkmind.seedy.mobile.parts.bleed
+import io.github.arkmind.seedy.mobile.parts.fitTitleSize
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.components.CardProgress
@@ -99,7 +97,6 @@ class DetailsActions(
     val onSeason: (UUID) -> Unit = {},
     /** Opens the request sheet: the seasons to tick first (empty: every open one). */
     val onRequest: (List<Int>) -> Unit = {},
-    val onMarkSeason: () -> Unit = {},
     /** Opens the More menu (null: no menu button). */
     val onMore: (() -> Unit)? = null,
 )
@@ -187,13 +184,6 @@ private fun TopButtons(actions: DetailsActions, onMore: (() -> Unit)?) {
     }
 }
 
-@Composable
-private fun GlassButton(icon: IconDef, size: Dp, onClick: () -> Unit) {
-    Box(Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(SeedyColors.Bg.copy(alpha = 0.5f)).tap(onClick = onClick), contentAlignment = Alignment.Center) {
-        SIcon(icon, size = size, color = SeedyColors.White)
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Top(state: DetailsViewModel.State, item: BaseItemDto, actions: DetailsActions, canRequest: Boolean) {
@@ -205,15 +195,14 @@ private fun Top(state: DetailsViewModel.State, item: BaseItemDto, actions: Detai
         Box(Modifier.fillMaxWidth().height(240.dp)) {
             val art = viewer.images?.backdrop(item, 1280) ?: state.children?.firstNotNullOfOrNull { viewer.images?.backdrop(it, 1280) }
             if (art != null && !isPerson && viewer.backdrops) AsyncImage(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = BiasAlignment(0.47f, -0.07f))
-            Box(Modifier.fillMaxWidth().height(120.dp).background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.65f), Color.Transparent))))
-            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.7f).background(Brush.verticalGradient(listOf(Color.Transparent, SeedyColors.Bg))))
+            HeroScrims()
             TopButtons(actions, actions.onMore)
         }
         Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 196.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (isPerson) Portrait(item, 96.dp, letters = 30.sp)
             BoxWithConstraints {
                 val name = item.name.orEmpty()
-                SText(name, size = titleSize(name, maxWidth), weight = 900, lineHeight = 0.95f, tracking = -0.02f, color = SeedyColors.White, uppercase = true, maxLines = 3)
+                SText(name, size = fitTitleSize(name, maxWidth), weight = 900, lineHeight = 0.95f, tracking = -0.02f, color = SeedyColors.White, uppercase = true, maxLines = 3)
             }
             Meta(state, item)
             if (state.badges.isNotEmpty()) {
@@ -246,12 +235,6 @@ private fun Top(state: DetailsViewModel.State, item: BaseItemDto, actions: Detai
             if (isSeries && !state.seasons.isNullOrEmpty()) SeasonBar(state, actions)
         }
     }
-}
-
-/** 32 px, smaller when the title's longest word wouldn't fit on a line (Noto Sans Black capitals run about 0.72 em). */
-private fun titleSize(title: String, maxWidth: Dp): TextUnit {
-    val longest = title.split(Regex("\\s+")).maxOfOrNull { it.length }?.coerceAtLeast(4) ?: 4
-    return min(32f, maxWidth.value / (longest * 0.72f)).sp
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -410,18 +393,11 @@ private fun EpisodeRow(ep: BaseItemDto, upNext: Boolean, onPlay: () -> Unit) {
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             SText(join(ep.episodeNumber, ep.name), size = 14.sp, weight = 700, color = SeedyColors.White, maxLines = 2)
-            val meta = episodeMeta(ep)
+            val meta = seasonEpisodeMeta(ep)
             if (meta.isNotEmpty()) SText(meta, size = 12.sp, color = SeedyColors.Text3, maxLines = 1)
         }
         Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).tap(enabled = playable, onClick = onPlay), contentAlignment = Alignment.Center) {
             SIcon(AppIcons.PlayOutline, size = 20.dp, color = SeedyColors.Text2)
         }
     }
-}
-
-/** "54 min · 25 Sep", "52 min · 34 min left", "Airs Fri 23 Oct". */
-fun episodeMeta(ep: BaseItemDto): String {
-    val day = ep.premiereDay
-    if (ep.isVirtual) return day?.let { if (it.isAfter(java.time.LocalDate.now())) t("Airs {date}", "date" to weekdayDate(it)) else dayMonth(it) }.orEmpty()
-    return join(ep.runtime, if (ep.inProgress) timeLeft(ep.remainingSeconds) else day?.let(::dayMonth))
 }

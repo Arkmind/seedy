@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -71,9 +72,9 @@ private fun same(a: TaskTrigger, b: TaskTrigger) =
 fun ScheduleSheet(task: TaskRow, saving: Boolean, onSave: (List<TaskTrigger>) -> Unit, onDismiss: () -> Unit) {
     var draft by remember(task.id) { mutableStateOf(task.triggers) }
     var kind by remember(task.id) { mutableStateOf(Kind.Daily) }
-    var time by remember(task.id) { mutableStateOf(180L) }
+    var time by remember(task.id) { mutableLongStateOf(180L) }
     var day by remember(task.id) { mutableStateOf("Sunday") }
-    var every by remember(task.id) { mutableStateOf(1440L) }
+    var every by remember(task.id) { mutableLongStateOf(1440L) }
     var note by remember(task.id) { mutableStateOf("") }
     var picking by remember(task.id) { mutableStateOf<String?>(null) }
 

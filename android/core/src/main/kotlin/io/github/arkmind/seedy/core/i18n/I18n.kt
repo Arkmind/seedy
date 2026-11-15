@@ -68,4 +68,11 @@ fun tn(n: Int, one: String, other: String, vararg vars: Pair<String, Any?>): Str
     return t(if (form == "one") one else other, "n" to formatNumber(n), *vars)
 }
 
+/** A word whose translation depends on where it stands ("Series|tab" is plural in French); [text] when there's none. */
+fun tc(text: String, context: String): String {
+    val key = "$text|$context"
+    val out = t(key)
+    return if (out == key) text else out
+}
+
 fun formatNumber(n: Number): String = NumberFormat.getInstance(I18n.locale).format(n)

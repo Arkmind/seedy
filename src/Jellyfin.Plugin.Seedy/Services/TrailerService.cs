@@ -88,7 +88,7 @@ public sealed partial class TrailerService
     }
 
     /// <summary>A local trailer in a container and codec browsers play without transcoding.</summary>
-    private static BaseItem? LocalTrailer(BaseItem title, User user)
+    private static Video? LocalTrailer(BaseItem title, User user)
     {
         try
         {

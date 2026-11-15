@@ -27,7 +27,6 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
-import io.github.arkmind.seedy.mobile.admin.Dot
 import io.github.arkmind.seedy.mobile.admin.ErrorCard
 import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.MenuItem
@@ -47,6 +46,7 @@ import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHost
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
+import io.github.arkmind.seedy.mobile.settings.choices
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.mobile.settings.settingsRow
 import io.github.arkmind.seedy.ui.theme.SText
@@ -140,11 +140,7 @@ private fun Profiles(state: PlayLogAdminState, actions: PlayLogAdminActions, onM
     val list = state.profiles
     Card(Modifier.padding(horizontal = 16.dp)) {
         when {
-            list == null && state.profilesError != null -> Row(Modifier.settingsRow(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Dot(SeedyColors.Danger)
-                SText(t("Couldn’t load the profiles.") + " " + state.profilesError, Modifier.weight(1f), size = 13.sp, color = SeedyColors.Text2)
-                PillButton(t("Try again"), actions::retryProfiles, height = 36.dp)
-            }
+            list == null && state.profilesError != null -> RetryRow(t("Couldn’t load the profiles.") + " " + state.profilesError, actions::retryProfiles)
             list == null -> repeat(3) { i ->
                 if (i > 0) RowLine()
                 Box(Modifier.settingsRow())

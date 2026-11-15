@@ -31,7 +31,7 @@ export function chapterAt(chapters: Chapter[], seconds: number): number {
   return idx;
 }
 
-export function chapterLabel(chapters: Chapter[], i: number): string {
+function chapterLabel(chapters: Chapter[], i: number): string {
   if (i < 0) return '';
   const name = chapters[i].Name?.trim();
   if (!name || /^chapter\s*\d+$/i.test(name)) return t('Chapter {n}', { n: i + 1 });

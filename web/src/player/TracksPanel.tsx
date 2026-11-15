@@ -5,35 +5,27 @@ import type { SubtitlePrefs } from '../api/seedy';
 import { Segmented, Switch } from '../ui/controls';
 import { Icon } from '../ui/icons';
 import { toast } from '../ui/overlay';
-import { formatNumber, getLang, locale, t } from '../lib/i18n';
+import { formatNumber, getLang, t } from '../lib/i18n';
 import { QUALITY_OPTIONS, SPEEDS, type QualityId } from './playback';
 import { offsetLabel } from './subtitles';
+import { capitalize, displayLanguage } from '../lib/format';
 
 export type TracksTab = 'subtitles' | 'audio' | 'quality' | 'speed';
 
 /* ── Track names: "English (SDH)" with "SRT · External", "English" with "EAC3 5.1 · Atmos" ── */
 
-let names: Intl.DisplayNames | null = null;
 function languageName(code?: string): string {
   if (!code || code === 'und') return '';
-  try {
-    names ??= new Intl.DisplayNames([getLang() === 'en' ? 'en' : locale()], { type: 'language' });
-    const n = names.of(code);
-    return n && n.toLowerCase() !== code.toLowerCase() ? n : code.toUpperCase();
-  } catch {
-    return code.toUpperCase();
-  }
+  const n = displayLanguage(code);
+  return n && n.toLowerCase() !== code.toLowerCase() ? n : code.toUpperCase();
 }
 
-export function streamLanguage(s: MediaStream): string {
+function streamLanguage(s: MediaStream): string {
   const localized = (s as MediaStream & { LocalizedLanguage?: string }).LocalizedLanguage;
   // The server names languages in its own language; outside English, the viewer's language comes first.
   const own = capitalize(languageName(s.Language));
   return (getLang() === 'en' ? localized || own : own || localized) || s.Title || (s.Type === 'Audio' ? t('Audio') : t('Subtitles'));
 }
-
-/* French language names are lower case ("anglais"); as a track name they start with a capital. */
-const capitalize = (s: string) => (s ? s.charAt(0).toLocaleUpperCase(locale()) + s.slice(1) : s);
 
 /* Stream titles that only repeat the language add nothing. */
 function extraTitle(s: MediaStream, lang: string): string {
@@ -58,7 +50,7 @@ export function subtitleTitle(s: MediaStream): string {
   return extra ? `${base} · ${extra}` : base;
 }
 
-export function subtitleSub(s: MediaStream): string {
+function subtitleSub(s: MediaStream): string {
   const codec = SUB_CODECS[(s.Codec ?? '').toLowerCase()] ?? (s.Codec ?? '').toUpperCase();
   const where = s.IsForced ? t('Forced') : s.IsExternal ? t('External') : t('Embedded');
   return [codec, where].filter(Boolean).join(' · ');
@@ -78,13 +70,13 @@ export function channelsLabel(n?: number, layout?: string): string {
   return t('{n} ch', { n });
 }
 
-export function audioTitle(s: MediaStream): string {
+function audioTitle(s: MediaStream): string {
   const lang = streamLanguage(s);
   const extra = extraTitle(s, lang);
   return extra ? `${lang} · ${extra}` : lang;
 }
 
-export function audioSub(s: MediaStream): string {
+function audioSub(s: MediaStream): string {
   const c = (s.Codec ?? '').toLowerCase();
   let codec = AUDIO_CODECS[c] ?? (c.startsWith('pcm') ? 'PCM' : c.toUpperCase());
   if (c === 'dts' && s.Profile && /MA|HD|X/.test(s.Profile)) codec = s.Profile.replace(/^DTS[- ]?/i, 'DTS-').replace('DTS-HD MA', 'DTS-HD MA');

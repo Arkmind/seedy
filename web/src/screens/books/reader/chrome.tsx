@@ -1,10 +1,9 @@
 import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { pct } from '../../../lib/format';
-import { t } from '../../../lib/i18n';
-import { tc } from '../parts';
+import { t, tc } from '../../../lib/i18n';
 import {
-  COLUMN, SIZE_MAX, SIZE_MIN, THEMES, type ComicSettings, type EpubSettings, type Fit, type FontChoice, type Layout, type Margins,
+  SIZE_MAX, SIZE_MIN, THEMES, type ComicSettings, type EpubSettings, type Fit, type FontChoice, type Layout, type Margins,
   type PageTheme, type Spacing, type Direction
 } from './settings';
 
@@ -65,20 +64,7 @@ export function BarButton({ icon, label, onClick, pressed, expanded, filled, id 
   );
 }
 
-/* Full screen follows the document; Esc leaves it on its own. */
-export function useFullscreen(): [boolean, () => void] {
-  const [on, setOn] = useState(!!document.fullscreenElement);
-  useEffect(() => {
-    const fn = () => setOn(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', fn);
-    return () => document.removeEventListener('fullscreenchange', fn);
-  }, []);
-  const toggle = () => {
-    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
-    else void document.documentElement.requestFullscreen?.().catch(() => undefined);
-  };
-  return [on, toggle];
-}
+export { useFullscreen } from '../../../lib/fullscreen';
 
 export function TurnButtons({ onPrev, onNext, prevDisabled, nextDisabled, rtl }: { onPrev: () => void; onNext: () => void; prevDisabled?: boolean; nextDisabled?: boolean; rtl?: boolean }) {
   return (
@@ -223,7 +209,7 @@ export function EpubSettingsPanel({ value, onChange, onClose }: { value: EpubSet
         options={[{ value: 'tight', label: t('Tight') }, { value: 'normal', label: tc('Normal', 'spacing') }, { value: 'airy', label: t('Airy') }]} />
       <Seg<Margins> label={t('Margins')} value={value.margins} onChange={(margins) => onChange({ margins })}
         options={[{ value: 'narrow', label: t('Narrow') }, { value: 'normal', label: tc('Normal', 'margins') }, { value: 'wide', label: t('Wide') }]} />
-      <Seg<Layout> label={t('Layout')} value={value.layout} onChange={(layout) => onChange({ layout })}
+      <Seg<Layout> label={tc('Layout', 'reader')} value={value.layout} onChange={(layout) => onChange({ layout })}
         options={[{ value: 'one', label: t('One page') }, { value: 'two', label: t('Two pages') }, { value: 'scroll', label: t('Scroll') }]} />
       <span class="rs-note">{t('Saved for this book on every device. Your place syncs through the server.')}</span>
     </section>
@@ -238,7 +224,7 @@ export function ComicSettingsPanel({ value, onChange, onClose }: { value: ComicS
     <section ref={ref} role="dialog" aria-labelledby="rs-h" class="rs-panel" tabIndex={-1}>
       <h2 id="rs-h" class="rs-title">{t('Reading settings')}</h2>
       <ThemePicker value={value.theme} onChange={(theme) => onChange({ theme })} />
-      <Seg<Layout> label={t('Layout')} value={value.layout} onChange={(layout) => onChange({ layout })}
+      <Seg<Layout> label={tc('Layout', 'reader')} value={value.layout} onChange={(layout) => onChange({ layout })}
         options={[{ value: 'one', label: t('One page') }, { value: 'two', label: t('Two pages') }, { value: 'scroll', label: t('Scroll') }]} />
       <Seg<Fit> label={t('Fit')} value={value.fit} onChange={(fit) => onChange({ fit })}
         options={[{ value: 'screen', label: t('Screen') }, { value: 'width', label: t('Width') }]} />
@@ -249,7 +235,6 @@ export function ComicSettingsPanel({ value, onChange, onClose }: { value: ComicS
   );
 }
 
-export { COLUMN };
 
 /* A side panel under the top bar (Contents, Search). */
 export function SidePanel({ title, onClose, children, anchorId, label }: { title: ComponentChildren; label: string; onClose: () => void; children: ComponentChildren; anchorId: string }) {

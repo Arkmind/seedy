@@ -1,10 +1,5 @@
 package io.github.arkmind.seedy.mobile.seasons
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -12,20 +7,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
@@ -37,22 +26,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.arkmind.seedy.core.feature.AdvancedActions
 import io.github.arkmind.seedy.core.feature.RequestSeasonsViewModel
 import io.github.arkmind.seedy.core.feature.SeasonsResult
 import io.github.arkmind.seedy.core.feature.SeasonsTarget
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.seedy.SeerrDetails
-import io.github.arkmind.seedy.mobile.parts.blockTaps
+import io.github.arkmind.seedy.mobile.browse.TallSheet
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.components.SeedySwitch
@@ -63,6 +49,7 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
+import io.github.arkmind.seedy.ui.theme.seasonPillColours
 
 /**
  * Board "Android · Request seasons": the sheet that asks Seerr for a series' seasons. Any page can open it (a series'
@@ -94,9 +81,6 @@ fun RequestSeasonsSheet(
     )
 }
 
-/** The Advanced section's choices. */
-class AdvancedActions(val server: (Int) -> Unit, val profile: (Int) -> Unit, val folder: (String) -> Unit, val user: (Int) -> Unit)
-
 /** The sheet itself, over a dimmed page (stateless, for previews and screenshot tests). */
 @Composable
 fun RequestSeasonsContent(
@@ -108,46 +92,25 @@ fun RequestSeasonsContent(
     onRetry: () -> Unit,
     onSubmit: () -> Unit,
     onDismiss: () -> Unit,
-) = io.github.arkmind.seedy.ui.components.Overlay {
-    BackHandler(onBack = onDismiss)
-    val shown = remember { MutableTransitionState(false).apply { targetState = true } }
-    Box(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxSize().background(Color(0xA8050505)).tap(onClick = onDismiss))
-        AnimatedVisibility(shown, enter = slideInVertically { it / 3 } + fadeIn()) {
-            Column(
-                Modifier.fillMaxSize().padding(top = 150.dp)
-                    .shadow(40.dp, RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp), ambientColor = Color.Black, spotColor = Color.Black)
-                    .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)).background(SeedyColors.Panel)
-                    .blockTaps(),
-            ) {
-                Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp, bottom = 6.dp).size(36.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(SeedyColors.Stroke))
-                Column(
-                    Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Head(state)
-                    state.options?.quota?.let { Quota(state) }
-                    SeasonsHead(state, onToggleAll)
-                    when {
-                        state.failed && state.details == null -> {
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                SText(t("Couldn't load the seasons from Seerr."), size = 13.sp, color = SeedyColors.Text2)
-                                SText(t("Try again"), Modifier.clip(RoundedCornerShape(12.dp)).background(SeedyColors.Surface).tap(onClick = onRetry).padding(horizontal = 14.dp, vertical = 10.dp), size = 13.sp, weight = 700, color = SeedyColors.White)
-                            }
-                        }
-                        state.details == null -> repeat(3) { Box(Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(13.dp)).background(SeedyColors.Row)) }
-                        state.rows.isEmpty() -> SText(t("Seerr doesn’t list any seasons for this series yet."), size = 13.sp, color = SeedyColors.Text2)
-                        else -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            for (row in state.rows) SeasonRow(row, on = !row.locked && row.n in state.picked) { onToggle(row.n) }
-                        }
-                    }
-                    if (state.can4k) Option(t("Request in 4K"), t("Sent to the 4K server separately")) { SeedySwitch(state.is4k, on4k) }
-                    if (state.hasAdvanced) Advanced(state, advanced)
-                }
-                Footer(state, onSubmit)
+) = TallSheet(onDismiss, footer = { Footer(state, onSubmit) }) {
+    Head(state)
+    state.options?.quota?.let { Quota(state) }
+    SeasonsHead(state, onToggleAll)
+    when {
+        state.failed && state.details == null -> {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SText(t("Couldn't load the seasons from Seerr."), size = 13.sp, color = SeedyColors.Text2)
+                SText(t("Try again"), Modifier.clip(RoundedCornerShape(12.dp)).background(SeedyColors.Surface).tap(onClick = onRetry).padding(horizontal = 14.dp, vertical = 10.dp), size = 13.sp, weight = 700, color = SeedyColors.White)
             }
         }
+        state.details == null -> repeat(3) { Box(Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(13.dp)).background(SeedyColors.Row)) }
+        state.rows.isEmpty() -> SText(t("Seerr doesn’t list any seasons for this series yet."), size = 13.sp, color = SeedyColors.Text2)
+        else -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (row in state.rows) SeasonRow(row, on = !row.locked && row.n in state.picked) { onToggle(row.n) }
+        }
     }
+    if (state.can4k) Option(t("Request in 4K"), t("Sent to the 4K server separately")) { SeedySwitch(state.is4k, on4k) }
+    if (state.hasAdvanced) Advanced(state, advanced)
 }
 
 @Composable
@@ -253,12 +216,7 @@ private fun SeasonRow(row: RequestSeasonsViewModel.Row, on: Boolean, onClick: ()
 
 @Composable
 private fun StatusPill(row: RequestSeasonsViewModel.Row) {
-    val (bg, ink, dot) = when (row.kind) {
-        RequestSeasonsViewModel.Kind.Server -> Triple(SeedyColors.Ok.copy(alpha = 0.1f), SeedyColors.Ok, SeedyColors.Ok)
-        RequestSeasonsViewModel.Kind.Pending -> Triple(SeedyColors.Pending.copy(alpha = 0.1f), SeedyColors.Pending, SeedyColors.Pending)
-        RequestSeasonsViewModel.Kind.Blocked -> Triple(Color(0xFF262626), SeedyColors.TextHero, SeedyColors.Danger)
-        else -> Triple(Color(0xFF262626), SeedyColors.TextHero, Color(0xFF6A6A6A))
-    }
+    val (bg, ink, dot) = seasonPillColours(row.kind)
     Row(
         Modifier.clip(CircleShape).background(bg).padding(horizontal = 9.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -324,41 +282,35 @@ private fun Choice(label: String, value: String, options: List<Pair<String, () -
     }
 }
 
+/** The pinned foot: what happens next (approved at once or an admin first), then the request button. */
 @Composable
 private fun Footer(state: RequestSeasonsViewModel.State, onSubmit: () -> Unit) {
-    val bottom = max(26.dp, WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 12.dp)
-    Column(
-        Modifier.fillMaxWidth().drawBehind { drawLine(SeedyColors.Line, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }
-            .padding(start = 16.dp, end = 16.dp, top = 13.dp, bottom = bottom),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        state.error?.let { SText(it, size = 12.sp, weight = 600, color = SeedyColors.Danger) }
-        val approve = state.approve
-        if (approve != null) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val tone = if (approve) SeedyColors.Ok else SeedyColors.Pending
-                Box(Modifier.size(18.dp).background(tone.copy(alpha = 0.16f), CircleShape), contentAlignment = Alignment.Center) {
-                    SIcon(if (approve) WebIcons.Check else AppIcons.ClockHands, size = 12.dp, color = tone, stroke = 3f)
-                }
-                SText(state.note, size = 12.sp, color = SeedyColors.Text2, maxLines = 2)
+    state.error?.let { SText(it, size = 12.sp, weight = 600, color = SeedyColors.Danger) }
+    val approve = state.approve
+    if (approve != null) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val tone = if (approve) SeedyColors.Ok else SeedyColors.Pending
+            Box(Modifier.size(18.dp).background(tone.copy(alpha = 0.16f), CircleShape), contentAlignment = Alignment.Center) {
+                SIcon(if (approve) WebIcons.Check else AppIcons.ClockHands, size = 12.dp, color = tone, stroke = 3f)
             }
+            SText(state.note, size = 12.sp, color = SeedyColors.Text2, maxLines = 2)
         }
-        val enabled = state.canSend
-        Row(
-            Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(14.dp)).background(if (enabled) SeedyColors.Inverse else SeedyColors.Surface2)
-                .tap(enabled = enabled, onClick = onSubmit),
-            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val ink = if (enabled) SeedyColors.InkInverse else SeedyColors.Text3
-            SIcon(WebIcons.Request, size = 19.dp, color = ink)
-            SText(
-                when {
-                    state.busy -> t("Requesting…")
-                    state.count > 0 -> tn(state.count, "Request {n} season", "Request {n} seasons")
-                    else -> t("Request seasons")
-                },
-                size = 15.sp, weight = 800, color = ink, maxLines = 1,
-            )
-        }
+    }
+    val enabled = state.canSend
+    Row(
+        Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(14.dp)).background(if (enabled) SeedyColors.Inverse else SeedyColors.Surface2)
+            .tap(enabled = enabled, onClick = onSubmit),
+        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val ink = if (enabled) SeedyColors.InkInverse else SeedyColors.Text3
+        SIcon(WebIcons.Request, size = 19.dp, color = ink)
+        SText(
+            when {
+                state.busy -> t("Requesting…")
+                state.count > 0 -> tn(state.count, "Request {n} season", "Request {n} seasons")
+                else -> t("Request seasons")
+            },
+            size = 15.sp, weight = 800, color = ink, maxLines = 1,
+        )
     }
 }

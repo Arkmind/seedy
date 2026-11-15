@@ -3,15 +3,19 @@ package io.github.arkmind.seedy.mobile.library
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.runtime.rememberCoroutineScope
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.manage.AddTarget
 import io.github.arkmind.seedy.core.manage.BulkViewModel
+import io.github.arkmind.seedy.mobile.browse.Message
+import io.github.arkmind.seedy.mobile.browse.fullLine
 import io.github.arkmind.seedy.mobile.manage.ManagePerms
 import io.github.arkmind.seedy.mobile.manage.ManageSheetHost
 import io.github.arkmind.seedy.mobile.manage.SelectionActions
 import io.github.arkmind.seedy.mobile.manage.SelectionBar
 import io.github.arkmind.seedy.mobile.manage.rememberManageSheets
 import io.github.arkmind.seedy.mobile.parts.Toast
+import io.github.arkmind.seedy.mobile.parts.bleed
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,7 +34,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -54,7 +57,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -159,17 +161,13 @@ fun LibraryRoute(id: UUID) {
             )
         }
         ManageSheetHost(sheets, say = bulk::say) { gone, message ->
-            vm.removed(gone.mapNotNull { runCatching { UUID.fromString(dashed(it)) }.getOrNull() }.toSet())
+            vm.removed(gone.mapNotNull(::uuidOf).toSet())
             picked = null
             bulk.say(message)
         }
         Toast(bulkState.message, bulk::messageShown, Modifier.align(Alignment.BottomCenter))
     }
 }
-
-/** Jellyfin's 32-character ids as UUIDs. */
-private fun dashed(id: String): String =
-    if (id.length == 32) "${id.substring(0, 8)}-${id.substring(8, 12)}-${id.substring(12, 16)}-${id.substring(16, 20)}-${id.substring(20)}" else id
 
 class LibraryActions(
     val onBack: () -> Unit = {},
@@ -208,7 +206,7 @@ fun LibraryScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Header, views and tools are one line of the grid: the grid's 16 px gaps only apply under them.
-        full("top") {
+        fullLine("top") {
             Column {
                 Header(state, actions)
                 if (state.view != null) {
@@ -221,28 +219,18 @@ fun LibraryScreen(
         }
         when {
             state.view == null && !state.error -> items(8) { GridCardSkeleton() }
-            state.error -> full("error") { Message(t("Couldn't open this library"), t("The server didn’t answer. Check your connection and try again.")) }
+            state.error -> fullLine("error") { Message(t("Couldn't open this library"), t("The server didn’t answer. Check your connection and try again.")) }
             state.tab == LibraryTab.Suggestions -> suggestions(state, actions)
             state.tab == LibraryTab.Genres -> genres(state, actions)
             else -> {
                 if (state.items.isEmpty() && state.loading) items(8) { GridCardSkeleton() }
-                else if (state.items.isEmpty()) full("empty") { Empty(state, actions) }
+                else if (state.items.isEmpty()) fullLine("empty") { Empty(state, actions) }
                 items(state.items, key = { it.id }) { item ->
                     GridCard(item, { actions.onOpen(item) }, selected = selection?.contains(item.id), onLongClick = actions.onPick?.let { pick -> { pick(item) } })
                 }
             }
         }
     }
-}
-
-private fun LazyGridScope.full(key: String, content: @Composable () -> Unit) = item(key = key, span = { GridItemSpan(maxLineSpan) }) { content() }
-
-/** Widens a full-line item past the grid's side padding. */
-private fun Modifier.bleed(start: Dp, end: Dp): Modifier = this.layout { measurable, constraints ->
-    val s = start.roundToPx()
-    val e = end.roundToPx()
-    val p = measurable.measure(constraints.copy(minWidth = constraints.minWidth + s + e, maxWidth = constraints.maxWidth + s + e))
-    layout(p.width - s - e, p.height) { p.place(-s, 0) }
 }
 
 @Composable
@@ -331,19 +319,6 @@ private fun Empty(state: LibraryViewModel.State, actions: LibraryActions) {
     }
 }
 
-@Composable
-fun Message(title: String, text: String, action: String? = null, onAction: () -> Unit = {}) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SText(title, size = 16.sp, weight = 800, color = SeedyColors.White, align = androidx.compose.ui.text.style.TextAlign.Center)
-        SText(text, size = 13.sp, color = SeedyColors.Text2, align = androidx.compose.ui.text.style.TextAlign.Center)
-        if (action != null) {
-            SText(
-                action, Modifier.padding(top = 8.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Inverse).tap(onClick = onAction).padding(horizontal = 16.dp, vertical = 10.dp),
-                size = 13.sp, weight = 800, color = SeedyColors.InkInverse,
-            )
-        }
-    }
-}
 
 private fun LazyGridScope.suggestions(state: LibraryViewModel.State, actions: LibraryActions) {
     val rows = state.suggestions
@@ -351,9 +326,9 @@ private fun LazyGridScope.suggestions(state: LibraryViewModel.State, actions: Li
         items(6) { GridCardSkeleton() }
         return
     }
-    if (rows.isEmpty()) full("none") { Message(t("Nothing to suggest yet"), t("Watch a few titles and suggestions will show up here.")) }
+    if (rows.isEmpty()) fullLine("none") { Message(t("Nothing to suggest yet"), t("Watch a few titles and suggestions will show up here.")) }
     for (row in rows) {
-        full("row:${row.title}") {
+        fullLine("row:${row.title}") {
             Column(Modifier.bleed(20.dp, 20.dp).padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SText(row.title, Modifier.weight(1f, fill = false), size = 16.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
@@ -373,7 +348,7 @@ private fun LazyGridScope.genres(state: LibraryViewModel.State, actions: Library
         items(8) { Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Surface)) }
         return
     }
-    if (tiles.isEmpty()) full("none") { Message(t("No genres yet"), t("Genres come from each title's metadata.")) }
+    if (tiles.isEmpty()) fullLine("none") { Message(t("No genres yet"), t("Genres come from each title's metadata.")) }
     items(tiles, key = { it.name }) { tile -> GenreTile(tile) { actions.onGenre(tile.name) } }
 }
 

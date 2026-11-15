@@ -5,13 +5,13 @@ import { fmtDayMonth, plural } from '../../lib/format';
 import { formatNumber, t, tn } from '../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync } from '../../lib/store';
-import { NumField, SavedNote, SelectField, Switch } from '../../ui/controls';
+import { NumField, Panel, SavedNote, type SaveState, SelectField, SettingRow, Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { MenuButton, Sheet, confirm, toast } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from '../admin/AdminLayout';
 import { addLibrary, addLibraryPath, type AvailableOptions, countItems, type Country, type Culture, errText, type FullUser, getAvailableOptions, getCountries, getCultures, getNamedConfig, getServerConfig, getTasks, getUsers, getVirtualFolders, type LibraryOptions, type MetadataConfig, type NfoConfig, patchNamedConfig, patchServerConfig, refreshItem, removeLibrary, removeLibraryPath, saveLibraryOptions, scanAllLibraries, type ServerConfig, type TaskInfo, type TypeOptions, type VirtualFolder } from './api';
 import { FolderPicker, InlineError, usePoll } from './parts';
-import { atLabel, dayDiff, hhmm } from './format';
+import { atLabel, dayDiff, hhmm, percent } from './format';
 
 /* Server · Libraries: each library's folders and options (autosaved), plus the server-wide library settings. */
 
@@ -50,7 +50,6 @@ function scannedLabel(end?: string): string {
   return t('Scanned on {date}', { date: fmtDayMonth(d) });
 }
 
-const percent = (p: number) => formatNumber(Math.floor(p) / 100, { style: 'percent' });
 
 export function ServerLibraries() {
   const loc = useLocation();
@@ -97,14 +96,14 @@ export function ServerLibraries() {
         </>
       }
     >
-      <div role="tablist" aria-label={t('Library settings')} class="srv-tabs srv-lib-tabs">
+      <div role="tablist" aria-label={t('Library settings')} class="srv-tabs">
         {TABS.map((x) => (
           <button key={x.id} type="button" role="tab" class="tab" aria-selected={tab === x.id ? 'true' : 'false'} onClick={() => setQuery({ tab: x.id === 'libraries' ? null : x.id })}>{t(x.label)}</button>
         ))}
       </div>
 
       {tab === 'libraries' && (
-        !folders && foldersError ? <LoadError error={foldersError} onRetry={() => void loadFolders()} what={t('the libraries')} />
+        !folders && foldersError ? <LoadError error={foldersError} onRetry={() => void loadFolders()} what="the libraries" />
           : !folders ? <LibrariesSkeleton />
             : <LibrariesTab folders={folders} tasks={tasks} selectedId={loc.query.get('lib')} onReload={loadFolders} onAdd={() => setAdding(true)} />
       )}
@@ -306,7 +305,7 @@ const locales = () => (localesPromise ??= Promise.all([getCultures(), getCountri
 
 function LibraryEditor({ folder, onReload }: { folder: VirtualFolder; onReload: () => Promise<void> }) {
   const [opts, setOpts] = useState<LibraryOptions>(folder.LibraryOptions);
-  const [save, setSave] = useState<'saved' | 'saving' | 'error'>('saved');
+  const [save, setSave] = useState<SaveState>('saved');
   const [picker, setPicker] = useState(false);
   const avail = useAsync(() => availableFor(folder.CollectionType), [folder.CollectionType]);
   const loc = useAsync(() => locales(), []);
@@ -802,17 +801,16 @@ function AddLibrarySheet({ open, existing, onClose, onAdded }: { open: boolean; 
         <form class="srv-form" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
           <label class="srv-field">
             <span class="srv-field-label">{t('Kind')}</span>
-            <span class="select-wrap">
-              <select class="select srv-full" value={type} onChange={(e) => {
-                const v = (e.currentTarget as HTMLSelectElement).value;
+            <SelectField
+              selectClass="srv-full"
+              value={type}
+              options={NEW_TYPES.map((x) => ({ value: x.value, label: t(x.label) }))}
+              onChange={(v) => {
                 setType(v);
                 const kind = NEW_TYPES.find((x) => x.value === v);
                 if (!nameTouched) setName(kind ? t(kind.name) : '');
-              }}>
-                {NEW_TYPES.map((x) => <option key={x.value} value={x.value}>{t(x.label)}</option>)}
-              </select>
-              <Icon name="chevronDown" size={16} />
-            </span>
+              }}
+            />
           </label>
           <label class="srv-field">
             <span class="srv-field-label">{t('Name')}</span>
@@ -853,7 +851,7 @@ function AddLibrarySheet({ open, existing, onClose, onAdded }: { open: boolean; 
 function useAutosave<T extends object>(load: () => Promise<T>, saveFn: (patch: Partial<T>) => Promise<unknown>) {
   const loaded = useAsync(() => load(), []);
   const [local, setLocal] = useState<T | null>(null);
-  const [state, setState] = useState<'saved' | 'saving' | 'error'>('saved');
+  const [state, setState] = useState<SaveState>('saved');
   const pending = useRef<Partial<T>>({});
   const timer = useRef(0);
   useEffect(() => { if (loaded.data) setLocal(loaded.data); }, [loaded.data]);
@@ -882,23 +880,14 @@ function useAutosave<T extends object>(load: () => Promise<T>, saveFn: (patch: P
   return { data: local, error: loaded.error, reload: loaded.reload, set, state };
 }
 
-function TabBody({ error, reload, ready, children, state }: { error?: Error; reload: () => void; ready: boolean; children: ComponentChildren; state: 'saved' | 'saving' | 'error' }) {
-  if (!ready && error) return <LoadError error={error} onRetry={reload} what={t('these settings')} />;
+function TabBody({ error, reload, ready, children, state }: { error?: Error; reload: () => void; ready: boolean; children: ComponentChildren; state: SaveState }) {
+  if (!ready && error) return <LoadError error={error} onRetry={reload} what="these settings" />;
   if (!ready) return <PanelSkeletons count={2} rows={3} />;
   return (
     <>
       {children}
       <div class="srv-lib-foot is-end"><SavedNote state={state} /></div>
     </>
-  );
-}
-
-function Row({ name, help, children }: { name: string; help: string; children: ComponentChildren }) {
-  return (
-    <div class="setting">
-      <span class="setting-label"><span class="setting-name">{name}</span><span class="setting-help">{help}</span></span>
-      {children}
-    </div>
   );
 }
 
@@ -912,17 +901,15 @@ function DisplayTab() {
     <TabBody error={cfg.error ?? meta.error} reload={() => { cfg.reload(); meta.reload(); }} ready={!!c && !!m} state={state}>
       {c && m && (
         <>
-          <section class="panel">
-            <div class="panel-head"><h2 class="panel-title">{t('Browsing')}</h2><p class="panel-text">{t('How every app shows what’s in the libraries.')}</p></div>
-            <Row name={t('Folders view')} help={t('Adds a library that shows the media folders as they are on disk')}><Switch checked={c.EnableFolderView} onChange={(v) => cfg.set('EnableFolderView', v)} label={t('Folders view')} /></Row>
-            <Row name={t('Specials inside their seasons')} help={t('Specials sit between the episodes they aired with')}><Switch checked={c.DisplaySpecialsWithinSeasons} onChange={(v) => cfg.set('DisplaySpecialsWithinSeasons', v)} label={t('Specials inside their seasons')} /></Row>
-            <Row name={t('Group movies into collections')} help={t('Movies in a collection show as one card in Movies')}><Switch checked={c.EnableGroupingMoviesIntoCollections} onChange={(v) => cfg.set('EnableGroupingMoviesIntoCollections', v)} label={t('Group movies into collections')} /></Row>
-            <Row name={t('Group shows into collections')} help={t('Shows in a collection show as one card in Shows')}><Switch checked={c.EnableGroupingShowsIntoCollections} onChange={(v) => cfg.set('EnableGroupingShowsIntoCollections', v)} label={t('Group shows into collections')} /></Row>
-            <Row name={t('Suggest channel content')} help={t('Live TV and channel titles can appear in suggestions')}><Switch checked={c.EnableExternalContentInSuggestions} onChange={(v) => cfg.set('EnableExternalContentInSuggestions', v)} label={t('Suggest channel content')} /></Row>
-          </section>
-          <section class="panel">
-            <div class="panel-head is-title-only"><h2 class="panel-title">{t('New titles')}</h2></div>
-            <Row name={t('Date added')} help={t('What “Recently added” sorts by')}>
+          <Panel title={t('Browsing')} text={t('How every app shows what’s in the libraries.')}>
+            <SettingRow name={t('Folders view')} help={t('Adds a library that shows the media folders as they are on disk')}><Switch checked={c.EnableFolderView} onChange={(v) => cfg.set('EnableFolderView', v)} label={t('Folders view')} /></SettingRow>
+            <SettingRow name={t('Specials inside their seasons')} help={t('Specials sit between the episodes they aired with')}><Switch checked={c.DisplaySpecialsWithinSeasons} onChange={(v) => cfg.set('DisplaySpecialsWithinSeasons', v)} label={t('Specials inside their seasons')} /></SettingRow>
+            <SettingRow name={t('Group movies into collections')} help={t('Movies in a collection show as one card in Movies')}><Switch checked={c.EnableGroupingMoviesIntoCollections} onChange={(v) => cfg.set('EnableGroupingMoviesIntoCollections', v)} label={t('Group movies into collections')} /></SettingRow>
+            <SettingRow name={t('Group shows into collections')} help={t('Shows in a collection show as one card in Shows')}><Switch checked={c.EnableGroupingShowsIntoCollections} onChange={(v) => cfg.set('EnableGroupingShowsIntoCollections', v)} label={t('Group shows into collections')} /></SettingRow>
+            <SettingRow name={t('Suggest channel content')} help={t('Live TV and channel titles can appear in suggestions')}><Switch checked={c.EnableExternalContentInSuggestions} onChange={(v) => cfg.set('EnableExternalContentInSuggestions', v)} label={t('Suggest channel content')} /></SettingRow>
+          </Panel>
+          <Panel title={t('New titles')}>
+            <SettingRow name={t('Date added')} help={t('What “Recently added” sorts by')}>
               <SelectField
                 value={m.UseFileCreationTimeForDateAdded ? 'file' : 'scan'}
                 options={[{ value: 'file', label: t('When the file was created') }, { value: 'scan', label: t('When a scan found it') }]}
@@ -930,8 +917,8 @@ function DisplayTab() {
                 label={t('Date added')}
                 onChange={(v) => meta.set('UseFileCreationTimeForDateAdded', v === 'file')}
               />
-            </Row>
-          </section>
+            </SettingRow>
+          </Panel>
         </>
       )}
     </TabBody>
@@ -954,31 +941,28 @@ function MetadataTab() {
     <TabBody error={cfg.error} reload={cfg.reload} ready={!!c} state={cfg.state}>
       {c && (
         <>
-          <section class="panel">
-            <div class="panel-head"><h2 class="panel-title">{t('Language and country')}</h2><p class="panel-text">{t('What new libraries start with. Each library can still choose its own.')}</p></div>
-            <Row name={t('Preferred language')} help={t('For titles, descriptions and artwork')}>
+          <Panel title={t('Language and country')} text={t('What new libraries start with. Each library can still choose its own.')}>
+            <SettingRow name={t('Preferred language')} help={t('For titles, descriptions and artwork')}>
               <SelectField value={c.PreferredMetadataLanguage ?? ''} options={withCurrent(langs, c.PreferredMetadataLanguage ?? '')} minWidth={240} label={t('Preferred language')} onChange={(v) => cfg.set('PreferredMetadataLanguage', v)} />
-            </Row>
-            <Row name={t('Country')} help={t('For release dates and age ratings')}>
+            </SettingRow>
+            <SettingRow name={t('Country')} help={t('For release dates and age ratings')}>
               <SelectField value={c.MetadataCountryCode ?? ''} options={withCurrent(countries, c.MetadataCountryCode ?? '')} minWidth={240} label={t('Country')} onChange={(v) => cfg.set('MetadataCountryCode', v)} />
-            </Row>
-          </section>
-          <section class="panel">
-            <div class="panel-head is-title-only"><h2 class="panel-title">{t('Chapters')}</h2></div>
-            <Row name={t('Chapter image size')} help={t('Pictures for the chapter list in the player')}>
+            </SettingRow>
+          </Panel>
+          <Panel title={t('Chapters')}>
+            <SettingRow name={t('Chapter image size')} help={t('Pictures for the chapter list in the player')}>
               <SelectField value={c.ChapterImageResolution ?? 'MatchSource'} options={CHAPTER_RES.map((o) => (o.value === 'MatchSource' ? { ...o, label: t(o.label) } : o))} minWidth={240} label={t('Chapter image size')} onChange={(v) => cfg.set('ChapterImageResolution', v)} />
-            </Row>
-            <Row name={t('Add chapters every')} help={t('For files without chapters of their own. 0 adds none')}>
+            </SettingRow>
+            <SettingRow name={t('Add chapters every')} help={t('For files without chapters of their own. 0 adds none')}>
               <span class="srv-num"><NumField value={Math.round((c.DummyChapterDuration ?? 0) / 60)} min={0} max={240} suffix="min" ariaLabel={t('Add chapters every, minutes')} width={56} onChange={(v) => cfg.set('DummyChapterDuration', v * 60)} /></span>
-            </Row>
-          </section>
-          <section class="panel">
-            <div class="panel-head is-title-only"><h2 class="panel-title">{t('Saved files')}</h2></div>
-            <Row name={t('Artwork file names')} help={t('How artwork saved next to the media is named')}>
+            </SettingRow>
+          </Panel>
+          <Panel title={t('Saved files')}>
+            <SettingRow name={t('Artwork file names')} help={t('How artwork saved next to the media is named')}>
               <SelectField value={c.ImageSavingConvention ?? 'Legacy'} options={[{ value: 'Legacy', label: t('Jellyfin’s own names') }, { value: 'Compatible', label: t('Kodi and Emby names') }]} minWidth={240} label={t('Artwork file names')} onChange={(v) => cfg.set('ImageSavingConvention', v)} />
-            </Row>
-            <Row name={t('Hide saved files')} help={t('Marks artwork and NFO files Jellyfin writes as hidden')}><Switch checked={c.SaveMetadataHidden} onChange={(v) => cfg.set('SaveMetadataHidden', v)} label={t('Hide saved files')} /></Row>
-          </section>
+            </SettingRow>
+            <SettingRow name={t('Hide saved files')} help={t('Marks artwork and NFO files Jellyfin writes as hidden')}><Switch checked={c.SaveMetadataHidden} onChange={(v) => cfg.set('SaveMetadataHidden', v)} label={t('Hide saved files')} /></SettingRow>
+          </Panel>
         </>
       )}
     </TabBody>
@@ -994,18 +978,17 @@ function NfoTab() {
   return (
     <TabBody error={nfo.error} reload={nfo.reload} ready={!!n} state={nfo.state}>
       {n && (
-        <section class="panel">
-          <div class="panel-head"><h2 class="panel-title">{t('NFO files')}</h2><p class="panel-text">{t('Kodi and other apps read these files next to the media. Jellyfin writes them for libraries that save artwork next to the media.')}</p></div>
-          <Row name={t('Save watched state for')} help={t('Writes which titles this person has watched into the files')}>
+        <Panel title={t('NFO files')} text={t('Kodi and other apps read these files next to the media. Jellyfin writes them for libraries that save artwork next to the media.')}>
+          <SettingRow name={t('Save watched state for')} help={t('Writes which titles this person has watched into the files')}>
             <SelectField value={userOptions.some((o) => o.value === userValue) ? userValue : ''} options={userOptions} minWidth={220} label={t('Save watched state for')} onChange={(v) => nfo.set('UserId', v || null)} />
-          </Row>
-          <Row name={t('Release date format')} help={t('As Kodi expects it, for example yyyy-MM-dd')}>
+          </SettingRow>
+          <SettingRow name={t('Release date format')} help={t('As Kodi expects it, for example yyyy-MM-dd')}>
             <input class="field srv-w220 srv-mono" aria-label={t('Release date format')} value={n.ReleaseDateFormat ?? ''} onInput={(e) => nfo.set('ReleaseDateFormat', (e.currentTarget as HTMLInputElement).value)} />
-          </Row>
-          <Row name={t('Save artwork paths')} help={t('Lists the artwork files inside each NFO')}><Switch checked={n.SaveImagePathsInNfo} onChange={(v) => nfo.set('SaveImagePathsInNfo', v)} label={t('Save artwork paths')} /></Row>
-          <Row name={t('Use path substitution')} help={t('Rewrites those paths with the rules under Settings › Expert')}><Switch checked={n.EnablePathSubstitution} onChange={(v) => nfo.set('EnablePathSubstitution', v)} label={t('Use path substitution')} /></Row>
-          <Row name={t('Copy extra fanart to extrathumbs')} help={t('For older Kodi skins that look there')}><Switch checked={n.EnableExtraThumbsDuplication} onChange={(v) => nfo.set('EnableExtraThumbsDuplication', v)} label={t('Copy extra fanart to extrathumbs')} /></Row>
-        </section>
+          </SettingRow>
+          <SettingRow name={t('Save artwork paths')} help={t('Lists the artwork files inside each NFO')}><Switch checked={n.SaveImagePathsInNfo} onChange={(v) => nfo.set('SaveImagePathsInNfo', v)} label={t('Save artwork paths')} /></SettingRow>
+          <SettingRow name={t('Use path substitution')} help={t('Rewrites those paths with the rules under Settings › Expert')}><Switch checked={n.EnablePathSubstitution} onChange={(v) => nfo.set('EnablePathSubstitution', v)} label={t('Use path substitution')} /></SettingRow>
+          <SettingRow name={t('Copy extra fanart to extrathumbs')} help={t('For older Kodi skins that look there')}><Switch checked={n.EnableExtraThumbsDuplication} onChange={(v) => nfo.set('EnableExtraThumbsDuplication', v)} label={t('Copy extra fanart to extrathumbs')} /></SettingRow>
+        </Panel>
       )}
     </TabBody>
   );

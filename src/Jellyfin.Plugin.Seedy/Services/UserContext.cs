@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using Jellyfin.Data;
@@ -50,8 +51,10 @@ public static class UserContext
     /// <returns>True for administrators.</returns>
     public static bool IsAdmin(this User user) => user.HasPermission(PermissionKind.IsAdministrator);
 
-    /// <summary>Formats an id the way Jellyfin's JSON does.</summary>
-    /// <param name="id">Id.</param>
-    /// <returns>32 hex digits.</returns>
-    public static string N(this Guid id) => id.ToString("N");
+    /// <summary>Lists the profiles admins first, then by name: the order the admin pages show them in, which also
+    /// picks their avatar colours in the statistics.</summary>
+    /// <param name="users">User manager.</param>
+    /// <returns>Profiles.</returns>
+    public static IEnumerable<User> InAdminOrder(this IUserManager users)
+        => users.GetUsers().OrderBy(u => !u.IsAdmin()).ThenBy(u => u.Username, StringComparer.OrdinalIgnoreCase);
 }

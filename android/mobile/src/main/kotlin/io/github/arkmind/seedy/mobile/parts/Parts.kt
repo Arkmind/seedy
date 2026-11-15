@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
@@ -55,6 +57,7 @@ import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import kotlinx.coroutines.delay
 
 /**
  * The phone boards' page padding: [top] and [bottom] include the system bars (the boards leave 36 px above and about
@@ -79,6 +82,14 @@ fun Modifier.bleed(h: Dp): Modifier = this.layout { measurable, constraints ->
     val extra = (h * 2).roundToPx()
     val placeable = measurable.measure(constraints.copy(minWidth = constraints.minWidth + extra, maxWidth = constraints.maxWidth + extra))
     layout(placeable.width - extra, placeable.height) { placeable.place(-h.roundToPx(), 0) }
+}
+
+/** Widens the element by [start] and [end] into the page margin (each side rounded to whole pixels on its own). */
+fun Modifier.bleed(start: Dp, end: Dp): Modifier = this.layout { measurable, constraints ->
+    val s = start.roundToPx()
+    val e = end.roundToPx()
+    val p = measurable.measure(constraints.copy(minWidth = constraints.minWidth + s + e, maxWidth = constraints.maxWidth + s + e))
+    layout(p.width - s - e, p.height) { p.place(-s, 0) }
 }
 
 /** A 44 px header button with a 22 px icon (back arrow, search, cast…). */
@@ -140,7 +151,7 @@ fun SeedyField(
     imeAction: ImeAction = ImeAction.Done,
     onDone: () -> Unit = {},
     /** Takes the focus (and the keyboard) when asked. */
-    focus: androidx.compose.ui.focus.FocusRequester? = null,
+    focus: FocusRequester? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -185,18 +196,18 @@ fun SeedyField(
     }
 }
 
-/** A form label above a field (13 px bold). */
+/** A form label above a field (13 px bold; the boards' dialogs label theirs in [SeedyColors.Text2]). */
 @Composable
-fun FieldLabel(text: String, modifier: Modifier = Modifier) {
-    SText(text, modifier, size = 13.sp, weight = 700, color = SeedyColors.Text)
+fun FieldLabel(text: String, modifier: Modifier = Modifier, color: Color = SeedyColors.Text) {
+    SText(text, modifier, size = 13.sp, weight = 700, color = color)
 }
 
 /** The web's toast: a short note over the page's foot that goes after a few seconds; [onDone] clears it. */
 @Composable
 fun Toast(message: String?, onDone: () -> Unit, modifier: Modifier = Modifier) {
     if (message == null) return
-    androidx.compose.runtime.LaunchedEffect(message) {
-        kotlinx.coroutines.delay(3200)
+    LaunchedEffect(message) {
+        delay(3200)
         onDone()
     }
     Box(

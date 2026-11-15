@@ -1,7 +1,8 @@
-import { SERVER_URL, get, getSession } from '../../api/client';
+import { SERVER_URL, currentUserId, get, withApiKey } from '../../api/client';
 import { getItems, type ItemsQuery } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
-import { formatNumber, getLang, locale, t, tn } from '../../lib/i18n';
+import { formatNumber, getLang, tn } from '../../lib/i18n';
+import { fmtLongWeekdayDate } from '../../lib/format';
 
 /* Photos libraries (Photos boards). Jellyfin 12 keeps photos in "Home videos and photos" libraries (the old photos
    type still shows up on servers that were upgraded): Photo and Video items, in PhotoAlbum folders (a folder with
@@ -25,17 +26,12 @@ export type PhotoItem = BaseItem & {
   IsoSpeedRating?: number;
   Latitude?: number;
   Longitude?: number;
-  Path?: string;
   ImageBlurHashes?: Record<string, Record<string, string>>;
 };
 
 export const PHOTO_FIELDS = ['DateCreated', 'PrimaryImageAspectRatio', 'Path', 'ParentId', 'MediaSources', 'Width', 'Height'];
 
-const uid = () => getSession()?.userId ?? '';
-const token = () => getSession()?.token ?? '';
-
 export const isVideo = (it: BaseItem) => it.Type === 'Video' || it.MediaType === 'Video' || it.Type === 'Movie' || it.Type === 'MusicVideo';
-export const isFolder = (it: BaseItem) => it.Type === 'PhotoAlbum' || it.Type === 'Folder';
 
 /* Width over height; photos say so in Width/Height, videos in their video stream. */
 export function ratioOf(it: BaseItem): number {
@@ -88,14 +84,14 @@ export function screenUrl(it: BaseItem, full = false): string | undefined {
 }
 
 /* The original file, as stored (needs the profile's download permission). */
-export const downloadUrl = (id: string) => `${SERVER_URL}/Items/${id}/Download?ApiKey=${encodeURIComponent(token())}`;
+export { downloadUrl } from '../../api/client';
 
 /* The file's size and type, from one byte of it. */
 const fileInfoCache = new Map<string, Promise<{ size?: number; type?: string }>>();
 export function fileInfo(id: string): Promise<{ size?: number; type?: string }> {
   let hit = fileInfoCache.get(id);
   if (!hit) {
-    hit = fetch(`${SERVER_URL}/Items/${id}/File?ApiKey=${encodeURIComponent(token())}`, { headers: { Range: 'bytes=0-0' } }).then((r) => {
+    hit = fetch(withApiKey(`/Items/${id}/File`), { headers: { Range: 'bytes=0-0' } }).then((r) => {
       const total = /\/(\d+)$/.exec(r.headers.get('Content-Range') ?? '')?.[1] ?? (r.status === 200 ? r.headers.get('Content-Length') : null);
       r.body?.cancel().catch(() => undefined);
       return { size: total ? Number(total) : undefined, type: r.headers.get('Content-Type') ?? undefined };
@@ -107,11 +103,11 @@ export function fileInfo(id: string): Promise<{ size?: number; type?: string }> 
 
 /* ───────── Words ───────── */
 
-export function countsLabel(photos: number, videos: number): string {
+export function countsLabel(photos: number, videos: number, sep = ', '): string {
   const parts: string[] = [];
   if (photos || !videos) parts.push(tn(photos, '{n} photo', '{n} photos'));
   if (videos) parts.push(tn(videos, '{n} video', '{n} videos'));
-  return parts.join(', ');
+  return parts.join(sep);
 }
 
 export function bytesLabel(n?: number): string {
@@ -122,35 +118,6 @@ export function bytesLabel(n?: number): string {
   let v = n;
   while (v >= 1000 && i < units.length - 1) { v /= 1000; i++; }
   return `${formatNumber(v >= 100 || i === 0 ? Math.round(v) : Math.round(v * 10) / 10)} ${units[i]}`;
-}
-
-/* "October 2026". */
-export function monthYear(d: Date): string {
-  try {
-    const s = new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric' }).format(d);
-    return s.charAt(0).toLocaleUpperCase() + s.slice(1);
-  } catch { return `${d.getMonth() + 1}/${d.getFullYear()}`; }
-}
-
-/* "Sun 9 August 2026". */
-export function longDay(d: Date): string {
-  try {
-    const s = new Intl.DateTimeFormat(locale(), { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }).format(d).replace(/,/g, '');
-    return s.charAt(0).toLocaleUpperCase() + s.slice(1);
-  } catch { return d.toDateString(); }
-}
-
-/* "9 to 16 August 2026", "28 July to 3 August 2026", "30 December 2025 to 2 January 2026". */
-export function dateRange(a?: Date, b?: Date): string {
-  if (!a || !b) return '';
-  const [from, to] = a <= b ? [a, b] : [b, a];
-  const fmt = (d: Date, o: Intl.DateTimeFormatOptions) => { try { return new Intl.DateTimeFormat(locale(), o).format(d); } catch { return d.toDateString(); } };
-  if (from.toDateString() === to.toDateString()) return fmt(from, { day: 'numeric', month: 'long', year: 'numeric' });
-  if (from.getFullYear() !== to.getFullYear())
-    return t('{from} to {to}', { from: fmt(from, { day: 'numeric', month: 'long', year: 'numeric' }), to: fmt(to, { day: 'numeric', month: 'long', year: 'numeric' }) });
-  if (from.getMonth() !== to.getMonth())
-    return t('{from} to {to}', { from: fmt(from, { day: 'numeric', month: 'long' }), to: fmt(to, { day: 'numeric', month: 'long', year: 'numeric' }) });
-  return t('{from} to {to}', { from: String(from.getDate()), to: fmt(to, { day: 'numeric', month: 'long', year: 'numeric' }) });
 }
 
 /* "1 year ago", "3 years ago". */
@@ -182,7 +149,6 @@ export function coordsLabel(lat: number, lon: number): string {
 }
 
 export const fileName = (it: PhotoItem) => (it.Path ? it.Path.split(/[\\/]/).pop() ?? it.Name : it.Name);
-export const folderOf = (it: PhotoItem) => (it.Path ? it.Path.split(/[\\/]/).slice(0, -1).join('/') : '');
 
 export function formatName(it: PhotoItem, type?: string): string {
   const ext = (it.Path?.split('.').pop() ?? '').toLowerCase();
@@ -224,7 +190,7 @@ export function allMedia(parentId: string): Promise<PhotoItem[]> {
 
 /* The years with photos, newest first. */
 export async function yearsOf(parentId: string): Promise<number[]> {
-  const r = await get<ItemsResult>('/Years', { userId: uid(), parentId, recursive: true, includeItemTypes: MEDIA_TYPES.join(','), sortBy: 'SortName', sortOrder: 'Descending', enableImages: false });
+  const r = await get<ItemsResult>('/Years', { userId: currentUserId(), parentId, recursive: true, includeItemTypes: MEDIA_TYPES.join(','), sortBy: 'SortName', sortOrder: 'Descending', enableImages: false });
   return r.Items.map((y) => Number(y.Name)).filter((y) => y > 1800).sort((a, b) => b - a);
 }
 
@@ -274,7 +240,7 @@ export async function memoriesOf(parentId: string, today = new Date(), days = 3)
     }
     for (const [k, list] of groups) {
       const date = takenAt(list[0]) ?? new Date(y, today.getMonth(), today.getDate());
-      out.push({ key: `${y}:${k}`, years: today.getFullYear() - y, title: list[0].Album || longDay(date), date, items: list });
+      out.push({ key: `${y}:${k}`, years: today.getFullYear() - y, title: list[0].Album || fmtLongWeekdayDate(date), date, items: list });
     }
   }
   return out.sort((a, b) => a.years - b.years || b.items.length - a.items.length);
@@ -347,7 +313,7 @@ export function subfolders(parentId: string, signal?: AbortSignal) {
 
 /* The folders up from an item to its library: [library, …, parent]. */
 export async function ancestorsOf(id: string): Promise<BaseItem[]> {
-  const list = await get<BaseItem[]>(`/Items/${id}/Ancestors`, { userId: uid() });
+  const list = await get<BaseItem[]>(`/Items/${id}/Ancestors`, { userId: currentUserId() });
   const top = list.findIndex((a) => a.Type === 'CollectionFolder' || a.Type === 'UserView');
   return (top >= 0 ? list.slice(0, top + 1) : list).reverse();
 }

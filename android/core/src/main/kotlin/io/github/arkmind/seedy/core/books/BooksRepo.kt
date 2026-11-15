@@ -5,6 +5,7 @@ import io.github.arkmind.seedy.core.audio.AudioPart
 import io.github.arkmind.seedy.core.audio.Reading
 import io.github.arkmind.seedy.core.audio.authorsOf
 import io.github.arkmind.seedy.core.audio.mergePlace
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred

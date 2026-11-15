@@ -3,6 +3,8 @@ package io.github.arkmind.seedy.core.format
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.Lang
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAccessor
 import java.time.temporal.ChronoUnit
 
 /*
@@ -17,6 +19,11 @@ private val DaysFr = listOf("lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim
 
 private fun month(d: LocalDate) = (if (I18n.lang == Lang.Fr) MonthsFr else MonthsEn)[d.monthValue - 1]
 private fun weekday(d: LocalDate) = (if (I18n.lang == Lang.Fr) DaysFr else DaysEn)[d.dayOfWeek.value - 1]
+
+/** "19:42": a time of day, 24-hour. */
+fun hourMinute(t: TemporalAccessor): String = HourMinute.format(t)
+
+private val HourMinute = DateTimeFormatter.ofPattern("HH:mm")
 
 /** "25 Sep". */
 fun dayMonth(d: LocalDate): String = "${d.dayOfMonth} ${month(d)}"

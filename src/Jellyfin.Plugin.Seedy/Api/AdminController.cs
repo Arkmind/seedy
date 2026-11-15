@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.Seedy.Data;
 using Jellyfin.Plugin.Seedy.Services;
+using Jellyfin.Plugin.Seedy.Services.Media;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Common.Updates;
 using MediaBrowser.Controller;
@@ -65,14 +66,12 @@ public class AdminController : ControllerBase
         _logger = logger;
     }
 
-    private static Plugin PluginInstance => Plugin.Instance ?? throw new InvalidOperationException("Seedy isn't loaded.");
-
     // ── Configuration ──
 
     /// <summary>Gets the admin settings.</summary>
     /// <returns>Settings.</returns>
     [HttpGet("Config")]
-    public ActionResult<AdminConfigDto> GetConfig() => ConfigMapper.ToAdmin(PluginInstance.Configuration);
+    public ActionResult<AdminConfigDto> GetConfig() => ConfigMapper.ToAdmin(Plugin.Required.Configuration);
 
     /// <summary>Saves the admin settings.</summary>
     /// <param name="body">Settings.</param>
@@ -80,17 +79,17 @@ public class AdminController : ControllerBase
     [HttpPost("Config")]
     public ActionResult<AdminConfigDto> SaveConfig([FromBody] AdminConfigDto body)
     {
-        var c = PluginInstance.Configuration;
+        var c = Plugin.Required.Configuration;
         var oldUrl = c.SeerrUrl;
         var oldApps = (c.LidarrUrl, c.ShelfarrUrl, c.LibrarrUrl, c.ReadarrUrl);
         ConfigMapper.Apply(c, body);
-        PluginInstance.Save(c);
+        Plugin.Required.Save(c);
         if (!string.Equals(oldUrl, c.SeerrUrl, StringComparison.Ordinal))
         {
             _seerr.Reset();
         }
 
-        foreach (var (name, was, now) in new[] { ("Lidarr", oldApps.LidarrUrl, c.LidarrUrl), ("Shelfarr", oldApps.ShelfarrUrl, c.ShelfarrUrl), ("Librarr", oldApps.LibrarrUrl, c.LibrarrUrl), ("Readarr", oldApps.ReadarrUrl, c.ReadarrUrl) })
+        foreach (var (name, was, now) in new[] { (LidarrClient.Name, oldApps.LidarrUrl, c.LidarrUrl), (ShelfarrClient.Name, oldApps.ShelfarrUrl, c.ShelfarrUrl), (LibrarrClient.Name, oldApps.LibrarrUrl, c.LibrarrUrl), (ReadarrClient.Name, oldApps.ReadarrUrl, c.ReadarrUrl) })
         {
             if (!string.Equals(was, now, StringComparison.Ordinal))
             {
@@ -107,12 +106,12 @@ public class AdminController : ControllerBase
     [HttpGet("Status")]
     public async Task<ActionResult<AdminStatusDto>> GetStatus(CancellationToken ct)
     {
-        var c = PluginInstance.Configuration;
-        var mine = PluginInstance.Version;
+        var c = Plugin.Required.Configuration;
+        var mine = Plugin.Required.Version;
         var latest = await LatestVersionAsync(ct).ConfigureAwait(false);
         return new AdminStatusDto
         {
-            PluginVersion = PluginInstance.VersionString,
+            PluginVersion = Plugin.Required.VersionString,
             LatestVersion = latest,
             UpToDate = latest is null ? null : !(Version.TryParse(latest, out var l) && l > mine),
             ServerVersion = _host.ApplicationVersionString,
@@ -184,7 +183,7 @@ public class AdminController : ControllerBase
             return BadRequest(new { message = "Use an SVG, PNG, WebP or JPEG up to 2 MB." });
         }
 
-        var folder = PluginInstance.SeedyDataPath;
+        var folder = Plugin.Required.SeedyDataPath;
         foreach (var old in Directory.EnumerateFiles(folder, "logo.*"))
         {
             System.IO.File.Delete(old);
@@ -196,10 +195,10 @@ public class AdminController : ControllerBase
             await file.CopyToAsync(stream).ConfigureAwait(false);
         }
 
-        var c = PluginInstance.Configuration;
+        var c = Plugin.Required.Configuration;
         c.LogoFileName = Path.GetFileName(file.FileName);
         c.LogoVersion = DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture);
-        PluginInstance.Save(c);
+        Plugin.Required.Save(c);
         return ConfigMapper.ToAdmin(c);
     }
 
@@ -208,15 +207,15 @@ public class AdminController : ControllerBase
     [HttpDelete("Logo")]
     public ActionResult<AdminConfigDto> RemoveLogo()
     {
-        foreach (var old in Directory.EnumerateFiles(PluginInstance.SeedyDataPath, "logo.*"))
+        foreach (var old in Directory.EnumerateFiles(Plugin.Required.SeedyDataPath, "logo.*"))
         {
             System.IO.File.Delete(old);
         }
 
-        var c = PluginInstance.Configuration;
+        var c = Plugin.Required.Configuration;
         c.LogoFileName = string.Empty;
         c.LogoVersion = DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture);
-        PluginInstance.Save(c);
+        Plugin.Required.Save(c);
         return ConfigMapper.ToAdmin(c);
     }
 
@@ -235,9 +234,9 @@ public class AdminController : ControllerBase
     [HttpPost("Seerr/Key")]
     public ActionResult<AdminConfigDto> SetSeerrKey([FromBody] KeyBody body)
     {
-        var c = PluginInstance.Configuration;
+        var c = Plugin.Required.Configuration;
         c.SeerrApiKey = (body.ApiKey ?? string.Empty).Trim();
-        PluginInstance.Save(c);
+        Plugin.Required.Save(c);
         _seerr.Reset();
         return ConfigMapper.ToAdmin(c);
     }
@@ -282,8 +281,8 @@ public class AdminController : ControllerBase
             return NotFound();
         }
 
-        var c = PluginInstance.Configuration;
-        var isNew = (c.SeerrProfiles ?? []).All(p => !string.Equals(p.UserId, id.ToString("N"), StringComparison.OrdinalIgnoreCase));
+        var c = Plugin.Required.Configuration;
+        var isNew = ConfigMapper.FindProfile(c.SeerrProfiles, id.ToString("N")) is null;
         var profile = ConfigMapper.SeerrProfile(c, id.ToString("N"));
         profile.UserId = id.ToString("N");
         if (isNew)
@@ -295,7 +294,7 @@ public class AdminController : ControllerBase
         profile.Manual = body.SeerrUserId is > 0;
         profile.SeerrUserId = body.SeerrUserId ?? 0;
         ConfigMapper.Upsert(c, profile);
-        PluginInstance.Save(c);
+        Plugin.Required.Save(c);
         return await AccountsAsync(false, ct).ConfigureAwait(false);
     }
 
@@ -311,12 +310,12 @@ public class AdminController : ControllerBase
             return NotFound();
         }
 
-        var c = PluginInstance.Configuration;
+        var c = Plugin.Required.Configuration;
         var profile = ConfigMapper.SeerrProfile(c, id.ToString("N"));
         profile.UserId = id.ToString("N");
         profile.CanRequest = body.CanRequest;
         ConfigMapper.Upsert(c, profile);
-        PluginInstance.Save(c);
+        Plugin.Required.Save(c);
         return await AccountsAsync(false, ct).ConfigureAwait(false);
     }
 
@@ -336,7 +335,7 @@ public class AdminController : ControllerBase
 
         var ratings = _localization.GetParentalRatings();
         var list = new List<SeerrAccountDto>();
-        foreach (var user in _users.GetUsers().OrderBy(u => !u.IsAdmin()).ThenBy(u => u.Username, StringComparer.OrdinalIgnoreCase))
+        foreach (var user in _users.InAdminOrder())
         {
             var (account, matchedBy) = await _seerr.AccountFor(user, ct).ConfigureAwait(false);
             var dto = _users.GetUserDto(user);
@@ -408,23 +407,21 @@ public class AdminController : ControllerBase
             return NotFound();
         }
 
-        var c = PluginInstance.Configuration;
+        var c = Plugin.Required.Configuration;
         var profile = ConfigMapper.PlayLogProfile(c, id.ToString("N"));
         profile.UserId = id.ToString("N");
         profile.Top10 = body.Top10 ?? profile.Top10;
         profile.History = body.History ?? profile.History;
         ConfigMapper.Upsert(c, profile);
-        PluginInstance.Save(c);
+        Plugin.Required.Save(c);
         return PlayLogProfiles();
     }
 
     private List<PlayLogProfileDto> PlayLogProfiles()
     {
-        var c = PluginInstance.Configuration;
+        var c = Plugin.Required.Configuration;
         var plays = _db.PlaysPerUser();
-        return _users.GetUsers()
-            .OrderBy(u => !u.IsAdmin())
-            .ThenBy(u => u.Username, StringComparer.OrdinalIgnoreCase)
+        return _users.InAdminOrder()
             .Select(u =>
             {
                 var uid = u.Id.ToString("N");

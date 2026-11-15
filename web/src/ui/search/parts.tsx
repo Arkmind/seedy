@@ -4,9 +4,10 @@ import type { BaseItem } from '../../api/types';
 import { meStore } from '../../lib/app-state';
 import { useStore } from '../../lib/store';
 import { Icon } from '../icons';
-import { loadGenres, marks, personLine, personMeta, type GenreInfo, type PersonInfo } from './engine';
+import { cached, loadGenres, marks, personLine, personMeta, search, type GenreInfo, type PersonInfo, type Results, type Size } from './engine';
 import { clearRecent, useRecent } from './recent';
 import { t } from '../../lib/i18n';
+import { initials } from '../../lib/format';
 
 /* Pieces shared by the bar's dropdown, the phone's full-screen search and the Search page. */
 
@@ -32,7 +33,6 @@ function tile(name: string) {
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return TILES[h % TILES.length];
 }
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).map((w) => w.charAt(0)).join('').slice(0, 2).toUpperCase();
 
 /* 16:9 artwork (a round photo for people), or initials on a colour while there's none. */
 export function Thumb({ item, width, class: cls }: { item: BaseItem; width: number; class?: string }) {
@@ -49,14 +49,14 @@ export function Thumb({ item, width, class: cls }: { item: BaseItem; width: numb
 }
 
 /* "Actor · 4 titles in your library", filled in once known. */
-export function PersonLine({ person, fallback = 'Person', short }: { person: BaseItem; fallback?: string; short?: boolean }) {
+export function PersonLine({ person, fallback, short }: { person: BaseItem; fallback?: string; short?: boolean }) {
   const [info, setInfo] = useState<PersonInfo | undefined>();
   useEffect(() => {
     let live = true;
     personMeta(person).then((i) => { if (live) setInfo(i); });
     return () => { live = false; };
   }, [person.Id]);
-  return <>{info ? (short ? info.role : personLine(info)) : fallback}</>;
+  return <>{info ? (short ? t(info.role) : personLine(info)) : fallback ?? t('Person')}</>;
 }
 
 /* Genres for "Browse by genre": the server's most used, at most eight. */
@@ -121,4 +121,38 @@ export function moveChip(container: HTMLElement, key: string): 'moved' | 'out' |
   const n = Math.max(0, Math.min(chips.length - 1, i + (back ? -1 : 1)));
   chips[n].focus();
   return 'moved';
+}
+
+/* How the search fields wait: from the second letter, after a short pause in typing. */
+export const SEARCH_MIN = 2;
+export const SEARCH_PAUSE = 250;
+
+/* Results for what's typed, searched from the second letter after a short pause (a remembered query shows at once).
+   [seed]: on the first render, show a remembered query's results straight away. */
+export function useSearchResults(term: string, size: Size, seed = false) {
+  const [query, setQ] = useState(seed && term.length >= SEARCH_MIN ? term : '');
+  const [state, setState] = useState<{ q: string; data?: Results; error?: boolean } | null>(() => {
+    const c = seed && term.length >= SEARCH_MIN ? cached(term, size) : undefined;
+    return c ? { q: term, data: c } : null;
+  });
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (term.length < SEARCH_MIN) { setQ(''); return; }
+    if (cached(term, size)) { setQ(term); return; }
+    const t = window.setTimeout(() => setQ(term), SEARCH_PAUSE);
+    return () => window.clearTimeout(t);
+  }, [term]);
+
+  useEffect(() => {
+    if (!query) return;
+    const ctrl = new AbortController();
+    search(query, size, ctrl.signal).then(
+      (data) => { if (!ctrl.signal.aborted) setState({ q: query, data }); },
+      (e: Error) => { if (!ctrl.signal.aborted && e?.name !== 'AbortError') setState({ q: query, error: true }); }
+    );
+    return () => ctrl.abort();
+  }, [query, tick]);
+
+  return { query, state, retry: () => setTick((n) => n + 1) };
 }

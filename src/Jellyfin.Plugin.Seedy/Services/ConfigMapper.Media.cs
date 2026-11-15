@@ -10,16 +10,12 @@ namespace Jellyfin.Plugin.Seedy.Services;
 /// <summary>Music and book request settings.</summary>
 public static partial class ConfigMapper
 {
-    /// <summary>The apps Seedy can send book requests to.</summary>
-    public static readonly string[] BookServices = ["shelfarr", "librarr", "readarr"];
+    /// <summary>The book formats, in the order the request window and settings list them.</summary>
+    internal static readonly string[] BookFormatOrder = ["ebook", "audiobook", "comic"];
 
-    private static string Hint(string key) => string.IsNullOrEmpty(key) ? null! : key[^Math.Min(4, key.Length)..];
+    private static string? Hint(string? key) => string.IsNullOrEmpty(key) ? null : key[^Math.Min(4, key.Length)..];
 
-    private static string CleanUrl(string? url)
-    {
-        var v = (url ?? string.Empty).Trim().TrimEnd('/');
-        return v;
-    }
+    private static string CleanUrl(string? url) => (url ?? string.Empty).Trim().TrimEnd('/');
 
     private static string Route(string? value, string fallback) => value is "shelfarr" or "librarr" or "readarr" or "off" ? value : fallback;
 
@@ -31,16 +27,16 @@ public static partial class ConfigMapper
         Lidarr = new AdminLidarrDto
         {
             Url = c.LidarrUrl,
-            ApiKeyHint = string.IsNullOrEmpty(c.LidarrApiKey) ? null : Hint(c.LidarrApiKey),
+            ApiKeyHint = Hint(c.LidarrApiKey),
             QualityProfileId = c.LidarrQualityProfileId,
             MetadataProfileId = c.LidarrMetadataProfileId,
             RootFolder = c.LidarrRootFolder,
             WholeArtist = c.LidarrWholeArtist == "future" ? "future" : "all",
             SearchOnApprove = c.LidarrSearchOnApprove
         },
-        Shelfarr = new AdminBookAppDto { Enabled = c.ShelfarrEnabled, Url = c.ShelfarrUrl, ApiKeyHint = string.IsNullOrEmpty(c.ShelfarrToken) ? null : Hint(c.ShelfarrToken) },
-        Librarr = new AdminBookAppDto { Enabled = c.LibrarrEnabled, Url = c.LibrarrUrl, ApiKeyHint = string.IsNullOrEmpty(c.LibrarrApiKey) ? null : Hint(c.LibrarrApiKey) },
-        Readarr = new AdminBookAppDto { Enabled = c.ReadarrEnabled, Url = c.ReadarrUrl, ApiKeyHint = string.IsNullOrEmpty(c.ReadarrApiKey) ? null : Hint(c.ReadarrApiKey) },
+        Shelfarr = new AdminBookAppDto { Enabled = c.ShelfarrEnabled, Url = c.ShelfarrUrl, ApiKeyHint = Hint(c.ShelfarrToken) },
+        Librarr = new AdminBookAppDto { Enabled = c.LibrarrEnabled, Url = c.LibrarrUrl, ApiKeyHint = Hint(c.LibrarrApiKey) },
+        Readarr = new AdminBookAppDto { Enabled = c.ReadarrEnabled, Url = c.ReadarrUrl, ApiKeyHint = Hint(c.ReadarrApiKey) },
         Routes = new AdminBookRoutesDto
         {
             Ebooks = Route(c.RouteEbooks, "shelfarr"),
@@ -113,7 +109,7 @@ public static partial class ConfigMapper
     /// <summary>The book formats people can request now.</summary>
     /// <param name="c">Configuration.</param>
     /// <returns>Formats.</returns>
-    public static List<string> BookFormats(PluginConfiguration c) => new[] { "ebook", "audiobook", "comic" }.Where(f => BookRoute(c, f) is not null).ToList();
+    public static List<string> BookFormats(PluginConfiguration c) => BookFormatOrder.Where(f => BookRoute(c, f) is not null).ToList();
 
     /// <summary>Gets a profile's music and book limits, with defaults by role when the admin never set them.</summary>
     /// <param name="c">Configuration.</param>
@@ -122,7 +118,7 @@ public static partial class ConfigMapper
     public static MediaRequestProfile MediaProfile(PluginConfiguration c, User user)
     {
         var uid = user.Id.ToString("N");
-        var stored = (c.MediaRequestProfiles ?? []).FirstOrDefault(p => string.Equals(p.UserId, uid, StringComparison.OrdinalIgnoreCase));
+        var stored = FindProfile(c.MediaRequestProfiles, uid);
         if (stored is not null)
         {
             return stored;
@@ -142,10 +138,5 @@ public static partial class ConfigMapper
     /// <summary>Stores a profile's music and book limits.</summary>
     /// <param name="c">Configuration.</param>
     /// <param name="profile">Limits.</param>
-    public static void Upsert(PluginConfiguration c, MediaRequestProfile profile)
-    {
-        var list = (c.MediaRequestProfiles ?? []).Where(p => !string.Equals(p.UserId, profile.UserId, StringComparison.OrdinalIgnoreCase)).ToList();
-        list.Add(profile);
-        c.MediaRequestProfiles = list.ToArray();
-    }
+    public static void Upsert(PluginConfiguration c, MediaRequestProfile profile) => c.MediaRequestProfiles = ReplaceProfile(c.MediaRequestProfiles, profile);
 }

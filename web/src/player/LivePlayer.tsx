@@ -3,22 +3,26 @@ import { ApiError } from '../api/client';
 import { getPrograms, type Program } from '../api/livetv';
 import { holdSession, releaseSession } from '../audio/engine';
 import type { BaseItem } from '../api/types';
-import { clock, duration, episodeTag } from '../lib/format';
+import { clock, duration, pct } from '../lib/format';
 import { t } from '../lib/i18n';
 import { back, href, navigate } from '../lib/router';
 import { safeLocal, saveLocal } from '../lib/store';
-import { Icon } from '../ui/icons';
+import { Icon, volumeIcon } from '../ui/icons';
 import { toast } from '../ui/overlay';
 import {
-  categoryOf, endMs, fraction, isAiring, isFavorite, noteWatched, previousChannelId, programTitle, recState, startMs, toggleRecord,
-  useChannels, useNow, useTimers, type LiveChannel
+  airingNow, categoryOf, channelByNumber, endMs, fraction, isAiring, isFavorite, noteWatched, previousChannelId, programTitle, recordLabel,
+  recState, startClock, startMs, toggleRecord, useChannels, useNow, useTimers, type LiveChannel
 } from '../screens/livetv/data';
-import { ChannelLogo, HeartIcon, LtIcon, RecDot, logoSrc } from '../screens/livetv/parts';
+import { ChannelLogo, HeartIcon, logoSrc, LtIcon, RecDot, watchPath } from '../screens/livetv/parts';
+import { useFullscreen } from '../lib/fullscreen';
+import { pipSupported, saveVolume, setVolume as setMediaVolume, toggleMute as toggleMediaMute, togglePip as togglePipOf } from './controls';
+import { BackButton, PBtn } from './parts';
+import { DEFAULT_SUBTITLES } from '../lib/app-state';
 import '../screens/livetv/livetv.css';
 import type { ProfileOptions } from './device-profile';
 import { keyAction } from './keys';
 import { closesSettled } from './live-profile';
-import { PlaybackSession, audioStreams, subtitleStreams, videoStream, type ActiveStream, type QualityId } from './playback';
+import { activeAudio, audioStreams, PlaybackSession, resLabel, subtitleStreams, videoStream, type ActiveStream, type QualityId } from './playback';
 import { VolumeSlider } from './Scrubber';
 import { CastMenu } from './TopMenus';
 import { TracksPanel, type TracksTab } from './TracksPanel';
@@ -64,7 +68,7 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
   });
   const [panel, setPanel] = useState<Panel>(null);
   const [active, setActive] = useState(true);
-  const [fullscreen, setFullscreen] = useState(!!document.fullscreenElement);
+  const [fullscreen, toggleFullscreen] = useFullscreen();
 
   /* ── One session per channel ── */
   useEffect(() => {
@@ -110,8 +114,8 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
     });
     void open();
     // The address follows the channel, so a reload lands on it.
-    if (!window.location.pathname.endsWith('/play/' + chId)) {
-      try { window.history.replaceState(window.history.state, '', href('/play/' + chId)); } catch { /* fine */ }
+    if (!window.location.pathname.endsWith(watchPath(chId))) {
+      try { window.history.replaceState(window.history.state, '', href(watchPath(chId))); } catch { /* fine */ }
     }
     const onHide = () => sess.stop();
     window.addEventListener('pagehide', onHide);
@@ -141,7 +145,7 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
       ['canplay', () => read({ waiting: false })],
       ['loadedmetadata', () => read()],
       ['resize', () => read()],
-      ['volumechange', () => { read(); saveLocal('seedy.volume', el.volume); saveLocal('seedy.muted', el.muted); report('volumechange'); }]
+      ['volumechange', () => { read(); saveVolume(el); report('volumechange'); }]
     ];
     hs.forEach(([ev, fn]) => el.addEventListener(ev, fn));
     return () => hs.forEach(([ev, fn]) => el.removeEventListener(ev, fn));
@@ -158,7 +162,7 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
     const id = window.setInterval(load, 60_000);
     return () => { alive = false; window.clearInterval(id); };
   }, [chId]);
-  const cur = progs.find((p) => isAiring(p, now)) ?? (isAiring(channel?.CurrentProgram, now) ? channel!.CurrentProgram : undefined);
+  const cur = progs.find((p) => isAiring(p, now)) ?? airingNow(channel, now);
   const next = progs.find((p) => startMs(p) >= (cur ? endMs(cur) - 60_000 : now) && p.Id !== cur?.Id);
   const rec = recState(cur, timers);
 
@@ -188,7 +192,7 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
     window.clearTimeout(typedTimer.current);
     setTyped('');
     if (!value) return;
-    const c = all.find((x) => x.num === value) ?? all.find((x) => parseFloat(x.num) === parseFloat(value));
+    const c = channelByNumber(all, value);
     if (c) switchTo(c.Id);
     else toast(t('There is no channel {n}', { n: value }), 'error');
   };
@@ -215,12 +219,9 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
     window.addEventListener('pointermove', fn, { passive: true });
     window.addEventListener('pointerdown', fn, { passive: true });
     poke();
-    const fs = () => setFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', fs);
     return () => {
       window.removeEventListener('pointermove', fn);
       window.removeEventListener('pointerdown', fn);
-      document.removeEventListener('fullscreenchange', fs);
       window.clearTimeout(hideTimer.current);
       window.clearTimeout(typedTimer.current);
     };
@@ -233,20 +234,10 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
     const e = el();
     if (e.paused) sessRef.current?.play(); else e.pause();
   };
-  const setVolume = (v: number) => { const e = el(); e.volume = Math.max(0, Math.min(1, v)); e.muted = v <= 0; };
-  const toggleMute = () => {
-    const e = el();
-    if (e.muted || e.volume === 0) { e.muted = false; if (e.volume === 0) e.volume = 0.5; } else e.muted = true;
-  };
-  const toggleFullscreen = () => {
-    if (document.fullscreenElement) { void document.exitFullscreen().catch(() => undefined); return; }
-    void document.documentElement.requestFullscreen?.().catch(() => undefined);
-  };
-  const pipSupported = (document as Document & { pictureInPictureEnabled?: boolean }).pictureInPictureEnabled === true;
-  const togglePip = () => {
-    if (document.pictureInPictureElement) void document.exitPictureInPicture().catch(() => undefined);
-    else void el().requestPictureInPicture?.().catch(() => toast(t("Picture in picture isn't available"), 'error'));
-  };
+  const setVolume = (v: number) => setMediaVolume(el(), v);
+  const toggleMute = () => toggleMediaMute(el());
+  const canPip = pipSupported();
+  const togglePip = () => togglePipOf(el());
   const exit = () => {
     sessRef.current?.stop();
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
@@ -372,7 +363,7 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
 
       <header class="pl-top">
         <div class="pl-top-left pl-fade">
-          <button type="button" class="btn player-btn is-soft" aria-label={t('Back')} onClick={exit}><Icon name="arrowLeft" size={22} /></button>
+          <BackButton onClick={exit} />
           <ChannelLogo channel={channel ?? (chRef.current as LiveChannel)} size={44} radius={12} />
           <div class="pl-top-titles">
             <span class="pl-top-name">{name}</span>
@@ -427,7 +418,7 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
           </div>
           <div ref={listRef} role="listbox" aria-label={scope === 'fav' && favs.length ? t('Favorite channels') : t('All channels')} class="lt-pl-list" aria-activedescendant={focusId ? 'lt-pl-' + focusId : undefined}>
             {scoped.map((c) => {
-              const p = isAiring(c.CurrentProgram, now) ? c.CurrentProgram : undefined;
+              const p = airingNow(c, now);
               const watching = c.Id === chId;
               const focused = c.Id === focusId;
               const nx = focused ? nextOf[c.Id] : undefined;
@@ -456,7 +447,7 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
                     {p && <span class="lt-pl-left">{duration((endMs(p) - now) / 1000)}</span>}
                   </div>
                   <div class="lt-pl-bar"><i style={{ width: (fraction(p, now) * 100).toFixed(1) + '%' }} /></div>
-                  {focused && nx && <span class="lt-pl-next">{t('Next')} · <b>{clock(new Date(startMs(nx)))} {programTitle(nx)}</b></span>}
+                  {focused && nx && <span class="lt-pl-next">{t('Next')} · <b>{startClock(nx)} {programTitle(nx)}</b></span>}
                 </div>
               );
             })}
@@ -483,7 +474,7 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
           onQuality={(q) => { setQuality(q); restart({ maxBitrate: bitrateFor(q) }); }}
           speed={rate}
           onSpeed={(r) => { el().playbackRate = r; setRate(r); }}
-          subPrefs={{ size: 'M', lift: true }}
+          subPrefs={DEFAULT_SUBTITLES}
           onSubPrefs={() => undefined}
           offset={0}
           onOffset={() => undefined}
@@ -500,9 +491,9 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
               <span class="lt-live lt-pl-live"><span class="lt-live-dot" />{t('LIVE')}</span>
               {cat && <span class="lt-pl-cat">{cat}</span>}
             </span>
-            <h1 class="pl-h1 lt-pl-h1">{cur ? (cur.IsSeries && cur.IndexNumber != null ? `${cur.Name} · ${episodeTag(cur)}` : cur.Name) : name}</h1>
+            <h1 class="pl-h1 lt-pl-h1">{cur ? programTitle(cur) : name}</h1>
             {next
-              ? <span class="lt-pl-nextline">{t('Next at {time}', { time: clock(new Date(startMs(next))) })} · <b>{programTitle(next)}</b></span>
+              ? <span class="lt-pl-nextline">{t('Next at {time}', { time: startClock(next) })} · <b>{programTitle(next)}</b></span>
               : !cur && <span class="lt-pl-nextline">{t('No guide information')}</span>}
           </div>
         </div>
@@ -512,11 +503,11 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
             <div class="lt-pl-progress pl-fade" role="progressbar" aria-label={t('Programme progress')}
               aria-valuemin={0} aria-valuemax={Math.round((endMs(cur) - startMs(cur)) / 60_000)} aria-valuenow={Math.round((now - startMs(cur)) / 60_000)}
               aria-valuetext={t('{done} of {total} minutes, {left} minutes left', { done: Math.round((now - startMs(cur)) / 60_000), total: Math.round((endMs(cur) - startMs(cur)) / 60_000), left: leftMin })}>
-              <div class="lt-pl-fill" style={{ width: (fraction(cur, now) * 100).toFixed(2) + '%' }} />
-              <span aria-hidden="true" class="lt-pl-dot" style={{ left: (fraction(cur, now) * 100).toFixed(2) + '%' }} />
+              <div class="lt-pl-fill" style={{ width: pct(fraction(cur, now)) }} />
+              <span aria-hidden="true" class="lt-pl-dot" style={{ left: pct(fraction(cur, now)) }} />
             </div>
             <div class="pl-times pl-fade">
-              <span>{clock(new Date(startMs(cur)))}</span>
+              <span>{startClock(cur)}</span>
               <span class="lt-pl-left2">{t('{time} left', { time: duration((endMs(cur) - now) / 1000) })} · {t('ends {time}', { time: clock(new Date(endMs(cur))) })}</span>
             </div>
           </>
@@ -527,48 +518,37 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
             <button type="button" class="btn player-btn is-primary" aria-label={m.paused ? t('Play') : t('Pause')} onClick={togglePlay}>
               <Icon name={m.paused ? 'play' : 'pause'} size={22} />
             </button>
-            <button type="button" class="btn player-btn lt-pl-ch" aria-label={t('Previous channel in list')} onClick={() => step(-1)} disabled={order.length < 2}>
+            <PBtn class="lt-pl-ch" label={t('Previous channel in list')} onClick={() => step(-1)} disabled={order.length < 2}>
               <LtIcon name="chevronDown" size={20} stroke={2.4} />{t('CH')}
-            </button>
-            <button type="button" class="btn player-btn lt-pl-ch" aria-label={t('Next channel in list')} onClick={() => step(1)} disabled={order.length < 2}>
+            </PBtn>
+            <PBtn class="lt-pl-ch" label={t('Next channel in list')} onClick={() => step(1)} disabled={order.length < 2}>
               <LtIcon name="chevronUp" size={20} stroke={2.4} />{t('CH')}
-            </button>
+            </PBtn>
             {prev && (
-              <button type="button" class="btn player-btn lt-pl-ch is-last" aria-label={t('Back to {name}, the last channel', { name: prev.label })} onClick={() => switchTo(prev.Id)}>
+              <PBtn class="lt-pl-ch is-last" label={t('Back to {name}, the last channel', { name: prev.label })} onClick={() => switchTo(prev.Id)}>
                 <LtIcon name="swap" size={20} />{t('Last channel')}
-              </button>
+              </PBtn>
             )}
             <div class="pl-volume">
-              <button type="button" class="btn player-btn" aria-label={m.muted || m.volume === 0 ? t('Unmute') : t('Mute')} onClick={toggleMute}>
-                <Icon name={m.muted || m.volume === 0 ? 'mute' : m.volume < 0.5 ? 'volumeLow' : 'volume'} size={22} />
-              </button>
+              <PBtn label={m.muted || m.volume === 0 ? t('Unmute') : t('Mute')} icon={volumeIcon(m.volume, m.muted)} onClick={toggleMute} />
               <VolumeSlider value={m.volume} muted={m.muted} onChange={setVolume} />
             </div>
           </div>
           <div class="pl-right">
             {cur && (
               <button type="button" class="btn player-btn lt-pl-record" aria-pressed={rec ? 'true' : 'false'} onClick={() => void toggleRecord(cur)}>
-                <RecDot />{rec === 'now' ? t('Recording') : rec === 'set' ? t('Recording set') : t('Record')}
+                <RecDot />{recordLabel(rec)}
               </button>
             )}
-            <button type="button" class="btn player-btn" aria-label={t('Channel list')} aria-pressed={channelsOpen ? 'true' : 'false'} aria-expanded={channelsOpen ? 'true' : 'false'}
-              onClick={() => setPanel((p) => (p?.kind === 'channels' ? null : { kind: 'channels' }))}>
+            <PBtn label={t('Channel list')} pressed={channelsOpen} expanded={channelsOpen} onClick={() => setPanel((p) => (p?.kind === 'channels' ? null : { kind: 'channels' }))}>
               <LtIcon name="channels" size={22} />
-            </button>
-            <button type="button" class="btn player-btn" aria-label={subIndex >= 0 ? t('Subtitles: On') : t('Subtitles: Off')} aria-expanded={panel?.kind === 'tracks' && panel.tab === 'subtitles' ? 'true' : 'false'}
-              onClick={() => setPanel((p) => (p?.kind === 'tracks' && p.tab === 'subtitles' ? null : { kind: 'tracks', tab: 'subtitles' }))}>
-              <Icon name="subtitles" size={22} />
-            </button>
-            <button type="button" class="btn player-btn" aria-label={t('Audio track')} aria-expanded={panel?.kind === 'tracks' && panel.tab === 'audio' ? 'true' : 'false'}
-              onClick={() => setPanel((p) => (p?.kind === 'tracks' && p.tab === 'audio' ? null : { kind: 'tracks', tab: 'audio' }))}>
-              <Icon name="audio" size={22} />
-            </button>
-            {pipSupported && (
-              <button type="button" class="btn player-btn" aria-label={t('Picture in picture')} onClick={togglePip}><Icon name="pip" size={22} /></button>
-            )}
-            <button type="button" class="btn player-btn" aria-label={fullscreen ? t('Exit full screen') : t('Full screen')} onClick={toggleFullscreen}>
-              <Icon name={fullscreen ? 'exitFullscreen' : 'fullscreen'} size={22} />
-            </button>
+            </PBtn>
+            <PBtn label={subIndex >= 0 ? t('Subtitles: On') : t('Subtitles: Off')} icon="subtitles" expanded={panel?.kind === 'tracks' && panel.tab === 'subtitles'}
+              onClick={() => setPanel((p) => (p?.kind === 'tracks' && p.tab === 'subtitles' ? null : { kind: 'tracks', tab: 'subtitles' }))} />
+            <PBtn label={t('Audio track')} icon="audio" expanded={panel?.kind === 'tracks' && panel.tab === 'audio'}
+              onClick={() => setPanel((p) => (p?.kind === 'tracks' && p.tab === 'audio' ? null : { kind: 'tracks', tab: 'audio' }))} />
+            <PBtn label={t('Picture in picture')} icon="pip" onClick={togglePip} hidden={!canPip} />
+            <PBtn label={fullscreen ? t('Exit full screen') : t('Full screen')} icon={fullscreen ? 'exitFullscreen' : 'fullscreen'} onClick={toggleFullscreen} />
           </div>
         </div>
       </div>
@@ -591,22 +571,11 @@ function liveError(code: string): { title: string; text: string } {
   }
 }
 
-function resLabel(w?: number, h?: number): string {
-  const W = w ?? 0;
-  const H = h ?? 0;
-  if (!W && !H) return '';
-  if (W >= 3800 || H >= 2100) return '4K';
-  if (W >= 1900 || H >= 1000) return '1080p';
-  if (W >= 1200 || H >= 700) return '720p';
-  if (H >= 560) return '576p';
-  return H ? `${H}p` : '';
-}
-
 /* "Direct stream · 1080p · AAC 2.0" */
 function streamLine(stream: ActiveStream, vw: number, vh: number): string {
   const s = stream.source;
   const v = videoStream(s);
-  const a = audioStreams(s).find((x) => x.Index === stream.audioIndex) ?? audioStreams(s)[0];
+  const a = activeAudio(stream);
   const ch = a?.Channels;
   const layout = ch === 1 ? '1.0' : ch === 2 ? '2.0' : ch === 6 ? '5.1' : ch === 8 ? '7.1' : ch ? String(ch) : '';
   const audio = a ? [stream.kind === 'Transcoding' ? 'AAC' : (a.Codec ?? '').toUpperCase(), layout].filter(Boolean).join(' ') : '';

@@ -2,11 +2,12 @@ import type { ComponentChildren, RefObject } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { userImageUrl } from '../../api/images';
 import { t, tn } from '../../lib/i18n';
-import { addNavigationGuard, getLocation, navigate } from '../../lib/router';
+import { addNavigationGuard, getLocation, Link, navigate } from '../../lib/router';
 import { Icon } from '../../ui/icons';
 import { confirm, Popover, Sheet } from '../../ui/overlay';
 import { errText, type FsEntry, getDirectory, getDrives, getParentPath } from './api';
 import { avatarColour } from './format';
+import { Switch } from '../../ui/controls';
 import './server.css';
 
 /* Pieces shared by the server dashboard pages: loading, drafts with an explicit save, setting rows and controls,
@@ -61,6 +62,15 @@ export function usePoll(fn: () => void, ms: number, deps: unknown[] = []) {
 const isPlain = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /* Fields that differ between two configuration objects; nested objects count field by field, lists count once. */
+export const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/* Only the fields a page changed, so saving doesn't undo edits made elsewhere since it loaded. */
+export function pickChanged<T extends Record<string, unknown>>(draft: T, saved: T): Partial<T> {
+  const out: Partial<T> = {};
+  for (const k of Object.keys(draft) as (keyof T)[]) if (!same(draft[k], saved[k])) out[k] = draft[k];
+  return out;
+}
+
 export function countChanges(a: unknown, b: unknown): number {
   if (isPlain(a) && isPlain(b)) {
     let n = 0;
@@ -127,7 +137,7 @@ export function UnsavedBar({ changes, note, saving, onDiscard, onSave, saveLabel
 }) {
   if (changes <= 0) return null;
   return (
-    <div class="unsaved srv-unsaved" role="region" aria-label={t('Unsaved changes')}>
+    <div class="unsaved" role="region" aria-label={t('Unsaved changes')}>
       <span class="unsaved-text" aria-live="polite">
         <span class="dot is-pending" />
         {tn(changes, '{n} unsaved change', '{n} unsaved changes')}{note ? ` · ${note}` : ''}
@@ -142,7 +152,7 @@ export function UnsavedBar({ changes, note, saving, onDiscard, onSave, saveLabel
 
 /* ── Rows and controls ── */
 
-export function SettingRow({ name, help, htmlFor, children, cls, labelCls }: {
+export function SrvRow({ name, help, htmlFor, children, cls, labelCls }: {
   name: ComponentChildren; help?: ComponentChildren; htmlFor?: string; children?: ComponentChildren; cls?: string; labelCls?: string;
 }) {
   const Label = htmlFor ? 'label' : 'span';
@@ -156,6 +166,11 @@ export function SettingRow({ name, help, htmlFor, children, cls, labelCls }: {
     </div>
   );
 }
+
+/* A row whose control is an on/off switch named like the row. */
+export const SrvSwitchRow = ({ name, help, on, set, labelCls }: { name: string; help: string; on: boolean; set: (v: boolean) => void; labelCls?: string }) => (
+  <SrvRow name={name} help={help} labelCls={labelCls}><Switch checked={on} onChange={set} label={name} /></SrvRow>
+);
 
 /* A number with its unit ("180 s", "2 streams"). `width` is the board's input width; the number keeps the
    browser's spinner gap on its right as drawn. */
@@ -191,37 +206,6 @@ export function NumBox({ value, onChange, min, max, unit, label, width = 52, ste
     </label>
   );
 }
-
-export function Select<T extends string | number>({ value, options, onChange, label, id, minWidth, mono }: {
-  value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label?: string; id?: string; minWidth?: number; mono?: boolean;
-}) {
-  return (
-    <span class={'select-wrap' + (mono ? ' srv-mono-select' : '')}>
-      <select
-        id={id}
-        class="select"
-        aria-label={label}
-        style={minWidth ? { minWidth: minWidth + 'px' } : undefined}
-        value={String(value)}
-        onChange={(e) => {
-          const raw = (e.currentTarget as HTMLSelectElement).value;
-          const opt = options.find((o) => String(o.value) === raw);
-          if (opt) onChange(opt.value);
-        }}
-      >
-        {options.map((o) => <option key={String(o.value)} value={String(o.value)}>{o.label}</option>)}
-      </select>
-      <Icon name="chevronDown" size={16} />
-    </span>
-  );
-}
-
-export const SwitchCtl = ({ on, set, label, disabled }: { on: boolean; set: (v: boolean) => void; label: string; disabled?: boolean }) => (
-  <button type="button" role="switch" class="switch" aria-checked={on ? 'true' : 'false'} aria-label={label} disabled={disabled} onClick={() => set(!on)} />
-);
-
-/* Select options whose labels are English keys: translated where they're rendered. */
-export const tOpts = <T,>(opts: { value: T; label: string }[]) => opts.map((o) => ({ ...o, label: t(o.label) }));
 
 /* ── Lists of addresses (Networking) ── */
 
@@ -428,12 +412,12 @@ export function UserAvatar({ user, index, size = 48, online, disabled, imgVersio
 }
 
 /* A notice above the page: "File Transformation won't load. …  Open plugins". */
-export function Notice({ tone, children, action, onAction, href }: {
+export function Notice({ tone, children, action, onAction, to }: {
   tone: 'warn' | 'accent';
   children: ComponentChildren;
   action: string;
   onAction?: () => void;
-  href?: string;
+  to?: string;
 }) {
   const body = (
     <>
@@ -443,13 +427,7 @@ export function Notice({ tone, children, action, onAction, href }: {
     </>
   );
   const cls = 'srv-notice' + (tone === 'warn' ? ' is-warn' : '');
-  if (href) {
-    return (
-      <a class={cls} href={href} onClick={(e) => { if (e.button !== 0 || e.metaKey || e.ctrlKey) return; e.preventDefault(); onAction?.(); }}>
-        {body}
-      </a>
-    );
-  }
+  if (to) return <Link to={to} class={cls}>{body}</Link>;
   return <button type="button" class={cls} onClick={onAction}>{body}</button>;
 }
 

@@ -2,11 +2,8 @@ package io.github.arkmind.seedy.mobile.books
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -15,14 +12,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.books.BookSort
 import io.github.arkmind.seedy.core.books.BooksView
 import io.github.arkmind.seedy.core.books.BooksViewModel
 import io.github.arkmind.seedy.core.books.ContinueKind
-import io.github.arkmind.seedy.core.books.uuidOf
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.audio.LocalAudio
 import io.github.arkmind.seedy.mobile.audio.miniBarSpace
@@ -35,6 +31,7 @@ import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.settings.PickOption
 import io.github.arkmind.seedy.mobile.settings.SheetHead
+import io.github.arkmind.seedy.mobile.settings.SheetList
 import io.github.arkmind.seedy.player.audio.AudioEngine
 import io.github.arkmind.seedy.ui.theme.currentSession
 import java.util.UUID
@@ -113,7 +110,7 @@ fun BooksLibraryRoute(id: UUID, view: String? = null, focus: String? = null) {
 private fun SortSheet(current: BookSort, onPick: (BookSort) -> Unit, onClose: () -> Unit) {
     BottomSheet(onClose) {
         SheetHead(t("Sort by"))
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+        SheetList {
             for (s in BookSort.entries) PickOption(t(s.label), s == current) { onPick(s); onClose() }
         }
     }

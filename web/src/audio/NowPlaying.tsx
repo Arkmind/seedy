@@ -1,6 +1,6 @@
 import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { fmtDate, dayOf } from '../lib/format';
+import { TICKS_PER_SECOND, fmtDate, dayOf, ticksToSeconds } from '../lib/format';
 import { formatNumber, t, tn } from '../lib/i18n';
 import { Link } from '../lib/router';
 import { useAsync, useStore } from '../lib/store';
@@ -147,7 +147,7 @@ export function LyricsOnly({ track, position }: { track: Track; position: number
 function LyricLines({ lines, synced, position }: { lines: { Text: string; Start?: number }[]; synced: boolean; position: number }) {
   const box = useRef<HTMLDivElement>(null);
   const hold = useRef(0);
-  const at = position * 10_000_000;
+  const at = position * TICKS_PER_SECOND;
   let current = -1;
   if (synced) for (let i = 0; i < lines.length; i++) if ((lines[i].Start ?? 0) <= at + 2_000_000) current = i;
   useEffect(() => {
@@ -165,7 +165,7 @@ function LyricLines({ lines, synced, position }: { lines: { Text: string; Start?
         return (
           <p key={i} class={cls}>
             <button type="button" class="apn-line-btn" aria-current={i === current ? 'true' : undefined}
-              onClick={() => { hold.current = 0; seek((l.Start ?? 0) / 10_000_000); }}>{l.Text || ' '}</button>
+              onClick={() => { hold.current = 0; seek(ticksToSeconds(l.Start)); }}>{l.Text || ' '}</button>
           </p>
         );
       })}
@@ -188,7 +188,7 @@ function AboutSong({ track }: { track: Track }) {
     [t('Genres'), (it.Genres ?? al?.Genres ?? []).join(', ') || undefined],
     [t('Written by'), people('Composer') || people('Lyricist') || undefined],
     [t('Plays'), it.UserData?.PlayCount ? tn(it.UserData.PlayCount, '{n} play', '{n} plays') : t('Not played yet')],
-    [t('Length'), it.RunTimeTicks ? clock(it.RunTimeTicks / 10_000_000) : undefined],
+    [t('Length'), it.RunTimeTicks ? clock(ticksToSeconds(it.RunTimeTicks)) : undefined],
     [t('Format'), qualityLabel(audioStreamOf(it)) || undefined],
     [t('File size'), size ? sizeLabel(size) : undefined]
   ];
@@ -298,7 +298,7 @@ function QueueList({ part, entries }: { part: 'added' | 'context'; entries: Entr
                 <span class="apn-q-sub">{artistsOf(tk)}</span>
               </span>
             </button>
-            {part === 'context' && <span class="apn-q-time">{tk.RunTimeTicks ? clock(tk.RunTimeTicks / 10_000_000) : ''}</span>}
+            {part === 'context' && <span class="apn-q-time">{tk.RunTimeTicks ? clock(ticksToSeconds(tk.RunTimeTicks)) : ''}</span>}
             <button type="button" class="apn-q-remove" aria-label={t('Remove {name} from the queue', { name: tk.Name })} onClick={() => removeFromQueue(e.key)}>
               <AIcon name="close" size={14} stroke={2.4} />
             </button>

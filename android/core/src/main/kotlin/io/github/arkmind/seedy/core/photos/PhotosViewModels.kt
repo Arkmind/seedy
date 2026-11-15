@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.core.photos
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.arkmind.seedy.core.data.plusNew
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -12,7 +13,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
-import org.jellyfin.sdk.model.api.UserItemDataDto
 import java.time.LocalDate
 import java.util.UUID
 
@@ -35,8 +35,10 @@ object PhotoQueue {
         this.changed = changed
     }
 
-    fun update(items: List<BaseItemDto>, total: Int, done: Boolean) {
-        _state.value = Queue(items, total, done)
+    /** The page the viewer was opened from grew: the viewer follows when it still shows that list (same first photo). */
+    fun follow(items: List<BaseItemDto>, total: Int, done: Boolean) {
+        val q = _state.value ?: return
+        if (q.items.firstOrNull()?.id == items.firstOrNull()?.id) _state.value = Queue(items, total, done)
     }
 
     fun patch(item: BaseItemDto) {
@@ -45,8 +47,6 @@ object PhotoQueue {
     }
 }
 
-fun BaseItemDto.withFavorite(on: Boolean): BaseItemDto =
-    copy(userData = (userData ?: UserItemDataDto(playbackPositionTicks = 0, playCount = 0, isFavorite = false, played = false, key = id.toString(), itemId = id)).copy(isFavorite = on))
 
 /** The photos library's views (the web's Timeline board tabs). */
 enum class PhotosTab(val label: String) { Timeline("Timeline"), Folders("Folders"), Videos("Videos"), Favorites("Favorites"), Cameras("Cameras") }
@@ -162,13 +162,11 @@ class PhotosViewModel(private val session: UserSession, private val libraryId: U
             _state.update {
                 if (page == null) it.copy(loading = false, error = true)
                 else {
-                    val seen = it.items.map { x -> x.id }.toSet()
-                    val fresh = page.items.filter { x -> x.id !in seen }
-                    val items = it.items + fresh
-                    it.copy(items = items, total = page.totalRecordCount, loading = false, done = items.size >= page.totalRecordCount || fresh.isEmpty())
+                    val items = it.items.plusNew(page.items) { x -> x.id }
+                    it.copy(items = items, total = page.totalRecordCount, loading = false, done = items.size >= page.totalRecordCount || items.size == it.items.size)
                 }
             }
-            PhotoQueue.state.value?.let { q -> if (q.items.firstOrNull()?.id == _state.value.items.firstOrNull()?.id) PhotoQueue.update(_state.value.items, _state.value.total, _state.value.done) }
+            _state.value.let { PhotoQueue.follow(it.items, it.total, it.done) }
         }
     }
 
@@ -280,13 +278,11 @@ class PhotoFolderViewModel(private val session: UserSession, private val folderI
             _state.update {
                 if (page == null) it.copy(loading = false, error = true)
                 else {
-                    val seen = it.items.map { x -> x.id }.toSet()
-                    val fresh = page.items.filter { x -> x.id !in seen }
-                    val items = it.items + fresh
-                    it.copy(items = items, total = page.totalRecordCount, loading = false, done = items.size >= page.totalRecordCount || fresh.isEmpty())
+                    val items = it.items.plusNew(page.items) { x -> x.id }
+                    it.copy(items = items, total = page.totalRecordCount, loading = false, done = items.size >= page.totalRecordCount || items.size == it.items.size)
                 }
             }
-            PhotoQueue.state.value?.let { q -> if (q.items.firstOrNull()?.id == _state.value.items.firstOrNull()?.id) PhotoQueue.update(_state.value.items, _state.value.total, _state.value.done) }
+            _state.value.let { PhotoQueue.follow(it.items, it.total, it.done) }
         }
     }
 

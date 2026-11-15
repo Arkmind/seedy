@@ -28,8 +28,10 @@ make build       # full build: web app, plugin, package
 - **Where things go:** a screen lives in its area's folder under `web/src/screens/` with its stylesheet; pieces several
   pages of an area share go in that folder's `parts.tsx`, and pieces the whole app shares in `web/src/ui/`. Screens and
   single components are `PascalCase.tsx`; other modules are `kebab-case`.
-- **CSS classes** carry their area's prefix: `nb-` navbar, `me-` personal settings, `admin-` the admin shell, `srv-`
-  server dashboard (`adv-` on its Advanced pages), `lt-` Live TV, `pl-` player.
+- **CSS classes** carry their area's prefix: `nb-` navbar, `me-` personal settings, `admin-` the admin shell (`st-`
+  Statistics, `amr-` music and book requests), `srv-` server dashboard (`adv-` on its Advanced pages), `lt-` Live TV,
+  `pl-` player, `ap-` audio player, `reqs-` Requests (`rq-` the season picker), `mu-` Music, `bk-` Books (`bkd-` a
+  book's page, `rd-` and `rs-` the reader and its settings), `ph-` Photos.
 - **Style:** match the surrounding code; keep components small and the design tokens in `web/src/ui/tokens.css`.
 
 ## For maintainers: releasing

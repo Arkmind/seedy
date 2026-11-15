@@ -42,7 +42,6 @@ import io.github.arkmind.seedy.core.books.BooksData
 import io.github.arkmind.seedy.core.books.BooksView
 import io.github.arkmind.seedy.core.books.BooksViewModel
 import io.github.arkmind.seedy.core.books.ContinueEntry
-import io.github.arkmind.seedy.core.books.SeriesGroup
 import io.github.arkmind.seedy.core.books.authorCounts
 import io.github.arkmind.seedy.core.books.authorGroups
 import io.github.arkmind.seedy.core.books.bookSub
@@ -56,7 +55,12 @@ import io.github.arkmind.seedy.core.books.sortItems
 import io.github.arkmind.seedy.core.books.sortSeries
 import io.github.arkmind.seedy.core.books.volumeLabel
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.i18n.tc
+import io.github.arkmind.seedy.mobile.browse.EmptyNote
+import io.github.arkmind.seedy.mobile.browse.SectionHead
+import io.github.arkmind.seedy.mobile.browse.SquareChip
 import io.github.arkmind.seedy.mobile.browse.topInset
+import io.github.arkmind.seedy.mobile.music.MusicHeader
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -100,16 +104,16 @@ fun BooksScreen(state: BooksViewModel.State, actions: BooksActions, bottomPaddin
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(BooksView.entries, key = { it.name }) { v ->
-                        BooksChip(if (v == BooksView.Series) tc("Series", "tab") else t(v.label), v == state.view) { actions.onView(v) }
+                        SquareChip(if (v == BooksView.Series) tc("Series", "tab") else t(v.label), v == state.view) { actions.onView(v) }
                     }
                 }
             }
         }
         when {
-            data == null && state.error -> item(key = "error") { BooksEmpty(t("Couldn't open this library"), action = t("Try again"), onAction = actions.onRetry) }
+            data == null && state.error -> item(key = "error") { EmptyNote(t("Couldn't open this library"), action = t("Try again"), onAction = actions.onRetry) }
             data == null -> item(key = "loading") { BooksSkeleton() }
             data.all.isEmpty() -> item(key = "empty") {
-                BooksEmpty(t("{name} is empty", "name" to state.name), t("Once the server finds books in this library they will show up here."))
+                EmptyNote(t("{name} is empty", "name" to state.name), t("Once the server finds books in this library they will show up here."))
             }
             query != null -> searchResults(data, query, actions)
             else -> when (state.view) {
@@ -124,25 +128,10 @@ fun BooksScreen(state: BooksViewModel.State, actions: BooksActions, bottomPaddin
     }
 }
 
-/** A word whose translation depends on where it stands ("Series|tab" is plural in French). */
-internal fun tc(text: String, context: String): String {
-    val key = "$text|$context"
-    val out = t(key)
-    return if (out == key) text else out
-}
-
 @Composable
-private fun BooksHeader(name: String, actions: BooksActions) {
-    Row(
-        Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = topInset()),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        HeaderButton(BookIcons.Back, actions.onBack)
-        SText(name, Modifier.weight(1f).padding(start = 6.dp), size = 22.sp, weight = 900, color = SeedyColors.White, maxLines = 1)
-        HeaderButton(BookIcons.Search, { actions.onSearch("") })
-        HeaderButton(BookIcons.More, actions.onMore)
-    }
+private fun BooksHeader(name: String, actions: BooksActions) = MusicHeader(name, actions.onBack, top = topInset()) {
+    HeaderButton(BookIcons.Search, { actions.onSearch("") })
+    HeaderButton(BookIcons.More, actions.onMore)
 }
 
 @Composable
@@ -230,7 +219,7 @@ private fun LazyListScope.overview(state: BooksViewModel.State, data: BooksData,
 
 private fun LazyListScope.grid(items: List<BaseItemDto>, empty: String, actions: BooksActions, sub: (BaseItemDto) -> String) {
     if (items.isEmpty()) {
-        item(key = "none") { BooksEmpty(empty) }
+        item(key = "none") { EmptyNote(empty) }
         return
     }
     item(key = "gap") { Spacer(Modifier.height(20.dp)) }
@@ -241,7 +230,7 @@ private fun LazyListScope.grid(items: List<BaseItemDto>, empty: String, actions:
 
 private fun LazyListScope.audioGrid(items: List<BaseItemDto>, actions: BooksActions) {
     if (items.isEmpty()) {
-        item(key = "none") { BooksEmpty(t("No audiobooks yet")) }
+        item(key = "none") { EmptyNote(t("No audiobooks yet")) }
         return
     }
     item(key = "gap") { Spacer(Modifier.height(20.dp)) }
@@ -267,7 +256,7 @@ private fun LazyListScope.seriesView(data: BooksData, sort: BookSort, focus: Str
         return
     }
     if (groups.isEmpty()) {
-        item(key = "none") { BooksEmpty(t("No series yet"), t("Books with a series in their metadata are grouped here.")) }
+        item(key = "none") { EmptyNote(t("No series yet"), t("Books with a series in their metadata are grouped here.")) }
         return
     }
     item(key = "gap") { Spacer(Modifier.height(20.dp)) }
@@ -305,7 +294,7 @@ private fun LazyListScope.authorsView(data: BooksData, sort: BookSort, focus: St
         return
     }
     if (groups.isEmpty()) {
-        item(key = "none") { BooksEmpty(t("No authors yet"), t("Authors come from each book's metadata.")) }
+        item(key = "none") { EmptyNote(t("No authors yet"), t("Authors come from each book's metadata.")) }
         return
     }
     item(key = "gap") { Spacer(Modifier.height(20.dp)) }
@@ -343,7 +332,7 @@ private fun LazyListScope.searchResults(data: BooksData, query: String, actions:
     val found = searchBooks(data, query)
     if (query.isBlank()) return
     if (found.isEmpty()) {
-        item(key = "none") { BooksEmpty(t("No results")) }
+        item(key = "none") { EmptyNote(t("No results")) }
         return
     }
     item(key = "gap") { Spacer(Modifier.height(16.dp)) }

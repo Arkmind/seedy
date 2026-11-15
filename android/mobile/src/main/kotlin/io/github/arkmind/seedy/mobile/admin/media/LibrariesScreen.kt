@@ -29,7 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.admin.media.LibrariesActions
 import io.github.arkmind.seedy.core.admin.media.LibrariesState
-import io.github.arkmind.seedy.core.admin.media.LibrariesViewModel
+import io.github.arkmind.seedy.core.admin.media.AdminLibrariesViewModel
 import io.github.arkmind.seedy.core.admin.media.LibraryCard
 import io.github.arkmind.seedy.core.admin.media.NewLibraryForm
 import io.github.arkmind.seedy.core.admin.media.NewLibraryKinds
@@ -69,7 +69,7 @@ import io.github.arkmind.seedy.ui.theme.currentSession
 fun LibrariesRoute() {
     val session = currentSession()
     val nav = LocalMobileNav.current
-    val vm = viewModel { LibrariesViewModel(session) }
+    val vm = viewModel { AdminLibrariesViewModel(session) }
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.load() }
     LaunchedEffect(Unit) { vm.live() }

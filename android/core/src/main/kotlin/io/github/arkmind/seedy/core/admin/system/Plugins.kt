@@ -19,6 +19,7 @@ import io.github.arkmind.seedy.core.admin.shortVersion
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.session.UserSession
+import io.github.arkmind.seedy.core.session.serverBase
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -168,7 +169,7 @@ internal fun versionLabel(v: PluginView, server: String, abi: String?): String {
 internal fun sourceLabel(v: PluginView): String {
     val repo = v.pkg?.versions?.firstOrNull { cmpVersion(it.version, v.plugin.version) == 0 } ?: v.pkg?.versions?.firstOrNull()
     return when {
-        v.self -> if (!repo?.repositoryName.isNullOrEmpty()) t("This interface · {repo}", "repo" to repo!!.repositoryName) else t("This interface")
+        v.self -> if (!repo?.repositoryName.isNullOrEmpty()) t("This interface · {repo}", "repo" to repo.repositoryName) else t("This interface")
         v.builtIn || isJellyfinRepo(repo?.repositoryUrl) -> "Jellyfin"
         else -> t("Third party")
     }
@@ -317,7 +318,7 @@ class PluginsViewModel(private val session: UserSession) : ViewModel(), PluginsA
     }
 
     private fun configUrl(page: ConfigPage): String =
-        session.api.baseUrl.orEmpty().trimEnd('/') + "/web/#/configurationpage?name=" + URLEncoder.encode(page.name, "UTF-8").replace("+", "%20")
+        session.api.serverBase + "/web/#/configurationpage?name=" + URLEncoder.encode(page.name, "UTF-8").replace("+", "%20")
 
     private fun row(v: PluginView): PluginRow {
         val p = v.plugin

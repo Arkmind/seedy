@@ -43,6 +43,9 @@ data class SavedServer(
     fun account(userId: String?): SavedAccount? = accounts.firstOrNull { it.userId == userId }
 }
 
+/** The address without its scheme or trailing slash ("192.168.1.20:8096", "media.example.org/jellyfin"). */
+val SavedServer.host: String get() = address.substringAfter("://").trimEnd('/')
+
 /**
  * An account signed in on this device. [deviceId] is its own: Jellyfin ends a device's other sessions when someone
  * signs in with the same device id, and each profile here keeps its session. [token] is null when the person turned

@@ -1,18 +1,25 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
+import { setFavorite } from '../../api/jellyfin';
 import type { BaseItem } from '../../api/types';
-import { duration, ticksToSeconds } from '../../lib/format';
+import { clock } from '../../audio/parts';
+import { canDownload } from '../../lib/app-state';
+import { dot, duration, fmtLongMonthYear, fmtMonthYear, fmtWeekdayDate, ticksToSeconds } from '../../lib/format';
 import { t, tn } from '../../lib/i18n';
-import { Link, setQuery } from '../../lib/router';
+import { Link, setQuery, useLocation } from '../../lib/router';
 import { safeLocal, saveLocal } from '../../lib/store';
-import { useInView } from '../browse/parts';
-import type { GridSelect } from '../browse/parts';
+import { Icon } from '../../ui/icons';
+import { toast } from '../../ui/overlay';
+import { SelectionHead, type Selection } from '../browse/library-select';
+import { canDeleteAny } from '../browse/manage/actions';
+import { openManage } from '../browse/manage/host';
+import { useInView, type GridSelect } from '../browse/parts';
 import {
-  countsLabel, daySub, folderInfo, isVideo, monthYear, ratioOf, thumbUrl, type Day, type FolderInfo, type Memory, type Month, type PhotoItem,
+  countsLabel, daySub, folderInfo, isVideo, ratioOf, thumbUrl, type Day, type FolderInfo, type Memory, type Month, type PhotoItem,
   yearsAgo
 } from './api';
-import { PIcon, type PIconName } from './icons';
-import { fmtMonthYear, fmtWeekdayDate } from '../../lib/format';
+import { PIcon } from './icons';
+import { downloadZip } from './zip';
 
 /* Pieces shared by the photos library, folder and viewer (Photos boards). Prefix ph-. */
 
@@ -41,16 +48,6 @@ export function SizeSwitch({ size, onChange }: { size: TileSize; onChange: (s: T
   );
 }
 
-/* ───────── Buttons ───────── */
-
-export function PhButton({ icon, label, primary, onClick, disabled, busy }: { icon: PIconName; label: string; primary?: boolean; onClick?: () => void; disabled?: boolean; busy?: boolean }) {
-  return (
-    <button type="button" class={'ph-btn' + (primary ? ' is-primary' : '')} disabled={disabled || busy} onClick={onClick}>
-      <PIcon name={icon} size={18} />{label}
-    </button>
-  );
-}
-
 /* ───────── Tabs ───────── */
 
 export function TabRow<T extends string>({ label, tabs, current, to }: { label: string; tabs: { id: T; label: string }[]; current: T; to: (id: T) => string }) {
@@ -70,6 +67,23 @@ export const viewerOpened = { current: false };
 export function openPhoto(id: string, slideshow = false) {
   viewerOpened.current = true;
   setQuery({ photo: id, play: slideshow ? '1' : undefined }, false);
+}
+
+/* Edits made from the selection bar or the viewer (a favourite) show on the grid before it reloads; `viewerList` is
+   what the viewer pages through when it isn't the grid (a selection, a memory, a slideshow). */
+export function usePhotoEdits() {
+  const loc = useLocation();
+  const [local, setLocal] = useState<Record<string, PhotoItem>>({});
+  const [viewerList, setViewerList] = useState<PhotoItem[] | null>(null);
+  useEffect(() => { if (!loc.query.get('photo')) setViewerList(null); }, [loc.query.get('photo')]);
+  return {
+    patch: (list: PhotoItem[]) => list.map((x) => local[x.Id] ?? x),
+    viewerList,
+    setViewerList,
+    onChanged: (changed: PhotoItem[]) => setLocal((m) => ({ ...m, ...Object.fromEntries(changed.map((x) => [x.Id, x])) })),
+    onShow: (photos: PhotoItem[]) => { setViewerList(photos); openPhoto(photos[0].Id, true); },
+    onItem: (it: PhotoItem) => { setLocal((m) => ({ ...m, [it.Id]: it })); if (viewerList) setViewerList((l) => l && l.map((x) => (x.Id === it.Id ? it : x))); }
+  };
 }
 
 export function photoHref(id: string): string {
@@ -105,7 +119,7 @@ export function Tile({ item, row, index, select, onOpen }: { item: PhotoItem; ro
       }}
     >
       {src && <img src={src} alt="" loading="lazy" decoding="async" draggable={false} />}
-      {video && <span class="ph-dur"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>{clockOf(secs)}</span>}
+      {video && <span class="ph-dur"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>{clock(Math.round(secs))}</span>}
       {fav && <span class="ph-fav" aria-label={t('Favorite')}><PIcon name="heart" size={16} filled /></span>}
       {select && (
         <>
@@ -125,17 +139,10 @@ export function Tile({ item, row, index, select, onOpen }: { item: PhotoItem; ro
   );
 }
 
-/* "0:42", "2:10", "1:04:09". */
-export function clockOf(secs: number): string {
-  const s = Math.max(0, Math.round(secs));
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
-  return h ? `${h}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}` : `${m}:${String(r).padStart(2, '0')}`;
-}
-
 /* One day: "Sat 17 Oct  14 photos · Home", then its photos in justified rows. */
-export function DaySection({ day, row, offset, select, own, onOpen, id }: { day: Day; row: number; offset: number; select?: GridSelect; own?: string; onOpen: (item: PhotoItem) => void; id?: string }) {
+export function DaySection({ day, row, offset, select, own, onOpen }: { day: Day; row: number; offset: number; select?: GridSelect; own?: string; onOpen: (item: PhotoItem) => void }) {
   return (
-    <section class="ph-day" aria-label={fmtWeekdayDate(day.date)} id={id}>
+    <section class="ph-day" aria-label={fmtWeekdayDate(day.date)}>
       <div class="ph-day-head"><h3>{fmtWeekdayDate(day.date)}</h3><span>{daySub(day, own)}</span></div>
       <JustifiedRows items={day.items} row={row} offset={offset} select={select} onOpen={onOpen} />
     </section>
@@ -152,14 +159,14 @@ export function JustifiedRows({ items, row, offset = 0, select, onOpen }: { item
 }
 
 /* Months and days, as on the Timeline board ("October 2026", then each day). */
-/* A folder of one month lists its days only (Folder board); `months` false hides the headings. */
+/* A folder of one month lists its days only (Folder board); `headings` false hides the month headings. */
 export function Timeline({ months, row, select, own, onOpen, headings = true }: { months: Month[]; row: number; select?: GridSelect; own?: string; onOpen: (item: PhotoItem) => void; headings?: boolean }) {
   let offset = 0;
   return (
     <>
       {months.map((m, mi) => (
         <div key={m.key} class="ph-month" data-month={`${m.date.getFullYear()}-${m.date.getMonth()}`}>
-          {headings && <h2 class={'ph-month-h' + (mi ? ' is-next' : '')}>{monthYear(m.date)}</h2>}
+          {headings && <h2 class={'ph-month-h' + (mi ? ' is-next' : '')}>{fmtLongMonthYear(m.date)}</h2>}
           {m.days.map((d) => {
             const at = offset;
             offset += d.items.length;
@@ -206,7 +213,7 @@ export function FolderCard({ item, to }: { item: BaseItem; to: string }) {
       </span>
       <span class="ph-folder-name">{item.Name}</span>
       <span class="ph-folder-sub">
-        {info ? [countsLabel(info.photos, info.videos), info.to ? fmtMonthYear(info.to) : ''].filter(Boolean).join(' · ') : ' '}
+        {info ? dot(countsLabel(info.photos, info.videos), info.to ? fmtMonthYear(info.to) : '') : ' '}
       </span>
     </Link></div>
   );
@@ -216,15 +223,56 @@ export function FolderGrid({ children }: { children: ComponentChildren }) {
   return <div class="ph-folder-grid">{children}</div>;
 }
 
-/* "212 photos · 14 videos". */
-export function countsLine(photos: number, videos: number): string {
-  return [photos || !videos ? tn(photos, '{n} photo', '{n} photos') : '', videos ? tn(videos, '{n} video', '{n} videos') : ''].filter(Boolean).join(' · ');
-}
-
 /* A row's height for a tile size; phones take smaller rows so two or three photos share one. */
 export function rowFor(size: TileSize): number {
   const phone = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 720px)').matches;
   return Math.round(ROW[size] * (phone ? 0.6 : 1));
 }
 
-export { ROW };
+/* ───────── Selection ───────── */
+
+export function PhotoSelectionBar({ sel, total, name, onChanged, onSelectAll, onShow }: {
+  sel: Selection; total: number; name: string; onChanged: (items: PhotoItem[]) => void; onSelectAll: () => Promise<void>; onShow: (photos: PhotoItem[]) => void;
+}) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const n = sel.items.length;
+  const fav = async (on: boolean) => {
+    setBusy('fav');
+    const items = sel.items as PhotoItem[];
+    const results = await Promise.allSettled(items.map((it) => setFavorite(it.Id, on)));
+    setBusy(null);
+    const ok = items.filter((_, i) => results[i].status === 'fulfilled').map((it) => ({ ...it, UserData: { ...(it.UserData ?? {}), IsFavorite: on } }));
+    onChanged(ok);
+    sel.set(ok.length === items.length ? ok : items);
+    if (ok.length < items.length) toast(tn(items.length - ok.length, 'Couldn’t update {n} photo', 'Couldn’t update {n} photos'), 'error');
+    else toast(on ? tn(ok.length, 'Added {n} photo to favorites', 'Added {n} photos to favorites') : tn(ok.length, 'Removed {n} photo from favorites', 'Removed {n} photos from favorites'));
+  };
+  const allFav = n > 0 && sel.items.every((x) => x.UserData?.IsFavorite);
+  return (
+    <div role="toolbar" aria-label={t('{n} selected', { n })} class="lib-sel ph-sel">
+      <SelectionHead sel={sel} total={total} busy={busy} setBusy={setBusy} onSelectAll={onSelectAll} />
+      <div class="lib-sel-actions">
+        <button type="button" class="lib-sel-btn" disabled={!n || busy !== null} onClick={() => void fav(!allFav)}>
+          <PIcon name="heart" size={18} filled={allFav} />{busy === 'fav' ? t('Working…') : allFav ? t('Remove from favorites') : t('Add to favorites')}
+        </button>
+        <button type="button" class="lib-sel-btn" disabled={!sel.items.some((x) => !isVideo(x))} onClick={() => {
+          const photos = (sel.items as PhotoItem[]).filter((x) => !isVideo(x));
+          sel.stop();
+          onShow(photos);
+        }}>
+          <PIcon name="slideshow" size={18} />{t('Slideshow')}
+        </button>
+        {canDownload() && (
+          <button type="button" class="lib-sel-btn" disabled={!n || busy !== null} onClick={() => { setBusy('zip'); downloadZip(name, sel.items).finally(() => setBusy(null)); }}>
+            <PIcon name="download" size={18} />{busy === 'zip' ? t('Working…') : t('Download')}
+          </button>
+        )}
+        {canDeleteAny() && (
+          <button type="button" class="lib-sel-btn is-danger" disabled={!n || busy !== null} onClick={() => openManage('delete', sel.items)}>
+            <Icon name="trash" size={18} />{t('Delete')}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

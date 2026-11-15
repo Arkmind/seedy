@@ -5,10 +5,18 @@ import androidx.lifecycle.viewModelScope
 import io.github.arkmind.seedy.core.admin.AdminHttp
 import io.github.arkmind.seedy.core.admin.SystemInfo
 import io.github.arkmind.seedy.core.admin.errorText
+import io.github.arkmind.seedy.core.data.bool
+import io.github.arkmind.seedy.core.data.int
+import io.github.arkmind.seedy.core.data.json
+import io.github.arkmind.seedy.core.data.objects
+import io.github.arkmind.seedy.core.data.str
+import io.github.arkmind.seedy.core.data.strings
+import io.github.arkmind.seedy.core.data.with
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.session.UserSession
 import io.github.arkmind.seedy.core.settings.Choice
+import io.github.arkmind.seedy.core.settings.Choices
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -399,7 +407,7 @@ fun serverSettingsState(
         ),
     )
     val groups = listOf(
-        SettingsGroup(null, listOf(ChoiceSetting("UICulture", t("Server language"), t("For notifications, logs and generated names"), labelOf(langOptions, culture), culture, langOptions))),
+        SettingsGroup(null, listOf(ChoiceSetting("UICulture", t("Server language"), t("For notifications, logs and generated names"), Choices.label(langOptions, culture), culture, langOptions))),
         SettingsGroup(
             t("Paths"),
             listOf(

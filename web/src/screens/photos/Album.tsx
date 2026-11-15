@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { JELLYFIN_WEB, post } from '../../api/client';
+
 import type { BaseItem } from '../../api/types';
-import { isAdmin, userStore } from '../../lib/app-state';
+import { canDownload, userStore } from '../../lib/app-state';
+import { dot, fmtDateRange } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -12,13 +13,13 @@ import { EmptyState, ErrorState, Sentinel, usePaged } from '../browse/parts';
 import { useSelection } from '../browse/library-select';
 import { manageChanged } from '../browse/manage/host';
 import {
-  MEDIA_TYPES, PHOTO_FIELDS, ancestorsOf, dateRange, folderInfo, getMedia, groupByDay, isVideo, subfolders, thumbUrl, type FolderInfo, type PhotoItem
+  MEDIA_TYPES, PHOTO_FIELDS, ancestorsOf, countsLabel, folderInfo, getMedia, groupByDay, isVideo, subfolders, thumbUrl, type FolderInfo, type PhotoItem
 } from './api';
 import { PIcon } from './icons';
-import { FolderCard, FolderGrid, JustifiedRows, rowFor, TabRow, Timeline, countsLine, openPhoto, useTileSize } from './parts';
-import { PhotoSelectionBar } from './PhotosLibrary';
+import { FolderCard, FolderGrid, JustifiedRows, PhotoSelectionBar, rowFor, TabRow, Timeline, openPhoto, usePhotoEdits, useTileSize } from './parts';
 import { PhotoViewer } from './Viewer';
 import { downloadZip } from './zip';
+import { LibraryMenuItems } from '../../ui/library-menu';
 import './photos.css';
 
 /* A folder of photos (Photos · Folder board): back button and breadcrumbs, three photos beside the folder's name,
@@ -41,7 +42,7 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
   const row = rowFor(size);
   const managed = useStore(manageChanged);
   const user = useStore(userStore);
-  const canDownload = !!(user?.Policy as { EnableContentDownloading?: boolean } | undefined)?.EnableContentDownloading;
+  const mayDownload = canDownload(user);
   const base = `/details/${item.Id}`;
 
   const ancestors = useAsync(() => ancestorsOf(item.Id).catch(() => [] as BaseItem[]), [item.Id]);
@@ -59,12 +60,11 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
     isFavorite: show === 'favorites' ? true : undefined, sortBy: sort.by, sortOrder: sort.order, startIndex: start, limit,
     fields: PHOTO_FIELDS, enableImageTypes: ['Primary'], imageTypeLimit: 1
   }, signal), [item.Id, show, sort.id, managed.n], 200);
-  const [local, setLocal] = useState<Record<string, PhotoItem>>({});
-  const list = (paged.items as PhotoItem[]).map((x) => local[x.Id] ?? x);
+  const edits = usePhotoEdits();
+  const { viewerList, setViewerList } = edits;
+  const list = edits.patch(paged.items as PhotoItem[]);
   const months = useMemo(() => (sort.id === 'name' ? [] : groupByDay(list)), [list, sort.id]);
   const sel = useSelection(list);
-  const [viewerList, setViewerList] = useState<PhotoItem[] | null>(null);
-  useEffect(() => { if (!loc.query.get('photo')) setViewerList(null); }, [loc.query.get('photo')]);
 
   const all = async (q: { random?: boolean; photos?: boolean } = {}) => {
     const r = await getMedia({
@@ -97,9 +97,9 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
   };
 
   const fi = info.data;
-  const counts = fi ? countsLine(fi.photos, fi.videos) : '';
-  const range = fi ? dateRange(fi.from, fi.to) : '';
-  const path = (item as PhotoItem).Path;
+  const counts = fi ? countsLabel(fi.photos, fi.videos, ' · ') : '';
+  const range = fi ? fmtDateRange(fi.from, fi.to) : '';
+  const path = item.Path;
   const covers = fi?.covers ?? [];
   const folders = subs.data?.Items ?? [];
   const empty = !paged.loading && !paged.items.length;
@@ -120,12 +120,12 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
           <div class="ph-hero-info">
             <span class="ph-eyebrow"><PIcon name="folder" size={16} />{t('Folder')}</span>
             <h1 id="ph-alb-h">{item.Name}</h1>
-            <span class="ph-hero-counts">{[counts, range].filter(Boolean).join(' · ') || ' '}</span>
+            <span class="ph-hero-counts">{dot(counts, range) || ' '}</span>
             {path && <span class="ph-hero-path">{path}</span>}
             <div class="ph-hero-actions">
               <button type="button" class="ph-btn is-primary" onClick={() => void slideshow(false)}><PIcon name="slideshow" size={18} />{t('Slideshow')}</button>
               <button type="button" class="ph-btn" onClick={() => void slideshow(true)}><PIcon name="shuffle" size={18} />{t('Shuffle')}</button>
-              {canDownload && <button type="button" class="ph-btn" disabled={zipping || !fi?.count} onClick={() => void download()}><PIcon name="download" size={18} />{zipping ? t('Preparing…') : t('Download')}</button>}
+              {mayDownload && <button type="button" class="ph-btn" disabled={zipping || !fi?.count} onClick={() => void download()}><PIcon name="download" size={18} />{zipping ? t('Preparing…') : t('Download')}</button>}
               <AlbumMenu item={item} onSelect={() => sel.start()} onRefresh={() => { paged.reload(); info.reload(); subs.reload(); }} />
             </div>
             {folders.length > 0 && (
@@ -150,9 +150,9 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
 
         {sel.active && (
           <PhotoSelectionBar sel={sel} total={paged.total} name={item.Name}
-            onChanged={(changed) => setLocal((m) => ({ ...m, ...Object.fromEntries(changed.map((x) => [x.Id, x])) }))}
+            onChanged={edits.onChanged}
             onSelectAll={async () => sel.set(await all())}
-            onShow={(photos) => { setViewerList(photos); openPhoto(photos[0].Id, true); }} />
+            onShow={edits.onShow} />
         )}
 
         {paged.error && !paged.items.length ? <ErrorState error={paged.error} retry={paged.reload} title={t('Couldn’t load the photos')} />
@@ -177,7 +177,7 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
           total={viewerList ? viewerList.length : paged.total}
           more={viewerList ? undefined : paged.loadMore}
           done={viewerList ? true : paged.done}
-          onItem={(it) => { setLocal((m) => ({ ...m, [it.Id]: it })); if (viewerList) setViewerList((l) => l && l.map((x) => (x.Id === it.Id ? it : x))); }}
+          onItem={edits.onItem}
         />
       )}
     </div>
@@ -229,21 +229,7 @@ function AlbumMenu({ item, onSelect, onRefresh }: { item: BaseItem; onSelect: ()
         <>
           <MenuItem icon="check" label={t('Select photos')} sub={t('Act on several at once')} onSelect={() => { close(); onSelect(); }} />
           <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); onRefresh(); }} />
-          <MenuItem icon="link" label={t('Copy link')} onSelect={() => {
-            close();
-            navigator.clipboard.writeText(window.location.href).then(() => toast(t('Link copied')), () => toast(t('Couldn’t copy the link'), 'error'));
-          }} />
-          <MenuItem icon="external" label={t('Open in Jellyfin')} href={`${JELLYFIN_WEB}#/list.html?parentId=${item.Id}`} />
-          {isAdmin() && (
-            <>
-              <div class="menu-sep" />
-              <MenuItem icon="refresh" label={t('Scan this folder')} sub={t('Look for new and changed photos')} onSelect={() => {
-                close();
-                post<void>(`/Items/${item.Id}/Refresh`, undefined, { Recursive: true, MetadataRefreshMode: 'Default', ImageRefreshMode: 'Default', ReplaceAllMetadata: false, ReplaceAllImages: false })
-                  .then(() => toast(t('Scanning {name}', { name: item.Name }), 'pending'), () => toast(t('Couldn’t start the scan'), 'error'));
-              }} />
-            </>
-          )}
+          <LibraryMenuItems item={item} close={close} scanLabel={t('Scan this folder')} scanSub={t('Look for new and changed photos')} />
         </>
       )}
     </MenuButton>

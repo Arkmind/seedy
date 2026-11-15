@@ -7,8 +7,10 @@ import { useAsync } from '../../lib/store';
 import { Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { Sheet, toast } from '../../ui/overlay';
-import { AlbumArt, cardStatus, initials, noteRequest, refreshMediaSummary } from './media-parts';
-import type { MusicTarget } from './music';
+import {
+  AlbumArt, cardStatus, DialogClose, DialogError, DialogFoot, initials, noteRequest, Quota, refreshMediaSummary, sendFailed
+} from './media-parts';
+import type { MusicTarget } from './RequestsMusic';
 
 /* Request an artist (RequestMusicArtist board): the whole discography, picked albums, or only what comes out from
    now on. Albums on the server or already asked for are locked; the quality is the admin's; the person's weekly
@@ -16,10 +18,10 @@ import type { MusicTarget } from './music';
 
 type Mode = 'artist' | 'albums' | 'future';
 type Type = 'album' | 'ep' | 'single';
-const TYPES: { id: Type; one: string; many: string }[] = [
-  { id: 'album', one: 'Albums · {n}', many: 'Albums · {n}' },
-  { id: 'ep', one: 'EPs · {n}', many: 'EPs · {n}' },
-  { id: 'single', one: 'Singles · {n}', many: 'Singles · {n}' }
+const TYPES: { id: Type; label: string }[] = [
+  { id: 'album', label: 'Albums · {n}' },
+  { id: 'ep', label: 'EPs · {n}' },
+  { id: 'single', label: 'Singles · {n}' }
 ];
 
 /* "2026 · 11 songs · 44 min", or "Out 6 Nov 2026" for what isn't out yet. */
@@ -63,7 +65,7 @@ function Head({ name, art, meta, onClose }: { name: string; art: ComponentChildr
         <h2 id="reqs-dlg-h" class="reqs-dlg-title">{name}</h2>
         <span class="reqs-dlg-meta">{meta}</span>
       </div>
-      <button type="button" class="reqs-dlg-close" aria-label={t('Close')} onClick={onClose}><Icon name="close" size={18} stroke={2.2} /></button>
+      <DialogClose onClose={onClose} />
     </div>
   );
 }
@@ -79,10 +81,7 @@ function Loading({ name, error, onRetry, onClose }: { name?: string; error?: Err
       />
       <div class="reqs-dlg-body">
         {error ? (
-          <div class="rq-error">
-            <span>{error.message || t('Couldn’t load this artist.')}</span>
-            <button type="button" class="btn btn-secondary is-sm" onClick={onRetry}>{t('Try again')}</button>
-          </div>
+          <DialogError message={error.message || t('Couldn’t load this artist.')} onRetry={onRetry} />
         ) : (
           <>
             <span class="reqs-dlg-seg skel" style={{ height: '50px' }} />
@@ -147,7 +146,7 @@ function Body({ data, opts, preselect, imageUrl, onClose }: { data: MusicArtist;
       void refreshMediaSummary();
       onClose();
     } catch (e) {
-      toast(`${t('Couldn’t send the request.')} ${(e as Error).message || ''}`.trim(), 'error');
+      sendFailed(e);
     } finally {
       setBusy(false);
     }
@@ -189,7 +188,7 @@ function Body({ data, opts, preselect, imageUrl, onClose }: { data: MusicArtist;
               <nav aria-label={t('Release types')} class="tab-row hscroll">
                 {TYPES.filter((x) => counts[x.id]).map((x) => (
                   <button key={x.id} type="button" class="tab" aria-pressed={type === x.id ? 'true' : 'false'} aria-current={type === x.id ? 'page' : undefined} onClick={() => setType(x.id)}>
-                    {t(x.many, { n: counts[x.id] })}
+                    {t(x.label, { n: counts[x.id] })}
                   </button>
                 ))}
               </nav>
@@ -200,7 +199,7 @@ function Body({ data, opts, preselect, imageUrl, onClose }: { data: MusicArtist;
                 </button>
               )}
             </div>
-            <div role="group" aria-label={t(TYPES.find((x) => x.id === type)!.many.split(' ·')[0]!)} class="reqs-dlg-rows">
+            <div role="group" aria-label={t(TYPES.find((x) => x.id === type)!.label.split(' ·')[0]!)} class="reqs-dlg-rows">
               {rows.map((r) => {
                 const isLocked = locked(r);
                 const on = !isLocked && (mode === 'artist' ? (r.type === 'album' || r.type === 'ep') && !r.upcoming && !r.secondary?.length : picked.has(r.mbid));
@@ -249,42 +248,17 @@ function Body({ data, opts, preselect, imageUrl, onClose }: { data: MusicArtist;
         </div>
       </div>
 
-      <div class="reqs-dlg-foot">
-        <span class="reqs-dlg-note">
-          <span class={'reqs-dot is-8 ' + (blocked || over ? 'is-danger' : opts.autoApprove ? 'is-ok' : 'is-pending')} aria-hidden="true" />
-          {blocked ? t('Music requests are switched off for your profile')
-            : over ? t('That’s more albums than you have left this week')
-            : opts.autoApprove ? t('Approved automatically for you') : t('An admin approves requests before Lidarr searches')}
-        </span>
-        <span class="reqs-dlg-buttons">
-          <button type="button" class="reqs-dlg-cancel" onClick={onClose}>{t('Cancel')}</button>
-          <button type="button" data-autofocus class="btn btn-primary reqs-dlg-send" disabled={busy || blocked || over || (mode === 'albums' && !units)} onClick={() => void submit()}>
-            <Icon name="request" size={18} stroke={2.2} />
-            {busy ? t('Requesting…') : label}
-          </button>
-        </span>
-      </div>
+      <DialogFoot
+        tone={blocked || over ? 'danger' : opts.autoApprove ? 'ok' : 'pending'}
+        note={blocked ? t('Music requests are switched off for your profile')
+          : over ? t('That’s more albums than you have left this week')
+          : opts.autoApprove ? t('Approved automatically for you') : t('An admin approves requests before Lidarr searches')}
+        busy={busy}
+        disabled={busy || blocked || over || (mode === 'albums' && !units)}
+        label={label}
+        onSend={() => void submit()}
+        onClose={onClose}
+      />
     </>
-  );
-}
-
-/* "Album requests this week · 3 of 5 left", with what's used in grey and this request in the accent. */
-export function Quota({ label, opts, units, aria, extra }: { label: string; opts: MediaOptions; units: number; aria: string; extra?: string }) {
-  const limit = opts.limit;
-  const pct = (n: number) => `${limit > 0 ? Math.max(0, Math.min(100, (n / limit) * 100)) : 0}%`;
-  const left = Math.max(0, limit - opts.used);
-  const over = limit >= 0 && units > left;
-  return (
-    <div class="reqs-dlg-card is-quota">
-      <span class="reqs-dlg-quota-line">
-        <span>{label}</span>
-        <span class={over ? 'is-over' : undefined}>{limit < 0 ? t('No limit') : limit === 0 ? t('Can’t request') : t('{left} of {limit} left', { left, limit })}</span>
-      </span>
-      <span role="img" aria-label={aria} class="reqs-dlg-quota-bar">
-        {limit > 0 && <span style={{ width: pct(opts.used) }} />}
-        {limit > 0 && <span class={over ? 'is-over' : undefined} style={{ width: pct(Math.min(units, Math.max(0, limit - opts.used))) }} />}
-      </span>
-      {extra && <span class="reqs-dlg-card-label">{extra}</span>}
-    </div>
   );
 }

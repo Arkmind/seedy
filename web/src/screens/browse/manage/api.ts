@@ -1,10 +1,11 @@
-import { del, get, getSession, post, request } from '../../../api/client';
+import { del, get, post, request, currentUserId } from '../../../api/client';
+import { fileBase64 } from '../../../api/images';
 import type { BaseItem, ItemKind } from '../../../api/types';
 import { locale, t } from '../../../lib/i18n';
+import { capitalize, displayLanguage } from '../../../lib/format';
 
 /* Jellyfin calls behind the item dialogs (Edit metadata, Identify, Edit images). All of them need an administrator. */
 
-const uid = () => getSession()?.userId ?? '';
 
 /* The whole item as the metadata editor sees it. Saving sends this object back, edited: whatever is left out is
    cleared on the server. */
@@ -21,7 +22,7 @@ export type ItemDto = BaseItem & Record<string, unknown> & {
   Path?: string;
 };
 
-export const getFullItem = (id: string, signal?: AbortSignal) => get<ItemDto>(`/Users/${uid()}/Items/${id}`, undefined, signal);
+export const getFullItem = (id: string, signal?: AbortSignal) => get<ItemDto>(`/Users/${currentUserId()}/Items/${id}`, undefined, signal);
 export const updateItem = (dto: ItemDto) => post<void>(`/Items/${dto.Id}`, dto);
 
 export interface ExternalIdInfo { Name: string; Key: string; Type?: string | null; UrlFormatString?: string | null }
@@ -91,13 +92,7 @@ export const deleteImage = (id: string, type: ImageKind, index?: number) =>
 
 /* Jellyfin reads an uploaded image as base64 text, sent with the image's own content type. */
 export async function uploadImage(id: string, type: ImageKind, file: File) {
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error ?? new Error('Unreadable file'));
-    reader.readAsDataURL(file);
-  });
-  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  const base64 = await fileBase64(file);
   return request<void>('POST', `/Items/${id}/Images/${type}`, { data: { type: file.type || 'image/jpeg', body: base64 } });
 }
 
@@ -152,11 +147,8 @@ export const idsLine = (ids?: Record<string, string>) =>
 
 export function languageName(code?: string | null): string {
   if (!code) return t('no text');
-  try {
-    const name = new Intl.DisplayNames([locale()], { type: 'language' }).of(code);
-    if (name && name !== code) return name.charAt(0).toLocaleUpperCase(locale()) + name.slice(1);
-  } catch { /* not a code Intl knows */ }
-  return code;
+  const name = displayLanguage(code, locale());
+  return name && name !== code ? capitalize(name) : code;
 }
 
 /* "Series", "Movie"… for the dialogs' sub lines. */

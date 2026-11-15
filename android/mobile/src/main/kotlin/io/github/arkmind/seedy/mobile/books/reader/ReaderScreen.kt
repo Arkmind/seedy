@@ -60,10 +60,10 @@ import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.books.PageTheme
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.mobile.books.BookIcons
 import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.icons.IconDef
-import io.github.arkmind.seedy.ui.icons.IconPart
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
@@ -75,13 +75,13 @@ import kotlin.math.roundToInt
 
 /** The reader's icons, from the board (24 grid, 2.2 px lines). */
 object ReaderIcons {
-    val Back = IconDef(2.2f, "M15 5l-7 7 7 7")
+    val Back = BookIcons.Back
     val Type = IconDef(2.2f, "M4 18L9 6l5 12", "M6 14h6", "M15 18l3-7 3 7", "M16 16h4")
-    val Bookmark = IconDef(2.2f, "M6 3h12v18l-6-4-6 4z")
-    val BookmarkOn = IconDef(2.2f, listOf(IconPart("M6 3h12v18l-6-4-6 4z", filled = true)))
-    val Contents = IconDef(2.2f, "M9 6h11", "M9 12h11", "M9 18h11", "M4 6h.01", "M4 12h.01", "M4 18h.01")
+    val Bookmark = BookIcons.Bookmark
+    val BookmarkOn = BookIcons.BookmarkFilled
+    val Contents = BookIcons.Chapters
     val Close = IconDef(2.2f, "M6 6l12 12", "M18 6L6 18")
-    val Download = IconDef(2.2f, "M12 3v12", "M7 10l5 5 5-5", "M5 20h14")
+    val Download = BookIcons.Download
     val File = IconDef(2.2f, "M6 3h8l4 4v14H6z", "M14 3v4h4")
 }
 

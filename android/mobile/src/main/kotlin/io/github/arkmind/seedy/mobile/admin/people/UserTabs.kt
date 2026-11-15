@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -32,17 +33,18 @@ import io.github.arkmind.seedy.core.admin.people.UnratedKinds
 import io.github.arkmind.seedy.core.admin.people.UserEditActions
 import io.github.arkmind.seedy.core.admin.people.UserEditState
 import io.github.arkmind.seedy.core.admin.people.allows
-import io.github.arkmind.seedy.core.admin.people.array
 import io.github.arkmind.seedy.core.admin.people.dayLabel
-import io.github.arkmind.seedy.core.admin.people.flag
 import io.github.arkmind.seedy.core.admin.people.hourLabel
-import io.github.arkmind.seedy.core.admin.people.labelOf
 import io.github.arkmind.seedy.core.admin.people.ratingOptions
 import io.github.arkmind.seedy.core.admin.people.schedules
-import io.github.arkmind.seedy.core.admin.people.strings
 import io.github.arkmind.seedy.core.admin.sameId
+import io.github.arkmind.seedy.core.data.array
+import io.github.arkmind.seedy.core.data.bool
+import io.github.arkmind.seedy.core.data.json
+import io.github.arkmind.seedy.core.data.strings
 import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.settings.Choices
 import io.github.arkmind.seedy.mobile.admin.AccentRow
 import io.github.arkmind.seedy.mobile.admin.ChipFlow
 import io.github.arkmind.seedy.mobile.admin.FormError
@@ -73,8 +75,6 @@ import kotlinx.serialization.json.put
 /* A user's other tabs (web/src/screens/server/UserEdit.tsx, built from the phone kit): libraries and devices,
  * parental controls, password and Seedy. */
 
-private const val DevicePage = 40
-
 private fun toggleIn(list: List<String>, id: String, on: Boolean): List<String> {
     val rest = list.filter { !sameId(it, id) && it != id }
     return if (on) rest + id else rest
@@ -82,7 +82,7 @@ private fun toggleIn(list: List<String>, id: String, on: Boolean): List<String> 
 
 /** A grey line inside a card ("There are no libraries yet."). */
 @Composable
-private fun NoteRow(text: String, color: androidx.compose.ui.graphics.Color = SeedyColors.Text2) {
+private fun NoteRow(text: String, color: Color = SeedyColors.Text2) {
     SText(text, Modifier.fillMaxWidth().padding(start = 16.dp, end = 14.dp, top = 14.dp, bottom = 14.dp), size = 13.sp, lineHeight = 1.45f, color = color)
 }
 
@@ -91,39 +91,39 @@ private fun NoteRow(text: String, color: androidx.compose.ui.graphics.Color = Se
 @Composable
 internal fun AccessTab(state: UserEditState, actions: UserEditActions) {
     var allDevices by remember { mutableStateOf(false) }
-    var shown by remember { mutableIntStateOf(DevicePage) }
+    var shown by remember { mutableIntStateOf(DevicePageSize) }
     val p = state.policy
     val name = state.name
     Section(t("Libraries"), foot = t("What {name} can browse and play.", "name" to name)) {
         switch(state, actions, "EnableAllFolders", t("All libraries"), t("Including libraries you add later"), default = true)
-        if (!p.flag("EnableAllFolders", true)) {
+        if (!p.bool("EnableAllFolders", true)) {
             val enabled = p.strings("EnabledFolders")
             if (state.folders.isEmpty()) row { NoteRow(t("There are no libraries yet.")) }
             for (f in state.folders) {
                 row {
-                    SwitchRow(f.name, f.sub, enabled.any { sameId(it, f.id) }) { on -> actions.set("EnabledFolders", strings(toggleIn(enabled, f.id, on))) }
+                    SwitchRow(f.name, f.sub, enabled.any { sameId(it, f.id) }) { on -> actions.set("EnabledFolders", json(toggleIn(enabled, f.id, on))) }
                 }
             }
         }
     }
     Section(t("Devices"), foot = t("Where {name} can sign in.", "name" to name)) {
         switch(state, actions, "EnableAllDevices", t("Any device"), t("New phones, TVs and browsers included"), default = true)
-        if (!p.flag("EnableAllDevices", true)) {
+        if (!p.bool("EnableAllDevices", true)) {
             val enabled = p.strings("EnabledDevices")
             val relevant = state.devices.filter { it.theirs || p.allows(it.id) }
             val list = if (allDevices) state.devices else relevant
             if (list.isEmpty()) row { NoteRow(t("{name} hasn’t signed in on any device yet.", "name" to name)) }
             for (d in list.take(shown)) {
                 row {
-                    SwitchRow(d.name, d.sub.ifEmpty { null }, p.allows(d.id), device = d.mine) { on -> actions.set("EnabledDevices", strings(toggleIn(enabled, d.id, on))) }
+                    SwitchRow(d.name, d.sub.ifEmpty { null }, p.allows(d.id), device = d.mine) { on -> actions.set("EnabledDevices", json(toggleIn(enabled, d.id, on))) }
                 }
             }
-            if (list.size > shown) row { AccentRow(t("Show more") + " · " + t("{n} more", "n" to formatNumber(list.size - shown)), { shown += DevicePage }, icon = null) }
+            if (list.size > shown) row { AccentRow(t("Show more") + " · " + t("{n} more", "n" to formatNumber(list.size - shown)), { shown += DevicePageSize }, icon = null) }
             if (state.devices.size > relevant.size || allDevices) {
                 row {
                     AccentRow(
                         if (allDevices) t("Only {name}’s devices", "name" to name) else t("Show every device on the server ({n})", "n" to formatNumber(state.devices.size)),
-                        { allDevices = !allDevices; shown = DevicePage },
+                        { allDevices = !allDevices; shown = DevicePageSize },
                         icon = null,
                     )
                 }
@@ -145,7 +145,7 @@ internal fun ParentalTab(state: UserEditState, actions: UserEditActions, sheet: 
     Section(t("Ratings"), foot = t("Titles above the limit are hidden from {name} everywhere, including search.", "name" to name)) {
         row {
             val help = if (state.ratings.isNotEmpty()) t("Ratings from the server’s country, lowest first") else t("Ratings from the metadata, lowest first")
-            PickRow(t("Highest rating allowed"), helpFor(state, "MaxParentalRating", help) { labelOf(savedOptions, savedValue) }, labelOf(options, value)) {
+            PickRow(t("Highest rating allowed"), helpFor(state, "MaxParentalRating", help) { Choices.label(savedOptions, savedValue) }, Choices.label(options, value)) {
                 sheet.open(t("Highest rating allowed"), options, value, actions::setRating)
             }
         }
@@ -154,13 +154,13 @@ internal fun ParentalTab(state: UserEditState, actions: UserEditActions, sheet: 
     Section(t("Hide titles without a rating"), foot = t("Turn on for each kind of title that should stay hidden when it has no rating")) {
         for ((id, label) in UnratedKinds) {
             row {
-                SwitchRow(t(label), null, id in blocked) { on -> actions.set("BlockUnratedItems", strings(if (on) blocked.filter { it != id } + id else blocked.filter { it != id })) }
+                SwitchRow(t(label), null, id in blocked) { on -> actions.set("BlockUnratedItems", json(if (on) blocked.filter { it != id } + id else blocked.filter { it != id })) }
             }
         }
     }
     Section(t("Tags"), foot = t("Tags come from the metadata, or from what you add on a title’s page.")) {
-        tags(t("Only show titles tagged"), t("Leave empty to allow everything"), p.strings("AllowedTags"), { tagging = "AllowedTags" }) { actions.set("AllowedTags", strings(it)) }
-        tags(t("Hide titles tagged"), t("Wins over the list above"), p.strings("BlockedTags"), { tagging = "BlockedTags" }) { actions.set("BlockedTags", strings(it)) }
+        tags(t("Only show titles tagged"), t("Leave empty to allow everything"), p.strings("AllowedTags"), { tagging = "AllowedTags" }) { actions.set("AllowedTags", json(it)) }
+        tags(t("Hide titles tagged"), t("Wins over the list above"), p.strings("BlockedTags"), { tagging = "BlockedTags" }) { actions.set("BlockedTags", json(it)) }
     }
     val schedules = p.schedules()
     val raw = p.array("AccessSchedules")
@@ -178,7 +178,7 @@ internal fun ParentalTab(state: UserEditState, actions: UserEditActions, sheet: 
         val list = p.strings(key)
         TextSheet(t("Add tag"), null, t("Add"), { v ->
             val tag = v.trim()
-            if (tag.isNotEmpty() && list.none { it.equals(tag, ignoreCase = true) }) actions.set(key, strings(list + tag))
+            if (tag.isNotEmpty() && list.none { it.equals(tag, ignoreCase = true) }) actions.set(key, json(list + tag))
         }, { tagging = null }, placeholder = t("Tag"))
     }
     if (scheduling) {
@@ -256,7 +256,7 @@ internal fun PasswordTab(state: UserEditState, actions: UserEditActions, onRemov
                 if (mismatch) FormError(t("The two passwords don’t match."))
                 state.password.error?.let { FormError(it) }
                 SheetButtons {
-                    if (!state.isMe && !state.saved.flag("IsAdministrator")) PillButton(t("Remove password"), onRemove)
+                    if (!state.isMe && !state.saved.bool("IsAdministrator")) PillButton(t("Remove password"), onRemove)
                     PillButton(
                         if (state.password.busy) t("Saving…") else t("Set password"),
                         { actions.setPassword(current, next) },

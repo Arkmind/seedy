@@ -1,13 +1,12 @@
 package io.github.arkmind.seedy.core.admin.seedy
 
 import io.github.arkmind.seedy.core.admin.AdminHttp
+import io.github.arkmind.seedy.core.admin.media.FsEntry
 import io.github.arkmind.seedy.core.i18n.t
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
 import org.jellyfin.sdk.api.client.HttpMethod
-import java.util.UUID
 
 /* Pieces several of these pages share: restarting the server, browsing its folders, checking addresses. */
 
@@ -34,10 +33,6 @@ suspend fun restartAndWait(http: AdminHttp) {
         delay(2_000)
     }
 }
-
-/** A folder or file on the server ([type] "Directory", "File", "NetworkShare"…). */
-@Serializable
-data class FsEntry(val name: String = "", val path: String = "", val type: String = "Directory")
 
 /** What a folder holds and the folder above it ("" for the list of drives, null at the drives). */
 data class FolderListing(val path: String, val entries: List<FsEntry>, val parent: String?, val error: String? = null)
@@ -81,8 +76,3 @@ fun validAddress(v: String, cidr: Boolean = false, host: Boolean = false): Strin
     return if (cidr) t("Write an address like 192.168.1.20 or a range like 192.168.1.0/24.") else t("Write an address like 192.168.1.20.")
 }
 
-/** Jellyfin's user ids come without dashes from Seedy. */
-fun uuidOf(id: String?): UUID? {
-    val s = id?.replace("-", "")?.takeIf { it.length == 32 } ?: return null
-    return runCatching { UUID.fromString("${s.substring(0, 8)}-${s.substring(8, 12)}-${s.substring(12, 16)}-${s.substring(16, 20)}-${s.substring(20)}") }.getOrNull()
-}

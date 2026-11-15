@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { BaseItem } from '../../../api/types';
+import { dot } from '../../../lib/format';
 import { t, tn } from '../../../lib/i18n';
 import { back, setQuery, useLocation } from '../../../lib/router';
 import { authorLine, comicPageUrl, type BookInfo, type Reading, type ReadingPatch } from '../api';
@@ -116,8 +117,8 @@ export function ComicReader({ item, info, reading }: { item: BaseItem; info: Boo
     if (left === !rtl) prev(); else next();
   };
 
-  const series = item.SeriesName ? [item.SeriesName, item.IndexNumber !== undefined && item.IndexNumber !== null ? t('No. {n}', { n: item.IndexNumber }) : ''].filter(Boolean).join(' · ') : '';
-  const sub = [authorLine(item), series].filter(Boolean).join(' · ');
+  const series = item.SeriesName ? dot(item.SeriesName, item.IndexNumber !== undefined && item.IndexNumber !== null ? t('No. {n}', { n: item.IndexNumber }) : '') : '';
+  const sub = dot(authorLine(item), series);
   const left = pages - lastShown - 1;
   const status: [string, string, string] = [
     left > 0 ? tn(left, '{n} page left', '{n} pages left') : t('Last page'),

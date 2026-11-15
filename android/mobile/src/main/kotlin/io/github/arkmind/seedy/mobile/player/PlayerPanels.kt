@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.format.audioTrackLabel
 import io.github.arkmind.seedy.core.format.episodeMeta
+import io.github.arkmind.seedy.core.format.inProgress
+import io.github.arkmind.seedy.core.format.playbackSpeedLabel
 import io.github.arkmind.seedy.core.format.progress
 import io.github.arkmind.seedy.core.format.subtitleTrackLabel
 import io.github.arkmind.seedy.core.i18n.t
@@ -50,6 +52,7 @@ import io.github.arkmind.seedy.mobile.settings.SubtitlesContent
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.player.PlayerState
+import io.github.arkmind.seedy.player.offsetLabel
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
@@ -114,7 +117,7 @@ fun EpisodesPanel(
                     ) {
                         Box(Modifier.width(112.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(9.dp)).alpha(if (future) 0.35f else 1f)) {
                             Artwork(viewer.images?.landscape(e, 240, viewer.episodeImages), Modifier.matchParentSize())
-                            if (e.progress > 0f && e.userData?.played != true) {
+                            if (e.inProgress) {
                                 Box(Modifier.align(Alignment.BottomCenter).padding(5.dp).fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.25f))) {
                                     Box(Modifier.fillMaxHeight().fillMaxWidth(e.progress).background(Color.White))
                                 }
@@ -234,16 +237,6 @@ fun StylePanel(state: SettingsState, actions: SettingsActions, onBack: () -> Uni
     }
 }
 
-/** "+0.3 s", "−0.5 s", "0 s". */
-fun offsetLabel(ms: Long): String {
-    val s = ms / 1000.0
-    return when {
-        ms > 0 -> "+%.1f s".format(s)
-        ms < 0 -> "−%.1f s".format(-s)
-        else -> "0 s"
-    }
-}
-
 /** "Shown 0.3 s later", "Shown 0.5 s earlier", "As in the file". */
 fun timingNote(ms: Long): String = when {
     ms > 0 -> t("Shown {s} s later", "s" to "%.1f".format(ms / 1000.0))
@@ -292,7 +285,7 @@ fun SpeedPanel(speed: Float, onSpeed: (Float) -> Unit, onClose: () -> Unit) {
                         Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(11.dp)).background(if (on) SeedyColors.Inverse else Color.Transparent).tap { onSpeed(s) },
                         contentAlignment = Alignment.Center,
                     ) {
-                        SText(speedLabel(s), size = 14.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.InkInverse else SeedyColors.Text)
+                        SText(playbackSpeedLabel(s), size = 14.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.InkInverse else SeedyColors.Text)
                     }
                 }
             }

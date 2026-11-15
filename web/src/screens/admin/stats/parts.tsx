@@ -1,8 +1,8 @@
 import type { ComponentChildren } from 'preact';
 import { userImageUrl } from '../../../api/images';
-import { clock } from '../../../lib/format';
-import { formatNumber, locale, t, tn } from '../../../lib/i18n';
-import { AVATAR_COLOURS } from '../../server/format';
+import { capitalize, clock, fmtIntl } from '../../../lib/format';
+import { formatNumber, t, tn } from '../../../lib/i18n';
+import { avatarColour } from '../../../ui/avatar';
 import type { Kind, Method } from './api';
 
 /* Pieces both Statistics pages share. Colours are the boards'. */
@@ -63,27 +63,13 @@ export function parseDay(day: string): Date {
   return new Date(y, (m || 1) - 1, d || 1);
 }
 
-export const dayKey = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-export function fmtDate(d: Date, opts: Intl.DateTimeFormatOptions): string {
-  try { return new Intl.DateTimeFormat(locale(), opts).format(d); } catch { return d.toDateString(); }
-}
-
 /* "Saturday 8 November" (French: "samedi 8 novembre"); the comma en-GB puts after the weekday is dropped. */
 export const longDay = (d: Date, year = false) =>
-  capital(fmtDate(d, { weekday: 'long', day: 'numeric', month: 'long', ...(year ? { year: 'numeric' } : {}) }).replace(',', ''));
+  capitalize(fmtIntl(d, { weekday: 'long', day: 'numeric', month: 'long', ...(year ? { year: 'numeric' } : {}) }).replace(',', ''));
 
 /* "Sat 8 Nov at 21:10". */
 export const shortMoment = (d: Date) =>
-  t('{date} at {time}', { date: capital(fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')), time: clock(d) });
-
-export const capital = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
-
-/* "Chrome, Firefox and Safari". */
-export function listText(items: string[]): string {
-  try { return new Intl.ListFormat(locale(), { style: 'long', type: 'conjunction' }).format(items); } catch { return items.join(', '); }
-}
+  t('{date} at {time}', { date: capitalize(fmtIntl(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')), time: clock(d) });
 
 export function pctText(n: number): string {
   return `${formatNumber(Math.round(n))}%`;
@@ -125,9 +111,18 @@ export function Change({ now, before, more, less, same }: { now: number; before?
 export function Avatar({ userId, name, imageTag, index, size, grey }: { userId: string; name: string; imageTag?: string | null; index: number; size: number; grey?: boolean }) {
   const img = imageTag ? userImageUrl({ Id: userId, PrimaryImageTag: imageTag }, size * 2) : undefined;
   return (
-    <span class="st-avatar" aria-hidden="true" style={{ width: size + 'px', height: size + 'px', background: grey ? '#8c8c8c' : AVATAR_COLOURS[index % AVATAR_COLOURS.length] }}>
+    <span class="st-avatar" aria-hidden="true" style={{ width: size + 'px', height: size + 'px', background: grey ? '#8c8c8c' : avatarColour(index) }}>
       {img ? <img src={img} alt="" /> : name.trim().charAt(0).toUpperCase()}
     </span>
+  );
+}
+
+/* The KPI tiles while the page loads. */
+export function KpiSkeletons({ count, class: cls }: { count: number; class?: string }) {
+  return (
+    <div class={'st-kpis' + (cls ? ' ' + cls : '')}>
+      {Array.from({ length: count }, (_, i) => <div key={i} class="st-kpi"><span class="skel skel-line" style={{ width: '60%' }} /><span class="skel skel-line" style={{ width: '40%', height: '28px' }} /><span class="skel skel-line" style={{ width: '80%' }} /></div>)}
+    </div>
   );
 }
 
@@ -146,17 +141,6 @@ export function Panel({ id, title, aside, children, class: cls }: { id: string; 
       {children}
     </section>
   );
-}
-
-/* Codec names as people know them. */
-export function codecName(codec?: string | null): string | undefined {
-  if (!codec) return undefined;
-  const c = codec.toLowerCase();
-  return ({
-    hevc: 'HEVC', h265: 'HEVC', h264: 'H.264', avc: 'H.264', av1: 'AV1', vp9: 'VP9', vp8: 'VP8', mpeg2video: 'MPEG-2', mpeg4: 'MPEG-4',
-    vc1: 'VC-1', pgssub: 'PGS', pgs: 'PGS', hdmv_pgs_subtitle: 'PGS', dvdsub: 'DVD', dvd_subtitle: 'DVD', dvbsub: 'DVB', dvb_subtitle: 'DVB',
-    ass: 'ASS', ssa: 'SSA', subrip: 'SRT', srt: 'SRT', webvtt: 'WebVTT', mov_text: 'MP4'
-  } as Record<string, string>)[c] ?? codec.toUpperCase();
 }
 
 export const songs = (n: number) => tn(n, '{n} song', '{n} songs');

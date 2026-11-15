@@ -57,15 +57,19 @@ import io.github.arkmind.seedy.core.books.isComic
 import io.github.arkmind.seedy.core.books.languageName
 import io.github.arkmind.seedy.core.books.roughTime
 import io.github.arkmind.seedy.core.books.volumeLabel
-import io.github.arkmind.seedy.core.books.yearOfBook
 import io.github.arkmind.seedy.core.format.fullDate
 import io.github.arkmind.seedy.core.format.ticksToSeconds
 import io.github.arkmind.seedy.core.format.timeLeft
+import io.github.arkmind.seedy.core.format.year
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
+import io.github.arkmind.seedy.mobile.browse.EmptyNote
+import io.github.arkmind.seedy.mobile.browse.SectionHead
 import io.github.arkmind.seedy.mobile.browse.topInset
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
+import io.github.arkmind.seedy.mobile.parts.rememberDominant
+import io.github.arkmind.seedy.mobile.parts.scaledColor
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -103,7 +107,7 @@ fun BookScreen(state: BookViewModel.State, actions: BookActions, bottomPadding: 
         if (item == null) {
             Column {
                 Row(Modifier.padding(start = 8.dp, top = topInset())) { HeaderButton(BookIcons.Back, actions.onBack) }
-                if (state.error) BooksEmpty(t("Couldn’t load this title"), action = t("Try again"), onAction = actions.onBack)
+                if (state.error) EmptyNote(t("Couldn’t load this title"), action = t("Try again"), onAction = actions.onBack)
             }
             return@Box
         }
@@ -180,7 +184,7 @@ fun BookScreen(state: BookViewModel.State, actions: BookActions, bottomPadding: 
 @Composable
 private fun heroGlow(item: BaseItemDto, audio: Boolean): Color {
     val url = bookArt(item, 64)
-    val rgb = rememberDominant(url)
+    val rgb = rememberDominant(url, requestSize = 16, cacheMisses = false)
     return when {
         url != null && rgb != null -> scaledColor(rgb, 40f)
         url != null -> SeedyColors.Bg
@@ -222,7 +226,7 @@ fun metaLine(state: BookViewModel.State, item: BaseItemDto): String {
         if (state.self?.let(::isComic) == true) t("{series} · No. {n}", "series" to name, "n" to n) else t("{series}, book {n}", "series" to name, "n" to n)
     }
     val length = if (state.audio) audioLength(item).ifEmpty { null } else state.info?.pages?.takeIf { it > 0 }?.let { tn(it, "{n} page", "{n} pages") }
-    return listOfNotNull(series, yearOfBook(item)?.toString(), length, languageName(state.language).ifEmpty { null }).joinToString(" · ")
+    return listOfNotNull(series, item.year?.toString(), length, languageName(state.language).ifEmpty { null }).joinToString(" · ")
 }
 
 private fun percentOf(r: io.github.arkmind.seedy.core.audio.Reading?): Int? = r?.takeIf { !it.finished && it.percent > 0 }?.percent?.roundToInt()
@@ -301,12 +305,6 @@ fun progressOf(state: BookViewModel.State, item: BaseItemDto): Pair<Float, Strin
         },
     ).joinToString(" · ")
     return fraction.toFloat() to text
-}
-
-private fun formatName(item: BaseItemDto): String = when (formatOf(item)) {
-    BookFormat.Audio -> t("Audiobook")
-    BookFormat.Other -> t("File")
-    else -> formatOf(item).name.uppercase()
 }
 
 /** "2.1 MB", "640 KB". */

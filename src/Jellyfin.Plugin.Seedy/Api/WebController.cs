@@ -98,7 +98,7 @@ public class WebController : ControllerBase
     /// </summary>
     private bool MovedToRoot => RootRedirectStartupFilter.AtRoot && !HttpContext.Items.ContainsKey(RootRedirectStartupFilter.AtRootItem);
 
-    private ActionResult Index()
+    private ContentResult Index()
     {
         if (!Files.Value.TryGetValue("index.html", out var resource) || Assembly.GetManifestResourceStream(resource) is not { } stream)
         {

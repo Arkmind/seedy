@@ -52,7 +52,6 @@
   display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 14px;
   background: var(--seedy-surface); box-shadow: inset 0 0 0 1px rgba(255, 201, 138, 0.35); color: var(--seedy-text);
 }
-.adv-notice.is-plain { background: var(--seedy-panel); box-shadow: none; }
 .adv-notice .dot { width: 8px; height: 8px; }
 .adv-notice-text { flex: 1 1 300px; font-size: 14px; line-height: 1.45; color: var(--seedy-text); }
 .adv-notice-text b { color: #ffffff; }
@@ -87,7 +86,6 @@ a.adv-notice:hover .adv-notice-link { color: var(--seedy-accent); }
 .adv-psource { font-size: 13px; color: var(--seedy-text-3); }
 .adv-pdesc { font-size: 13px; line-height: 1.45; color: var(--seedy-text-3); }
 .adv-pnote { font-size: 13px; line-height: 1.45; color: var(--seedy-pending); }
-.adv-pnote.is-danger { color: var(--seedy-danger); }
 .adv-pactions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .adv-pactions .icon-btn { flex: none; }
 

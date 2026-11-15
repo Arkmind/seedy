@@ -227,6 +227,7 @@ fun RequestThumbArt(r: MediaRequest, modifier: Modifier) {
 
 /** Board "Android · Requests · Music" card: a 128 px album with its type, where it is, the title and a line. */
 @Composable
+@Suppress("ModifierParameter") // the default sizes the card when the caller gives none
 fun AlbumCard(r: MusicRelease, meta: Pair<String, Boolean>, onClick: () -> Unit, modifier: Modifier = Modifier.width(128.dp)) {
     Column(modifier.tap(onClick = onClick), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
@@ -241,6 +242,7 @@ fun AlbumCard(r: MusicRelease, meta: Pair<String, Boolean>, onClick: () -> Unit,
 
 /** Board "Android · Requests · Books" card: a 112 px book with its formats, where it is, the title and a line. */
 @Composable
+@Suppress("ModifierParameter") // the default sizes the card when the caller gives none
 fun BookCardView(b: BookCard, cover: String?, meta: Pair<String, Boolean>, onClick: () -> Unit, modifier: Modifier = Modifier.width(112.dp)) {
     Column(modifier.tap(onClick = onClick), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f)) {
@@ -286,6 +288,7 @@ fun ArtistCard(a: MusicArtistRef, onClick: () -> Unit, modifier: Modifier = Modi
 
 /** A card while its row loads. */
 @Composable
+@Suppress("ModifierParameter") // the default sizes the card when the caller gives none
 fun CardSkeleton(width: Int, ratio: Float, modifier: Modifier = Modifier.width(width.dp)) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(ratio).clip(RoundedCornerShape(11.dp)).background(SeedyColors.Surface))

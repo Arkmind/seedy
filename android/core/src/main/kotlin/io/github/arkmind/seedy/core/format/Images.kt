@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.core.format
 
+import io.github.arkmind.seedy.core.session.serverBase
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -43,7 +44,7 @@ class Images(private val api: ApiClient) {
 
     /** Someone's picture by their id alone (Seedy's people list says whether they have one). */
     fun userPicture(userId: String, maxWidth: Int): String =
-        api.baseUrl.orEmpty().trimEnd('/') + "/Users/$userId/Images/Primary?quality=90&maxWidth=$maxWidth"
+        api.serverBase + "/Users/$userId/Images/Primary?quality=90&maxWidth=$maxWidth"
 
     /** A person's portrait, a channel's logo, a library's own picture: the item's primary image. */
     fun primary(item: BaseItemDto, maxWidth: Int): String? =

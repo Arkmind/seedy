@@ -1,13 +1,11 @@
 package io.github.arkmind.seedy.mobile.admin.seedy
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -20,8 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -29,13 +26,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import io.github.arkmind.seedy.core.admin.seedy.HomeAdminActions
 import io.github.arkmind.seedy.core.admin.seedy.HomeAdminState
 import io.github.arkmind.seedy.core.admin.seedy.HomeConfig
@@ -50,7 +44,7 @@ import io.github.arkmind.seedy.mobile.admin.AddChip
 import io.github.arkmind.seedy.mobile.admin.BoardField
 import io.github.arkmind.seedy.mobile.admin.ChipFlow
 import io.github.arkmind.seedy.mobile.admin.ErrorCard
-import io.github.arkmind.seedy.mobile.admin.LeaveGuard
+import io.github.arkmind.seedy.mobile.admin.leaveGuard
 import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.NameTag
 import io.github.arkmind.seedy.mobile.admin.PillButton
@@ -68,6 +62,7 @@ import io.github.arkmind.seedy.mobile.settings.CssColumn
 import io.github.arkmind.seedy.mobile.settings.Faint
 import io.github.arkmind.seedy.mobile.settings.PickOption
 import io.github.arkmind.seedy.mobile.settings.PickRow
+import io.github.arkmind.seedy.mobile.settings.ReorderState
 import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.Section
 import io.github.arkmind.seedy.mobile.settings.SectionTitle
@@ -75,12 +70,18 @@ import io.github.arkmind.seedy.mobile.settings.SegRow
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHead
 import io.github.arkmind.seedy.mobile.settings.SheetHost
+import io.github.arkmind.seedy.mobile.settings.SheetList
 import io.github.arkmind.seedy.mobile.settings.SheetState
 import io.github.arkmind.seedy.mobile.settings.StackRow
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
+import io.github.arkmind.seedy.mobile.settings.choices
 import io.github.arkmind.seedy.mobile.settings.cssText
+import io.github.arkmind.seedy.mobile.settings.liftedCard
+import io.github.arkmind.seedy.mobile.settings.rememberReorder
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
-import io.github.arkmind.seedy.ui.components.boxShadow
+import io.github.arkmind.seedy.mobile.settings.reorderDrag
+import io.github.arkmind.seedy.mobile.settings.reorderLift
+import io.github.arkmind.seedy.mobile.settings.withValue
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.SettingsIcons
@@ -89,8 +90,6 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import kotlinx.coroutines.delay
-
-private val Dragged = Color(0xFF262626)
 
 private val LookBack = listOf(30, 60, 90, 0)
 private fun lookBackLabel(n: Int) = when (n) {
@@ -118,11 +117,11 @@ fun DefaultHomeScreen(state: HomeAdminState, actions: HomeAdminActions, onBack: 
     var genreSheet by remember { mutableStateOf(false) }
     var titleSheet by remember { mutableStateOf(false) }
     val changes = state.changes
-    LeaveGuard(changes > 0, t("Your changes to the home screen haven’t been saved yet. If you leave now, they’re lost."), onBack)
+    val back = leaveGuard(changes > 0, t("Your changes to the home screen haven’t been saved yet. If you leave now, they’re lost."), onBack)
     SettingsPage(
         t("Home screen"),
         t("The home screen every new profile starts with. After that, row order adapts to each person unless they or you turn it off."),
-        onBack,
+        back,
         overlay = {
             SheetHost(sheet)
             val h = state.home
@@ -143,7 +142,7 @@ fun DefaultHomeScreen(state: HomeAdminState, actions: HomeAdminActions, onBack: 
             h == null -> LoadingCards(3, 220.dp)
             else -> HomeBody(h, state, actions, sheet, dragging, addGenre = { genreSheet = true }, addTitle = { titleSheet = true })
         }
-        if (changes > 0) SaveBarRoom() else androidx.compose.foundation.layout.Spacer(Modifier.height(40.dp))
+        if (changes > 0) SaveBarRoom() else Spacer(Modifier.height(40.dp))
     }
 }
 
@@ -257,73 +256,33 @@ private fun HomeBody(h: HomeConfig, state: HomeAdminState, actions: HomeAdminAct
  */
 @Composable
 private fun RowsEditor(rows: List<HomeRowConfig>, onChange: (List<HomeRowConfig>) -> Unit, preview: String?) {
-    var order by remember { mutableStateOf<List<String>?>(null) }
-    var drag by remember { mutableStateOf<String?>(null) }
-    var offset by remember { mutableFloatStateOf(0f) }
-    val heights = remember { mutableStateMapOf<String, Int>() }
-    val shown = order?.mapNotNull { k -> rows.firstOrNull { it.kind == k } }?.takeIf { it.size == rows.size } ?: rows
+    val reorder = rememberReorder<String>()
+    val shown = reorder.shown(rows) { it.kind }
     val firstMovable = rows.indexOfFirst { it.kind !in LockedRows }.coerceAtLeast(0)
 
-    fun start(kind: String) {
-        order = shown.map { it.kind }
-        drag = kind
-        offset = 0f
-    }
-
-    fun move(dy: Float) {
-        val kind = drag ?: return
-        val list = order?.toMutableList() ?: return
-        offset += dy
-        var i = list.indexOf(kind)
-        while (i < list.lastIndex && offset > (heights[list[i + 1]] ?: 0) / 2f) {
-            offset -= heights[list[i + 1]] ?: 0
-            list.add(i + 1, list.removeAt(i)); i++
-        }
-        while (i > firstMovable && offset < -(heights[list[i - 1]] ?: 0) / 2f) {
-            offset += heights[list[i - 1]] ?: 0
-            list.add(i - 1, list.removeAt(i)); i--
-        }
-        // Not above the locked rows: the row stops at their edge.
-        if (i == firstMovable && offset < 0) offset = maxOf(offset, -8f)
-        order = list
-    }
-
-    fun end() {
-        val list = order?.mapNotNull { k -> rows.firstOrNull { it.kind == k } }
-        drag = null
-        offset = 0f
-        if (list != null && list.map { it.kind } != rows.map { it.kind }) onChange(list)
-        order = null
+    fun end(drop: ReorderState.Drop<String>) {
+        val list = drop.order.mapNotNull { k -> rows.firstOrNull { it.kind == k } }
+        if (list.map { it.kind } != rows.map { it.kind }) onChange(list)
     }
 
     Column(Modifier.fillMaxWidth().background(SeedyColors.Panel, RoundedCornerShape(18.dp))) {
-        shown.forEachIndexed { i, r ->
+        // Keyed, so a row keeps its gesture while it moves past the others.
+        shown.forEachIndexed { i, r -> key(r.kind) {
             val locked = r.kind in LockedRows
-            val lifted = r.kind == (drag ?: preview)
+            val lifted = r.kind == (reorder.drag ?: preview)
             if (i > 0 && !lifted) RowLine()
+            val keys = { shown.map { it.kind } }
             AdminRowItem(
                 r, locked, lifted,
-                Modifier.onSizeChanged { heights[r.kind] = it.height }
-                    .zIndex(if (lifted) 1f else 0f)
-                    .graphicsLayer {
-                        if (lifted) {
-                            translationY = if (drag != null) offset else -10.dp.toPx()
-                            scaleX = 1.02f
-                            scaleY = 1.02f
-                        }
-                    }
-                    .then(
-                        if (locked) Modifier else Modifier.pointerInput(r.kind) {
-                            detectDragGesturesAfterLongPress(onDragStart = { start(r.kind) }, onDragEnd = ::end, onDragCancel = ::end) { c, d -> c.consume(); move(d.y) }
-                        },
-                    ),
-                grip = if (locked) Modifier else Modifier.pointerInput(r.kind) {
-                    detectDragGestures(onDragStart = { start(r.kind) }, onDragEnd = ::end, onDragCancel = ::end) { c, d -> c.consume(); move(d.y) }
-                },
+                // Not above the locked rows: the row stops at their edge.
+                Modifier.onSizeChanged { reorder.heights[r.kind] = it.height }
+                    .reorderLift(lifted) { if (reorder.drag != null) reorder.offset else -10.dp.toPx() }
+                    .then(if (locked) Modifier else Modifier.reorderDrag(reorder, r.kind, keys, floor = firstMovable, clampAtFloor = true, onEnd = ::end)),
+                grip = if (locked) Modifier else Modifier.reorderDrag(reorder, r.kind, keys, longPress = false, floor = firstMovable, clampAtFloor = true, onEnd = ::end),
                 onToggle = { on -> onChange(rows.map { if (it.kind == r.kind) it.copy(enabled = on) else it }) },
                 onCount = { n -> onChange(rows.map { if (it.kind == r.kind) it.copy(count = n) else it }) },
             )
-        }
+        } }
     }
 }
 
@@ -331,10 +290,8 @@ private fun RowsEditor(rows: List<HomeRowConfig>, onChange: (List<HomeRowConfig>
 private fun AdminRowItem(r: HomeRowConfig, locked: Boolean, lifted: Boolean, modifier: Modifier, grip: Modifier, onToggle: (Boolean) -> Unit, onCount: (Int) -> Unit) {
     val info = HomeRowInfo[r.kind]
     val name = t(info?.name ?: r.kind)
-    val shape = RoundedCornerShape(16.dp)
     Row(
-        modifier.fillMaxWidth()
-            .then(if (lifted) Modifier.boxShadow(Color.Black.copy(alpha = 0.6f), 30.dp, 14.dp, 16.dp).clip(shape).background(Dragged).border(1.dp, Color.White.copy(alpha = 0.08f), shape) else Modifier)
+        modifier.fillMaxWidth().liftedCard(lifted)
             .padding(start = 6.dp, end = 14.dp, top = 6.dp, bottom = 6.dp).heightIn(min = 58.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -376,7 +333,7 @@ private fun GenreSheet(chosen: List<String>, actions: HomeAdminActions, onAdd: (
     BottomSheet(onDismiss) {
         SheetHead(t("Add a starting genre"))
         if ((all?.size ?: 0) > 8) BoardField(q, { q = it }, Modifier.padding(start = 20.dp, end = 20.dp, bottom = 8.dp), placeholder = t("Find a genre"))
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+        SheetList {
             when {
                 failed -> SText(t("Couldn’t load genres"), Modifier.padding(12.dp), size = 13.sp, color = SeedyColors.Danger)
                 all == null -> SText(t("Loading genres…"), Modifier.padding(12.dp), size = 13.sp, color = SeedyColors.Text3)

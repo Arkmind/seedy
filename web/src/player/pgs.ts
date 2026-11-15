@@ -1,6 +1,8 @@
 /* PGS (Blu-ray picture subtitles, .sup) for "Show picture subtitles here": the server hands the stream over as it
    is and Seedy decodes the run-length bitmaps onto a canvas over the picture. */
 
+import { fetchSubtitle } from './subtitles';
+
 interface PgsObject { id: number; width: number; height: number; data: Uint8Array }
 
 export interface PgsPicture {
@@ -33,7 +35,7 @@ function ycrcb(y: number, cr: number, cb: number, a: number): number {
   return ((a & 0xff) << 24 | c(b) << 16 | c(g) << 8 | c(r)) >>> 0;
 }
 
-export function parsePgs(buf: ArrayBuffer): PgsCue[] {
+function parsePgs(buf: ArrayBuffer): PgsCue[] {
   const bytes = new Uint8Array(buf);
   const view = new DataView(buf);
   const cues: PgsCue[] = [];
@@ -192,7 +194,5 @@ export function activePgs(cues: PgsCue[], t: number): PgsCue | null {
 }
 
 export async function loadPgs(url: string, signal?: AbortSignal): Promise<PgsCue[]> {
-  const res = await fetch(url, { signal });
-  if (!res.ok) throw new Error(`Subtitle request failed (${res.status})`);
-  return parsePgs(await res.arrayBuffer());
+  return parsePgs(await (await fetchSubtitle(url, signal)).arrayBuffer());
 }

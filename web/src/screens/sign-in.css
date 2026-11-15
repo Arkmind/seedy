@@ -96,7 +96,6 @@
 
 .signin-qc { gap: 8px; }
 .signin-hint { font-size: 14px; color: var(--seedy-text-2); text-align: center; }
-.signin-link { border: 0; padding: 0; background: none; font: inherit; font-weight: 700; color: #ffffff; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
 .signin-back {
   align-self: center; display: flex; align-items: center; gap: 6px; border: 0; padding: 6px 8px; border-radius: var(--r-ctl);

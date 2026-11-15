@@ -12,6 +12,7 @@ import io.github.arkmind.seedy.core.browse.playableTypesFor
 import io.github.arkmind.seedy.core.browse.sorted
 import io.github.arkmind.seedy.core.browse.tabsFor
 import io.github.arkmind.seedy.core.browse.typesFor
+import io.github.arkmind.seedy.core.data.plusNew
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.Job
@@ -179,11 +180,9 @@ class LibraryViewModel(session: UserSession, private val id: UUID) : ViewModel()
             if (gen != generation) return@launch
             result.onSuccess { r ->
                 _state.update { cur ->
-                    val seen = cur.items.mapTo(HashSet()) { it.id }
-                    val fresh = r.items.filter { it.id !in seen }
-                    val items = cur.items + fresh
+                    val items = cur.items.plusNew(r.items) { it.id }
                     val total = if (random) items.size else r.totalRecordCount
-                    cur.copy(items = items, itemsTotal = total, loading = false, done = random || items.size >= total || fresh.isEmpty())
+                    cur.copy(items = items, itemsTotal = total, loading = false, done = random || items.size >= total || items.size == cur.items.size)
                 }
             }.onFailure { _state.update { it.copy(loading = false, pageError = true) } }
         }

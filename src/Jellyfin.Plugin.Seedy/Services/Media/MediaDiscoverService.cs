@@ -472,7 +472,7 @@ public sealed class MediaDiscoverService
 
     private async Task<List<BookCardDto>> SearchBooks(string query, CancellationToken ct)
     {
-        if (ShelfarrClient.HasCredentials && ConfigMapper.Current.ShelfarrEnabled)
+        if (ConfigMapper.BookAppReady(ConfigMapper.Current, "shelfarr"))
         {
             try
             {

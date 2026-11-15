@@ -1,25 +1,25 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { JELLYFIN_WEB, get, post } from '../../api/client';
+import { deviceId, get } from '../../api/client';
 import type { BaseItem, SessionInfo } from '../../api/types';
-import { deviceId } from '../../api/client';
-import { meStore } from '../../lib/app-state';
-import { plural, ticksToSeconds, timeLeft } from '../../lib/format';
-import { t, tn } from '../../lib/i18n';
+import { dot, plural, ticksToSeconds, timeLeft } from '../../lib/format';
+import { t, tc, tn } from '../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
-import { useAsync, useStore } from '../../lib/store';
+import { useAsync } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
-import { MenuButton, MenuItem, toast } from '../../ui/overlay';
+import { MenuButton, MenuItem } from '../../ui/overlay';
 import { EmptyState, ErrorState } from '../browse/parts';
 import { AudioCover, BookCover } from './covers';
-import { isBookOrPart, mergePlace, partsOf } from '../../audio/api';
-import { authorLine, authorsOf, formatOf, getBookInfo, isAudioBook, isComic, listReading, loadLibraryItems, normalize, seriesOf, workKey, type Reading } from './api';
+import { isBookOrPart } from '../../audio/api';
+import { authorsOf, getBookInfo, isAudioBook, isComic, normalize, seriesOf, workKey, type Reading } from './api';
 import {
-  AudioCard, BookCard, ContinueCard, SectionHead, SeriesCard, bookSub, comicSub, roughTime, tc, useColumns,
+  AudioCard, BookCard, ContinueCard, SectionHead, SeriesCard, VolumeCard, bookSub, comicSub, roughTime, useColumns, chapterIndexAt, fileExt, surnameFirst,
   type ContinueEntry, type SeriesGroup
 } from './parts';
+import { LibraryMenuItems } from '../../ui/library-menu';
+import { sortKey, time, useBooksData, type BooksData } from './library-data';
 import './books.css';
 
 /* The books library (Books library board): title and counts, Sort and ⋯, then tabs. Overview shows Continue,
@@ -41,9 +41,6 @@ const SORTS = [
 ] as const;
 type SortId = (typeof SORTS)[number]['id'];
 
-const PREFERRED = ['epub', 'cbz', 'pdf', 'cbr', 'other'];
-const time = (s?: string) => (s ? new Date(s).getTime() || 0 : 0);
-const sortKey = (it: BaseItem) => (it.SortName ?? it.Name ?? '').toLowerCase();
 
 function sortItems(items: BaseItem[], sort: SortId, reading: Map<string, Reading>): BaseItem[] {
   const list = items.slice();
@@ -60,96 +57,7 @@ function sortItems(items: BaseItem[], sort: SortId, reading: Map<string, Reading
 const released = (it: BaseItem) => (it.PremiereDate ? time(it.PremiereDate) : it.ProductionYear ? new Date(it.ProductionYear, 0, 1).getTime() : 0);
 const lastRead = (it: BaseItem, reading: Map<string, Reading>) => Math.max(time(reading.get(it.Id)?.UpdatedAt), time(it.UserData?.LastPlayedDate));
 /* "Mara Linde" sorts under L. */
-const authorSort = (it: BaseItem) => {
-  const name = authorsOf(it)[0]?.Name ?? '';
-  const parts = name.trim().split(/\s+/);
-  return (parts.length > 1 ? parts[parts.length - 1] + ' ' + parts.slice(0, -1).join(' ') : name).toLowerCase() || '￿';
-};
-
-export interface BooksData {
-  all: BaseItem[];
-  books: BaseItem[];
-  comics: BaseItem[];
-  audio: BaseItem[];
-  reading: Map<string, Reading>;
-  series: SeriesGroup[];
-}
-
-/* Series with at least two volumes here. */
-function groupSeries(items: BaseItem[]): SeriesGroup[] {
-  const map = new Map<string, BaseItem[]>();
-  for (const it of items) {
-    const name = seriesOf(it);
-    if (!name || isAudioBook(it)) continue;
-    const key = normalize(name);
-    const list = map.get(key) ?? [];
-    list.push(it);
-    map.set(key, list);
-  }
-  return Array.from(map, ([key, vols]) => {
-    // One cover per volume: the EPUB and the PDF of one book count once.
-    const seen = new Set<string>();
-    const volumes = vols
-      .sort((a, b) => (a.IndexNumber ?? 9999) - (b.IndexNumber ?? 9999) || sortKey(a).localeCompare(sortKey(b))
-        || PREFERRED.indexOf(formatOf(a)) - PREFERRED.indexOf(formatOf(b)))
-      .filter((v) => { const k = `${v.IndexNumber ?? ''}|${normalize(v.Name)}`; if (seen.has(k)) return false; seen.add(k); return true; });
-    const authors = Array.from(new Set(volumes.map(authorLine).filter(Boolean)));
-    return {
-      name: seriesOf(volumes[0])!,
-      key,
-      author: authors.length === 1 ? authors[0] : authors.length > 1 ? t('Various authors') : '',
-      volumes,
-      read: volumes.filter((v) => v.UserData?.Played).length,
-      read_at: Math.max(0, ...volumes.map((v) => time(v.UserData?.LastPlayedDate))),
-      latest: Math.max(...volumes.map((v) => time(v.DateCreated)))
-    };
-  }).filter((g) => g.volumes.length > 1);
-}
-
-/* One card per work: the EPUB and the PDF of a book show as the book (its page lists both), the reader's format first. */
-function oneEach(items: BaseItem[]): BaseItem[] {
-  const best = new Map<string, BaseItem>();
-  for (const it of items) {
-    const key = workKey(it) + '|' + (it.IndexNumber ?? '');
-    const cur = best.get(key);
-    if (!cur || PREFERRED.indexOf(formatOf(it)) < PREFERRED.indexOf(formatOf(cur))) best.set(key, it);
-  }
-  const keep = new Set(Array.from(best.values()).map((i) => i.Id));
-  return items.filter((i) => keep.has(i.Id));
-}
-
-export function useBooksData(viewId: string) {
-  const [fresh, setFresh] = useState(0);
-  const items = useAsync((signal) => (viewId ? libraryItems(viewId, fresh > 0, signal) : Promise.resolve(undefined)), [viewId, fresh]);
-  const reading = useAsync(() => (viewId ? listReading(true, 200).catch(() => [] as Reading[]) : Promise.resolve([] as Reading[])), [viewId, fresh]);
-  const data = useMemo<BooksData | undefined>(() => {
-    if (!items.data) return undefined;
-    const map = new Map((reading.data ?? []).map((r) => [r.ItemId, r]));
-    // Audiobooks in one file take Seedy's place in them (books in several files have it from the server).
-    const all = items.data.map((i) => (isAudioBook(i) && !partsOf(i) ? mergePlace(i, map.get(i.Id)) : i));
-    return {
-      all,
-      books: oneEach(all.filter((i) => !isAudioBook(i) && !isComic(i))),
-      comics: oneEach(all.filter((i) => !isAudioBook(i) && isComic(i))),
-      audio: all.filter(isAudioBook),
-      reading: map,
-      series: groupSeries(all)
-    };
-  }, [items.data, reading.data]);
-  return { data, error: items.error, loading: items.loading, reload: () => setFresh((n) => n + 1) };
-}
-
-/* The library's items stay for a minute, so going from the library to a book and back doesn't load them again. */
-const itemsCache = new Map<string, { at: number; items: Promise<BaseItem[]> }>();
-function libraryItems(viewId: string, force: boolean, signal: AbortSignal): Promise<BaseItem[]> {
-  const hit = itemsCache.get(viewId);
-  if (hit && !force && Date.now() - hit.at < 60_000) return hit.items;
-  const items = loadLibraryItems(viewId);
-  itemsCache.set(viewId, { at: Date.now(), items });
-  items.catch(() => itemsCache.delete(viewId));
-  void signal;
-  return items;
-}
+const authorSort = (it: BaseItem) => surnameFirst(authorsOf(it)[0]?.Name ?? '') || '￿';
 
 /* Whether a book belongs to a series with more than one volume here. */
 const running = (data: BooksData, it: BaseItem) => { const s = seriesOf(it); return !!s && data.series.some((g) => g.key === normalize(s)); };
@@ -158,7 +66,6 @@ const running = (data: BooksData, it: BaseItem) => { const s = seriesOf(it); ret
 
 export function BooksLibrary({ view }: { view: BaseItem }) {
   const loc = useLocation();
-  const me = useStore(meStore);
   const tabParam = loc.query.get('tab') as TabId | null;
   const tab: TabId = TABS.some((x) => x.id === tabParam) ? tabParam! : 'overview';
   const sortParam = loc.query.get('sort') as SortId | null;
@@ -210,21 +117,7 @@ export function BooksLibrary({ view }: { view: BaseItem }) {
                 {(close) => (
                   <>
                     <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); lib.reload(); }} />
-                    <MenuItem icon="link" label={t('Copy link')} onSelect={() => {
-                      close();
-                      navigator.clipboard.writeText(window.location.href).then(() => toast(t('Link copied')), () => toast(t("Couldn't copy the link"), 'error'));
-                    }} />
-                    <MenuItem icon="external" label={t('Open in Jellyfin')} href={`${JELLYFIN_WEB}#/list?parentId=${view.Id}`} />
-                    {me.isAdmin && (
-                      <>
-                        <div class="menu-sep" />
-                        <MenuItem icon="refresh" label={t('Scan library files')} sub={t('Look for new and changed media')} onSelect={() => {
-                          close();
-                          post<void>(`/Items/${view.Id}/Refresh`, undefined, { Recursive: true, MetadataRefreshMode: 'Default', ImageRefreshMode: 'Default', ReplaceAllMetadata: false, ReplaceAllImages: false })
-                            .then(() => toast(t('Scanning {name}', { name: view.Name }), 'pending'), () => toast(t("Couldn't start the scan"), 'error'));
-                        }} />
-                      </>
-                    )}
+                    <LibraryMenuItems item={view} close={close} />
                   </>
                 )}
               </MenuButton>
@@ -416,13 +309,13 @@ async function readingEntry(item: BaseItem, r: Reading): Promise<ContinueEntry> 
     const pages = info?.Pages ?? 0;
     const page = Math.min(pages, (Number(r.Locator) || 0) + 1);
     return {
-      item, kind: t('Comic · {format}', { format: (/\.(\w+)$/.exec(String((item as { Path?: string }).Path ?? ''))?.[1] ?? 'CBZ').toUpperCase() }),
+      item, kind: t('Comic · {format}', { format: fileExt(item, 'CBZ').toUpperCase() }),
       where: pages ? t('Page {n} of {total}', { n: page, total: pages }) : undefined,
       fraction, done: t('{n}% read', { n: Math.round(r.Percent) }),
       left: pages ? tn(Math.max(0, pages - page), '{n} page left', '{n} pages left') : undefined
     };
   }
-  const format = (/\.(\w+)$/.exec(String((item as { Path?: string }).Path ?? ''))?.[1] ?? 'EPUB').toUpperCase();
+  const format = fileExt(item, 'EPUB').toUpperCase();
   const chapter = r.ChapterIndex && r.Chapter ? t('Chapter {n} · {title}', { n: r.ChapterIndex, title: r.Chapter }) : r.Chapter;
   const minutes = info?.Minutes ? info.Minutes * (1 - fraction) : 0;
   return {
@@ -437,8 +330,7 @@ function audioEntry(item: BaseItem, live: boolean): ContinueEntry {
   const total = item.RunTimeTicks ?? 0;
   const fraction = total ? pos / total : 0;
   const chapters = item.Chapters ?? [];
-  let ci = -1;
-  chapters.forEach((c, i) => { if (c.StartPositionTicks <= pos) ci = i; });
+  const ci = chapterIndexAt(chapters, pos);
   const ch = ci >= 0 ? chapters[ci] : undefined;
   return {
     item,
@@ -500,15 +392,14 @@ function Authors({ data, sort, focus, tabTo }: { data: BooksData; sort: SortId; 
         map.set(key, g);
       }
     }
-    const surname = (n: string) => { const p = n.trim().split(/\s+/); return (p.length > 1 ? p[p.length - 1] + ' ' + p.slice(0, -1).join(' ') : n).toLowerCase(); };
-    const byName = (a: AuthorGroup, b: AuthorGroup) => (!a.name ? 1 : !b.name ? -1 : surname(a.name).localeCompare(surname(b.name)));
+    const byName = (a: AuthorGroup, b: AuthorGroup) => (!a.name ? 1 : !b.name ? -1 : surnameFirst(a.name).localeCompare(surnameFirst(b.name)));
     const list = Array.from(map.values());
     if (sort === 'added') return list.sort((a, b) => (b.added - a.added) || byName(a, b));
     if (sort === 'read') return list.sort((a, b) => (b.readAt - a.readAt) || byName(a, b));
     if (sort === 'released') return list.sort((a, b) => (b.released - a.released) || byName(a, b));
     return list.sort(byName);
   }, [data, sort]);
-  const counts = (g: AuthorGroup) => [g.books.length ? plural(g.books.length, 'book') : '', g.audio.length ? plural(g.audio.length, 'audiobook') : ''].filter(Boolean).join(' · ');
+  const counts = (g: AuthorGroup) => dot(g.books.length ? plural(g.books.length, 'book') : '', g.audio.length ? plural(g.audio.length, 'audiobook') : '');
   const one = focus ? groups.find((g) => g.key === (normalize(focus) || '~')) : undefined;
   if (one) {
     return (
@@ -574,7 +465,7 @@ function SeriesView({ data, sort, open, tabTo }: { data: BooksData; sort: SortId
       <div class="bk-sections">
         <section class="bk-sec" aria-labelledby="bk-one">
           <div class="bk-sec-head">
-            <h2 id="bk-one" class="bk-sec-title">{current.name}<span class="bk-sec-count">{[current.author, t('{read} of {total} read', { read: current.read, total: current.volumes.length })].filter(Boolean).join(' · ')}</span></h2>
+            <h2 id="bk-one" class="bk-sec-title">{current.name}<span class="bk-sec-count">{dot(current.author, t('{read} of {total} read', { read: current.read, total: current.volumes.length }))}</span></h2>
             <Link to={tabTo('series')} replace class="bk-sec-link">{t('All series')}</Link>
           </div>
           <div class="bk-grid">
@@ -593,25 +484,3 @@ function SeriesView({ data, sort, open, tabTo }: { data: BooksData; sort: SortId
     </div>
   );
 }
-
-/* A volume in a series: "Book 2 · read" with a tick, "Book 3 · 46%" in the accent, "Book 4 · new". */
-export function VolumeCard({ item, reading, current }: { item: BaseItem; reading?: Reading; current?: boolean }) {
-  const n = item.IndexNumber;
-  const read = !!item.UserData?.Played || !!reading?.Finished;
-  const inProgress = !read && !!reading && reading.Percent > 0;
-  const fresh = !read && !reading && !!item.DateCreated && Date.now() - time(item.DateCreated) < 30 * 86_400_000;
-  const label = n !== undefined && n !== null ? (isComic(item) ? t('No. {n}', { n }) : t('Book {n}', { n })) : '';
-  const state = read ? t('read') : inProgress ? `${Math.round(reading!.Percent)}%` : fresh ? t('new') : '';
-  const sub = [label, state].filter(Boolean).join(' · ');
-  return (
-    <BookCard
-      item={item}
-      sub={sub}
-      subClass={read ? 'is-dimmer' : inProgress ? 'is-accent' : undefined}
-      titleClass={read ? 'is-dim' : current ? 'is-current' : undefined}
-      badge={read ? <span class="bk-read-badge" aria-label={tc('Read', 'done')}><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span> : undefined}
-    />
-  );
-}
-
-export { sortItems, groupSeries };

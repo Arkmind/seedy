@@ -1,31 +1,30 @@
 import { Fragment } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { JELLYFIN_WEB, post } from '../../api/client';
-import { getItems, setFavorite } from '../../api/jellyfin';
+
+import { getItems } from '../../api/jellyfin';
 import type { BaseItem } from '../../api/types';
-import { isAdmin, meStore, userStore } from '../../lib/app-state';
+import { meStore } from '../../lib/app-state';
 import { CUSTOM, readCustom } from '../me/prefs';
-import { t, tn } from '../../lib/i18n';
-import { fmtMonthYear } from '../../lib/format';
+import { t } from '../../lib/i18n';
+import { fmtShortMonth } from '../../lib/format';
 import { navigate, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { Header } from '../../ui/navbar/Header';
 import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { headerHeight } from '../../ui/sticky';
 import { EmptyState, ErrorState, Sentinel, usePaged } from '../browse/parts';
-import { useSelection, type Selection } from '../browse/library-select';
-import { openManage } from '../browse/manage/host';
+import { type Selection, useSelection } from '../browse/library-select';
 import { manageChanged } from '../browse/manage/host';
 import { Icon } from '../../ui/icons';
 import {
-  allMedia, cameraName, getMedia, groupByDay, isVideo, mediaQuery, memoriesOf, monthsOf, yearsOf, type Memory, type PhotoItem
+  allMedia, cameraName, countsLabel, getMedia, groupByDay, isVideo, mediaQuery, memoriesOf, monthsOf, yearsOf, type Memory, type PhotoItem
 } from './api';
 import { PIcon } from './icons';
 import {
-  FolderCard, FolderGrid, MemoryCard, rowFor, SizeSwitch, TabRow, Timeline, countsLine, openPhoto, useTileSize
+  FolderCard, FolderGrid, MemoryCard, PhotoSelectionBar, rowFor, SizeSwitch, TabRow, Timeline, openPhoto, usePhotoEdits, useTileSize
 } from './parts';
 import { PhotoViewer } from './Viewer';
-import { downloadZip } from './zip';
+import { LibraryMenuItems } from '../../ui/library-menu';
 import './photos.css';
 
 /* A photos library (Photos · Timeline board): its name and counts, Slideshow, Select and ⋯, then Timeline, Folders,
@@ -59,12 +58,9 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
 
   // The grid tabs page through the library, newest first.
   const grid = tab === 'timeline' || tab === 'videos' || tab === 'favorites';
+  const tabQuery = { includeItemTypes: tab === 'videos' ? ['Video'] : undefined, isFavorite: tab === 'favorites' ? true : undefined };
   const paged = usePaged((start, limit, signal) => (grid
-    ? getMedia(mediaQuery(view.Id, {
-      startIndex: start, limit,
-      includeItemTypes: tab === 'videos' ? ['Video'] : undefined,
-      isFavorite: tab === 'favorites' ? true : undefined
-    }), signal)
+    ? getMedia(mediaQuery(view.Id, { startIndex: start, limit, ...tabQuery }), signal)
     : Promise.resolve({ Items: [], TotalRecordCount: 0 })), [view.Id, tab, managed.n], 150);
 
   // Cameras: every photo, grouped by the camera that took it.
@@ -78,14 +74,12 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
     }
     return [...map].sort((a, b) => (a[0] ? 0 : 1) - (b[0] ? 0 : 1) || b[1].length - a[1].length);
   }, [everything.data]);
-  const cameraName_ = camera ?? cameras[0]?.[0];
-  const cameraItems = cameras.find(([k]) => k === cameraName_)?.[1] ?? [];
+  const currentCamera = camera ?? cameras[0]?.[0];
+  const cameraItems = cameras.find(([k]) => k === currentCamera)?.[1] ?? [];
 
-  const [local, setLocal] = useState<Record<string, PhotoItem>>({});
-  const patch = (list: PhotoItem[]) => list.map((x) => local[x.Id] ?? x);
-  const list: PhotoItem[] = patch(grid ? (paged.items as PhotoItem[]) : tab === 'cameras' ? cameraItems : []);
-  const [viewerList, setViewerList] = useState<PhotoItem[] | null>(null);
-  useEffect(() => { if (!loc.query.get('photo')) setViewerList(null); }, [loc.query.get('photo')]);
+  const edits = usePhotoEdits();
+  const { viewerList, setViewerList } = edits;
+  const list: PhotoItem[] = edits.patch(grid ? (paged.items as PhotoItem[]) : tab === 'cameras' ? cameraItems : []);
 
   const sel = useSelection(list);
   useEffect(() => { sel.stop(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [view.Id, tab, camera]);
@@ -100,7 +94,7 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
     else toast(t('No photos here yet'), 'error');
   };
 
-  const countText = counts.data ? countsLine(counts.data.photos, counts.data.videos) : '';
+  const countText = counts.data ? countsLabel(counts.data.photos, counts.data.videos, ' · ') : '';
   const shownList = viewerList ?? list;
 
   return (
@@ -122,13 +116,11 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
             <TabRow label={t('Photo views')} tabs={tabs} current={tab} to={(id) => (id === first ? base : `${base}?tab=${id}`)} />
             {tab !== 'folders' && <SizeSwitch size={size} onChange={setSize} />}
           </div>
-          {sel.active && <PhotoSelectionBar sel={sel} total={tab === 'cameras' ? list.length : paged.total} name={view.Name} onChanged={(changed) => {
-            setLocal((m) => ({ ...m, ...Object.fromEntries(changed.map((x) => [x.Id, x])) }));
-          }} onSelectAll={async () => {
+          {sel.active && <PhotoSelectionBar sel={sel} total={tab === 'cameras' ? list.length : paged.total} name={view.Name} onChanged={edits.onChanged} onSelectAll={async () => {
             if (tab === 'cameras') { sel.set(list); return; }
-            const r = await getMedia(mediaQuery(view.Id, { includeItemTypes: tab === 'videos' ? ['Video'] : undefined, isFavorite: tab === 'favorites' ? true : undefined, limit: paged.total }));
+            const r = await getMedia(mediaQuery(view.Id, { ...tabQuery, limit: paged.total }));
             sel.set(r.Items);
-          }} onShow={(photos) => { setViewerList(photos); openPhoto(photos[0].Id, true); }} />}
+          }} onShow={edits.onShow} />}
         </div>
 
         {tab === 'timeline' && !sel.active && <Memories view={view} onOpen={(m) => { setViewerList(m.items); openPhoto(m.items[0].Id); }} />}
@@ -155,13 +147,13 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
               <>
                 <div class="ph-chips" role="list" aria-label={t('Cameras')}>
                   {cameras.map(([k, items]) => (
-                    <a key={k || 'none'} role="listitem" href={`${base}?tab=cameras&camera=${encodeURIComponent(k)}`} class="ph-chip" aria-current={k === cameraName_ ? 'true' : undefined}
+                    <a key={k || 'none'} role="listitem" href={`${base}?tab=cameras&camera=${encodeURIComponent(k)}`} class="ph-chip" aria-current={k === currentCamera ? 'true' : undefined}
                       onClick={(e) => { e.preventDefault(); navigate(`${base}?tab=cameras&camera=${encodeURIComponent(k)}`, { replace: true, keepScroll: true }); }}>
                       <PIcon name="camera" size={15} />{k || t('No camera details')} <span>{items.length}</span>
                     </a>
                   ))}
                 </div>
-                <div class="ph-timeline"><div class="ph-days"><Timeline months={groupByDay(cameraItems.map((x) => local[x.Id] ?? x))} row={row} select={sel.grid} onOpen={(it) => openPhoto(it.Id)} /></div></div>
+                <div class="ph-timeline"><div class="ph-days"><Timeline months={groupByDay(list)} row={row} select={sel.grid} onOpen={(it) => openPhoto(it.Id)} /></div></div>
               </>
             )
         )}
@@ -173,7 +165,7 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
           total={viewerList ? viewerList.length : tab === 'cameras' ? list.length : paged.total}
           more={viewerList || !grid ? undefined : paged.loadMore}
           done={viewerList || !grid ? true : paged.done}
-          onItem={(it) => { setLocal((m) => ({ ...m, [it.Id]: it })); if (viewerList) setViewerList((l) => l && l.map((x) => (x.Id === it.Id ? it : x))); }}
+          onItem={edits.onItem}
         />
       )}
     </div>
@@ -237,12 +229,7 @@ function TimelineWithRail({ view, list, paged, row, select, rail, onOpen }: {
   };
 
   // "Oct", "Sep" (the app's short month names, as on the board).
-  const monthName = (m: number) => {
-    const s = fmtMonthYear(new Date(2000, m, 1)).replace(/\s*\d+$/, '').replace(/\.$/, '');
-    return s.charAt(0).toLocaleUpperCase() + s.slice(1);
-  };
-
-  return (
+    return (
     <div class="ph-timeline" ref={wrap}>
       <div class="ph-days">
         <Timeline months={months} row={row} select={select.grid} onOpen={onOpen} />
@@ -256,7 +243,7 @@ function TimelineWithRail({ view, list, paged, row, select, rail, onOpen }: {
             <Fragment key={y}>
               <a href="#" class="ph-rail-y" aria-current={y === curYear && !(yearMonths.data?.length) ? 'true' : undefined} onClick={(e) => { e.preventDefault(); void jump(y); }}>{y}</a>
               {y === curYear && yearMonths.data?.map((m) => (
-                <a key={`${y}-${m}`} href="#" class="ph-rail-m" aria-current={cur?.m === m ? 'true' : undefined} onClick={(e) => { e.preventDefault(); void jump(y, m); }}>{monthName(m)}</a>
+                <a key={`${y}-${m}`} href="#" class="ph-rail-m" aria-current={cur?.m === m ? 'true' : undefined} onClick={(e) => { e.preventDefault(); void jump(y, m); }}>{fmtShortMonth(m)}</a>
               ))}
             </Fragment>
           ))}
@@ -274,8 +261,7 @@ function Memories({ view, onOpen }: { view: BaseItem; onOpen: (m: Memory) => voi
   const memories = useAsync(() => memoriesOf(view.Id, new Date(), all ? 15 : 3), [view.Id, all]);
   const [shown, setShown] = useState<Memory[]>([]);
   useEffect(() => { if (memories.data) setShown(memories.data); }, [memories.data]);
-  const list = shown;
-  if (!list.length) return null;
+  if (!shown.length) return null;
   return (
     <section class="ph-memories" aria-labelledby="ph-mem-h">
       <div class="ph-sec-head">
@@ -283,7 +269,7 @@ function Memories({ view, onOpen }: { view: BaseItem; onOpen: (m: Memory) => voi
         <button type="button" class="ph-sec-link" aria-expanded={all ? 'true' : 'false'} onClick={() => setAll((v) => !v)}>{all ? t('Fewer memories') : t('All memories')}</button>
       </div>
       <div class="ph-memory-grid">
-        {(all ? list : list.slice(0, 4)).map((m) => <MemoryCard key={m.key} memory={m} onOpen={() => onOpen(m)} />)}
+        {(all ? shown : shown.slice(0, 4)).map((m) => <MemoryCard key={m.key} memory={m} onOpen={() => onOpen(m)} />)}
       </div>
     </section>
   );
@@ -321,82 +307,9 @@ function LibraryMenu({ view, onRefresh }: { view: BaseItem; onRefresh: () => voi
       {(close) => (
         <>
           <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); onRefresh(); }} />
-          <MenuItem icon="link" label={t('Copy link')} onSelect={() => {
-            close();
-            navigator.clipboard.writeText(window.location.href).then(() => toast(t('Link copied')), () => toast(t('Couldn’t copy the link'), 'error'));
-          }} />
-          <MenuItem icon="external" label={t('Open in Jellyfin')} href={`${JELLYFIN_WEB}#/list.html?parentId=${view.Id}`} />
-          {isAdmin() && (
-            <>
-              <div class="menu-sep" />
-              <MenuItem icon="refresh" label={t('Scan library files')} sub={t('Look for new and changed media')} onSelect={() => {
-                close();
-                post<void>(`/Items/${view.Id}/Refresh`, undefined, { Recursive: true, MetadataRefreshMode: 'Default', ImageRefreshMode: 'Default', ReplaceAllMetadata: false, ReplaceAllImages: false })
-                  .then(() => toast(t('Scanning {name}', { name: view.Name }), 'pending'), () => toast(t('Couldn’t start the scan'), 'error'));
-              }} />
-            </>
-          )}
+          <LibraryMenuItems item={view} close={close} />
         </>
       )}
     </MenuButton>
-  );
-}
-
-/* ───────── Selection ───────── */
-
-const canDelete = () => isAdmin() || !!userStore.get()?.Policy?.EnableContentDeletion || !!(userStore.get()?.Policy as { EnableContentDeletionFromFolders?: string[] } | undefined)?.EnableContentDeletionFromFolders?.length;
-const canDownload = () => !!(userStore.get()?.Policy as { EnableContentDownloading?: boolean } | undefined)?.EnableContentDownloading;
-
-export function PhotoSelectionBar({ sel, total, name, onChanged, onSelectAll, onShow }: {
-  sel: Selection; total: number; name: string; onChanged: (items: PhotoItem[]) => void; onSelectAll: () => Promise<void>; onShow: (photos: PhotoItem[]) => void;
-}) {
-  const [busy, setBusy] = useState<string | null>(null);
-  const n = sel.items.length;
-  const fav = async (on: boolean) => {
-    setBusy('fav');
-    const items = sel.items as PhotoItem[];
-    const results = await Promise.allSettled(items.map((it) => setFavorite(it.Id, on)));
-    setBusy(null);
-    const ok = items.filter((_, i) => results[i].status === 'fulfilled').map((it) => ({ ...it, UserData: { ...(it.UserData ?? {}), IsFavorite: on } }));
-    onChanged(ok);
-    sel.set(ok.length === items.length ? ok : items);
-    if (ok.length < items.length) toast(tn(items.length - ok.length, 'Couldn’t update {n} photo', 'Couldn’t update {n} photos'), 'error');
-    else toast(on ? tn(ok.length, 'Added {n} photo to favorites', 'Added {n} photos to favorites') : tn(ok.length, 'Removed {n} photo from favorites', 'Removed {n} photos from favorites'));
-  };
-  const allFav = n > 0 && sel.items.every((x) => x.UserData?.IsFavorite);
-  return (
-    <div role="toolbar" aria-label={t('{n} selected', { n })} class="lib-sel ph-sel">
-      <div class="lib-sel-left">
-        <button type="button" class="lib-sel-close" aria-label={t('Stop selecting')} onClick={sel.stop}><Icon name="close" size={18} stroke={2.2} /></button>
-        <span class="lib-sel-count" aria-live="polite">{t('{n} selected', { n })}</span>
-        {n < total && (
-          <button type="button" class="lib-sel-all" disabled={busy !== null} onClick={() => { setBusy('all'); onSelectAll().finally(() => setBusy(null)); }}>
-            {busy === 'all' ? t('Selecting…') : t('Select all {n}', { n: total })}
-          </button>
-        )}
-      </div>
-      <div class="lib-sel-actions">
-        <button type="button" class="lib-sel-btn" disabled={!n || busy !== null} onClick={() => void fav(!allFav)}>
-          <PIcon name="heart" size={18} filled={allFav} />{busy === 'fav' ? t('Working…') : allFav ? t('Remove from favorites') : t('Add to favorites')}
-        </button>
-        <button type="button" class="lib-sel-btn" disabled={!sel.items.some((x) => !isVideo(x))} onClick={() => {
-          const photos = (sel.items as PhotoItem[]).filter((x) => !isVideo(x));
-          sel.stop();
-          onShow(photos);
-        }}>
-          <PIcon name="slideshow" size={18} />{t('Slideshow')}
-        </button>
-        {canDownload() && (
-          <button type="button" class="lib-sel-btn" disabled={!n || busy !== null} onClick={() => { setBusy('zip'); downloadZip(name, sel.items).finally(() => setBusy(null)); }}>
-            <PIcon name="download" size={18} />{busy === 'zip' ? t('Working…') : t('Download')}
-          </button>
-        )}
-        {canDelete() && (
-          <button type="button" class="lib-sel-btn is-danger" disabled={!n || busy !== null} onClick={() => openManage('delete', sel.items)}>
-            <Icon name="trash" size={18} />{t('Delete')}
-          </button>
-        )}
-      </div>
-    </div>
   );
 }

@@ -4,8 +4,8 @@ import { getEpisodes, getItem, getItems, getNextUp, getResume, getSeasons } from
 import { backdropUrl, personImageUrl, primaryUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { seerrDetails, type SeerrDetails } from '../../api/seedy';
-import { meStore } from '../../lib/app-state';
-import { episodeTag, fmtDate, plural, progressFraction, remainingSeconds, runtime, timeLeft, yearRange, dayOf } from '../../lib/format';
+import { meStore, viewsStore } from '../../lib/app-state';
+import { dayOf, episodeTag, fmtDate, initials, plural, progressFraction, remainingSeconds, runtime, timeLeft, yearRange } from '../../lib/format';
 import { back, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { manageChanged } from './manage/host';
@@ -15,8 +15,8 @@ import { Icon } from '../../ui/icons';
 import { MenuItem, toast } from '../../ui/overlay';
 import { playPath } from '../../ui/cards';
 import {
-  CardGrid, EmptyPlaylist, EmptyState, ErrorState, GridSkeleton, findView, playRandom, resolvePlayable, seasonsLabel, toggleFavorite, togglePlayed,
-  useItemList, yearOf
+  CardGrid, EmptyPlaylist, EmptyState, episodeLabel, ErrorState, findView, GRID_FIELDS, GridSkeleton, playRandom, resolvePlayable,
+  seasonsLabel, toggleFavorite, togglePlayed, useItemList, yearOf
 } from './parts';
 import {
   CastRow, DetailsHero, DetailsSkeleton, MetaLine, MoreActions, SeasonEpisodes, SimilarRow, SquareToggle, TrailerButton,
@@ -32,7 +32,6 @@ import { BookDetails } from '../books/BookDetails';
 import { asBook, getAudiobook, withPlace } from '../../audio/api';
 import { PhotoAlbumPage } from '../photos/Album';
 import { ancestorsOf, isPhotoLibrary } from '../photos/api';
-import { viewsStore } from '../../lib/app-state';
 
 /* An audiobook in several files opens as the book: its folder, or any of its files. */
 async function asAudiobook(item: BaseItem): Promise<BaseItem> {
@@ -105,20 +104,24 @@ function PhotoRedirect({ item }: { item: BaseItem }) {
   return <Shell><DetailsSkeleton /></Shell>;
 }
 
-/* A folder inside a photos library is a photo folder; anywhere else it lists what's in it. */
-function FolderPage({ item }: { item: BaseItem }) {
+/* The library [item] is in: undefined while looking, null when it's in none. */
+function useLibraryOf(item: BaseItem) {
   const views = useStore(viewsStore);
   const [lib, setLib] = useState<BaseItem | null | undefined>(undefined);
   useEffect(() => { findView(item.Id, views).then((v) => setLib(v ?? null), () => setLib(null)); }, [item.Id, views.length]);
+  return lib;
+}
+
+/* A folder inside a photos library is a photo folder; anywhere else it lists what's in it. */
+function FolderPage({ item }: { item: BaseItem }) {
+  const lib = useLibraryOf(item);
   if (lib === undefined) return <Shell><DetailsSkeleton /></Shell>;
   return isPhotoLibrary(lib?.CollectionType) ? <PhotoAlbumPage item={item} /> : <CollectionPage item={item} />;
 }
 
 /* A video in a photos library plays from its folder's page; elsewhere it's a title like a movie. */
 function VideoPage({ item }: { item: BaseItem }) {
-  const views = useStore(viewsStore);
-  const [lib, setLib] = useState<BaseItem | null | undefined>(undefined);
-  useEffect(() => { findView(item.Id, views).then((v) => setLib(v ?? null), () => setLib(null)); }, [item.Id, views.length]);
+  const lib = useLibraryOf(item);
   if (lib === undefined) return <Shell><DetailsSkeleton /></Shell>;
   if (isPhotoLibrary(lib?.CollectionType)) return <PhotoRedirect item={item} />;
   return <MoviePage item={item} />;
@@ -140,9 +143,6 @@ function useLocal(item: BaseItem) {
   return [it, setIt] as const;
 }
 
-const episodeLabel = (ep: BaseItem) =>
-  ep.ParentIndexNumber ? `S${ep.ParentIndexNumber} · E${ep.IndexNumber ?? ''}` : ep.IndexNumber !== undefined ? `E${ep.IndexNumber}` : '';
-
 function backTo(item: BaseItem, view?: BaseItem) {
   return { label: view?.Name ?? fallbackLibraryName(item), to: view ? `/library/${view.Id}` : '/' };
 }
@@ -156,9 +156,14 @@ async function seriesTarget(seriesId: string): Promise<Target | null> {
   if (resume) return { ep: resume, resume: true };
   const next = (await getNextUp(1, seriesId).catch(() => null))?.Items[0];
   if (next) return { ep: next, resume: false };
-  const eps = (await getEpisodes(seriesId, undefined, { limit: 40, isMissing: false }).catch(() => null))?.Items ?? [];
-  const first = eps.find((e) => (e.ParentIndexNumber ?? 1) > 0 && e.LocationType !== 'Virtual') ?? eps[0];
+  const first = await firstEpisode(seriesId);
   return first ? { ep: first, resume: false } : null;
+}
+
+/* A show's first real episode (a regular season's, on the server), else whatever comes first. */
+async function firstEpisode(seriesId: string): Promise<BaseItem | undefined> {
+  const eps = (await getEpisodes(seriesId, undefined, { limit: 40, isMissing: false }).catch(() => null))?.Items ?? [];
+  return eps.find((e) => (e.ParentIndexNumber ?? 1) > 0 && e.LocationType !== 'Virtual') ?? eps[0];
 }
 
 function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: () => void }) {
@@ -198,8 +203,7 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
     else toast(t('Nothing to play yet'), 'error');
   };
   const playFirst = async () => {
-    const eps = (await getEpisodes(item.Id, undefined, { limit: 40, isMissing: false }).catch(() => null))?.Items ?? [];
-    const first = eps.find((e) => (e.ParentIndexNumber ?? 1) > 0 && e.LocationType !== 'Virtual') ?? eps[0];
+    const first = await firstEpisode(item.Id);
     if (first) navigate(playPath(first, { restart: true }));
     else toast(t('Nothing to play yet'), 'error');
   };
@@ -231,13 +235,13 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
         badges={techBadges(tech.data)}
         overview={item.Overview}
         info={info}
-        progress={pt?.resume ? { fraction: progressFraction(pt.ep), text: `${timeLeft(remainingSeconds(pt.ep))} of ${pt.ep.Name}` } : undefined}
+        progress={pt?.resume ? { fraction: progressFraction(pt.ep), text: t('{time} of {name}', { time: timeLeft(remainingSeconds(pt.ep)), name: pt.ep.Name }) } : undefined}
         notice={gaps.notice}
         actions={
           <>
             <button type="button" class="btn btn-primary" onClick={() => play()}>
               <Icon name="play" size={20} />
-              {pt ? `${pt.resume ? t('Resume') : t('Play')} ${episodeLabel(pt.ep)}`.trim() : 'Play'}
+              {pt ? `${pt.resume ? t('Resume') : t('Play')} ${episodeLabel(pt.ep)}`.trim() : t('Play')}
             </button>
             <TrailerButton item={item} />
             <button type="button" class="btn btn-square" aria-label={t('Shuffle episodes')} onClick={shuffle}>
@@ -436,7 +440,7 @@ function EpisodePage({ item: initial, onChanged }: { item: BaseItem; onChanged: 
   const info: InfoRow[] = [
     { label: 'Directed by', value: names(peopleOf(item, 'Director'), 2) },
     { label: 'Written by', value: names(peopleOf(item, 'Writer'), 2) },
-    { label: guests.length ? t('Guest stars') : t('Starring'), value: names(guests.length ? guests : peopleOf(item, 'Actor'), 3) },
+    { label: guests.length ? 'Guest stars' : 'Starring', value: names(guests.length ? guests : peopleOf(item, 'Actor'), 3) },
     { label: 'Aired', value: aired },
     { label: 'Video', value: lines.video },
     { label: 'Audio', value: lines.audio },
@@ -448,14 +452,14 @@ function EpisodePage({ item: initial, onChanged }: { item: BaseItem; onChanged: 
       <DetailsHero
         art={heroArt(item, series.data)}
         itemId={item.Id}
-        overline={item.SeriesName ?? 'Series'}
+        overline={item.SeriesName ?? t('Series')}
         overlineTo={item.SeriesId ? `/details/${item.SeriesId}` : undefined}
         title={item.Name}
         meta={<MetaLine parts={[episodeTag(item), item.PremiereDate ? String(dayOf(item.PremiereDate)!.getFullYear()) : undefined, runtime(item)]} rating={item.OfficialRating} score={item.CommunityRating} />}
         badges={techBadges(item)}
         overview={item.Overview}
         info={info}
-        progress={resume ? { fraction, text: `${timeLeft(remainingSeconds(item))} of ${item.Name}` } : undefined}
+        progress={resume ? { fraction, text: t('{time} of {name}', { time: timeLeft(remainingSeconds(item)), name: item.Name }) } : undefined}
         actions={
           <>
             <button type="button" class="btn btn-primary" onClick={() => navigate(playPath(item))}>
@@ -492,26 +496,25 @@ function PersonPage({ item: initial }: { item: BaseItem }) {
   const [more, setMore] = useState(false);
   const { items, setItems, replace } = useItemList();
   const films = useAsync(
-    () => getItems({ personIds: [item.Id], includeItemTypes: ['Movie', 'Series'], sortBy: ['PremiereDate', 'ProductionYear', 'SortName'], sortOrder: 'Descending', limit: 200, fields: ['PrimaryImageAspectRatio', 'ProductionYear', 'Genres', 'ChildCount', 'DateCreated', 'SortName'] }),
+    () => getItems({ personIds: [item.Id], includeItemTypes: ['Movie', 'Series'], sortBy: ['PremiereDate', 'ProductionYear', 'SortName'], sortOrder: 'Descending', limit: 200, fields: GRID_FIELDS }),
     [item.Id]
   );
   useEffect(() => { if (films.data) setItems(films.data.Items); }, [films.data]);
   const portrait = personImageUrl({ Id: item.Id, PrimaryImageTag: item.ImageTags?.Primary }, 480);
   const born = item.PremiereDate ? dayOf(item.PremiereDate)! : undefined;
   const died = item.EndDate ? dayOf(item.EndDate)! : undefined;
-  const place = (item as BaseItem & { ProductionLocations?: string[] }).ProductionLocations?.[0];
+  const place = item.ProductionLocations?.[0];
   const birth = [
     born ? (place ? t('Born {date} in {place}', { date: fmtDate(born), place }) : t('Born {date}', { date: fmtDate(born) })) : place ? t('Born in {place}', { place }) : '',
     died ? t('Died {date}', { date: fmtDate(died) }) : ''
   ].filter(Boolean).join(' · ');
-  const initials = item.Name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   const fav = !!item.UserData?.IsFavorite;
   return (
     <div class="page">
       <Header active={null} />
       <main class="page-main person">
         <div class="person-head">
-          <div class="person-portrait" aria-hidden="true">{portrait ? <img src={portrait} alt="" /> : initials}</div>
+          <div class="person-portrait" aria-hidden="true">{portrait ? <img src={portrait} alt="" /> : initials(item.Name)}</div>
           <div class="person-text">
             <span class="overline">{t('Cast & crew')}</span>
             <h1 class="person-name">{item.Name}</h1>
@@ -535,12 +538,12 @@ function PersonPage({ item: initial }: { item: BaseItem }) {
         </div>
         <section class="browse-section" aria-label={t('Filmography')}>
           <div class="browse-section-head">
-            <div class="row-head-main"><h2 class="row-title">{t('Filmography')}</h2>{films.data && <span class="row-sub">{plural(films.data.TotalRecordCount, 'title')} in your library</span>}</div>
+            <div class="row-head-main"><h2 class="row-title">{t('Filmography')}</h2>{films.data && <span class="row-sub">{t('{count} in your library', { count: plural(films.data.TotalRecordCount, 'title') })}</span>}</div>
           </div>
           {films.loading && !films.data ? <GridSkeleton count={8} />
             : films.error && !films.data ? <ErrorState error={films.error} retry={films.reload} />
             : items.length ? <CardGrid items={items} onReplace={replace} />
-            : <EmptyState icon="film" title={t('Nothing in your library yet')} text={`Titles with ${item.Name} will show up here once they're on the server.`} />}
+            : <EmptyState icon="film" title={t('Nothing in your library yet')} text={t("Titles with {name} will show up here once they're on the server.", { name: item.Name })} />}
         </section>
       </main>
     </div>
