@@ -151,44 +151,27 @@ public sealed class MediaRequestService
         _ => service
     };
 
-    private static MediaRequestData DataOf(MediaRequestRecord q)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<MediaRequestData>(q.Data, Json) ?? new MediaRequestData();
-        }
-        catch (JsonException)
-        {
-            return new MediaRequestData();
-        }
-    }
+    private static MediaRequestData DataOf(MediaRequestRecord q) => Parse(q.Data, new MediaRequestData());
 
-    private static List<MediaRequestPart> PartsOf(MediaRequestRecord q)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<List<MediaRequestPart>>(q.Parts, Json) ?? [];
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
-    }
+    private static List<MediaRequestPart> PartsOf(MediaRequestRecord q) => Parse(q.Parts, new List<MediaRequestPart>());
 
-    private static MediaNoteDto? NoteOf(MediaRequestRecord q)
+    private static MediaNoteDto? NoteOf(MediaRequestRecord q) => Parse<MediaNoteDto?>(q.Note, null);
+
+    // A stored JSON column, or the fallback when it is empty or unreadable.
+    private static T Parse<T>(string? json, T fallback)
     {
-        if (string.IsNullOrEmpty(q.Note))
+        if (string.IsNullOrEmpty(json))
         {
-            return null;
+            return fallback;
         }
 
         try
         {
-            return JsonSerializer.Deserialize<MediaNoteDto>(q.Note, Json);
+            return JsonSerializer.Deserialize<T>(json, Json) ?? fallback;
         }
         catch (JsonException)
         {
-            return null;
+            return fallback;
         }
     }
 
@@ -413,12 +396,7 @@ public sealed class MediaRequestService
     /// <returns>The request.</returns>
     public async Task<MediaRequestDto> ApproveAsync(User admin, string id, CancellationToken ct)
     {
-        var q = Get(id);
-        if (q.Status != "pending")
-        {
-            throw new MediaServiceException("Seedy", "This request isn't waiting for approval.", HttpStatusCode.Conflict);
-        }
-
+        var q = GetPending(id);
         q.DecidedAt = DateTime.UtcNow;
         q.DecidedBy = admin.Username;
         await SendAsync(q, ct).ConfigureAwait(false);
@@ -432,12 +410,7 @@ public sealed class MediaRequestService
     /// <returns>The request.</returns>
     public async Task<MediaRequestDto> DeclineAsync(User admin, string id, CancellationToken ct)
     {
-        var q = Get(id);
-        if (q.Status != "pending")
-        {
-            throw new MediaServiceException("Seedy", "This request isn't waiting for approval.", HttpStatusCode.Conflict);
-        }
-
+        var q = GetPending(id);
         q.Status = "declined";
         q.DecidedAt = DateTime.UtcNow;
         q.DecidedBy = admin.Username;
@@ -512,12 +485,7 @@ public sealed class MediaRequestService
     /// <returns>The request.</returns>
     public async Task<MediaRequestDto> SearchNowAsync(User user, string id, CancellationToken ct)
     {
-        var q = Get(id);
-        if (!user.IsAdmin() && q.UserId != user.Id.ToString("N"))
-        {
-            throw new MediaServiceException("Seedy", "This isn't your request.", HttpStatusCode.Forbidden);
-        }
-
+        var q = GetOwned(id, user);
         if (q.SentAt is null)
         {
             if (q.Status == "pending")
@@ -574,12 +542,7 @@ public sealed class MediaRequestService
     /// <returns>The request.</returns>
     public async Task<MediaRequestDto> AcceptLowerAsync(User user, string id, CancellationToken ct)
     {
-        var q = Get(id);
-        if (!user.IsAdmin() && q.UserId != user.Id.ToString("N"))
-        {
-            throw new MediaServiceException("Seedy", "This isn't your request.", HttpStatusCode.Forbidden);
-        }
-
+        var q = GetOwned(id, user);
         var data = DataOf(q);
         var artist = q.Kind == "music" ? await _lidarr.ArtistAsync(q.ForeignId, ct).ConfigureAwait(false) : null;
         if (artist is null)
@@ -603,6 +566,19 @@ public sealed class MediaRequestService
     }
 
     private MediaRequestRecord Get(string id) => _db.GetMediaRequest(id) ?? throw new MediaServiceException("Seedy", "This request is gone.", HttpStatusCode.NotFound);
+
+    private MediaRequestRecord GetPending(string id)
+    {
+        var q = Get(id);
+        return q.Status == "pending" ? q : throw new MediaServiceException("Seedy", "This request isn't waiting for approval.", HttpStatusCode.Conflict);
+    }
+
+    // The requester's own request; admins may act on any.
+    private MediaRequestRecord GetOwned(string id, User user)
+    {
+        var q = Get(id);
+        return user.IsAdmin() || q.UserId == user.Id.ToString("N") ? q : throw new MediaServiceException("Seedy", "This isn't your request.", HttpStatusCode.Forbidden);
+    }
 
     // ── Sending to the apps ──
 
