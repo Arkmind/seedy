@@ -1,5 +1,6 @@
 import { get, request } from '../../../api/client';
 import type { BaseItem } from '../../../api/types';
+import { saveBlob } from '../../../lib/clipboard';
 
 /* /Seedy/Admin/Stats: the play log added up. Times are UTC ISO strings; dates ("2026-11-08") are local to the
    time zone the page sends. */
@@ -71,13 +72,5 @@ export const getStatsDay = (date: string, signal?: AbortSignal) => get<StatsDay>
 
 export async function exportStats(f: StatsFilters) {
   const res = await request<Response>('GET', '/Seedy/Admin/Stats/Export', { query: query(f), raw: true });
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `seedy-statistics-${f.range}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  saveBlob(`seedy-statistics-${f.range}.csv`, await res.blob());
 }

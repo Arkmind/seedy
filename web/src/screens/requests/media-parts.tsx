@@ -5,7 +5,7 @@ import {
   type BookFormat, type CardStatus, type MediaRequest, type MediaService, type MediaSummary
 } from '../../api/media';
 import { daysFromToday, fmtDate, fmtWeekdayDate } from '../../lib/format';
-import { t, tn } from '../../lib/i18n';
+import { formatNumber, t, tn } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { createStore, useAsync, useStore } from '../../lib/store';
 import { Icon } from '../../ui/icons';
@@ -96,6 +96,10 @@ export function RequestThumb({ r, size = 'row' }: { r: MediaRequest; size?: 'row
 }
 
 /* ── Wording ── */
+
+/* A book's place in its series: "3", "2.5" ("2,5"). */
+export const seriesNumber = (n?: number) =>
+  n === undefined ? '' : Number.isInteger(n) ? String(n) : formatNumber(Number(n.toFixed(1)), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 export const SERVICE_NAMES: Record<MediaService, string> = { lidarr: 'Lidarr', shelfarr: 'Shelfarr', librarr: 'Librarr', readarr: 'Readarr' };
 

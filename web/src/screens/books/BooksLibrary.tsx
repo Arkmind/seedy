@@ -1,6 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { JELLYFIN_WEB, get, post } from '../../api/client';
+import { JELLYFIN_WEB, get } from '../../api/client';
 import type { BaseItem, SessionInfo } from '../../api/types';
 import { deviceId } from '../../api/client';
 import { meStore } from '../../lib/app-state';
@@ -11,7 +11,7 @@ import { useAsync, useStore } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
-import { MenuButton, MenuItem, toast } from '../../ui/overlay';
+import { MenuButton, MenuItem } from '../../ui/overlay';
 import { EmptyState, ErrorState } from '../browse/parts';
 import { AudioCover, BookCover } from './covers';
 import { isBookOrPart, mergePlace, partsOf } from '../../audio/api';
@@ -20,6 +20,7 @@ import {
   AudioCard, BookCard, ContinueCard, SectionHead, SeriesCard, bookSub, comicSub, roughTime, tc, useColumns,
   type ContinueEntry, type SeriesGroup
 } from './parts';
+import { LibraryMenuItems } from '../../ui/library-menu';
 import './books.css';
 
 /* The books library (Books library board): title and counts, Sort and ⋯, then tabs. Overview shows Continue,
@@ -210,21 +211,7 @@ export function BooksLibrary({ view }: { view: BaseItem }) {
                 {(close) => (
                   <>
                     <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); lib.reload(); }} />
-                    <MenuItem icon="link" label={t('Copy link')} onSelect={() => {
-                      close();
-                      navigator.clipboard.writeText(window.location.href).then(() => toast(t('Link copied')), () => toast(t("Couldn't copy the link"), 'error'));
-                    }} />
-                    <MenuItem icon="external" label={t('Open in Jellyfin')} href={`${JELLYFIN_WEB}#/list?parentId=${view.Id}`} />
-                    {me.isAdmin && (
-                      <>
-                        <div class="menu-sep" />
-                        <MenuItem icon="refresh" label={t('Scan library files')} sub={t('Look for new and changed media')} onSelect={() => {
-                          close();
-                          post<void>(`/Items/${view.Id}/Refresh`, undefined, { Recursive: true, MetadataRefreshMode: 'Default', ImageRefreshMode: 'Default', ReplaceAllMetadata: false, ReplaceAllImages: false })
-                            .then(() => toast(t('Scanning {name}', { name: view.Name }), 'pending'), () => toast(t("Couldn't start the scan"), 'error'));
-                        }} />
-                      </>
-                    )}
+                    <LibraryMenuItems item={view} jellyfinHref={`${JELLYFIN_WEB}#/list?parentId=${view.Id}`} admin={me.isAdmin} close={close} />
                   </>
                 )}
               </MenuButton>

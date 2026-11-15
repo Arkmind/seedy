@@ -4,7 +4,7 @@ import { cardArt, personImageUrl, tmdbImage, type CardArt } from '../api/images'
 import type { BaseItem } from '../api/types';
 import type { SeerrItem } from '../api/seedy';
 import { Link, href, navigate } from '../lib/router';
-import { pct, progressFraction } from '../lib/format';
+import { initials, pct, progressFraction, score } from '../lib/format';
 import { useStore } from '../lib/store';
 import { tvActive } from '../screens/me/effects';
 import { isAudioItem } from '../audio/api';
@@ -333,7 +333,7 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
           <span class="card-meta" style={{ fontWeight: 600, color: metaAccent ? 'var(--seedy-accent)' : undefined }}>{meta}</span>
         ) : (
           <span class="card-meta is-score">
-            {item.rating ? <><Icon name="star" size={13} color="var(--seedy-accent)" />{item.rating.toFixed(1)}</> : null}
+            {item.rating ? <><Icon name="star" size={13} color="var(--seedy-accent)" />{score(item.rating)}</> : null}
             {item.rating && item.year ? ' · ' : ''}
             {item.year}
           </span>
@@ -414,14 +414,15 @@ export function LibraryTile({ view, width = 300, artSrc }: { view: BaseItem & { 
 
 const CAST_BG = ['#3d2424', '#26362b', '#3f3322', '#2f2840', '#1f3a3c', '#3d2436', '#2e2e2e', '#24313d'];
 const CAST_INK = ['#f0b9a0', '#d9e3b5', '#f2cf86', '#e3c4ff', '#a8e6df', '#ffb3e6', '#e0e0e0', '#c9d6e3'];
+/* A cast face's colours while there's no photo, taking turns down the list. */
+export const castFace = (index: number) => ({ background: CAST_BG[index % CAST_BG.length], color: CAST_INK[index % CAST_INK.length] });
 
 export function CastCard({ person, index, role }: { person: { Id: string; Name: string; PrimaryImageTag?: string }; index: number; role?: string }) {
   const img = personImageUrl(person, 280);
-  const initials = person.Name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   return (
     <Link to={`/details/${person.Id}`} class="cast-card">
-      <span aria-hidden="true" class="cast-face" style={{ background: CAST_BG[index % CAST_BG.length], color: CAST_INK[index % CAST_INK.length] }}>
-        {img ? <Img src={img} class="art" /> : initials}
+      <span aria-hidden="true" class="cast-face" style={castFace(index)}>
+        {img ? <Img src={img} class="art" /> : initials(person.Name)}
       </span>
       <span class="cast-text">
         <span class="cast-name">{person.Name}</span>

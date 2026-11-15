@@ -3,7 +3,7 @@ import { del, downloadUrl } from '../../api/client';
 import { getItem, getItems } from '../../api/jellyfin';
 import { imageUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
-import { userStore, viewsStore } from '../../lib/app-state';
+import { canDownload, userStore, viewsStore } from '../../lib/app-state';
 import { TICKS_PER_SECOND, dayOf, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
@@ -80,7 +80,7 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
   const source = { kind: playlist ? 'playlist' as const : 'album' as const, id: item.Id, name: item.Name };
   const here = !!s.current && (s.source?.id === item.Id || (!playlist && s.current.track.AlbumId === item.Id && s.source?.kind === 'album'));
   const playing = here && s.playing;
-  const canDownload = !!(user?.Policy as { EnableContentDownloading?: boolean } | undefined)?.EnableContentDownloading;
+  const mayDownload = canDownload(user);
   const fav = !!item.UserData?.IsFavorite;
 
   const play = () => {
@@ -154,7 +154,7 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
                 aria-label={fav ? t('Remove from favorites') : t('Add to favorites')} onClick={() => void toggleFavorite(item, setItem)}>
                 <AIcon name="heart" size={20} filled={fav} />
               </button>
-              {canDownload && !playlist && (
+              {mayDownload && !playlist && (
                 <button type="button" class="mu-btn is-icon" aria-label={t('Download album')} disabled={!list.length} onClick={() => downloadAll(list)}>
                   <AIcon name="download" size={20} />
                 </button>

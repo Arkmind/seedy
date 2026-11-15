@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { JELLYFIN_WEB, get, post, currentUserId } from '../../api/client';
+import { JELLYFIN_WEB, get, currentUserId } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { meStore } from '../../lib/app-state';
@@ -20,6 +20,7 @@ import {
   albumsLabel, countOf, dot, playlistCovers, playlistSub, playsLabel, songsOf, songsLabel, yearOf, type Mix
 } from './parts';
 import { AlbumsTab, ArtistsTab, FoldersTab, GenresTab, PlaylistsTab, SongsTab } from './tabs';
+import { LibraryMenuItems } from '../../ui/library-menu';
 import './music.css';
 
 /* A music library (MusicHome board): the title with its counts, Shuffle all, Instant mix and ⋯; the Overview (Jump
@@ -94,21 +95,7 @@ export function MusicLibrary({ view }: { view: BaseItem }) {
                 {(close) => (
                   <>
                     <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); setReload((n) => n + 1); }} />
-                    <MenuItem icon="link" label={t('Copy link')} onSelect={() => {
-                      close();
-                      navigator.clipboard.writeText(window.location.href).then(() => toast(t('Link copied')), () => toast(t('Couldn’t copy the link'), 'error'));
-                    }} />
-                    <MenuItem icon="external" label={t('Open in Jellyfin')} href={`${JELLYFIN_WEB}#/music.html?topParentId=${view.Id}&collectionType=music`} />
-                    {me.isAdmin && (
-                      <>
-                        <div class="menu-sep" />
-                        <MenuItem icon="refresh" label={t('Scan library files')} sub={t('Look for new and changed media')} onSelect={() => {
-                          close();
-                          post<void>(`/Items/${view.Id}/Refresh`, undefined, { Recursive: true, MetadataRefreshMode: 'Default', ImageRefreshMode: 'Default', ReplaceAllMetadata: false, ReplaceAllImages: false })
-                            .then(() => toast(t('Scanning {name}', { name: view.Name }), 'pending'), () => toast(t("Couldn't start the scan"), 'error'));
-                        }} />
-                      </>
-                    )}
+                    <LibraryMenuItems item={view} jellyfinHref={`${JELLYFIN_WEB}#/music.html?topParentId=${view.Id}&collectionType=music`} admin={me.isAdmin} close={close} />
                   </>
                 )}
               </MenuButton>

@@ -9,6 +9,11 @@ import { currentUserId, isAdmin, userStore } from '../../../lib/app-state';
 export const canManage = () => isAdmin();
 export const canCollect = () => isAdmin() || !!userStore.get()?.Policy?.EnableCollectionManagement;
 export const canDelete = (item: BaseItem) => !!item.CanDelete;
+/* Whether this profile may delete anything at all (the selection bars' Delete). */
+export const canDeleteAny = () => {
+  const p = userStore.get()?.Policy;
+  return isAdmin() || !!p?.EnableContentDeletion || !!p?.EnableContentDeletionFromFolders?.length;
+};
 
 // ── Playlists ──
 
@@ -40,8 +45,6 @@ export const createCollection = (name: string, ids: string[]) => post<{ Id: stri
 
 export const refreshItem = (id: string) =>
   post<void>(`/Items/${id}/Refresh`, undefined, { metadataRefreshMode: 'FullRefresh', imageRefreshMode: 'FullRefresh', replaceAllMetadata: false, replaceAllImages: false });
-export const markPlayed = (id: string, on = true) => (on ? post<void>(`/UserPlayedItems/${id}`, undefined, { userId: currentUserId() }) : del<void>(`/UserPlayedItems/${id}`, { userId: currentUserId() }));
-
 // ── Delete ──
 
 export interface DeleteGroup { kind: 'season' | 'media' | 'extras'; id?: string; name?: string; index?: number; episodes: number; files: number; bytes: number; height?: number; codec?: string }

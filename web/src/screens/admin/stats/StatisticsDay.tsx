@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { clock, episodeTag } from '../../../lib/format';
+import { capitalize, clock, episodeTag, fmtIntl, listText } from '../../../lib/format';
 import { formatNumber, t, tn } from '../../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../../lib/router';
 import { BackBar } from '../../../ui/BackBar';
 import { AdminLayout, LoadError } from '../AdminLayout';
 import { getStatsDay, type Kind, type StatsDay, type StatsSession } from './api';
 import {
-  Avatar, Kpi, KIND_COLOUR, KINDS, MethodBadge, Trend, dayKey, fmtDate, hoursValue, kindLabel, listText, longDay,
+  Avatar, Kpi, KIND_COLOUR, KINDS, MethodBadge, Trend, dayKey, hoursValue, kindLabel, longDay,
   mbps, parseDay, shortDuration, songs
 } from './parts';
 import './stats.css';
@@ -106,7 +106,7 @@ export function AdminStatisticsDay({ date }: { date: string }) {
   const prev = new Date(day); prev.setDate(day.getDate() - step);
   const next = new Date(day); next.setDate(day.getDate() + step);
   const nextDisabled = !data || dayKey(next) > data.today;
-  const shortName = (d: Date) => fmtDate(d, { weekday: 'long', day: 'numeric' }).replace(/^./, (c) => c.toUpperCase());
+  const shortName = (d: Date) => capitalize(fmtIntl(d, { weekday: 'long', day: 'numeric' }));
   const current = data && data.date === date ? data : null;
 
   return (

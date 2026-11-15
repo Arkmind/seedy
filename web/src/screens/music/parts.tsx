@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { get, currentUserId } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
-import { ticksToSeconds } from '../../lib/format';
-import { locale, t, tn } from '../../lib/i18n';
+import { itemYear, ticksToSeconds } from '../../lib/format';
+import { t, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { Popover, toast } from '../../ui/overlay';
@@ -46,11 +46,8 @@ export const releaseLabel = (r: Release | 'appears') =>
   r === 'single' ? t('Single') : r === 'ep' ? t('EP') : r === 'appears' ? t('Appears on') : t('Album');
 
 export const albumArtist = (a: Pick<Track, 'AlbumArtist' | 'AlbumArtists' | 'Artists'>) => a.AlbumArtist || a.AlbumArtists?.[0]?.Name || a.Artists?.[0] || '';
-export const yearOf = (a: Pick<BaseItem, 'ProductionYear' | 'PremiereDate'>) => (a.ProductionYear ? String(a.ProductionYear) : a.PremiereDate ? a.PremiereDate.slice(0, 4) : '');
-/* "12 March 2024", "12 mars 2024". */
-export function longDate(d: Date): string {
-  try { return new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'long', year: 'numeric' }).format(d); } catch { return d.toDateString(); }
-}
+export const yearOf = (a: Pick<BaseItem, 'ProductionYear' | 'PremiereDate'>) => String(itemYear(a) ?? '');
+export { longDate } from '../../lib/format';
 
 export const dot = (...parts: (string | number | undefined | null | false)[]) => parts.filter((p) => p !== undefined && p !== null && p !== false && p !== '').join(' · ');
 

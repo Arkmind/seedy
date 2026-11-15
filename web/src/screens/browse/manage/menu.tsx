@@ -11,6 +11,8 @@ import {
 } from './actions';
 import { openManage } from './host';
 import { deleteSize } from './delete';
+import { listText } from '../../../lib/format';
+import { copyText } from '../../../lib/clipboard';
 
 /* Details · More menu board: the item's own actions on top (from the page), Add to playlist and Add to collection
    with their side menus, the Manage group for admins, Delete, then Open in Jellyfin and Copy link. */
@@ -66,12 +68,8 @@ export function ItemMenu({ item, children, shortcut }: {
     }
   };
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      toast(t('Link copied'));
-    } catch {
-      toast(t('Couldn’t copy the link'), 'error');
-    }
+    if (await copyText(window.location.href)) toast(t('Link copied'));
+    else toast(t('Couldn’t copy the link'), 'error');
   };
 
   const p = preview?.items[0];
@@ -226,7 +224,7 @@ function shareLabel(info: { OpenAccess?: boolean; Shares?: { UserId: string }[] 
   const shares = info?.Shares ?? [];
   if (!shares.length) return t('only you');
   const who = shares.map((s) => names.get(s.UserId.replace(/-/g, ''))).filter(Boolean) as string[];
-  if (who.length === shares.length && who.length <= 2) return t('shared with {names}', { names: who.join(t(' and ')) });
+  if (who.length === shares.length && who.length <= 2) return t('shared with {names}', { names: listText(who) });
   return tn(shares.length, 'shared with {n} person', 'shared with {n} people');
 }
 

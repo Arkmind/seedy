@@ -9,6 +9,7 @@ import { Header } from '../../ui/navbar/Header';
 import { EmptyState } from '../browse/parts';
 import { SERVICE_NAMES, useMediaSummary } from './media-parts';
 import { useSummary } from './parts';
+import { capitalize, listText } from '../../lib/format';
 
 /* The Requests page's frame (Requests, RequestsMusic, RequestsBooks, RequestsMine boards): the title with the
    Movies and shows · Music · Books tabs (only for the services the server has), the line saying where requests go,
@@ -38,11 +39,10 @@ function booksLine(formats: { format: string; service: string }[]): string {
   const words: Record<string, string> = { ebook: t('ebooks'), audiobook: t('audiobooks'), comic: t('comics and manga') };
   const parts = [...by.entries()].map(([service, fs]) => {
     const list = fs.map((f) => words[f] ?? f);
-    const what = list.length > 1 ? t('{a} and {b}', { a: list.slice(0, -1).join(', '), b: list[list.length - 1]! }) : list[0]!;
+    const what = listText(list);
     return t('{formats} from {service}', { formats: what, service: SERVICE_NAMES[service as keyof typeof SERVICE_NAMES] ?? service });
   });
-  const line = parts.join(' · ');
-  return line.charAt(0).toLocaleUpperCase() + line.slice(1);
+  return capitalize(parts.join(' · '));
 }
 
 function useServiceLine(service: Service | null): { line: string; open?: { url: string; name: string } } {
@@ -67,7 +67,7 @@ function useServiceLine(service: Service | null): { line: string; open?: { url: 
     ...(services.includes('music') ? ['Lidarr'] : []),
     ...[...new Set(Object.values(me.media?.bookRoutes ?? {}))].map((s) => SERVICE_NAMES[s as keyof typeof SERVICE_NAMES])
   ].filter(Boolean);
-  const list = names.length > 1 ? t('{a} and {b}', { a: names.slice(0, -1).join(', '), b: names[names.length - 1]! }) : names[0] ?? 'Seerr';
+  const list = names.length ? listText(names) : 'Seerr';
   return { line: t('Everything you asked for, from {services}', { services: list }) };
 }
 

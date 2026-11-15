@@ -1,7 +1,7 @@
 import { get, currentUserId } from '../../api/client';
 import { getItems, getNextUp, getResume, type ItemsQuery } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
-import { duration, episodeTag, plural, remainingSeconds, ticksToSeconds, timeLeft, yearRange } from '../../lib/format';
+import { duration, episodeTag, join, plural, remainingSeconds, ticksToSeconds, timeLeft, yearRange } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { asBook, type AudiobookParts } from '../../audio/api';
 
@@ -495,8 +495,6 @@ export function rowMeta(item: BaseItem): string {
 
 /* Books keep their writers as Author people (from the EPUB, or ComicInfo for comics). */
 const authorOf = (item: BaseItem) => (item.People ?? []).filter((p) => p.Type === 'Author' || p.Type === 'Writer').map((p) => p.Name).slice(0, 2).join(' & ');
-
-export const join = (...parts: (string | undefined | null | false)[]) => parts.filter(Boolean).join(' · ');
 
 /* The name a row shows: episodes carry their show ("Glass Harbor · North Pier"). */
 export function rowTitle(item: BaseItem): { lead: string; name: string } {

@@ -7,7 +7,7 @@ import { currentUserId } from '../../../lib/app-state';
 import { t, tn } from '../../../lib/i18n';
 import { Icon, type IconName } from '../../../ui/icons';
 import { MenuItem, Popover, toast } from '../../../ui/overlay';
-import { avatarColour } from '../../server/format';
+import { avatarColour } from '../../../ui/avatar';
 import { createPlaylist, getShareWith, type SharePerson } from './actions';
 import { ItemButton, ItemDialog, ItemField } from './dialog';
 

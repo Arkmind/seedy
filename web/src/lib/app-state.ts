@@ -168,4 +168,6 @@ export async function signOut() {
 }
 
 export const isAdmin = () => !!userStore.get()?.Policy?.IsAdministrator;
+/* The profile may download original files (Jellyfin's "Download media"). */
+export const canDownload = (user = userStore.get()) => !!user?.Policy?.EnableContentDownloading;
 export { currentUserId };

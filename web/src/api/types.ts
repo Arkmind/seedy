@@ -172,6 +172,8 @@ export interface UserPolicy {
   EnableSubtitleManagement?: boolean;
   EnableCollectionManagement?: boolean;
   EnableContentDeletion?: boolean;
+  EnableContentDeletionFromFolders?: string[];
+  EnableContentDownloading?: boolean;
   EnableRemoteControlOfOtherUsers?: boolean;
   EnableSharedDeviceControl?: boolean;
   EnableSyncPlayAccess?: boolean;

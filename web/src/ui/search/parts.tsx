@@ -7,6 +7,7 @@ import { Icon } from '../icons';
 import { loadGenres, marks, personLine, personMeta, type GenreInfo, type PersonInfo } from './engine';
 import { clearRecent, useRecent } from './recent';
 import { t } from '../../lib/i18n';
+import { initials } from '../../lib/format';
 
 /* Pieces shared by the bar's dropdown, the phone's full-screen search and the Search page. */
 
@@ -32,7 +33,6 @@ function tile(name: string) {
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return TILES[h % TILES.length];
 }
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).map((w) => w.charAt(0)).join('').slice(0, 2).toUpperCase();
 
 /* 16:9 artwork (a round photo for people), or initials on a colour while there's none. */
 export function Thumb({ item, width, class: cls }: { item: BaseItem; width: number; class?: string }) {

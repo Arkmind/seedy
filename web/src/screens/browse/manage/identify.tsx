@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { primaryUrl } from '../../../api/images';
 import type { BaseItem, ItemKind } from '../../../api/types';
-import { locale, t, tn } from '../../../lib/i18n';
+import { t, tn } from '../../../lib/i18n';
 import { Icon } from '../../../ui/icons';
 import { toast } from '../../../ui/overlay';
 import {
@@ -9,6 +9,7 @@ import {
   searchKind, type ExternalIdInfo, type RemoteSearchResult
 } from './api';
 import { ItemButton, ItemCheck, ItemDialog, ItemField } from './dialog';
+import { listText } from '../../../lib/format';
 import './identify.css';
 
 /* Identify (ItemIdentify board): look the item up by name, year or an id, pick the right match, and Jellyfin
@@ -54,10 +55,6 @@ function metaLine(r: RemoteSearchResult): string {
   if (r.Overview) parts.push(r.Overview.trim());
   if (!parts.length && r.SearchProviderName) parts.push(providerName(r.SearchProviderName));
   return parts.join(' · ');
-}
-
-function listOf(names: string[]): string {
-  try { return new Intl.ListFormat(locale(), { type: 'conjunction' }).format(names); } catch { return names.join(', '); }
 }
 
 export function IdentifyDialog({ item, onClose, onDone }: { item: BaseItem; onClose: () => void; onDone: () => void }) {
@@ -185,7 +182,7 @@ export function IdentifyDialog({ item, onClose, onDone }: { item: BaseItem; onCl
           </form>
           <div class="idf-count" aria-live="polite">
             <span class="idf-count-n">{searching && !results ? t('Searching…') : tn(results?.length ?? 0, '{n} match', '{n} matches')}</span>
-            {!!providers.length && <span class="idf-count-from">{t('From {providers} · sorted by how close they are', { providers: listOf(providers) })}</span>}
+            {!!providers.length && <span class="idf-count-from">{t('From {providers} · sorted by how close they are', { providers: listText(providers) })}</span>}
           </div>
           {results && !results.length && !searching ? (
             <p class="idf-note">{t('Nothing matched. Try the original title, leave the year out, or paste an ID.')}</p>

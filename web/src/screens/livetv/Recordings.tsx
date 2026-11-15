@@ -4,7 +4,7 @@ import {
   cancelSeriesTimer, cancelTimer, deleteRecording, getRecordings, updateSeriesTimer, type Program, type SeriesTimer, type Timer
 } from '../../api/livetv';
 import { meStore } from '../../lib/app-state';
-import { clock, fmtDayMonth, startOfDay } from '../../lib/format';
+import { clock, daysBetween, fmtWeekdayDate, pct, startOfDay } from '../../lib/format';
 import { t, tn } from '../../lib/i18n';
 import { navigate } from '../../lib/router';
 import { safeLocal, saveLocal, useAsync, useStore } from '../../lib/store';
@@ -13,7 +13,7 @@ import { Icon } from '../../ui/icons';
 import { confirm, toast } from '../../ui/overlay';
 import {
   categoryOf, channelColor, cleanName, endMs, fraction, loadTimers, programTitle, recordingNow, startMs, timeRange, tunersStore,
-  loadTuners, useChannels, useNow, useTimers, weekdayShort, type LiveChannel
+  loadTuners, useChannels, useNow, useTimers, type LiveChannel
 } from './data';
 import { LiveLayout } from './LiveLayout';
 import { Chip, ChannelLogo, LivePill, LtIcon, ProgramArt, StopIcon, hasProgramArt, watch } from './parts';
@@ -215,8 +215,8 @@ const NUM_WORDS = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'E
 /* "Three recordings overlap tomorrow from 21:40 to 22:00." */
 function overlapSentence(c: Conflict, now: number): string {
   const count = c.count < NUM_WORDS.length ? t(NUM_WORDS[c.count]) : String(c.count);
-  const days = Math.round((startOfDay(new Date(c.start)).getTime() - startOfDay(new Date(now)).getTime()) / 86_400_000);
-  const vars = { count, start: clock(new Date(c.start)), end: clock(new Date(c.end)), day: `${weekdayShort(new Date(c.start))} ${fmtDayMonth(new Date(c.start))}` };
+  const days = daysBetween(new Date(c.start), new Date(now));
+  const vars = { count, start: clock(new Date(c.start)), end: clock(new Date(c.end)), day: fmtWeekdayDate(new Date(c.start)) };
   if (days <= 0) return t('{count} recordings overlap tonight from {start} to {end}.', vars);
   if (days === 1) return t('{count} recordings overlap tomorrow from {start} to {end}.', vars);
   return t('{count} recordings overlap on {day} from {start} to {end}.', vars);
@@ -233,8 +233,8 @@ function tunerSentence(limit: number, excess: number, type: string): string {
 
 function dayHeading(day: number, now: number): string {
   const d = new Date(day);
-  const diff = Math.round((day - startOfDay(new Date(now)).getTime()) / 86_400_000);
-  const date = `${weekdayShort(d)} ${fmtDayMonth(d)}`;
+  const diff = daysBetween(d, new Date(now));
+  const date = fmtWeekdayDate(d);
   if (diff <= 0) return t('Tonight');
   if (diff === 1) return t('Tomorrow, {date}', { date });
   return date;
@@ -270,7 +270,7 @@ function RecordingNow({ timer: x, channel, now }: { timer: Timer; channel?: Live
         <span class="lt-recnow-title">{title}</span>
         <span class="lt-recnow-sub">{sub}</span>
         <div class="lt-recnow-progress">
-          <div class="lt-bar is-5 is-rec"><i style={{ width: (fraction(x as unknown as Program, now) * 100).toFixed(2) + '%' }} /></div>
+          <div class="lt-bar is-5 is-rec"><i style={{ width: pct(fraction(x as unknown as Program, now)) }} /></div>
           {t('{done} of {total} min', { done, total })}
         </div>
         <div class="lt-recnow-actions">
@@ -453,7 +453,7 @@ function RecordedCard({ item: r, channel, onDeleted }: { item: Rec; channel?: Li
   const isNew = !r.UserData?.Played && !pos && !!when && Date.now() - Date.parse(when) < 14 * 86_400_000;
   const episode = (r.IsSeries || r.Type === 'Episode') && r.IndexNumber != null;
   const title = episode ? programTitle({ ...r, IsSeries: true, Name: r.SeriesName ?? r.Name } as Program) : r.Name;
-  const meta = [when ? t('Recorded {date}', { date: `${weekdayShort(new Date(when))} ${fmtDayMonth(new Date(when))}` }) : '', channel?.label ?? (r.ChannelName ? cleanName(r.ChannelName) : '')].filter(Boolean).join(' · ');
+  const meta = [when ? t('Recorded {date}', { date: fmtWeekdayDate(new Date(when)) }) : '', channel?.label ?? (r.ChannelName ? cleanName(r.ChannelName) : '')].filter(Boolean).join(' · ');
   const remove = async () => {
     const ok = await confirm({ title: t('Delete {title}?', { title: title ?? '' }), text: t('The recording is removed from the server.'), action: t('Delete'), danger: true });
     if (!ok) return;
@@ -473,7 +473,7 @@ function RecordedCard({ item: r, channel, onDeleted }: { item: Rec; channel?: Li
           <div class="card-hover"><span class="play-disc is-48"><Icon name="play" size={22} /></span></div>
           {isNew && <span class="lt-card-pills"><span class="lt-tag"><span class="lt-tag-dot" />{t('New')}</span></span>}
           {art.src && channel && <ChannelLogo channel={channel} size={30} radius={8} class="lt-card-logo" />}
-          {pos > 0 && total > 0 && <div class="lt-card-bar"><i style={{ width: Math.min(100, (pos / total) * 100).toFixed(2) + '%' }} /></div>}
+          {pos > 0 && total > 0 && <div class="lt-card-bar"><i style={{ width: pct(pos / total) }} /></div>}
         </div>
         <span class="lt-card-text is-tight">
           <span class="lt-card-title is-14">{title}</span>

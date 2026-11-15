@@ -181,6 +181,10 @@ export const setFavorite = (id: string, on: boolean) =>
    of the show's other episodes in progress too), and the show comes back as Next up. */
 export const clearResume = (id: string) => del<void>(`/Seedy/Home/Continue/${id}`);
 
+/* Looks for new and changed files under a library or folder (Jellyfin's "Scan library files"). */
+export const scanItem = (id: string) =>
+  post<void>(`/Items/${id}/Refresh`, undefined, { Recursive: true, MetadataRefreshMode: 'Default', ImageRefreshMode: 'Default', ReplaceAllMetadata: false, ReplaceAllImages: false });
+
 export const setPlayed = (id: string, on: boolean) =>
   on
     ? post<{ Played: boolean }>(`/UserPlayedItems/${id}`, undefined, { userId: currentUserId() })

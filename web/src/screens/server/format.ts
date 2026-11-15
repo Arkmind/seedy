@@ -1,5 +1,5 @@
 import type { MediaStream } from '../../api/types';
-import { clock, daysFromToday, fmtDate, fmtDayMonth } from '../../lib/format';
+import { capitalize, clock, daysFromToday, fmtDate, fmtDayMonth, fmtMonthShort, hhmm24 } from '../../lib/format';
 import { formatNumber, getLang, locale, t, tn } from '../../lib/i18n';
 import type { Session, SystemInfo } from './api';
 
@@ -21,10 +21,7 @@ export function weekdayName(day: number | string): string {
 }
 
 /* The same as a label on its own ("Sunday", "Dimanche"). */
-export const weekdayLabel = (day: number | string) => {
-  const s = weekdayName(day);
-  return s.charAt(0).toLocaleUpperCase() + s.slice(1);
-};
+export const weekdayLabel = (day: number | string) => capitalize(weekdayName(day));
 
 /* .NET's DateTime.MinValue ("0001-01-01T00:00:00") means "never". */
 export function realDate(s?: string | null): Date | undefined {
@@ -122,56 +119,16 @@ export function cmpVersion(a?: string | null, b?: string | null): number {
   return 0;
 }
 
-/* Copies text; falls back to a hidden textarea where the async clipboard isn't allowed (plain http). */
-export async function copyText(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch { /* fall through */ }
-  try {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.setAttribute('readonly', '');
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand('copy');
-    ta.remove();
-    return ok;
-  } catch {
-    return false;
-  }
-}
-
-export function downloadText(name: string, text: string, type = 'text/plain;charset=utf-8') {
-  const blob = new Blob([text], { type });
-  const href = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = href;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(href), 1000);
-}
+export { copyText, downloadText } from '../../lib/clipboard';
 
 /* ── Dates and people (Overview, Users, Devices, Activity) ── */
 
-export const AVATAR_COLOURS = ['#f0f0f0', '#9fd3ff', '#b8f59f', '#ffc98a', '#e3c4ff', '#ffb3e6', '#a8e6df', '#f0b9a0'];
-export const avatarColour = (index: number) => AVATAR_COLOURS[Math.max(0, index) % AVATAR_COLOURS.length];
+export { AVATAR_COLOURS, avatarColour } from '../../ui/avatar';
 
-const pad = (n: number) => String(n).padStart(2, '0');
-export const hhmm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+export { hhmm24 as hhmm };
 
 /* Whole days between that day and today (0 today, 1 yesterday). */
-export function dayDiff(d: Date): number {
-  const a = new Date(d); a.setHours(0, 0, 0, 0);
-  const b = new Date(); b.setHours(0, 0, 0, 0);
-  return Math.round((b.getTime() - a.getTime()) / 86_400_000);
-}
+export const dayDiff = (d: Date) => -daysFromToday(d);
 
 /* "17 Oct", or "17 Oct 2025" outside this year. */
 export const shortDate = (d: Date) => (d.getFullYear() === new Date().getFullYear() ? fmtDayMonth(d) : fmtDate(d));
@@ -179,15 +136,15 @@ export const shortDate = (d: Date) => (d.getFullYear() === new Date().getFullYea
 /* "today at 18:30", "yesterday at 03:00", "on 12 Oct at 03:00": the {when} of a sentence. */
 export function atLabel(d: Date): string {
   const days = dayDiff(d);
-  if (days === 0) return t('today at {time}', { time: hhmm(d) });
-  if (days === 1) return t('yesterday at {time}', { time: hhmm(d) });
-  return t('on {date} at {time}', { date: fmtDayMonth(d), time: hhmm(d) });
+  if (days === 0) return t('today at {time}', { time: hhmm24(d) });
+  if (days === 1) return t('yesterday at {time}', { time: hhmm24(d) });
+  return t('on {date} at {time}', { date: fmtDayMonth(d), time: hhmm24(d) });
 }
 
 /* Activity times: "20:02" today, "Yesterday", then "17 Oct". */
 export function activityWhen(d: Date): string {
   const days = dayDiff(d);
-  if (days === 0) return hhmm(d);
+  if (days === 0) return hhmm24(d);
   if (days === 1) return t('Yesterday');
   return shortDate(d);
 }
@@ -203,7 +160,7 @@ function lastSeenText(d: Date): string {
   const mins = Math.round((Date.now() - d.getTime()) / 60_000);
   const days = dayDiff(d);
   if (mins < 60) return t('Last seen {n} min ago', { n: Math.max(1, mins) });
-  if (days === 0) return t('Last seen today at {time}', { time: hhmm(d) });
+  if (days === 0) return t('Last seen today at {time}', { time: hhmm24(d) });
   if (days === 1) return t('Last seen yesterday');
   if (days < 7) return t('Last seen {n} days ago', { n: days });
   if (days < 30) return tn(Math.round(days / 7), 'Last seen {n} week ago', 'Last seen {n} weeks ago');
@@ -238,14 +195,6 @@ export const mbps = (bps?: number) => {
   return `${formatNumber(m >= 10 ? Math.round(m) : Math.round(m * 10) / 10)} Mbps`;
 };
 
-/* Short month and day names as the boards write them ("19 Oct", "Mon"); French uses its usual abbreviations. */
-const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const MONTHS_FR = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
-const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const DAYS_FR = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
-export const monthShort = (d: Date) => (getLang() === 'fr' ? MONTHS_FR : MONTHS_EN)[d.getMonth()];
-export const dayShort = (d: Date) => (getLang() === 'fr' ? DAYS_FR : DAYS_EN)[d.getDay()];
-
 /* "Now", "2 min ago", "Yesterday, 19:40", "14 Oct", "2 Aug 2025". */
 export function lastActive(iso?: string | null, now = Date.now()): string {
   if (!iso) return t('Never');
@@ -256,10 +205,10 @@ export function lastActive(iso?: string | null, now = Date.now()): string {
   if (m < 60) return t('{n} min ago', { n: m });
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
-  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const hm = hhmm24(d);
   if (d >= today) return t('Today, {time}', { time: hm });
   if (d.getTime() >= today.getTime() - 86_400_000) return t('Yesterday, {time}', { time: hm });
-  const dm = `${d.getDate()} ${monthShort(d)}`;
+  const dm = `${d.getDate()} ${fmtMonthShort(d)}`;
   return d.getFullYear() === today.getFullYear() ? dm : `${dm} ${d.getFullYear()}`;
 }
 

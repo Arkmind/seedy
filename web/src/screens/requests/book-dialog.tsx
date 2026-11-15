@@ -5,7 +5,7 @@ import { useAsync } from '../../lib/store';
 import { Icon, type IconName } from '../../ui/icons';
 import { Sheet, toast } from '../../ui/overlay';
 import type { BookTarget } from './books';
-import { BookArt, noteRequest, refreshMediaSummary, SERVICE_NAMES } from './media-parts';
+import { BookArt, noteRequest, refreshMediaSummary, seriesNumber, SERVICE_NAMES } from './media-parts';
 import { Quota } from './music-dialog';
 
 /* Request a book (RequestBook board): the ebook, the audiobook or both (a comic for comics), the language, the
@@ -37,7 +37,6 @@ function routeLine(format: BookFormat, service: string): string {
   return name;
 }
 
-const num = (n?: number) => (n === undefined ? '' : Number.isInteger(n) ? String(n) : n.toFixed(1));
 
 export function RequestBook({ target, onClose, onDone }: { target: BookTarget; onClose: () => void; onDone?: () => void }) {
   const state = useAsync(() => Promise.all([bookDetails(target.card), mediaOptions('book')]), [target.card.workId]);
@@ -107,12 +106,12 @@ function Body({ book, opts, row, loading, error, retry, onClose, onDone }: {
   };
 
   const meta = [
-    book.series ? t('{series}, book {n}', { series: book.series, n: num(book.seriesIndex) }) : '',
+    book.series ? t('{series}, book {n}', { series: book.series, n: seriesNumber(book.seriesIndex) }) : '',
     book.year ? String(book.year) : '',
     book.pages ? t('{n} pages', { n: book.pages }) : ''
   ].filter(Boolean);
   const read = book.readTo !== undefined && book.readFrom !== undefined
-    ? (book.readFrom === book.readTo ? t('You’ve read book {n} on Seedy.', { n: num(book.readTo) }) : t('You’ve read books {from} to {to} on Seedy.', { from: num(book.readFrom), to: num(book.readTo) }))
+    ? (book.readFrom === book.readTo ? t('You’ve read book {n} on Seedy.', { n: seriesNumber(book.readTo) }) : t('You’ve read books {from} to {to} on Seedy.', { from: seriesNumber(book.readFrom), to: seriesNumber(book.readTo) }))
     : '';
   const services = [...new Set([...picked].map((f) => available.find((a) => a.format === f)?.service).filter(Boolean))] as string[];
   const libraries = [...new Set([...picked].map((f) => available.find((a) => a.format === f)?.library).filter(Boolean))] as string[];

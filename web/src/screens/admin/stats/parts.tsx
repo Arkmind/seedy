@@ -1,8 +1,8 @@
 import type { ComponentChildren } from 'preact';
 import { userImageUrl } from '../../../api/images';
-import { clock } from '../../../lib/format';
-import { formatNumber, locale, t, tn } from '../../../lib/i18n';
-import { AVATAR_COLOURS } from '../../server/format';
+import { capitalize, clock, fmtIntl } from '../../../lib/format';
+import { formatNumber, t, tn } from '../../../lib/i18n';
+import { AVATAR_COLOURS } from '../../../ui/avatar';
 import type { Kind, Method } from './api';
 
 /* Pieces both Statistics pages share. Colours are the boards'. */
@@ -66,24 +66,13 @@ export function parseDay(day: string): Date {
 export const dayKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-export function fmtDate(d: Date, opts: Intl.DateTimeFormatOptions): string {
-  try { return new Intl.DateTimeFormat(locale(), opts).format(d); } catch { return d.toDateString(); }
-}
-
 /* "Saturday 8 November" (French: "samedi 8 novembre"); the comma en-GB puts after the weekday is dropped. */
 export const longDay = (d: Date, year = false) =>
-  capital(fmtDate(d, { weekday: 'long', day: 'numeric', month: 'long', ...(year ? { year: 'numeric' } : {}) }).replace(',', ''));
+  capitalize(fmtIntl(d, { weekday: 'long', day: 'numeric', month: 'long', ...(year ? { year: 'numeric' } : {}) }).replace(',', ''));
 
 /* "Sat 8 Nov at 21:10". */
 export const shortMoment = (d: Date) =>
-  t('{date} at {time}', { date: capital(fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')), time: clock(d) });
-
-export const capital = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
-
-/* "Chrome, Firefox and Safari". */
-export function listText(items: string[]): string {
-  try { return new Intl.ListFormat(locale(), { style: 'long', type: 'conjunction' }).format(items); } catch { return items.join(', '); }
-}
+  t('{date} at {time}', { date: capitalize(fmtIntl(d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')), time: clock(d) });
 
 export function pctText(n: number): string {
   return `${formatNumber(Math.round(n))}%`;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { JELLYFIN_WEB, post } from '../../api/client';
+import { JELLYFIN_WEB } from '../../api/client';
 import type { BaseItem } from '../../api/types';
-import { isAdmin, userStore } from '../../lib/app-state';
+import { canDownload, isAdmin, userStore } from '../../lib/app-state';
 import { t } from '../../lib/i18n';
 import { Link, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -19,6 +19,7 @@ import { FolderCard, FolderGrid, JustifiedRows, rowFor, TabRow, Timeline, counts
 import { PhotoSelectionBar } from './PhotosLibrary';
 import { PhotoViewer } from './Viewer';
 import { downloadZip } from './zip';
+import { LibraryMenuItems } from '../../ui/library-menu';
 import './photos.css';
 
 /* A folder of photos (Photos · Folder board): back button and breadcrumbs, three photos beside the folder's name,
@@ -41,7 +42,7 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
   const row = rowFor(size);
   const managed = useStore(manageChanged);
   const user = useStore(userStore);
-  const canDownload = !!(user?.Policy as { EnableContentDownloading?: boolean } | undefined)?.EnableContentDownloading;
+  const mayDownload = canDownload(user);
   const base = `/details/${item.Id}`;
 
   const ancestors = useAsync(() => ancestorsOf(item.Id).catch(() => [] as BaseItem[]), [item.Id]);
@@ -125,7 +126,7 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
             <div class="ph-hero-actions">
               <button type="button" class="ph-btn is-primary" onClick={() => void slideshow(false)}><PIcon name="slideshow" size={18} />{t('Slideshow')}</button>
               <button type="button" class="ph-btn" onClick={() => void slideshow(true)}><PIcon name="shuffle" size={18} />{t('Shuffle')}</button>
-              {canDownload && <button type="button" class="ph-btn" disabled={zipping || !fi?.count} onClick={() => void download()}><PIcon name="download" size={18} />{zipping ? t('Preparing…') : t('Download')}</button>}
+              {mayDownload && <button type="button" class="ph-btn" disabled={zipping || !fi?.count} onClick={() => void download()}><PIcon name="download" size={18} />{zipping ? t('Preparing…') : t('Download')}</button>}
               <AlbumMenu item={item} onSelect={() => sel.start()} onRefresh={() => { paged.reload(); info.reload(); subs.reload(); }} />
             </div>
             {folders.length > 0 && (
@@ -229,21 +230,7 @@ function AlbumMenu({ item, onSelect, onRefresh }: { item: BaseItem; onSelect: ()
         <>
           <MenuItem icon="check" label={t('Select photos')} sub={t('Act on several at once')} onSelect={() => { close(); onSelect(); }} />
           <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); onRefresh(); }} />
-          <MenuItem icon="link" label={t('Copy link')} onSelect={() => {
-            close();
-            navigator.clipboard.writeText(window.location.href).then(() => toast(t('Link copied')), () => toast(t('Couldn’t copy the link'), 'error'));
-          }} />
-          <MenuItem icon="external" label={t('Open in Jellyfin')} href={`${JELLYFIN_WEB}#/list.html?parentId=${item.Id}`} />
-          {isAdmin() && (
-            <>
-              <div class="menu-sep" />
-              <MenuItem icon="refresh" label={t('Scan this folder')} sub={t('Look for new and changed photos')} onSelect={() => {
-                close();
-                post<void>(`/Items/${item.Id}/Refresh`, undefined, { Recursive: true, MetadataRefreshMode: 'Default', ImageRefreshMode: 'Default', ReplaceAllMetadata: false, ReplaceAllImages: false })
-                  .then(() => toast(t('Scanning {name}', { name: item.Name }), 'pending'), () => toast(t('Couldn’t start the scan'), 'error'));
-              }} />
-            </>
-          )}
+          <LibraryMenuItems item={item} jellyfinHref={`${JELLYFIN_WEB}#/list.html?parentId=${item.Id}`} admin={isAdmin()} close={close} scanLabel={t('Scan this folder')} scanSub={t('Look for new and changed photos')} />
         </>
       )}
     </MenuButton>

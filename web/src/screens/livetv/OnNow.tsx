@@ -12,6 +12,7 @@ import {
 import { LiveLayout, NoChannels } from './LiveLayout';
 import { ChannelLogo, HeartIcon, LivePill, ProgramArt, RecDot, SoundButton, TagPill, hasProgramArt, watch } from './parts';
 import { useLivePreview } from './preview';
+import { pct } from '../../lib/format';
 
 /* Live TV · On now (board "Live TV · On now"): the last watched channel with a muted live preview, then rows —
    on now on favourite channels, starting soon, and the guide's categories for tonight. */
@@ -123,7 +124,7 @@ function Hero({ channel, program, next, now, last, timers }: {
         {program ? (
           <div class="lt-hero-meta">
             <div class="lt-hero-line"><span>{[cat, timeRange(program)].filter(Boolean).join(' · ')}</span><b>{leftLabel(program, now)}</b></div>
-            <div class="lt-bar is-6"><i style={{ width: (fraction(program, now) * 100).toFixed(2) + '%' }} /></div>
+            <div class="lt-bar is-6"><i style={{ width: pct(fraction(program, now)) }} /></div>
           </div>
         ) : (
           <div class="lt-hero-line"><span>{t('No guide information')}</span></div>
@@ -220,7 +221,7 @@ export function ProgramCard({ program, channel, now, timers, first, grid }: {
           </div>
           {art && <ChannelLogo channel={channel} size={34} radius={9} class="lt-card-logo" />}
           {rec && <span class="lt-card-rec"><span class="lt-rec-dot" />{rec === 'now' ? t('Recording') : t('Recording set')}</span>}
-          {live && program && <div class="lt-card-bar"><i style={{ width: (fraction(program, now) * 100).toFixed(2) + '%' }} /></div>}
+          {live && program && <div class="lt-card-bar"><i style={{ width: pct(fraction(program, now)) }} /></div>}
         </div>
         <div class="lt-card-text">
           <span class="lt-card-title">{title}</span>

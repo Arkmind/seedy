@@ -4,7 +4,7 @@ import { getEpisodes, getLocalTrailers, getSimilar, setPlayed } from '../../api/
 import { backdropUrl, cardArt } from '../../api/images';
 import type { BaseItem, Person } from '../../api/types';
 import { viewsStore } from '../../lib/app-state';
-import { fmtDate, fmtWeekdayDate, pct, plural, progressFraction, remainingSeconds, runtime, timeLeft, ratingLabel, dayOf, fitTitle } from '../../lib/format';
+import { fmtDate, score as fmtScore, fmtWeekdayDate, pct, plural, progressFraction, remainingSeconds, runtime, timeLeft, ratingLabel, dayOf, fitTitle } from '../../lib/format';
 import { Link, href, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { Art, CastCard, ItemCard, SkeletonCards, WatchedCheck, playPath } from '../../ui/cards';
@@ -171,7 +171,7 @@ export function MetaLine({ parts, rating, score, genres }: { parts: (string | un
       {first && <span>{first}</span>}
       {rating && <span class="rating-badge">{ratingLabel(rating)}</span>}
       {rest.map((p) => <span key={p}>{p}</span>)}
-      {score ? <span class="score"><Icon name="star" size={15} />{score.toFixed(1)}</span> : null}
+      {score ? <span class="score"><Icon name="star" size={15} />{fmtScore(score)}</span> : null}
       {genres && genres.length > 0 && <span>{genres.join(' · ')}</span>}
     </>
   );

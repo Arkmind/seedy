@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { getGuideInfo, getPrograms, type Program } from '../../api/livetv';
 import { meStore } from '../../lib/app-state';
-import { clock, duration, episodeTag, fmtDayMonth, startOfDay } from '../../lib/format';
-import { locale, t } from '../../lib/i18n';
+import { clock, daysBetween, duration, episodeTag, fmtIntl, fmtWeekdayDate, fmtWeekdayShort, pct, startOfDay } from '../../lib/format';
+import { t } from '../../lib/i18n';
 import { useLocation } from '../../lib/router';
 import { safeLocal, saveLocal, useAsync, useStore } from '../../lib/store';
 import { Switch } from '../../ui/controls';
@@ -10,7 +10,7 @@ import { Icon } from '../../ui/icons';
 import { MenuButton, MenuItem, Popover, Sheet } from '../../ui/overlay';
 import {
   CATEGORIES, categoryOf, previewAllowed, endMs, fraction, isAiring, isFavorite, leftLabel, newTag, programsChanged, recState, startMs, timeRange,
-  toggleRecord, toggleSeries, useChannels, useNow, useTimers, weekdayShort, type Category, type LiveChannel
+  toggleRecord, toggleSeries, useChannels, useNow, useTimers, type Category, type LiveChannel
 } from './data';
 import { LiveLayout, NoChannels } from './LiveLayout';
 import { ChannelLogo, Chip, HeartIcon, LivePill, LtIcon, ProgramArt, RecDot, SeriesDot, SoundButton, watch } from './parts';
@@ -293,14 +293,14 @@ export function LiveGuide() {
       <div
         ref={gridRef}
         role="grid"
-        aria-label={t('TV guide, {day}', { day: new Intl.DateTimeFormat(locale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(ws)) })}
+        aria-label={t('TV guide, {day}', { day: fmtIntl(new Date(ws), { weekday: 'long', day: 'numeric', month: 'long' }) })}
         aria-rowcount={rows.length + 1}
         class="lt-grid"
         onKeyDown={(e) => onGridKey(e as unknown as KeyboardEvent)}
       >
         <div role="row" class="lt-grid-head">
           <div role="columnheader" class="lt-grid-corner">
-            <span>{`${weekdayShort(new Date(ws))} ${fmtDayMonth(new Date(ws))}`}</span>
+            <span>{fmtWeekdayDate(new Date(ws))}</span>
             <span class="lt-grid-nav">
               <button type="button" class="lt-grid-arrow" aria-label={t('Earlier')} onClick={() => setWs(ws - HALF * 2)}><Icon name="chevronLeft" size={16} stroke={2.4} /></button>
               <button type="button" class="lt-grid-arrow" aria-label={t('Later')} onClick={() => setWs(ws + HALF * 2)}><Icon name="chevronRight" size={16} stroke={2.4} /></button>
@@ -446,8 +446,8 @@ export function LiveGuide() {
 /* "Today, Mon 19", "Tomorrow, Tue 20", "Wed 21" */
 function dayLabel(day: number, now: number): string {
   const d = new Date(day);
-  const diff = Math.round((day - startOfDay(new Date(now)).getTime()) / 86_400_000);
-  const short = `${weekdayShort(d)} ${d.getDate()}`;
+  const diff = daysBetween(d, new Date(now));
+  const short = `${fmtWeekdayShort(d)} ${d.getDate()}`;
   if (diff === 0) return t('Today, {day}', { day: short });
   if (diff === 1) return t('Tomorrow, {day}', { day: short });
   if (diff === -1) return t('Yesterday, {day}', { day: short });
@@ -523,8 +523,8 @@ function GuideHero({ program: p, channel, now, timers, onAbout, programs }: {
         </div>
         <h2 id="lt-ghero-h" class="lt-ghero-title">{p.Name} {epLine && <span class="lt-ghero-ep">{epLine}</span>}</h2>
         <div class="lt-ghero-meta">
-          <span>{[cat, day ? `${weekdayShort(new Date(startMs(p)))} ${fmtDayMonth(new Date(startMs(p)))}` : '', timeRange(p)].filter(Boolean).join(' · ')}</span>
-          {airing && <div class="lt-bar is-5 lt-ghero-bar"><i style={{ width: (fraction(p, now) * 100).toFixed(2) + '%' }} /></div>}
+          <span>{[cat, day ? fmtWeekdayDate(new Date(startMs(p))) : '', timeRange(p)].filter(Boolean).join(' · ')}</span>
+          {airing && <div class="lt-bar is-5 lt-ghero-bar"><i style={{ width: pct(fraction(p, now)) }} /></div>}
           <b>{airing ? leftLabel(p, now) : future ? t('Starts in {time}', { time: duration((startMs(p) - now) / 1000) }) : t('Ended')}</b>
         </div>
         {p.Overview && <p class="lt-ghero-text">{p.Overview}</p>}
@@ -546,7 +546,7 @@ function GuideHero({ program: p, channel, now, timers, onAbout, programs }: {
             <LtIcon name="info" size={19} />
           </button>
           {nextEp && (
-            <span class="lt-ghero-next">{t('Next episode')} · <b>{`${weekdayShort(new Date(startMs(nextEp)))} ${fmtDayMonth(new Date(startMs(nextEp)))}, ${clock(new Date(startMs(nextEp)))}`}</b></span>
+            <span class="lt-ghero-next">{t('Next episode')} · <b>{`${fmtWeekdayDate(new Date(startMs(nextEp)))}, ${clock(new Date(startMs(nextEp)))}`}</b></span>
           )}
         </div>
       </div>
@@ -571,7 +571,7 @@ function AboutProgram({ program: p, channel, onClose }: { program: Program; chan
   const ep = p.IsSeries && p.IndexNumber != null ? episodeTag(p) : '';
   const facts = [
     channel ? `${channel.num} · ${channel.label}` : p.ChannelName,
-    `${weekdayShort(new Date(startMs(p)))} ${fmtDayMonth(new Date(startMs(p)))} · ${timeRange(p)}`,
+    `${fmtWeekdayDate(new Date(startMs(p)))} · ${timeRange(p)}`,
     duration((endMs(p) - startMs(p)) / 1000),
     p.OfficialRating
   ].filter(Boolean);

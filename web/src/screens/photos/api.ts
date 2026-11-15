@@ -2,6 +2,7 @@ import { SERVER_URL, currentUserId, get, withApiKey } from '../../api/client';
 import { getItems, type ItemsQuery } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { formatNumber, getLang, locale, t, tn } from '../../lib/i18n';
+import { capitalize, fmtIntl } from '../../lib/format';
 
 /* Photos libraries (Photos boards). Jellyfin 12 keeps photos in "Home videos and photos" libraries (the old photos
    type still shows up on servers that were upgraded): Photo and Video items, in PhotoAlbum folders (a folder with
@@ -125,30 +126,23 @@ export function bytesLabel(n?: number): string {
 /* "October 2026". */
 export function monthYear(d: Date): string {
   try {
-    const s = new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric' }).format(d);
-    return s.charAt(0).toLocaleUpperCase() + s.slice(1);
+    return capitalize(new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric' }).format(d));
   } catch { return `${d.getMonth() + 1}/${d.getFullYear()}`; }
 }
 
 /* "Sun 9 August 2026". */
-export function longDay(d: Date): string {
-  try {
-    const s = new Intl.DateTimeFormat(locale(), { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }).format(d).replace(/,/g, '');
-    return s.charAt(0).toLocaleUpperCase() + s.slice(1);
-  } catch { return d.toDateString(); }
-}
+export const longDay = (d: Date) => capitalize(fmtIntl(d, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }).replace(/,/g, ''));
 
 /* "9 to 16 August 2026", "28 July to 3 August 2026", "30 December 2025 to 2 January 2026". */
 export function dateRange(a?: Date, b?: Date): string {
   if (!a || !b) return '';
   const [from, to] = a <= b ? [a, b] : [b, a];
-  const fmt = (d: Date, o: Intl.DateTimeFormatOptions) => { try { return new Intl.DateTimeFormat(locale(), o).format(d); } catch { return d.toDateString(); } };
-  if (from.toDateString() === to.toDateString()) return fmt(from, { day: 'numeric', month: 'long', year: 'numeric' });
+  if (from.toDateString() === to.toDateString()) return fmtIntl(from, { day: 'numeric', month: 'long', year: 'numeric' });
   if (from.getFullYear() !== to.getFullYear())
-    return t('{from} to {to}', { from: fmt(from, { day: 'numeric', month: 'long', year: 'numeric' }), to: fmt(to, { day: 'numeric', month: 'long', year: 'numeric' }) });
+    return t('{from} to {to}', { from: fmtIntl(from, { day: 'numeric', month: 'long', year: 'numeric' }), to: fmtIntl(to, { day: 'numeric', month: 'long', year: 'numeric' }) });
   if (from.getMonth() !== to.getMonth())
-    return t('{from} to {to}', { from: fmt(from, { day: 'numeric', month: 'long' }), to: fmt(to, { day: 'numeric', month: 'long', year: 'numeric' }) });
-  return t('{from} to {to}', { from: String(from.getDate()), to: fmt(to, { day: 'numeric', month: 'long', year: 'numeric' }) });
+    return t('{from} to {to}', { from: fmtIntl(from, { day: 'numeric', month: 'long' }), to: fmtIntl(to, { day: 'numeric', month: 'long', year: 'numeric' }) });
+  return t('{from} to {to}', { from: String(from.getDate()), to: fmtIntl(to, { day: 'numeric', month: 'long', year: 'numeric' }) });
 }
 
 /* "1 year ago", "3 years ago". */

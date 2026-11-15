@@ -10,6 +10,7 @@ import {
 } from './data';
 import { LiveLayout, NoChannels } from './LiveLayout';
 import { ChannelLogo, Chip, HeartIcon, LtIcon, watch } from './parts';
+import { pct } from '../../lib/format';
 
 /* Live TV · Channels (no board of its own; built from the Guide's pieces): every channel as a tile with its number,
    logo and name, what's on now with its progress and what's next, and the favourite heart. Filter chips as on the
@@ -148,7 +149,7 @@ function ChannelTile({ channel: c, program: p, next, now, rec }: { channel: Live
               <span class="lt-ch-titletext">{programTitle(p)}</span>
             </span>
             <span class="lt-ch-meta"><span>{timeRange(p)}</span><b>{leftLabel(p, now)}</b></span>
-            <span class="lt-bar is-5"><i style={{ width: (fraction(p, now) * 100).toFixed(2) + '%' }} /></span>
+            <span class="lt-bar is-5"><i style={{ width: pct(fraction(p, now)) }} /></span>
             {next && <span class="lt-ch-next">{t('Next')} · <b>{timeRange(next).split(' – ')[0]} {next.Name}</b></span>}
           </span>
         ) : (

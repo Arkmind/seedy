@@ -1,12 +1,12 @@
 import { Fragment } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { JELLYFIN_WEB, post } from '../../api/client';
+import { JELLYFIN_WEB } from '../../api/client';
 import { getItems, setFavorite } from '../../api/jellyfin';
 import type { BaseItem } from '../../api/types';
-import { isAdmin, meStore, userStore } from '../../lib/app-state';
+import { canDownload, isAdmin, meStore } from '../../lib/app-state';
 import { CUSTOM, readCustom } from '../me/prefs';
 import { t, tn } from '../../lib/i18n';
-import { fmtMonthYear } from '../../lib/format';
+import { capitalize, fmtMonthShort } from '../../lib/format';
 import { navigate, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { Header } from '../../ui/navbar/Header';
@@ -26,6 +26,8 @@ import {
 } from './parts';
 import { PhotoViewer } from './Viewer';
 import { downloadZip } from './zip';
+import { canDeleteAny } from '../browse/manage/actions';
+import { LibraryMenuItems } from '../../ui/library-menu';
 import './photos.css';
 
 /* A photos library (Photos · Timeline board): its name and counts, Slideshow, Select and ⋯, then Timeline, Folders,
@@ -237,10 +239,7 @@ function TimelineWithRail({ view, list, paged, row, select, rail, onOpen }: {
   };
 
   // "Oct", "Sep" (the app's short month names, as on the board).
-  const monthName = (m: number) => {
-    const s = fmtMonthYear(new Date(2000, m, 1)).replace(/\s*\d+$/, '').replace(/\.$/, '');
-    return s.charAt(0).toLocaleUpperCase() + s.slice(1);
-  };
+  const monthName = (m: number) => capitalize(fmtMonthShort(new Date(2000, m, 1)).replace(/\.$/, ''));
 
   return (
     <div class="ph-timeline" ref={wrap}>
@@ -321,21 +320,7 @@ function LibraryMenu({ view, onRefresh }: { view: BaseItem; onRefresh: () => voi
       {(close) => (
         <>
           <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); onRefresh(); }} />
-          <MenuItem icon="link" label={t('Copy link')} onSelect={() => {
-            close();
-            navigator.clipboard.writeText(window.location.href).then(() => toast(t('Link copied')), () => toast(t('Couldn’t copy the link'), 'error'));
-          }} />
-          <MenuItem icon="external" label={t('Open in Jellyfin')} href={`${JELLYFIN_WEB}#/list.html?parentId=${view.Id}`} />
-          {isAdmin() && (
-            <>
-              <div class="menu-sep" />
-              <MenuItem icon="refresh" label={t('Scan library files')} sub={t('Look for new and changed media')} onSelect={() => {
-                close();
-                post<void>(`/Items/${view.Id}/Refresh`, undefined, { Recursive: true, MetadataRefreshMode: 'Default', ImageRefreshMode: 'Default', ReplaceAllMetadata: false, ReplaceAllImages: false })
-                  .then(() => toast(t('Scanning {name}', { name: view.Name }), 'pending'), () => toast(t('Couldn’t start the scan'), 'error'));
-              }} />
-            </>
-          )}
+          <LibraryMenuItems item={view} jellyfinHref={`${JELLYFIN_WEB}#/list.html?parentId=${view.Id}`} admin={isAdmin()} close={close} />
         </>
       )}
     </MenuButton>
@@ -344,8 +329,6 @@ function LibraryMenu({ view, onRefresh }: { view: BaseItem; onRefresh: () => voi
 
 /* ───────── Selection ───────── */
 
-const canDelete = () => isAdmin() || !!userStore.get()?.Policy?.EnableContentDeletion || !!(userStore.get()?.Policy as { EnableContentDeletionFromFolders?: string[] } | undefined)?.EnableContentDeletionFromFolders?.length;
-const canDownload = () => !!(userStore.get()?.Policy as { EnableContentDownloading?: boolean } | undefined)?.EnableContentDownloading;
 
 export function PhotoSelectionBar({ sel, total, name, onChanged, onSelectAll, onShow }: {
   sel: Selection; total: number; name: string; onChanged: (items: PhotoItem[]) => void; onSelectAll: () => Promise<void>; onShow: (photos: PhotoItem[]) => void;
@@ -391,7 +374,7 @@ export function PhotoSelectionBar({ sel, total, name, onChanged, onSelectAll, on
             <PIcon name="download" size={18} />{busy === 'zip' ? t('Working…') : t('Download')}
           </button>
         )}
-        {canDelete() && (
+        {canDeleteAny() && (
           <button type="button" class="lib-sel-btn is-danger" disabled={!n || busy !== null} onClick={() => openManage('delete', sel.items)}>
             <Icon name="trash" size={18} />{t('Delete')}
           </button>

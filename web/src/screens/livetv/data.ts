@@ -5,7 +5,7 @@ import {
 } from '../../api/livetv';
 import { setFavorite } from '../../api/jellyfin';
 import { meStore } from '../../lib/app-state';
-import { clock, duration, episodeTag, startOfDay } from '../../lib/format';
+import { clock, daysBetween, duration, episodeTag, fmtWeekdayShort, startOfDay } from '../../lib/format';
 import { locale, t } from '../../lib/i18n';
 import { createStore, safeLocal, saveLocal, useStore } from '../../lib/store';
 import { confirm, toast } from '../../ui/overlay';
@@ -284,15 +284,12 @@ export function soonLabel(p: Program, now: number): string {
 /* "Tomorrow 13:00" for a programme on another day, else "22:00 – 22:30". */
 export function whenLine(p: Program, now: number): string {
   const s = new Date(startMs(p));
-  const days = Math.round((startOfDay(s).getTime() - startOfDay(new Date(now)).getTime()) / 86_400_000);
+  const days = daysBetween(s, new Date(now));
   if (days >= 1 && s.getHours() >= 6) {
-    return days === 1 ? t('Tomorrow {time}', { time: clock(s) }) : `${weekdayShort(s)} ${clock(s)}`;
+    return days === 1 ? t('Tomorrow {time}', { time: clock(s) }) : `${fmtWeekdayShort(s)} ${clock(s)}`;
   }
   return timeRange(p);
 }
-
-/* "Mon" / "lun." as each language writes it. */
-export const weekdayShort = (d: Date) => new Intl.DateTimeFormat(locale(), { weekday: 'short' }).format(d);
 
 /* "The Undercroft · S1 E3" */
 export function programTitle(p: Program): string {

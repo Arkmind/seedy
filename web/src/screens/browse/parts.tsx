@@ -10,8 +10,8 @@ import { meStore } from '../../lib/app-state';
 import { createStore, useStore } from '../../lib/store';
 import type { BaseItem, ItemsResult, UserItemData } from '../../api/types';
 import {
-  daysFromToday, episodeCode, episodeTag, fmtDate, fmtDayMonth, plural, progressFraction, remainingSeconds,
-  runtime, timeLeft, whenLabel, yearRange, dayOf } from '../../lib/format';
+  dayOf, daysFromToday, episodeCode, episodeTag, fmtDate, fmtDayMonth, itemYear, join, plural, progressFraction, remainingSeconds, runtime, timeLeft, whenLabel, yearRange
+} from '../../lib/format';
 import { Link, navigate } from '../../lib/router';
 import { ItemCard, LibraryCard, SkeletonCards, WatchedCheck, Progress, Art, detailsPath, playPath } from '../../ui/cards';
 import { cardArt, primaryUrl } from '../../api/images';
@@ -31,8 +31,7 @@ export function patchUserData(item: BaseItem, patch: Partial<UserItemData>): Bas
   return { ...item, UserData: { ...item.UserData, ...patch } };
 }
 
-export const yearOf = (item: BaseItem): string =>
-  item.ProductionYear ? String(item.ProductionYear) : item.PremiereDate ? String(dayOf(item.PremiereDate)!.getFullYear()) : '';
+export const yearOf = (item: BaseItem): string => String(itemYear(item) ?? '');
 
 /* "3 seasons" — ChildCount on a series is its season count. */
 export function seasonsLabel(item: BaseItem): string {
@@ -43,7 +42,7 @@ export function seasonsLabel(item: BaseItem): string {
 export const typeLabel = (item: BaseItem) =>
   item.Type === 'Series' ? 'Series' : item.Type === 'Episode' ? 'Episode' : item.Type === 'BoxSet' ? 'Collection' : item.Type === 'MusicAlbum' ? t('Album') : t('Movie');
 
-export const join = (...parts: (string | undefined | null | false)[]) => parts.filter(Boolean).join(' · ');
+export { join };
 
 /* "S3 E2 · The Pass · 34 min left" / "Movie · 1 h 12 min left". */
 export function resumeMeta(item: BaseItem): string {

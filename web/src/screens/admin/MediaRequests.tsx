@@ -14,6 +14,7 @@ import { MenuButton, MenuItem, Sheet, toast } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
 import { editConfig, flushConfig, mergeServerConfig, useAdminConfig } from './config';
 import { ProfileAvatar } from './Requests';
+import { capitalize } from '../../lib/format';
 import '../requests/media.css';
 
 /* Music and book requests (AdminMediaRequests board): Seedy talks to Lidarr, Shelfarr, Librarr and a Readarr-API app
@@ -399,7 +400,7 @@ function BookAppPanel({ service, m }: { service: BookApp; m: Media }) {
   const usedLine = used.length > 1 ? t('{a} and {b}', { a: used.slice(0, -1).join(', '), b: used[used.length - 1]! }) : used[0];
   return (
     <section aria-labelledby={service + '-h'} class="panel">
-      <Head id={service + '-h'} icon={p.icon} title={name} sub={usedLine ? usedLine.charAt(0).toLocaleUpperCase() + usedLine.slice(1) : t(p.sub)} />
+      <Head id={service + '-h'} icon={p.icon} title={name} sub={usedLine ? capitalize(usedLine) : t(p.sub)} />
       <UrlRow service={service} value={app.url} onCommit={(v) => setMedia((x) => ({ ...x, [service]: { ...x[service], url: v } }), 0)} placeholder={p.placeholder} />
       <KeyRow service={service} hint={app.apiKeyHint} name={t(p.key)} help={t(p.keyHelp)} />
       <ConnRow service={service} ready={!!app.url && !!app.apiKeyHint} />

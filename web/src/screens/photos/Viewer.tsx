@@ -1,7 +1,7 @@
 import { createPortal } from 'preact/compat';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { getItem, setFavorite } from '../../api/jellyfin';
-import { userStore } from '../../lib/app-state';
+import { canDownload, userStore } from '../../lib/app-state';
 import { clock, duration, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, back, navigate, setQuery, useLocation } from '../../lib/router';
@@ -46,7 +46,7 @@ export function PhotoViewer({ list, total, more, done, onItem }: Props) {
   const playing = loc.query.get('play') === '1';
   const user = useStore(userStore);
   const device = useStore(deviceStore);
-  const canDownload = !!(user?.Policy as { EnableContentDownloading?: boolean } | undefined)?.EnableContentDownloading;
+  const mayDownload = canDownload(user);
   const index = list.findIndex((x) => x.Id === id);
   const [alone, setAlone] = useState<PhotoItem>();
   const [local, setLocal] = useState<Record<string, PhotoItem>>({});
@@ -188,7 +188,7 @@ export function PhotoViewer({ list, total, more, done, onItem }: Props) {
           <VButton icon="heart" size={20} filled={!!item?.UserData?.IsFavorite} on={!!item?.UserData?.IsFavorite} label={item?.UserData?.IsFavorite ? t('Remove from favorites') : t('Add to favorites')} onClick={() => void favorite()} />
           <VButton icon="rotate" size={18} label={t('Rotate')} onClick={rotate} disabled={!item || isVideo(item)} />
           <VButton icon={playing ? 'pause' : 'slideshow'} size={18} label={playing ? t('Pause slideshow') : t('Start slideshow')} onClick={() => setPlaying(!playing)} />
-          {canDownload && item && (
+          {mayDownload && item && (
             <a class="ph-v-btn" href={downloadUrl(item.Id)} download aria-label={t('Download original')} title={t('Download original')}>
               <PIcon name="download" size={18} />
             </a>

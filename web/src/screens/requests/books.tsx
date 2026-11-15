@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import { bookCover, bookRow, bookSearch, type BookCard as Book, type BookRow } from '../../api/media';
-import { dayOf, daysFromToday, fmtDayMonth, fmtMonthYear } from '../../lib/format';
+import { dayOf, daysFromToday, fmtDayMonth, fmtMonthYear, score } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { useAsync } from '../../lib/store';
@@ -11,7 +11,7 @@ import { ListFrame } from '../browse/Lists';
 import { EmptyState, ErrorState, Lazy } from '../browse/parts';
 import { RequestBook } from './book-dialog';
 import { Frame, NotSetUp, useServices } from './frame';
-import { BookArt, cardStatus, MediaTopLists, useAsked } from './media-parts';
+import { BookArt, cardStatus, MediaTopLists, seriesNumber, useAsked } from './media-parts';
 
 /* Requests · Books (RequestsBooks board): Shelfarr and Librarr inside Seedy. Your book requests and approvals, then
    the next volumes of series the person reads in Seedy, audiobooks of books they finished, and what's trending.
@@ -23,7 +23,6 @@ const ROWS: { row: BookRow; title: string; src: string }[] = [
   { row: 'trending', title: 'Trending', src: 'From {source}' }
 ];
 
-const num = (n?: number) => (n === undefined ? '' : Number.isInteger(n) ? String(n) : n.toFixed(1));
 
 /* "Ebook + audio", "Audiobook", "Comic", "Upcoming", and the badge's colour. */
 export function bookType(b: Book): { text: string; cls: string } {
@@ -43,12 +42,12 @@ function releaseWhen(b: Book): string {
 }
 
 export function bookMeta(b: Book, row?: BookRow): { text: string; accent: boolean } {
-  const series = b.series ? (b.content === 'comic' ? t('{series} · Vol. {n}', { series: b.series, n: num(b.seriesIndex) }) : `${b.series} ${num(b.seriesIndex)}`.trim()) : '';
+  const series = b.series ? (b.content === 'comic' ? t('{series} · Vol. {n}', { series: b.series, n: seriesNumber(b.seriesIndex) }) : `${b.series} ${seriesNumber(b.seriesIndex)}`.trim()) : '';
   if (row === 'next') {
     if (b.upcoming) return { text: [series, releaseWhen(b)].filter(Boolean).join(' · '), accent: true };
     return { text: series || b.author || '', accent: false };
   }
-  if (row === 'trending') return { text: [b.year, b.rating ? `★ ${b.rating.toFixed(1)}` : ''].filter(Boolean).join(' · '), accent: false };
+  if (row === 'trending') return { text: [b.year, b.rating ? `★ ${score(b.rating)}` : ''].filter(Boolean).join(' · '), accent: false };
   if (row === 'audiobooks') return { text: b.author ?? '', accent: false };
   return { text: [b.author, b.year].filter(Boolean).join(' · '), accent: false };
 }

@@ -5,24 +5,19 @@ import type { SubtitlePrefs } from '../api/seedy';
 import { Segmented, Switch } from '../ui/controls';
 import { Icon } from '../ui/icons';
 import { toast } from '../ui/overlay';
-import { formatNumber, getLang, locale, t } from '../lib/i18n';
+import { formatNumber, getLang, t } from '../lib/i18n';
 import { QUALITY_OPTIONS, SPEEDS, type QualityId } from './playback';
 import { offsetLabel } from './subtitles';
+import { capitalize, displayLanguage } from '../lib/format';
 
 export type TracksTab = 'subtitles' | 'audio' | 'quality' | 'speed';
 
 /* ── Track names: "English (SDH)" with "SRT · External", "English" with "EAC3 5.1 · Atmos" ── */
 
-let names: Intl.DisplayNames | null = null;
 function languageName(code?: string): string {
   if (!code || code === 'und') return '';
-  try {
-    names ??= new Intl.DisplayNames([getLang() === 'en' ? 'en' : locale()], { type: 'language' });
-    const n = names.of(code);
-    return n && n.toLowerCase() !== code.toLowerCase() ? n : code.toUpperCase();
-  } catch {
-    return code.toUpperCase();
-  }
+  const n = displayLanguage(code);
+  return n && n.toLowerCase() !== code.toLowerCase() ? n : code.toUpperCase();
 }
 
 export function streamLanguage(s: MediaStream): string {
@@ -31,9 +26,6 @@ export function streamLanguage(s: MediaStream): string {
   const own = capitalize(languageName(s.Language));
   return (getLang() === 'en' ? localized || own : own || localized) || s.Title || (s.Type === 'Audio' ? t('Audio') : t('Subtitles'));
 }
-
-/* French language names are lower case ("anglais"); as a track name they start with a capital. */
-const capitalize = (s: string) => (s ? s.charAt(0).toLocaleUpperCase(locale()) + s.slice(1) : s);
 
 /* Stream titles that only repeat the language add nothing. */
 function extraTitle(s: MediaStream, lang: string): string {

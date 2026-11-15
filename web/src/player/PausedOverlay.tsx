@@ -1,5 +1,5 @@
 import type { BaseItem } from '../api/types';
-import { runtime, yearRange, ratingLabel } from '../lib/format';
+import { dayOf, ratingLabel, runtime, yearRange } from '../lib/format';
 import { Icon } from '../ui/icons';
 import { t } from '../lib/i18n';
 import { EdgeProgress } from './UpNext';
@@ -11,7 +11,7 @@ export function PausedOverlay({ item, rating, fraction, onWake }: { item: BaseIt
   const sub = isEpisode
     ? [item.ParentIndexNumber !== undefined ? t('S{n}', { n: item.ParentIndexNumber }) : '', item.IndexNumber !== undefined ? t('E{n}', { n: item.IndexNumber }) : '', item.Name].filter(Boolean).join(' · ')
     : item.Type === 'Audio' ? [item.Name, item.AlbumArtist ?? item.Artists?.[0]].filter(Boolean).join(' · ') : '';
-  const year = isEpisode && item.PremiereDate ? String(new Date(item.PremiereDate).getFullYear()) : yearRange(item);
+  const year = isEpisode && item.PremiereDate ? String(dayOf(item.PremiereDate)?.getFullYear() ?? '') : yearRange(item);
   const cast = (item.People ?? []).filter((p) => p.Type === 'Actor' || p.Type === 'GuestStar').slice(0, 3).map((p) => p.Name);
   return (
     <div class="pl-paused" onPointerMove={onWake} onPointerDown={onWake} onWheel={onWake}>

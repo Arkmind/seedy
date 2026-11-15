@@ -3,7 +3,7 @@ import { ApiError } from '../api/client';
 import { getPrograms, type Program } from '../api/livetv';
 import { holdSession, releaseSession } from '../audio/engine';
 import type { BaseItem } from '../api/types';
-import { clock, duration, episodeTag } from '../lib/format';
+import { clock, duration, episodeTag, pct } from '../lib/format';
 import { t } from '../lib/i18n';
 import { back, href, navigate } from '../lib/router';
 import { safeLocal, saveLocal } from '../lib/store';
@@ -512,8 +512,8 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
             <div class="lt-pl-progress pl-fade" role="progressbar" aria-label={t('Programme progress')}
               aria-valuemin={0} aria-valuemax={Math.round((endMs(cur) - startMs(cur)) / 60_000)} aria-valuenow={Math.round((now - startMs(cur)) / 60_000)}
               aria-valuetext={t('{done} of {total} minutes, {left} minutes left', { done: Math.round((now - startMs(cur)) / 60_000), total: Math.round((endMs(cur) - startMs(cur)) / 60_000), left: leftMin })}>
-              <div class="lt-pl-fill" style={{ width: (fraction(cur, now) * 100).toFixed(2) + '%' }} />
-              <span aria-hidden="true" class="lt-pl-dot" style={{ left: (fraction(cur, now) * 100).toFixed(2) + '%' }} />
+              <div class="lt-pl-fill" style={{ width: pct(fraction(cur, now)) }} />
+              <span aria-hidden="true" class="lt-pl-dot" style={{ left: pct(fraction(cur, now)) }} />
             </div>
             <div class="pl-times pl-fade">
               <span>{clock(new Date(startMs(cur)))}</span>

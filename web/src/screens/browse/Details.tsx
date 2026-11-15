@@ -5,7 +5,7 @@ import { backdropUrl, personImageUrl, primaryUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { seerrDetails, type SeerrDetails } from '../../api/seedy';
 import { meStore } from '../../lib/app-state';
-import { episodeTag, fmtDate, plural, progressFraction, remainingSeconds, runtime, timeLeft, yearRange, dayOf } from '../../lib/format';
+import { dayOf, episodeTag, fmtDate, initials, plural, progressFraction, remainingSeconds, runtime, timeLeft, yearRange } from '../../lib/format';
 import { back, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { manageChanged } from './manage/host';
@@ -504,14 +504,13 @@ function PersonPage({ item: initial }: { item: BaseItem }) {
     born ? (place ? t('Born {date} in {place}', { date: fmtDate(born), place }) : t('Born {date}', { date: fmtDate(born) })) : place ? t('Born in {place}', { place }) : '',
     died ? t('Died {date}', { date: fmtDate(died) }) : ''
   ].filter(Boolean).join(' · ');
-  const initials = item.Name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   const fav = !!item.UserData?.IsFavorite;
   return (
     <div class="page">
       <Header active={null} />
       <main class="page-main person">
         <div class="person-head">
-          <div class="person-portrait" aria-hidden="true">{portrait ? <img src={portrait} alt="" /> : initials}</div>
+          <div class="person-portrait" aria-hidden="true">{portrait ? <img src={portrait} alt="" /> : initials(item.Name)}</div>
           <div class="person-text">
             <span class="overline">{t('Cast & crew')}</span>
             <h1 class="person-name">{item.Name}</h1>

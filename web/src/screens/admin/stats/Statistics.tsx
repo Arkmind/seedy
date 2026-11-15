@@ -7,9 +7,9 @@ import { toast } from '../../../ui/overlay';
 import { AdminLayout, LoadError } from '../AdminLayout';
 import { exportStats, getStats, type Range, type Stats, type StatsFilters } from './api';
 import {
-  Avatar, Change, Kpi, KIND_COLOUR, KINDS, METHOD_COLOUR, Panel, Trend, capital, codecName, dayKey, durationText, fmtDate,
-  hoursText, hoursValue, kindLabel, listText, longDay, methodLabel, parseDay, pctText, shortMoment, songs
+  Avatar, Change, Kpi, KIND_COLOUR, KINDS, METHOD_COLOUR, Panel, Trend, codecName, dayKey, durationText, hoursText, hoursValue, kindLabel, longDay, methodLabel, parseDay, pctText, shortMoment, songs
 } from './parts';
+import { capitalize, fmtIntl, listText } from '../../../lib/format';
 import './stats.css';
 
 const RANGES: { value: Range; label: string }[] = [
@@ -176,7 +176,7 @@ function Kpis({ data, filters }: { data: Stats; filters: StatsFilters }) {
   // No change to show when the log doesn't reach back over the period before: say since when it counts instead.
   const start = data.firstPlay && data.firstPlay > data.from ? data.firstPlay : data.from;
   const since = (data.range === 'all' || (data.firstPlay && data.firstPlay > data.from))
-    ? <Trend>{t('Since {date}', { date: fmtDate(parseDay(start), { day: 'numeric', month: 'short', year: 'numeric' }) })}</Trend>
+    ? <Trend>{t('Since {date}', { date: fmtIntl(parseDay(start), { day: 'numeric', month: 'short', year: 'numeric' }) })}</Trend>
     : k.prevWatchMs === null || k.prevWatchMs === undefined ? <Trend>{t('Not enough history to compare')}</Trend> : null;
   return (
     <div class="st-kpis">
@@ -243,9 +243,9 @@ function niceScale(maxMs: number): { step: number; top: number } {
 
 function bucketLabel(data: Stats, start: string, long: boolean): string {
   const d = parseDay(start);
-  if (data.bucket === 'month') return capital(fmtDate(d, long ? { month: 'long', year: 'numeric' } : { month: 'short' }));
-  if (data.bucket === 'week') return long ? t('Week of {date}', { date: fmtDate(d, { day: 'numeric', month: 'long' }) }) : fmtDate(d, { day: 'numeric', month: 'short' });
-  return long ? longDay(d) : fmtDate(d, { day: 'numeric', month: 'short' });
+  if (data.bucket === 'month') return capitalize(fmtIntl(d, long ? { month: 'long', year: 'numeric' } : { month: 'short' }));
+  if (data.bucket === 'week') return long ? t('Week of {date}', { date: fmtIntl(d, { day: 'numeric', month: 'long' }) }) : fmtIntl(d, { day: 'numeric', month: 'short' });
+  return long ? longDay(d) : fmtIntl(d, { day: 'numeric', month: 'short' });
 }
 
 function WatchTime({ data }: { data: Stats }) {
@@ -524,10 +524,10 @@ function WhenPeopleWatch({ data }: { data: Stats }) {
   const [cell, setCell] = useState<{ d: number; h: number } | null>(null);
   const max = Math.max(...data.heat.flat(), 0);
   const names = DAY_NAMES();
-  const short = names.map((d) => capital(fmtDate(d, { weekday: 'short' }).replace('.', '')));
+  const short = names.map((d) => capitalize(fmtIntl(d, { weekday: 'short' }).replace('.', '')));
   const hh = (h: number) => `${String(h % 24).padStart(2, '0')}:00`;
   const b = busiest(data.heat);
-  const busy = b ? t('Busiest: {days}, {from} to {to}', { days: capital(listText(b.days.map((d) => fmtDate(names[d], { weekday: 'long' })))), from: hh(b.from), to: hh(b.from + 3) }) : t('Nothing played in this period.');
+  const busy = b ? t('Busiest: {days}, {from} to {to}', { days: capitalize(listText(b.days.map((d) => fmtIntl(names[d], { weekday: 'long' })))), from: hh(b.from), to: hh(b.from + 3) }) : t('Nothing played in this period.');
 
   // The most recent such weekday in the period, opened at that hour.
   const openCell = (d: number, h: number) => {
@@ -542,9 +542,9 @@ function WhenPeopleWatch({ data }: { data: Stats }) {
       ...(cell.h >= 12 ? { right: `${((23 - cell.h) / 24) * 100}%` } : { left: `calc(34px + ${(cell.h / 24) * 100}%)` }),
       ...(cell.d <= 3 ? { top: `${(cell.d + 1) * 26 + 4}px` } : { bottom: `${(7 - cell.d) * 26 + 22}px` })
     }}>
-      <b>{t('{day}s, {time}', { day: fmtDate(names[cell.d], { weekday: 'long' }), time: hh(cell.h) })}</b>
+      <b>{t('{day}s, {time}', { day: fmtIntl(names[cell.d], { weekday: 'long' }), time: hh(cell.h) })}</b>
       <span>{t('{h} watched on average', { h: hoursText(data.heat[cell.d][cell.h], 1) })} · {tn(data.heatViewers[cell.d][cell.h], '{n} viewer', '{n} viewers')}</span>
-      <span class="st-tip-more">{t('Click to see each {day}', { day: fmtDate(names[cell.d], { weekday: 'long' }) })}<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
+      <span class="st-tip-more">{t('Click to see each {day}', { day: fmtIntl(names[cell.d], { weekday: 'long' }) })}<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
     </div>
   );
   return (

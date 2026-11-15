@@ -11,6 +11,7 @@ import { Icon } from '../ui/icons';
 import { Medu } from '../ui/medu';
 import { Sea, type Bubble, type Flake, type Ray } from '../ui/sea';
 import { t } from '../lib/i18n';
+import { hhmm24 } from '../lib/format';
 import './sign-in.css';
 
 /* Sign in over slowly crossfading library backdrops (admin Branding setting). "Who's watching?" shows the users the
@@ -377,7 +378,7 @@ function ForgotStep({ name, onBack }: { name: string; onBack: () => void }) {
   };
 
   const until = result && result !== 'error' && result.PinExpirationDate ? new Date(result.PinExpirationDate) : null;
-  const time = until && !isNaN(until.getTime()) ? `${String(until.getHours()).padStart(2, '0')}:${String(until.getMinutes()).padStart(2, '0')}` : '';
+  const time = until && !isNaN(until.getTime()) ? hhmm24(until) : '';
   let body;
   if (result === null) {
     body = (

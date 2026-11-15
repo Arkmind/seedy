@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { cardArt } from '../api/images';
 import type { BaseItem } from '../api/types';
-import { endsAt, episodeTag, runtime, ticksToSeconds } from '../lib/format';
+import { endsAt, episodeTag, pct, runtime, ticksToSeconds } from '../lib/format';
 import { Art } from '../ui/cards';
 import { CountdownRing, Icon } from '../ui/icons';
 import { usingKeyboard } from './keys';
@@ -53,7 +53,7 @@ export function UpNext({ next, remaining, total, onPlay, onDismiss }: {
 export function EdgeProgress({ fraction }: { fraction: number }) {
   return (
     <div aria-hidden="true" class="pl-edge">
-      <div style={{ width: `${(Math.max(0, Math.min(1, fraction)) * 100).toFixed(2)}%` }} />
+      <div style={{ width: pct(fraction) }} />
     </div>
   );
 }

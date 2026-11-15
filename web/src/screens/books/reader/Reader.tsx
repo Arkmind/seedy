@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import '@fontsource-variable/noto-serif/wght.css';
 import { getItem, DETAIL_FIELDS } from '../../../api/jellyfin';
 import type { BaseItem } from '../../../api/types';
-import { userStore } from '../../../lib/app-state';
+import { canDownload, userStore } from '../../../lib/app-state';
 import { t } from '../../../lib/i18n';
 import { back, navigate } from '../../../lib/router';
 import { useAsync, useStore } from '../../../lib/store';
@@ -40,10 +40,6 @@ export function Reader({ id }: { id: string }) {
   if (format === 'cbz') return info.data?.Pages ? <ComicReader item={it} info={info.data} reading={reading.data} /> : <NoPages item={it} />;
   if (format === 'pdf') return <PdfReader item={it} info={info.data} reading={reading.data} />;
   return <Unsupported item={it} />;
-}
-
-function canDownload(): boolean {
-  return !!(userStore.get()?.Policy as { EnableContentDownloading?: boolean } | undefined)?.EnableContentDownloading;
 }
 
 /* PDF: the browser's viewer in a frame, from a copy of the file (the file endpoint asks browsers to save it). */

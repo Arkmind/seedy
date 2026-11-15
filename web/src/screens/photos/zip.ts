@@ -2,6 +2,7 @@ import { downloadUrl } from '../../api/client';
 import type { BaseItem } from '../../api/types';
 import { t } from '../../lib/i18n';
 import { toast } from '../../ui/overlay';
+import { saveBlob } from '../../lib/clipboard';
 
 /* Download several photos and videos as one .zip, built here: each original comes from Jellyfin's download endpoint
    (so the profile's download permission applies) and goes in uncompressed, since photos and videos don't shrink. */
@@ -101,13 +102,6 @@ export async function downloadZip(name: string, items: BaseItem[]): Promise<void
   end.setUint16(10, central.length, true);
   end.setUint32(12, size, true);
   end.setUint32(16, offset, true);
-  const blob = new Blob([...parts, ...central, end.buffer], { type: 'application/zip' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `${name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'Photos'}.zip`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+  saveBlob(`${name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'Photos'}.zip`, new Blob([...parts, ...central, end.buffer], { type: 'application/zip' }), 60_000);
   toast(failed ? t('Downloaded {n}, {failed} couldn’t be read', { n: central.length, failed }) : t('Downloaded {name}.zip', { name }));
 }

@@ -1,6 +1,7 @@
 import { del, get, post, request, currentUserId } from '../../../api/client';
 import type { BaseItem, ItemKind } from '../../../api/types';
 import { locale, t } from '../../../lib/i18n';
+import { capitalize, displayLanguage } from '../../../lib/format';
 
 /* Jellyfin calls behind the item dialogs (Edit metadata, Identify, Edit images). All of them need an administrator. */
 
@@ -151,11 +152,8 @@ export const idsLine = (ids?: Record<string, string>) =>
 
 export function languageName(code?: string | null): string {
   if (!code) return t('no text');
-  try {
-    const name = new Intl.DisplayNames([locale()], { type: 'language' }).of(code);
-    if (name && name !== code) return name.charAt(0).toLocaleUpperCase(locale()) + name.slice(1);
-  } catch { /* not a code Intl knows */ }
-  return code;
+  const name = displayLanguage(code, locale());
+  return name && name !== code ? capitalize(name) : code;
 }
 
 /* "Series", "Movie"… for the dialogs' sub lines. */

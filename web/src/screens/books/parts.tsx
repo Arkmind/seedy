@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useLayoutEffect, useState } from 'preact/hooks';
 import type { BaseItem } from '../../api/types';
-import { dayOf, duration, pct, ticksToSeconds } from '../../lib/format';
+import { duration, itemYear, pct, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { playAudiobook } from '../../audio/engine';
@@ -18,8 +18,6 @@ export function tc(text: string, context: string): string {
   const out = t(key);
   return out === key ? text : out;
 }
-
-export const yearOfBook = (item: BaseItem) => item.ProductionYear ?? (item.PremiereDate ? dayOf(item.PremiereDate)?.getFullYear() : undefined);
 
 /* "About 3 h", "1 h 30 min", "25 min": rough reading/listening time for cards. */
 export function roughTime(minutes: number): string {
@@ -44,7 +42,7 @@ export function bookSub(item: BaseItem): string {
   const series = seriesOf(item);
   if (series) return `${series}, ${item.IndexNumber}`;
   const author = authorLine(item);
-  const year = yearOfBook(item);
+  const year = itemYear(item);
   return [author, year ? String(year) : item.Genres?.[0]?.toLowerCase()].filter(Boolean).join(' · ');
 }
 
@@ -54,7 +52,7 @@ export function comicSub(item: BaseItem, reading: Reading | undefined, running: 
   const series = seriesOf(item);
   if (series && running) return `${series} · ${state}`;
   const author = authorLine(item);
-  const year = yearOfBook(item);
+  const year = itemYear(item);
   return [author, year ? String(year) : ''].filter(Boolean).join(' · ') || t('One-shot');
 }
 

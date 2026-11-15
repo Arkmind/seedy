@@ -9,6 +9,7 @@ import { formatNumber, t } from '../../lib/i18n';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
 import { ProfileAvatar } from './Requests';
 import { editConfig, loadProfiles, profilesStore, statusStore, useAdminConfig } from './config';
+import { saveBlob } from '../../lib/clipboard';
 
 type Log = AdminConfig['playLog'];
 
@@ -83,15 +84,7 @@ export function AdminPlayLog() {
 
 async function exportPlays(p: PlayLogProfile) {
   const res = await request<Response>('GET', '/Seedy/Admin/PlayLog/Export', { query: { userId: p.userId }, raw: true });
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `seedy-plays-${p.name.trim().replace(/[\\/:*?"<>|\s]+/g, '-') || p.userId}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  saveBlob(`seedy-plays-${p.name.trim().replace(/[\\/:*?"<>|\s]+/g, '-') || p.userId}.csv`, await res.blob());
 }
 
 function ProfilesPanel() {

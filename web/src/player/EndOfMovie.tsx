@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
 import { backdropUrl, cardArt } from '../api/images';
 import type { BaseItem } from '../api/types';
-import { duration, runtime, score } from '../lib/format';
+import { duration, pct, runtime, score } from '../lib/format';
 import { Art } from '../ui/cards';
 import { CountdownRing, Icon } from '../ui/icons';
 import { usingKeyboard } from './keys';
@@ -67,7 +67,7 @@ export function EndOfMovie({ item, picks, creditsLeft, fraction, remaining, tota
       <div class={'pl-end-body' + (pick ? '' : ' is-solo')}>
         <div class="pl-end-now">
           <div ref={tile} class="pl-end-tile">
-            <div class="pl-end-bar"><div style={{ width: `${(Math.min(1, fraction) * 100).toFixed(2)}%` }} /></div>
+            <div class="pl-end-bar"><div style={{ width: pct(fraction) }} /></div>
           </div>
           <div class="pl-end-text">
             <span class="pl-end-title">{item.Name}</span>

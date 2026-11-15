@@ -9,6 +9,7 @@ import { type ChannelMappingOptions, deleteListingProvider, deleteTuner, discove
 import { getGuideInfo, type GuideInfo } from '../../api/livetv';
 import { LoadFailed, NumBox, PathField, Select, SettingRow, SwitchCtl, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
 import { Glyph } from './glyphs';
+import { capitalize } from '../../lib/format';
 ;
 
 /* ── Settings saved with the unsaved bar (everything except tuners and guide sources, which save on their own) ── */
@@ -561,13 +562,12 @@ function providerDetail(p: ListingsProvider, tuners: TunerHostInfo[]): string {
     ? t('All tuners')
     : t('{tuners} only', { tuners: tuners.filter((x) => x.Id && p.EnabledTuners.includes(x.Id)).map(tunerName).join(', ') });
   if (p.Type === 'xmltv') {
-    const cat = (label: string, list?: string[]) => (list?.length ? t('{label}: {list}', { label: t(label), list: list.map(cap).join('|') }) : '');
+    const cat = (label: string, list?: string[]) => (list?.length ? t('{label}: {list}', { label: t(label), list: list.map(capitalize).join('|') }) : '');
     return [cat('Movies', p.MovieCategories), cat('Kids', p.KidsCategories), cat('News', p.NewsCategories), cat('Sports', p.SportsCategories), forTuners].filter(Boolean).join(' · ');
   }
   return [p.Username, p.Country, p.ZipCode, forTuners].filter(Boolean).join(' · ');
 }
 
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const CAT_LABEL = { movies: 'Movies categories', kids: 'Kids categories', news: 'News categories', sports: 'Sports categories' } as const;
 const splitList = (s: string) => s.split(/[|,]/).map((x) => x.trim()).filter(Boolean);
 

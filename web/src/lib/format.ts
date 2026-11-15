@@ -1,5 +1,5 @@
 import type { BaseItem } from '../api/types';
-import { getLang, locale, t, tn } from './i18n';
+import { formatNumber, getLang, locale, t, tn } from './i18n';
 
 /* Copy formats follow the boards: "1 h 54 min", "2 h 03 min", "34 min left", "Ends at 22:41",
    "S3 E2", "Fri 23 Oct", "In 4 weeks · 17 Nov". */
@@ -42,10 +42,12 @@ export interface DateStyle { hour12: boolean; monthFirst: boolean; iso: boolean 
 let dateStyle: DateStyle = { hour12: false, monthFirst: false, iso: false };
 export function setDateStyle(next: DateStyle) { dateStyle = next; }
 
+/* "22:41" whatever the clock setting (timelines, exports, server pages). */
+export const hhmm24 = (date: Date) => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
 export function clock(date: Date): string {
-  const m = String(date.getMinutes()).padStart(2, '0');
-  if (dateStyle.hour12) return `${date.getHours() % 12 || 12}:${m} ${date.getHours() < 12 ? 'AM' : 'PM'}`;
-  return `${String(date.getHours()).padStart(2, '0')}:${m}`;
+  if (dateStyle.hour12) return `${date.getHours() % 12 || 12}:${String(date.getMinutes()).padStart(2, '0')} ${date.getHours() < 12 ? 'AM' : 'PM'}`;
+  return hhmm24(date);
 }
 
 export const endsAt = (secondsFromNow: number, rate = 1) => t('Ends at {time}', { time: clock(new Date(Date.now() + (secondsFromNow / (rate || 1)) * 1000)) });
@@ -89,6 +91,10 @@ const DAYS_FR = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
 const MONTHS = new Proxy([] as string[], { get: (_, k) => (getLang() === 'fr' ? MONTHS_FR : MONTHS_EN)[k as unknown as number] });
 const DAYS = new Proxy([] as string[], { get: (_, k) => (getLang() === 'fr' ? DAYS_FR : DAYS_EN)[k as unknown as number] });
 
+/* "Oct", "oct."; "Mon", "lun.". */
+export const fmtMonthShort = (d: Date) => MONTHS[d.getMonth()];
+export const fmtWeekdayShort = (d: Date) => DAYS[d.getDay()];
+
 export const fmtDayMonth = (d: Date) => (dateStyle.monthFirst ? `${MONTHS[d.getMonth()]} ${d.getDate()}` : `${d.getDate()} ${MONTHS[d.getMonth()]}`);
 export const fmtDate = (d: Date) =>
   dateStyle.iso ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -98,15 +104,24 @@ export const fmtWeekdayDate = (d: Date) => `${DAYS[d.getDay()]} ${fmtDayMonth(d)
 /* "Nov 2026", "nov. 2026". */
 export const fmtMonthYear = (d: Date) => `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 
+/* Any Intl date format in Seedy's language (the browser's own date text if Intl refuses the options). */
+export function fmtIntl(d: Date, opts: Intl.DateTimeFormatOptions): string {
+  try { return new Intl.DateTimeFormat(locale(), opts).format(d); } catch { return d.toDateString(); }
+}
+
+/* "12 March 2024", "12 mars 2024". */
+export const longDate = (d: Date) => fmtIntl(d, { day: 'numeric', month: 'long', year: 'numeric' });
+
 export function startOfDay(d: Date): Date {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
   return x;
 }
 
-export function daysFromToday(d: Date): number {
-  return Math.round((startOfDay(d).getTime() - startOfDay(new Date()).getTime()) / 86_400_000);
-}
+/* Whole calendar days from [ref] to [d]: 0 the same day, 1 the day after, -1 the day before. */
+export const daysBetween = (d: Date, ref: Date = new Date()) => Math.round((startOfDay(d).getTime() - startOfDay(ref).getTime()) / 86_400_000);
+
+export const daysFromToday = (d: Date) => daysBetween(d);
 
 /* "Today · 19 Oct", "In 8 days · 27 Oct", "In 4 weeks · 17 Nov", "In 2 months · 24 Dec". */
 export function whenLabel(d: Date): { text: string; isToday: boolean } {
@@ -131,14 +146,17 @@ export function historyGroup(d: Date): { key: string; label: string } {
   const now = new Date();
   if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) return { key: 'month', label: t('Earlier this month') };
   const month = new Intl.DateTimeFormat(locale(), { month: 'long', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' }).format(d);
-  return { key: `m-${d.getFullYear()}-${d.getMonth()}`, label: month.charAt(0).toLocaleUpperCase() + month.slice(1) };
+  return { key: `m-${d.getFullYear()}-${d.getMonth()}`, label: capitalize(month) };
 }
 
+/* An item's year: its production year, else the year of its premiere day. */
+export const itemYear = (item: Pick<BaseItem, 'ProductionYear' | 'PremiereDate'>) => item.ProductionYear ?? dayOf(item.PremiereDate)?.getFullYear();
+
 export function yearRange(item: BaseItem): string {
-  const start = item.ProductionYear ?? (item.PremiereDate ? new Date(item.PremiereDate).getFullYear() : undefined);
+  const start = itemYear(item);
   if (!start) return '';
   if (item.Type !== 'Series') return String(start);
-  const end = item.EndDate ? new Date(item.EndDate).getFullYear() : undefined;
+  const end = dayOf(item.EndDate)?.getFullYear();
   if (item.Status === 'Continuing') return `${start}–${new Date().getFullYear() > start ? new Date().getFullYear() : ''}`.replace(/–$/, '');
   if (end && end !== start) return `${start}–${end}`;
   return String(start);
@@ -148,7 +166,34 @@ export function yearRange(item: BaseItem): string {
    through plural() translates once the dictionary has them. */
 export const plural = (n: number, one: string, many = one + 's') => tn(n, `{n} ${one}`, `{n} ${many}`);
 
-export const score = (n?: number) => (n ? n.toFixed(1) : '');
+/* "7.4" ("7,4"): a rating with one decimal, rounded as toFixed does. */
+export const score = (n?: number) => (n ? formatNumber(Number(n.toFixed(1)), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '');
+
+/* "Bob Dylan · 1965 · 6 min": the parts that are there, with the boards' middle dot. */
+export const join = (...parts: (string | undefined | null | false)[]) => parts.filter(Boolean).join(' · ');
+
+/* "Chrome, Firefox and Safari" ("Chrome, Firefox et Safari"). */
+export function listText(items: string[]): string {
+  try { return new Intl.ListFormat(locale(), { style: 'long', type: 'conjunction' }).format(items); } catch { return items.join(', '); }
+}
+
+/* French month and language names are lower case ("octobre", "anglais"); a label starts with a capital. */
+export const capitalize = (s: string) => (s ? s.charAt(0).toLocaleUpperCase(locale()) + s.slice(1) : s);
+
+/* "JD" for "Jane Doe": the first letters of the first two words. */
+export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+
+/* A language's name from its code ("fr" → "French"; "français" in French), or undefined when Intl doesn't know it.
+   Callers decide how to treat a name that only repeats the code, and their fallback. */
+const languageNames = new Map<string, Intl.DisplayNames | null>();
+export function displayLanguage(code: string, loc = getLang() === 'en' ? 'en' : locale()): string | undefined {
+  let names = languageNames.get(loc);
+  if (names === undefined) {
+    try { names = new Intl.DisplayNames([loc], { type: 'language' }); } catch { names = null; }
+    languageNames.set(loc, names);
+  }
+  try { return names?.of(code) || undefined; } catch { return undefined; }
+}
 
 /* Calendar dates ("2026-10-23", or Jellyfin's "2026-10-23T00:00:00.0000000Z" premiere dates) are days, not moments:
    read them as that day wherever the viewer is, instead of shifting west of UTC to the day before. */
