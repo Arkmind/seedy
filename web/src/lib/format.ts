@@ -166,6 +166,12 @@ export function yearRange(item: BaseItem): string {
 
 /* "248 movies": the English forms are the translation keys ("{n} movie" / "{n} movies"), so every count Seedy shows
    through plural() translates once the dictionary has them. */
+/* "Movies, Shows and Music". */
+export function joinNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return t('{list} and {last}', { list: names.slice(0, -1).join(', '), last: names[names.length - 1] });
+}
+
 export const plural = (n: number, one: string, many = one + 's') => tn(n, `{n} ${one}`, `{n} ${many}`);
 
 /* "7.4" ("7,4"): a rating with one decimal, rounded as toFixed does. */

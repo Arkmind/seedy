@@ -5,7 +5,7 @@ import { href, setQuery, useLocation } from '../../lib/router';
 import { toast } from '../../ui/overlay';
 import { AdminLayout, PanelSkeletons } from '../admin/AdminLayout';
 import { type EncodingOptions, errText, ffmpegVersion, getEncoding, getServerConfig, getSessions, getSystemInfo, type GpuScan, type HwAccel, saveEncoding, saveServerConfig, scanGpus, type ServerConfig, type TrickplayOptions } from './api';
-import { ChipList, LoadFailed, NumBox, PathField, SrvRow, SrvSwitchRow, tOpts, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
+import { ChipList, LoadFailed, NumBox, PathField, pickChanged, SrvRow, SrvSwitchRow, tOpts, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
 import { SelectField } from '../../ui/controls';
 
 type Tab = 'transcoding' | 'resume' | 'streaming' | 'previews';
@@ -215,15 +215,6 @@ export function ServerPlayback() {
       />
     </AdminLayout>
   );
-}
-
-/* Only the fields this page changed, so saving doesn't undo edits made elsewhere since it loaded. */
-function pickChanged<T extends Record<string, unknown>>(draft: T, saved: T): Partial<T> {
-  const out: Partial<T> = {};
-  for (const k of Object.keys(draft) as (keyof T)[]) {
-    if (JSON.stringify(draft[k]) !== JSON.stringify(saved[k])) (out as Record<string, unknown>)[k as string] = draft[k];
-  }
-  return out;
 }
 
 function Group({ title, children }: { title: string; children: ComponentChildren }) {

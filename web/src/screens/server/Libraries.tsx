@@ -11,7 +11,7 @@ import { MenuButton, Sheet, confirm, toast } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from '../admin/AdminLayout';
 import { addLibrary, addLibraryPath, type AvailableOptions, countItems, type Country, type Culture, errText, type FullUser, getAvailableOptions, getCountries, getCultures, getNamedConfig, getServerConfig, getTasks, getUsers, getVirtualFolders, type LibraryOptions, type MetadataConfig, type NfoConfig, patchNamedConfig, patchServerConfig, refreshItem, removeLibrary, removeLibraryPath, saveLibraryOptions, scanAllLibraries, type ServerConfig, type TaskInfo, type TypeOptions, type VirtualFolder } from './api';
 import { FolderPicker, InlineError, usePoll } from './parts';
-import { atLabel, dayDiff, hhmm } from './format';
+import { atLabel, dayDiff, hhmm, percent } from './format';
 
 /* Server · Libraries: each library's folders and options (autosaved), plus the server-wide library settings. */
 
@@ -50,7 +50,6 @@ function scannedLabel(end?: string): string {
   return t('Scanned on {date}', { date: fmtDayMonth(d) });
 }
 
-const percent = (p: number) => formatNumber(Math.floor(p) / 100, { style: 'percent' });
 
 export function ServerLibraries() {
   const loc = useLocation();

@@ -112,7 +112,6 @@ const fr: Record<string, string> = {
   'Show {name}': 'Afficher {name}',
   'Continue watching always comes right after the featured banner when it has something.': 'Reprendre la lecture apparaît toujours juste après la bannière quand elle contient quelque chose.',
   'Show them again': 'Les réafficher',
-  '{a} and {b}': '{a} et {b}',
   '{n} row you hid from Home': '{n} rangée masquée de l’accueil',
   '{n} rows you hid from Home': '{n} rangées masquées de l’accueil',
   '{n} title not used for Because you watched': '{n} titre exclu de « Parce que vous avez regardé »',

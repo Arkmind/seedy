@@ -4,6 +4,7 @@ import { getItems } from '../../api/jellyfin';
 import { adminGetConfig, getHome, type HomeRowPref, type HomeRowSetting, type RowKind } from '../../api/seedy';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { meStore, userStore, viewsStore } from '../../lib/app-state';
+import { joinNames } from '../../lib/format';
 import { useAsync, useStore } from '../../lib/store';
 import { NumField, Segmented, Stepper, Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
@@ -209,7 +210,7 @@ function RowsSection() {
 function hiddenText(rows: number, seeds: number) {
   const a = rows ? tn(rows, '{n} row you hid from Home', '{n} rows you hid from Home') : '';
   const b = seeds ? tn(seeds, '{n} title not used for Because you watched', '{n} titles not used for Because you watched') : '';
-  return a && b ? t('{a} and {b}', { a, b }) : a || b;
+  return joinNames([a, b].filter(Boolean));
 }
 
 /* Rows and Because-you-watched titles hidden from Home's row menus, with a way back. */

@@ -5,14 +5,11 @@ import { Icon } from '../../ui/icons';
 import { Sheet, toast } from '../../ui/overlay';
 import { type DayOfWeek, reasonText, setTaskTriggers, type TaskInfo, type TaskTrigger } from './api';
 import { runLength, weekdayLabel, WEEKDAYS } from './format';
-import { intervalText, minutesOf, taskName, ticksOfMinutes, triggerText } from './tasks';
+import { intervalText, minutesOf, taskName, ticksOfMinutes, timeOfDay, triggerText } from './tasks';
 
 type Kind = 'daily' | 'weekly' | 'interval' | 'startup';
 
-const TIMES = Array.from({ length: 48 }, (_, i) => {
-  const m = i * 30;
-  return { value: m, label: `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` };
-});
+const TIMES = Array.from({ length: 48 }, (_, i) => ({ value: i * 30, label: timeOfDay(ticksOfMinutes(i * 30)) }));
 const INTERVAL_MINUTES = [15, 30, 45, 60, 120, 180, 240, 360, 480, 720, 1440];
 /* Labels are built at render, in the profile's language: "Every 15 minutes", "Every hour", "Every 24 hours"; "Sunday". */
 const intervals = () => INTERVAL_MINUTES.map((m) => ({ value: m, label: intervalText(ticksOfMinutes(m)) }));

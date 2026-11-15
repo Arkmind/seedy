@@ -14,7 +14,7 @@ import { MenuButton, MenuItem, Sheet, toast } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
 import { editConfig, flushConfig, mergeServerConfig, useAdminConfig } from './config';
 import { ProfileAvatar } from './Requests';
-import { capitalize } from '../../lib/format';
+import { capitalize, joinNames } from '../../lib/format';
 import '../requests/media.css';
 
 /* Music and book requests (AdminMediaRequests board): Seedy talks to Lidarr, Shelfarr, Librarr and a Readarr-API app
@@ -313,11 +313,12 @@ const ROUTES: { key: keyof Media['routes']; format: 'ebook' | 'audiobook' | 'com
   { key: 'comics', format: 'comic', name: 'Comics and manga', help: 'CBZ, CBR', plural: 'comics and manga' }
 ];
 
+/* "ebooks and audiobooks": what the app is picked for. */
+const formatsFor = (m: Media, app: BookApp) => joinNames(ROUTES.filter((r) => m.routes[r.key] === app).map((r) => t(r.plural)));
+
 function usedFor(m: Media, app: BookApp): string {
-  const formats = ROUTES.filter((r) => m.routes[r.key] === app).map((r) => t(r.plural));
-  if (!formats.length) return '';
-  const list = formats.length > 1 ? t('{a} and {b}', { a: formats.slice(0, -1).join(', '), b: formats[formats.length - 1]! }) : formats[0]!;
-  return t('Used for {formats}', { formats: list });
+  const list = formatsFor(m, app);
+  return list ? t('Used for {formats}', { formats: list }) : '';
 }
 
 function BooksPanel({ m }: { m: Media }) {
@@ -361,7 +362,7 @@ function BooksPanel({ m }: { m: Media }) {
         {ROUTES.map((r) => {
           const land = landing.find((l) => l.format === r.format);
           const options = [
-            ...enabled.filter((a) => r.format !== 'comic' || a.id !== 'readarr').map((a) => ({ value: a.id as string, label: a.id === 'readarr' ? 'Readarr API' : a.name })),
+            ...enabled.filter((a) => r.format !== 'comic' || a.id !== 'readarr').map((a) => ({ value: a.id as string, label: a.name })),
             { value: 'off', label: t('Don’t allow') }
           ];
           const value = options.some((o) => o.value === m.routes[r.key]) ? m.routes[r.key] : 'off';
@@ -395,9 +396,8 @@ const APP_PANEL: Record<BookApp, { icon: IconName; sub: string; key: string; key
 function BookAppPanel({ service, m }: { service: BookApp; m: Media }) {
   const p = APP_PANEL[service];
   const app = m[service];
-  const name = service === 'readarr' ? 'Readarr API' : APP_NAMES[service];
-  const used = ROUTES.filter((r) => m.routes[r.key] === service).map((r) => t(r.plural));
-  const usedLine = used.length > 1 ? t('{a} and {b}', { a: used.slice(0, -1).join(', '), b: used[used.length - 1]! }) : used[0];
+  const name = APPS.find((a) => a.id === service)!.name;
+  const usedLine = formatsFor(m, service);
   return (
     <section aria-labelledby={service + '-h'} class="panel">
       <Head id={service + '-h'} icon={p.icon} title={name} sub={usedLine ? capitalize(usedLine) : t(p.sub)} />

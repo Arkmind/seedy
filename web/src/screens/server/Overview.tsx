@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { cardArt } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { userStore } from '../../lib/app-state';
-import { episodeTag, pct } from '../../lib/format';
+import { episodeTag, joinNames, pct } from '../../lib/format';
 import { formatNumber, t, tn, tx } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
@@ -15,7 +15,7 @@ import { AdminLayout } from '../admin/AdminLayout';
 import { type ActivityEntry, errText, type FullUser, getActivity, getItemCounts, getPackages, getPlugins, getSessions, getStorage, getSystemInfo, getTasks, getUsers, type ItemCounts, type PackageInfo, type PluginInfo, restartingStore, restartServer, sameId, scanAllLibraries, seedyBackups, sendSessionMessage, type Session, shutdownServer, stopSession, type SystemInfo, type TaskInfo } from './api';
 import { Glyph } from './glyphs';
 import { InlineError, Notice, usePoll, UserAvatar } from './parts';
-import { activityWhen, dayDiff, fmtSize, hhmm, majorMinor, platformLabel, playDetail, playMethod, shortDate, uptime } from './format';
+import { activityWhen, dayDiff, fmtSize, hhmm, majorMinor, percent, platformLabel, playDetail, playMethod, shortDate, uptime } from './format';
 import { countPluginUpdates, pluginTargetAbi } from './plugins';
 import { sentenceCase, serverStartFromTasks } from './tasks';
 import { pluginUpdatesStore } from './status';
@@ -343,7 +343,7 @@ function TasksPanel({ tasks }: { tasks: Data<TaskInfo[]> & { reload: () => void 
       ) : (
         running.map((task) => {
           const p = task.CurrentProgressPercentage;
-          const label = task.State === 'Cancelling' ? t('Stopping') : p === undefined || p === null ? t('Starting') : formatNumber(Math.floor(p) / 100, { style: 'percent' });
+          const label = task.State === 'Cancelling' ? t('Stopping') : p === undefined || p === null ? t('Starting') : percent(p);
           return (
             <div key={task.Id} class="srv-task">
               <div class="srv-task-line"><span class="srv-task-name">{sentenceCase(task.Name)}</span><span class="srv-task-state">{label}</span></div>
@@ -565,7 +565,7 @@ function FirstScan({ scan, counts, serverId }: { scan?: TaskInfo; counts?: ItemC
     counts.AlbumCount ? tn(counts.AlbumCount, '{n} album', '{n} albums') : '',
     counts.BookCount ? tn(counts.BookCount, '{n} book', '{n} books') : ''
   ].filter(Boolean);
-  const list = found.length > 1 ? t('{list} and {last}', { list: found.slice(0, -1).join(', '), last: found[found.length - 1] }) : found[0] ?? '';
+  const list = joinNames(found);
   const minutes = Math.max(1, Math.round((Date.parse(done.EndTimeUtc) - Date.parse(done.StartTimeUtc)) / 60_000));
   const took = minutes < 60 ? tn(minutes, '{n} minute', '{n} minutes')
     : t('{h} h {m} min', { h: Math.floor(minutes / 60), m: minutes % 60 });

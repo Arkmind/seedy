@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'preact/hooks';
 import { userStore } from '../../lib/app-state';
-import { plural } from '../../lib/format';
+import { daysFromToday, plural } from '../../lib/format';
 import { formatNumber, t, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -35,12 +35,7 @@ export async function loadUsersData(signal?: AbortSignal): Promise<UsersData> {
   return { users, sessions, devices, folders, ratings };
 }
 
-const isToday = (s?: string) => {
-  if (!s) return false;
-  const d = new Date(s);
-  const n = new Date();
-  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
-};
+const isToday = (s?: string) => !!s && daysFromToday(new Date(s)) === 0;
 
 /* "Watching now on iPhone", "Last seen yesterday on Living room TV". */
 export function presence(u: FullUser, data: Pick<UsersData, 'sessions' | 'devices'>): { text: string; online: boolean; watching: boolean } {

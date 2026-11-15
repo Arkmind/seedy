@@ -189,6 +189,9 @@ export function platformLabel(info: SystemInfo, knownOs = ''): string {
   return [os, arch].filter(Boolean).join(' ');
 }
 
+/* A task's progress (0–100) as "42 %". */
+export const percent = (p: number) => formatNumber(Math.floor(p) / 100, { style: 'percent' });
+
 export const mbps = (bps?: number) => {
   if (!bps) return '';
   const m = bps / 1_000_000;

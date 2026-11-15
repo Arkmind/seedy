@@ -6,7 +6,7 @@ import { Segmented } from '../../ui/controls';
 import { confirm, toast } from '../../ui/overlay';
 import { AdminLayout, PanelSkeletons } from '../admin/AdminLayout';
 import { errText, getNetwork, getSessions, type NetworkConfig, restartingStore, restartServer, saveNetwork } from './api';
-import { ChipList, LoadFailed, SrvRow, SrvSwitchRow, UnsavedBar, useDraft, useLoad, useUnsavedGuard, validAddress } from './parts';
+import { ChipList, LoadFailed, pickChanged, SrvRow, SrvSwitchRow, UnsavedBar, useDraft, useLoad, useUnsavedGuard, validAddress } from './parts';
 
 /* Jellyfin keeps "" for the root; the board shows it as "/". */
 const showBase = (b: string) => (b ? b : '/');
@@ -74,8 +74,7 @@ export function ServerNetworking() {
     try {
       /* Jellyfin replaces the whole network configuration: put only this page's changes on what the server has now. */
       const loaded = net.data;
-      const changed: Partial<NetworkConfig> = {};
-      for (const k of Object.keys(c)) if (JSON.stringify(c[k]) !== JSON.stringify(loaded[k])) changed[k] = c[k];
+      const changed = pickChanged(c, loaded);
       if ('BaseUrl' in changed) changed.BaseUrl = normaliseBase(c.BaseUrl);
       const body = { ...(await getNetwork()), ...changed } as NetworkConfig;
       if (import.meta.env.DEV) console.info('[seedy] POST /System/Configuration/network', JSON.stringify(body));

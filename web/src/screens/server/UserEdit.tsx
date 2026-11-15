@@ -12,7 +12,7 @@ import { MenuButton, MenuItem, Sheet, confirm, toast } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from '../admin/AdminLayout';
 import { accountsStore, loadAccounts, loadProfiles, profilesStore } from '../admin/config';
 import { type AccessDay, type AccessSchedule, deleteUser, deleteUserImage, errText, type FullPolicy, type FullUser, getUser, type ParentalRating, patchUserPolicy, renameUser, resetUserPassword, sameId, setUserPassword, signOutEverywhere, type UnratedItem, uploadUserImage } from './api';
-import { UnsavedBar, useFilePicker, UserAvatar, useUnsavedGuard } from './parts';
+import { pickChanged, same, UnsavedBar, useFilePicker, UserAvatar, useUnsavedGuard } from './parts';
 import { hourLabel, loadUsersData, presence, type UsersData } from './Users';
 
 /* Server · Edit user: one person's account, playback, access, parental controls, password and Seedy switches. */
@@ -33,8 +33,6 @@ interface Draft { name: string; policy: FullPolicy; seedy: SeedyFlags }
    (or a reload) don't turn into changes nobody made. */
 interface Patch { name?: string; policy: Partial<FullPolicy>; seedy: Partial<SeedyFlags> }
 const NO_PATCH: Patch = { policy: {}, seedy: {} };
-
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 function countChanges(d: Draft, base: Draft): number {
   let n = 0;
@@ -107,8 +105,7 @@ export function ServerUserEdit({ id }: { id: string }) {
       if (name && name !== base.name) await renameUser(user, name);
       if (!same(d.policy, base.policy)) {
         /* Only the fields changed here go onto the server's current policy, so edits made elsewhere since stay. */
-        const changed: Partial<FullPolicy> = {};
-        for (const k of Object.keys(d.policy)) if (!same(d.policy[k], base.policy[k])) changed[k] = d.policy[k];
+        const changed = pickChanged(d.policy, base.policy);
         if ('MaxParentalRating' in changed || 'MaxParentalSubRating' in changed) {
           changed.MaxParentalRating = d.policy.MaxParentalRating;
           changed.MaxParentalSubRating = d.policy.MaxParentalSubRating;

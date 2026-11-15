@@ -62,6 +62,15 @@ export function usePoll(fn: () => void, ms: number, deps: unknown[] = []) {
 const isPlain = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /* Fields that differ between two configuration objects; nested objects count field by field, lists count once. */
+export const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/* Only the fields a page changed, so saving doesn't undo edits made elsewhere since it loaded. */
+export function pickChanged<T extends Record<string, unknown>>(draft: T, saved: T): Partial<T> {
+  const out: Partial<T> = {};
+  for (const k of Object.keys(draft) as (keyof T)[]) if (!same(draft[k], saved[k])) out[k] = draft[k];
+  return out;
+}
+
 export function countChanges(a: unknown, b: unknown): number {
   if (isPlain(a) && isPlain(b)) {
     let n = 0;

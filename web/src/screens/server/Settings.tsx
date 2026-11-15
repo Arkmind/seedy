@@ -5,7 +5,7 @@ import { NumField, SelectField, SettingRow, Switch } from '../../ui/controls';
 import { confirm, toast } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from '../admin/AdminLayout';
 import { type BrandingOptions, type CastReceiver, errText, getBranding, getLocalizationOptions, getServerConfig, getSystemInfo, type LocalizationOption, patchBranding, patchServerConfig, type PathSubstitution, restartServer, type ServerConfig, type SystemInfo, uploadSplashscreen } from './api';
-import { FolderPicker, PairsSheet, UnsavedBar, useFilePicker, useUnsavedGuard } from './parts';
+import { FolderPicker, PairsSheet, same, UnsavedBar, useFilePicker, useUnsavedGuard } from './parts';
 
 /* Server · Settings: Jellyfin's General and Branding pages on one page, saved explicitly. */
 
@@ -69,8 +69,6 @@ function toDraft(cfg: ServerConfig, branding: BrandingOptions, info: SystemInfo)
     customCss: branding.CustomCss ?? ''
   };
 }
-
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 function changedKeys(d: Draft, base: Draft): (keyof Draft)[] {
   return (Object.keys(d) as (keyof Draft)[]).filter((k) => {
