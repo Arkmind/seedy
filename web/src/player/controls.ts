@@ -26,7 +26,8 @@ export function saveVolume(m: Volume) {
 
 export const pipSupported = () => (document as Document & { pictureInPictureEnabled?: boolean }).pictureInPictureEnabled === true;
 
-export function togglePip(video?: HTMLVideoElement | null) {
+/* `open` asks for the window: the <video>'s own request, or the experimental player's copy of its canvas. */
+export function togglePip(open: () => Promise<unknown> | undefined) {
   if (document.pictureInPictureElement) void document.exitPictureInPicture().catch(() => undefined);
-  else void video?.requestPictureInPicture?.().catch(() => toast(t("Picture in picture isn't available"), 'error'));
+  else void open()?.catch(() => toast(t("Picture in picture isn't available"), 'error'));
 }

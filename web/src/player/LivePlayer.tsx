@@ -237,7 +237,7 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
   const setVolume = (v: number) => setMediaVolume(el(), v);
   const toggleMute = () => toggleMediaMute(el());
   const canPip = pipSupported();
-  const togglePip = () => togglePipOf(el());
+  const togglePip = () => togglePipOf(() => el().requestPictureInPicture());
   const exit = () => {
     sessRef.current?.stop();
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);

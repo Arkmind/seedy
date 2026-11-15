@@ -30,6 +30,22 @@ const NO_RANGES = {
 const MEDIA_TYPES = ['Video', 'Audio', 'Data', 'Subtitle'];
 const COVER_ART = 0x400;
 
+/* Resolves once the <video> has a first frame (picture in picture refuses an element without one). */
+function hasPicture(video: HTMLVideoElement, ms: number) {
+  return new Promise<void>((resolve, reject) => {
+    if (video.readyState >= HTMLMediaElement.HAVE_METADATA) return resolve();
+    const done = (ok: boolean) => {
+      window.clearTimeout(timer);
+      video.removeEventListener('loadedmetadata', loaded);
+      if (ok) resolve();
+      else reject(new DOMException('No picture yet', 'InvalidStateError'));
+    };
+    const loaded = () => done(true);
+    const timer = window.setTimeout(() => done(false), ms);
+    video.addEventListener('loadedmetadata', loaded);
+  });
+}
+
 export interface SoftOpenOptions {
   /* Which of the file's own audio tracks to play, counting from 0 (the server numbers external files first). */
   audioTrack?: number;
@@ -71,6 +87,10 @@ export class SoftMedia extends EventTarget implements MediaLike {
   private stalled = false;
   /* Rendered frames and clock over the last few seconds, against what the video's frame rate needs. */
   private watch = { at: 0, frames: 0, time: 0, behind: 0, graceUntil: 0 };
+  /* Picture in picture: the page's <video> plays a copy of the canvas while the browser's window is up. */
+  private pip: { video: HTMLVideoElement; stream: MediaStream; onPause: () => void; onLeave: () => void } | null = null;
+  /* A picture in picture window this player takes over once its canvas exists (after a track change). */
+  private pipNext: HTMLVideoElement | null = null;
 
   constructor(host: HTMLElement) {
     super();
@@ -110,6 +130,8 @@ export class SoftMedia extends EventTarget implements MediaLike {
         }
       });
       this.player = p;
+      // libmedia stops drawing in a hidden page unless it is in picture in picture, which it only knows for its own windows.
+      p.isPictureInPicture = () => this.inPip();
       p.on('played', () => {
         this.running = true;
         this.stalled = false;
@@ -121,6 +143,7 @@ export class SoftMedia extends EventTarget implements MediaLike {
         this.want = false;
         this.finished = true;
         this.time = this.dur || this.time;
+        this.mirrorPip();
         this.emit('timeupdate');
         this.emit('pause');
         this.emit('ended');
@@ -150,6 +173,9 @@ export class SoftMedia extends EventTarget implements MediaLike {
       this.timer = window.setInterval(() => this.tick(), 250);
       if (this.rate !== 1) p.setPlaybackRate(this.rate);
       if (this.want) await this.start();
+      const next = this.pipNext;
+      this.pipNext = null;
+      if (next && document.pictureInPictureElement === next) await this.pictureInPicture(next).catch(() => undefined);
     } catch (e) {
       this.fail('failed', e);
     }
@@ -197,7 +223,7 @@ export class SoftMedia extends EventTarget implements MediaLike {
   private checkSpeed(p: AVPlayer, now: number) {
     const w = this.watch;
     // A hidden page (another tab, a minimized or covered window) draws no frames: libmedia skips what nobody sees.
-    if (document.visibilityState === 'hidden') {
+    if (document.visibilityState === 'hidden' && !this.inPip()) {
       w.at = 0;
       w.behind = 0;
       w.graceUntil = now + 5000;
@@ -227,6 +253,7 @@ export class SoftMedia extends EventTarget implements MediaLike {
     this.error = { code, message: err instanceof Error ? err.message : String(err ?? '') };
     this.want = false;
     if (this.started) void this.player?.pause().catch(() => undefined);
+    this.mirrorPip();
     this.emit('error');
   }
 
@@ -262,6 +289,66 @@ export class SoftMedia extends EventTarget implements MediaLike {
     this.lastMove = performance.now();
     this.emit('seeked');
     this.emit('timeupdate');
+  }
+
+  /* ── Picture in picture ── */
+
+  private inPip() {
+    return !!this.pip && document.pictureInPictureElement === this.pip.video;
+  }
+
+  /* Opens picture in picture on the page's <video>, playing a live copy of the canvas (or moves an open window to it). */
+  async pictureInPicture(video: HTMLVideoElement) {
+    const canvas = this.box.querySelector('canvas');
+    if (!this.ready || !canvas) throw new DOMException('Nothing to show yet', 'InvalidStateError');
+    this.endPip(false);
+    const stream = canvas.captureStream();
+    video.srcObject = stream;
+    video.muted = true;
+    void video.play().catch(() => undefined);
+    // A paused canvas sends no frame: libmedia draws the waiting one again when resized.
+    if (!this.want) this.player?.resize(this.box.clientWidth, this.box.clientHeight);
+    try {
+      await hasPicture(video, 3000);
+      if (this.destroyed) throw new DOMException('The experimental player stopped', 'AbortError');
+      if (document.pictureInPictureElement !== video) await video.requestPictureInPicture();
+    } catch (e) {
+      stream.getTracks().forEach((t) => t.stop());
+      if (video.srcObject === stream) video.srcObject = null;
+      throw e;
+    }
+    // The window's close button pauses its video: pause the film too, as it would the normal player.
+    const onPause = () => { if (this.want && this.pip?.video === video) this.pause(); };
+    const onLeave = () => this.endPip(true);
+    video.addEventListener('pause', onPause);
+    video.addEventListener('leavepictureinpicture', onLeave);
+    this.pip = { video, stream, onPause, onLeave };
+    this.mirrorPip();
+  }
+
+  /* After a track change, this player takes over the window the previous one had open on the <video>. */
+  keepPictureInPicture(video: HTMLVideoElement) {
+    this.pipNext = video;
+  }
+
+  /* The window's play/pause button follows the film. */
+  private mirrorPip() {
+    const v = this.pip?.video;
+    if (!v) return;
+    if (this.want) void v.play().catch(() => undefined);
+    else v.pause();
+  }
+
+  /* Stops the copy; `clear` also empties the <video> (a replaced player leaves its last frame until the next one). */
+  private endPip(clear: boolean) {
+    const pip = this.pip;
+    if (!pip) return;
+    this.pip = null;
+    pip.video.removeEventListener('pause', pip.onPause);
+    pip.video.removeEventListener('leavepictureinpicture', pip.onLeave);
+    if (!clear) return;
+    pip.stream.getTracks().forEach((t) => t.stop());
+    if (pip.video.srcObject === pip.stream) pip.video.srcObject = null;
   }
 
   /* ── HTMLMediaElement ── */
@@ -303,6 +390,7 @@ export class SoftMedia extends EventTarget implements MediaLike {
     if (this.error) throw new DOMException('The experimental player stopped', 'NotSupportedError');
     if (!this.want) {
       this.want = true;
+      this.mirrorPip();
       this.emit('play');
     }
     if (this.finished) await this.seek(0);
@@ -319,6 +407,7 @@ export class SoftMedia extends EventTarget implements MediaLike {
     this.want = false;
     this.running = false;
     if (this.started) void this.player?.pause().catch(() => undefined);
+    this.mirrorPip();
     if (was) this.emit('pause');
   }
 
@@ -328,6 +417,7 @@ export class SoftMedia extends EventTarget implements MediaLike {
     this.destroyed = true;
     window.clearInterval(this.timer);
     this.resizer?.disconnect();
+    this.endPip(false);
     const p = this.player;
     this.player = null;
     if (p) {

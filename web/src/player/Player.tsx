@@ -756,8 +756,8 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const setVolume = (v: number) => setMediaVolume(el(), v);
   const toggleMute = () => toggleMediaMute(el());
   const toggleFullscreen = () => toggleFullscreenOf(mediaRef.current);
-  const canPip = !isAudio && !soft && typeof document !== 'undefined' && pipSupported();
-  const togglePip = () => togglePipOf(mediaRef.current);
+  const canPip = !isAudio && typeof document !== 'undefined' && pipSupported();
+  const togglePip = () => togglePipOf(() => sess()?.pictureInPicture());
 
   const exit = () => {
     if (inGroup()) void leaveGroup();
