@@ -30,7 +30,6 @@ const fr: Record<string, string> = {
 
   // Search
   'Results for “{query}”': 'Résultats pour « {query} »',
-  '1 title': '1 titre',
   'Nothing found for “{query}”': 'Aucun résultat pour « {query} »',
   'Try another title, or check the spelling.': 'Essayez un autre titre, ou vérifiez l’orthographe.',
 

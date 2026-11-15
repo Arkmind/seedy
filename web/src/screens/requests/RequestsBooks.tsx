@@ -7,10 +7,9 @@ import { Link } from '../../lib/router';
 import { useAsync } from '../../lib/store';
 import { Row } from '../../ui/Row';
 import { Icon } from '../../ui/icons';
-import { ListFrame } from '../browse/Lists';
 import { EmptyState, ErrorState, Lazy } from '../browse/parts';
 import { RequestBook } from './book-dialog';
-import { Frame, NotSetUp, useServices } from './frame';
+import { BrowseFrame, Frame, NotSetUp, ResultsSection, useServices } from './frame';
 import { BookArt, cardStatus, MediaTopLists, seriesNumber, useAsked } from './media-parts';
 
 /* Requests · Books (RequestsBooks board): Shelfarr and Librarr inside Seedy. Your book requests and approvals, then
@@ -161,13 +160,10 @@ function BookResults({ query }: { query: string }) {
   else if (!state.data?.results.length) body = <EmptyState icon="searchX" title={t('Nothing found for “{query}”', { query })} text={t('Try another title or author, or check the spelling.')} />;
   else body = <div class="reqs-grid is-books">{state.data.results.map((b) => <BookCardView key={b.workId} b={b} meta={bookMeta(b)} onOpen={() => dialog.open({ card: b })} />)}</div>;
   return (
-    <section class="reqs-pad reqs-results" aria-labelledby="reqs-results-h">
-      <div class="reqs-col-head">
-        <h2 id="reqs-results-h" class="row-title">{t('Results for “{query}”', { query })}</h2>
-      </div>
+    <ResultsSection query={query}>
       {body}
       {dialog.dialog}
-    </section>
+    </ResultsSection>
   );
 }
 
@@ -184,13 +180,9 @@ export function BooksBrowse({ row }: { row: string }) {
   else if (!state.data?.results.length) body = <EmptyState icon="clock" title={t('Nothing here right now')} text={t('Check back later for new books.')} />;
   else body = <div class="reqs-grid is-books">{state.data.results.map((b) => <BookCardView key={b.workId} b={b} meta={bookMeta(b, def.row)} onOpen={() => dialog.open({ card: b, row: def.row })} />)}</div>;
   return (
-    <ListFrame
-      active="requests"
-      title={def ? t(def.title) : t('List not found')}
-      lede={<Link to="/requests/books" class="list-seed"><Icon name="chevronLeft" size={14} stroke={2.4} />{t('Back to book requests')}</Link>}
-    >
+    <BrowseFrame title={def ? t(def.title) : t('List not found')} back="/requests/books" backLabel={t('Back to book requests')}>
       {body}
       {dialog.dialog}
-    </ListFrame>
+    </BrowseFrame>
   );
 }

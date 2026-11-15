@@ -5,7 +5,7 @@ import {
   seerrDetails, seerrRequest, seerrRequestOptions,
   type RequestBody, type RequestOptions, type SeerrDetails, type SeerrSeason, type SeerrStatus
 } from '../../api/seedy';
-import { dayOf, fmtDate, plural } from '../../lib/format';
+import { dayOf, fmtDate, pctOf, plural } from '../../lib/format';
 import { formatNumber, t, tn } from '../../lib/i18n';
 import { Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
@@ -384,8 +384,6 @@ function AdvField({ label, value, options, onChange }: { label: string; value: s
     </label>
   );
 }
-
-const pctOf = (n: number, of: number) => `${of > 0 ? Math.max(0, Math.min(100, (n / of) * 100)) : 0}%`;
 
 function freeSize(bytes: number): string {
   const tb = bytes / 1024 ** 4;

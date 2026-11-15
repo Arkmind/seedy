@@ -457,7 +457,16 @@ const fr: Record<string, string> = {
   "the title": "le titre",
   "Don't use {name}": "Ne plus utiliser {name}",
   "{n} of {total}: {name}": "{n} sur {total} : {name}",
-  "Unknown": "Inconnu"
+  "Unknown": "Inconnu",
+  "daily": "tous les jours",
+  "Mondays": "le lundi",
+  "Tuesdays": "le mardi",
+  "Wednesdays": "le mercredi",
+  "Thursdays": "le jeudi",
+  "Fridays": "le vendredi",
+  "Saturdays": "le samedi",
+  "Sundays": "le dimanche",
+  "Unreleased": "Pas encore sorti"
 };
 
 export default fr;

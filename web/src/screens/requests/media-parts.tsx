@@ -1,34 +1,24 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import {
-  mediaApprove, mediaDecline, mediaList, mediaRemove, mediaSearchNow, mediaAcceptLower, mediaSummary,
-  type BookFormat, type CardStatus, type MediaRequest, type MediaService, type MediaSummary
+  mediaAcceptLower, mediaApprove, mediaDecline, mediaList, mediaRemove, mediaSearchNow, mediaSummary, type BookFormat, type CardStatus,
+  type MediaOptions, type MediaRequest, type MediaService, type MediaSummary
 } from '../../api/media';
-import { daysFromToday, fmtDate, fmtWeekdayDate } from '../../lib/format';
 import { formatNumber, t, tn } from '../../lib/i18n';
 import { Link } from '../../lib/router';
-import { createStore, useAsync, useStore } from '../../lib/store';
+import { createStore, createSummary, useAsync, useStore } from '../../lib/store';
 import { Icon } from '../../ui/icons';
 import { confirm, toast } from '../../ui/overlay';
+import { actLine, requesterName } from './wording';
+import { useBusyRun } from './busy-run';
+import { pctOf as widthOf } from '../../lib/format';
+import { BOOK_PALETTES, DrawnBookSvg, DrawnSquareSvg, SQUARE_PALETTES } from '../../ui/drawn-art';
 import './media.css';
 
 /* Shared pieces of the Music and Books request pages (RequestsMusic, RequestsBooks, RequestsMine boards): covers with
    the boards' art when there's no image, request wording, state chips and actions. */
 
 /* ── Covers ── */
-
-const CP = [
-  ['#1c2a3a', '#2f4a66', '#f2c47e', '#e8eef4'], ['#3a1d2e', '#6b2f4f', '#ff9fbf', '#fbe4f3'], ['#13302b', '#1f5a4d', '#9fe0c8', '#def4f1'],
-  ['#2b2118', '#5c3b22', '#f0a35e', '#f7ecd5'], ['#1d1d2e', '#3b3b6b', '#b9b3ff', '#efe6fb'], ['#262626', '#444444', '#f0f0f0', '#ffffff'],
-  ['#36200f', '#a3471f', '#ffd27a', '#fff2d8'], ['#0f2233', '#1b6f8f', '#9fe9ff', '#e6fbff'], ['#2a1035', '#7a3fd1', '#ffb3e6', '#fbe4f3']
-];
-const CPATH = ['M0 140 Q50 110 100 140 T200 140 V200 H0Z', 'M0 200 L200 70 V200Z', 'M0 150 L50 110 L90 140 L140 90 L200 130 V200 H0Z', 'M0 0 H200 V40 Q100 70 0 40Z'];
-const BP = [
-  ['#e8dcc8', '#c9583e', '#2c3a49', '#1e1e1e'], ['#1f3a3c', '#a8e6df', '#0f1c1d', '#def4f1'], ['#2f2840', '#e3c4ff', '#16121f', '#efe6fb'],
-  ['#f2cf86', '#1d170f', '#5c4a2c', '#1d170f'], ['#3d2424', '#f0b9a0', '#1c1111', '#f6e3da'], ['#dfe7ef', '#2f4a7a', '#9fb2c6', '#141b22'],
-  ['#26362b', '#d9e3b5', '#121a14', '#eef2e0'], ['#141414', '#ff9fff', '#2a2a2a', '#f0f0f0']
-];
-const BPATH = ['M0 300 L0 210 Q100 170 200 210 V300Z', 'M0 300 L200 160 V300Z', 'M0 230 L50 190 L100 220 L150 170 L200 200 V300 H0Z', 'M0 300 V240 H200 V300Z'];
 
 export function hash(s: string): number {
   let h = 0;
@@ -47,21 +37,10 @@ function Img({ src, onFail }: { src?: string | null; onFail?: () => void }) {
 /* Square album art: the Cover Art Archive's image, or the boards' drawn cover with the title on it. */
 export function AlbumArt({ seed, src, text, round, class: cls }: { seed: string; src?: string | null; text?: string; round?: boolean; class?: string }) {
   const i = hash(seed);
-  const c = CP[i % CP.length];
-  const s = i % 4;
-  const by = s === 1 ? 120 : s === 3 ? 0 : 200;
-  const bh = s === 1 ? 80 : s === 3 ? 30 : 0;
-  const cx = [70, 130, 100, 60][s], cy = [80, 70, 95, 120][s], r = [46, 30, 58, 22][s], r2 = [70, 52, 82, 40][s];
-  const sw = [3, 8, 2, 6][s], ro = [0.5, 0.35, 0.6, 0.4][s], po = [0.9, 0.7, 0.85, 0.6][s];
+  const c = SQUARE_PALETTES[i % SQUARE_PALETTES.length];
   return (
     <span class={'reqs-art' + (round ? ' is-round' : '') + (cls ? ' ' + cls : '')} aria-hidden="true" style={{ background: c[0] }}>
-      <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
-        <rect width="200" height="200" fill={c[0]} />
-        <rect y={by} width="200" height={bh} fill={c[1]} />
-        {!round && <circle cx={cx} cy={cy} r={r} fill={c[2]} />}
-        {!round && <circle cx={cx} cy={cy} r={r2} fill="none" stroke={c[3]} stroke-width={sw} opacity={ro} />}
-        {!round && <path d={CPATH[(i + 1) % 4]} fill={c[1]} opacity={po} />}
-      </svg>
+      <DrawnSquareSvg c={c} s={i % 4} hill={(i + 1) % 4} bare={round} />
       {text && <span class={round ? 'reqs-art-initials' : 'reqs-art-text'} style={{ color: c[3] }}>{text}</span>}
       <Img src={src} />
     </span>
@@ -71,14 +50,10 @@ export function AlbumArt({ seed, src, text, round, class: cls }: { seed: string;
 /* A 2:3 book cover: the image, or the boards' drawn cover with title and author. */
 export function BookArt({ seed, src, title, author, size = 'card', class: cls }: { seed: string; src?: string | null; title: string; author?: string; size?: 'card' | 'thumb' | 'dialog'; class?: string }) {
   const i = hash(seed);
-  const c = BP[i % BP.length];
-  const s = i % 4;
+  const c = BOOK_PALETTES[i % BOOK_PALETTES.length];
   return (
     <span class={'reqs-book is-' + size + (cls ? ' ' + cls : '')} aria-hidden="true" style={{ background: c[0] }}>
-      <svg viewBox="0 0 200 300" preserveAspectRatio="xMidYMid slice">
-        <circle cx={[140, 60, 100, 150][s]} cy={[150, 170, 130, 120][s]} r={[44, 60, 36, 50][s]} fill={c[1]} />
-        <path d={BPATH[s]} fill={c[2]} />
-      </svg>
+      <DrawnBookSvg c={c} s={i % 4} />
       <span class="reqs-book-title" style={{ color: c[3] }}>{title}</span>
       {author && <span class="reqs-book-author" style={{ color: c[3] }}>{author}</span>}
       <Img src={src} />
@@ -129,26 +104,10 @@ export function mediaKindLine(r: MediaRequest): string {
   return r.albums.length === 1 ? t('Album') : tn(r.albums.length, '{n} album', '{n} albums');
 }
 
-const ACTS = {
-  asked: ['asked today', 'asked yesterday', 'asked {date}'],
-  approved: ['approved today', 'approved yesterday', 'approved {date}'],
-  askedBy: ['asked by {name} today', 'asked by {name} yesterday', 'asked by {name} {date}']
-} as const;
-
-export function actLine(act: keyof typeof ACTS, iso: string | undefined, name = ''): string {
-  const d = iso ? new Date(iso) : undefined;
-  if (!d || Number.isNaN(d.getTime())) return '';
-  const ago = -daysFromToday(d);
-  const date = d.getFullYear() === new Date().getFullYear() ? fmtWeekdayDate(d) : fmtDate(d);
-  return t(ACTS[act][ago <= 0 ? 0 : ago === 1 ? 1 : 2], { date, name });
-}
-
-const who = (r: MediaRequest) => (r.requestedByMe ? t('you') : r.requestedBy || t('someone'));
-
 /* The line under a request on Discover: what, when (approved while it's on its way), and the app for books. */
 export function mediaWhat(r: MediaRequest, everyone: boolean): string {
   const parts = [mediaKindLine(r)];
-  if (everyone) parts.push(actLine('askedBy', r.requestedAt, who(r)));
+  if (everyone) parts.push(actLine('askedBy', r.requestedAt, requesterName(r)));
   else if (r.decidedAt && ['approved', 'searching', 'downloading', 'failed'].includes(r.status)) parts.push(actLine('approved', r.decidedAt));
   else parts.push(actLine('asked', r.requestedAt));
   if (r.kind === 'book' && !everyone) parts.push(SERVICE_NAMES[r.service]);
@@ -278,7 +237,7 @@ export function MediaMineRow({ r }: { r: MediaRequest }) {
 
 /* Discover · Waiting for your approval. */
 export function MediaApprovalRow({ r, actions }: { r: MediaRequest; actions: MediaActions }) {
-  const p = { title: mediaName(r), name: who(r) };
+  const p = { title: mediaName(r), name: requesterName(r) };
   const busy = actions.busy(r);
   return (
     <div class={'reqs-row is-approval is-media is-' + r.kind}>
@@ -287,23 +246,31 @@ export function MediaApprovalRow({ r, actions }: { r: MediaRequest; actions: Med
         <span class="reqs-name">{mediaName(r)}</span>
         <span class="reqs-what">{mediaWhat(r, true)}</span>
       </span>
-      <span class="reqs-decide">
-        <button type="button" class="btn reqs-decline" disabled={busy} aria-label={t('Decline {title} for {name}', p)} onClick={() => actions.decline(r)}>{t('Decline')}</button>
-        <button type="button" class="btn btn-primary is-sm reqs-approve" disabled={busy} aria-label={t('Approve {title} for {name}', p)} onClick={() => actions.approve(r)}>
-          <Icon name="check" size={16} stroke={2.8} />
-          {t('Approve')}
-        </button>
-      </span>
+      <DecideButtons {...p} busy={busy} onDecline={() => actions.decline(r)} onApprove={() => actions.approve(r)} />
     </div>
   );
 }
 
-export function MediaRowSkeletons({ count, kind, approval }: { count: number; kind: 'music' | 'book'; approval?: boolean }) {
+/* Decline and Approve on a request waiting for an admin. */
+export function DecideButtons({ title, name, busy, onDecline, onApprove }: { title: string; name: string; busy: boolean; onDecline: () => void; onApprove: () => void }) {
+  return (
+    <span class="reqs-decide">
+      <button type="button" class="btn reqs-decline" disabled={busy} aria-label={t('Decline {title} for {name}', { title, name })} onClick={onDecline}>{t('Decline')}</button>
+      <button type="button" class="btn btn-primary is-sm reqs-approve" disabled={busy} aria-label={t('Approve {title} for {name}', { title, name })} onClick={onApprove}>
+        <Icon name="check" size={16} stroke={2.8} />
+        {t('Approve')}
+      </button>
+    </span>
+  );
+}
+
+/* Request rows while they load: [thumb] is the cover's class (a poster, an album, a book). */
+export function RowSkeletons({ count, approval, media, thumb = 'reqs-thumb skel' }: { count: number; approval?: boolean; media?: boolean; thumb?: string }) {
   return (
     <>
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} class={'reqs-row is-media' + (approval ? ' is-approval' : '')} aria-hidden="true">
-          <span class={(kind === 'music' ? 'reqs-thumb-album' : 'reqs-thumb-book is-skel') + ' skel'} />
+        <div key={i} class={'reqs-row' + (media ? ' is-media' : '') + (approval ? ' is-approval' : '')} aria-hidden="true">
+          <span class={thumb} />
           <span class="reqs-text">
             <span class="skel skel-line" style={{ width: '38%' }} />
             <span class="skel skel-line" style={{ width: '62%' }} />
@@ -313,6 +280,9 @@ export function MediaRowSkeletons({ count, kind, approval }: { count: number; ki
     </>
   );
 }
+
+export const MediaRowSkeletons = ({ count, kind, approval }: { count: number; kind: 'music' | 'book'; approval?: boolean }) =>
+  <RowSkeletons count={count} approval={approval} media thumb={(kind === 'music' ? 'reqs-thumb-album' : 'reqs-thumb-book is-skel') + ' skel'} />;
 
 export function Note({ icon, text, action }: { icon: 'alert' | 'inbox' | 'check' | 'user'; text: string; action?: ComponentChildren }) {
   return (
@@ -326,17 +296,9 @@ export function Note({ icon, text, action }: { icon: 'alert' | 'inbox' | 'check'
 
 /* ── Counts ── */
 
-const summaryStore = createStore<MediaSummary | null>(null);
-let summaryAt = 0;
-export function refreshMediaSummary(): Promise<void> {
-  summaryAt = Date.now();
-  return mediaSummary().then((s) => summaryStore.set(s), () => { /* keep the last counts */ });
-}
-export function useMediaSummary(enabled = true): MediaSummary | null {
-  const s = useStore(summaryStore);
-  useEffect(() => { if (enabled && Date.now() - summaryAt > 3000) void refreshMediaSummary(); }, [enabled]);
-  return s;
-}
+const summary = createSummary<MediaSummary>(mediaSummary);
+export const refreshMediaSummary = summary.refresh;
+export const useMediaSummary = summary.use;
 
 /* ── Actions ── */
 
@@ -352,21 +314,7 @@ export interface MediaActions {
 /* Approve, decline, search again, accept a lesser quality, cancel. `onChange` gets the request after the action (null
    once it's gone); the tabs' counts refresh. */
 export function useMediaActions(onChange: (r: MediaRequest, next: MediaRequest | null) => void): MediaActions {
-  const [busy, setBusy] = useState<Record<string, boolean>>({});
-  const run = async (r: MediaRequest, call: () => Promise<MediaRequest | null>, done: string, failed: string) => {
-    setBusy((b) => ({ ...b, [r.id]: true }));
-    try {
-      const next = await call();
-      onChange(r, next);
-      noteRequest(r, next);
-      toast(done);
-      void refreshMediaSummary();
-    } catch (e) {
-      toast(failed + ((e as Error)?.message ? ': ' + (e as Error).message : ''), 'error');
-    } finally {
-      setBusy((b) => { const n = { ...b }; delete n[r.id]; return n; });
-    }
-  };
+  const { run, busy } = useBusyRun<MediaRequest, MediaRequest | null>((r) => r.id, (r, next) => { onChange(r, next); noteRequest(r, next); }, refreshMediaSummary);
   const name = (r: MediaRequest) => ({ title: mediaName(r) });
   return {
     approve: (r) => run(r, () => mediaApprove(r.id), t('Approved {title}', name(r)), t('Couldn’t approve {title}', name(r))),
@@ -380,7 +328,7 @@ export function useMediaActions(onChange: (r: MediaRequest, next: MediaRequest |
         : { title: t('Remove this request?'), text: t('The request for {title} is removed, and cancelled in {service} when it’s still on its way. Anything already downloaded stays on the server.', { ...name(r), service: SERVICE_NAMES[r.service] }), action: t('Remove'), danger: true });
       if (ok) await run(r, async () => { await mediaRemove(r.id); return null; }, own ? t('Request cancelled') : t('Request removed'), t('Couldn’t remove {title}', name(r)));
     },
-    busy: (r) => !!busy[r.id]
+    busy
   };
 }
 
@@ -396,37 +344,105 @@ export function MediaTopLists({ kind }: { kind: 'music' | 'book' }) {
   const actions = useMediaActions((r) => setGone((g) => new Set(g).add(r.id)));
   const mineList = (mine.data?.results ?? []).filter((r) => r.status !== 'declined').slice(0, 3);
   const waiting = (pending.data?.results ?? []).filter((r) => r.status === 'pending' && !gone.has(r.id));
-  const retry = (reload: () => void) => <button type="button" class="btn btn-secondary is-xs" onClick={reload}>{t('Try again')}</button>;
   const music = kind === 'music';
+  return (
+    <TopColumns
+      mineTitle={music ? t('Your music requests') : t('Your book requests')}
+      mineSeeAll={(mine.data?.results.length ?? 0) > 3 ? `/requests/my?type=${music ? 'music' : 'books'}` : undefined}
+      mine={mine.loading && !mine.data ? <MediaRowSkeletons count={3} kind={kind} />
+        : mine.error ? <Note icon="alert" text={t('Seedy couldn’t load your requests.')} action={<RetryButton onClick={mine.reload} />} />
+        : !mineList.length ? <Note icon="inbox" text={music ? t('Nothing requested yet. Pick an album below, or search for any artist above.') : t('Nothing requested yet. Pick a book below, or search for any title above.')} />
+        : mineList.map((r) => <MediaMineRow key={r.id} r={r} />)}
+      approvals={canManage ? (pending.loading && !pending.data ? <MediaRowSkeletons count={2} kind={kind} approval />
+        : pending.error ? <Note icon="alert" text={t('Couldn’t load the requests waiting for approval.')} action={<RetryButton onClick={pending.reload} />} />
+        : !waiting.length ? <Note icon="check" text={t('All caught up. New requests that need you show up here.')} />
+        : waiting.slice(0, 4).map((r) => <MediaApprovalRow key={r.id} r={r} actions={actions} />)) : undefined}
+      approvalsSeeAll={waiting.length > 4 ? { to: `/requests/all?type=${music ? 'music' : 'books'}&show=pending`, n: waiting.length } : undefined}
+    />
+  );
+}
+
+export const RetryButton = ({ onClick }: { onClick: () => void }) => <button type="button" class="btn btn-secondary is-xs" onClick={onClick}>{t('Try again')}</button>;
+
+/* The two columns at the top of a Requests page: the person's own requests, and (for admins) what waits for them. */
+export function TopColumns({ mineTitle, mineSeeAll, mine, approvals, approvalsSeeAll }: {
+  mineTitle: string; mineSeeAll?: string; mine: ComponentChildren; approvals?: ComponentChildren; approvalsSeeAll?: { to: string; n: number };
+}) {
   return (
     <div class="reqs-columns">
       <section aria-labelledby="reqs-mine-h" class="reqs-col is-mine">
         <div class="reqs-col-head">
-          <h2 id="reqs-mine-h" class="row-title">{music ? t('Your music requests') : t('Your book requests')}</h2>
-          {(mine.data?.results.length ?? 0) > 3 && <Link to={`/requests/my?type=${music ? 'music' : 'books'}`} class="row-link">{t('See all')}</Link>}
+          <h2 id="reqs-mine-h" class="row-title">{mineTitle}</h2>
+          {mineSeeAll && <Link to={mineSeeAll} class="row-link">{t('See all')}</Link>}
         </div>
-        <div class="reqs-list">
-          {mine.loading && !mine.data ? <MediaRowSkeletons count={3} kind={kind} />
-            : mine.error ? <Note icon="alert" text={t('Seedy couldn’t load your requests.')} action={retry(mine.reload)} />
-            : !mineList.length ? <Note icon="inbox" text={music ? t('Nothing requested yet. Pick an album below, or search for any artist above.') : t('Nothing requested yet. Pick a book below, or search for any title above.')} />
-            : mineList.map((r) => <MediaMineRow key={r.id} r={r} />)}
-        </div>
+        <div class="reqs-list">{mine}</div>
       </section>
-      {canManage && (
+      {approvals !== undefined && (
         <section aria-labelledby="reqs-appr-h" class="reqs-col is-approvals">
           <div class="reqs-col-head">
             <h2 id="reqs-appr-h" class="row-title">{t('Waiting for your approval')}</h2>
             <span class="row-sub">{t('Admins only')}</span>
-            {waiting.length > 4 && <Link to={`/requests/all?type=${music ? 'music' : 'books'}&show=pending`} class="row-link">{t('See all {n}', { n: waiting.length })}</Link>}
+            {approvalsSeeAll && <Link to={approvalsSeeAll.to} class="row-link">{t('See all {n}', { n: approvalsSeeAll.n })}</Link>}
           </div>
-          <div class="reqs-list">
-            {pending.loading && !pending.data ? <MediaRowSkeletons count={2} kind={kind} approval />
-              : pending.error ? <Note icon="alert" text={t('Couldn’t load the requests waiting for approval.')} action={retry(pending.reload)} />
-              : !waiting.length ? <Note icon="check" text={t('All caught up. New requests that need you show up here.')} />
-              : waiting.slice(0, 4).map((r) => <MediaApprovalRow key={r.id} r={r} actions={actions} />)}
-          </div>
+          <div class="reqs-list">{approvals}</div>
         </section>
       )}
+    </div>
+  );
+}
+
+/* ── Request dialogs (music and books) ── */
+
+export const DialogClose = ({ onClose }: { onClose: () => void }) => (
+  <button type="button" class="reqs-dlg-close" aria-label={t('Close')} onClick={onClose}><Icon name="close" size={18} stroke={2.2} /></button>
+);
+
+export const DialogError = ({ message, onRetry }: { message: string; onRetry: () => void }) => (
+  <div class="rq-error">
+    <span>{message}</span>
+    <button type="button" class="btn btn-secondary is-sm" onClick={onRetry}>{t('Try again')}</button>
+  </div>
+);
+
+export const sendFailed = (e: unknown) => toast(`${t('Couldn’t send the request.')} ${(e as Error).message || ''}`.trim(), 'error');
+
+/* What happens to the request (the dot's tone and a sentence), Cancel, and Request. */
+export function DialogFoot({ tone, note, busy, disabled, label, onSend, onClose }: {
+  tone?: 'danger' | 'ok' | 'pending'; note: ComponentChildren; busy: boolean; disabled: boolean; label: string; onSend: () => void; onClose: () => void;
+}) {
+  return (
+    <div class="reqs-dlg-foot">
+      <span class="reqs-dlg-note">
+        {tone && <span class={'reqs-dot is-8 is-' + tone} aria-hidden="true" />}
+        {note}
+      </span>
+      <span class="reqs-dlg-buttons">
+        <button type="button" class="reqs-dlg-cancel" onClick={onClose}>{t('Cancel')}</button>
+        <button type="button" data-autofocus class="btn btn-primary reqs-dlg-send" disabled={disabled} onClick={onSend}>
+          <Icon name="request" size={18} stroke={2.2} />
+          {busy ? t('Requesting…') : label}
+        </button>
+      </span>
+    </div>
+  );
+}
+
+/* "Album requests this week · 3 of 5 left", with what's used in grey and this request in the accent. */
+export function Quota({ label, opts, units, aria, extra }: { label: string; opts: MediaOptions; units: number; aria: string; extra?: string }) {
+  const limit = opts.limit;
+  const left = Math.max(0, limit - opts.used);
+  const over = limit >= 0 && units > left;
+  return (
+    <div class="reqs-dlg-card is-quota">
+      <span class="reqs-dlg-quota-line">
+        <span>{label}</span>
+        <span class={over ? 'is-over' : undefined}>{limit < 0 ? t('No limit') : limit === 0 ? t('Can’t request') : t('{left} of {limit} left', { left, limit })}</span>
+      </span>
+      <span role="img" aria-label={aria} class="reqs-dlg-quota-bar">
+        {limit > 0 && <span style={{ width: widthOf(opts.used, limit) }} />}
+        {limit > 0 && <span class={over ? 'is-over' : undefined} style={{ width: widthOf(Math.min(units, Math.max(0, limit - opts.used)), limit) }} />}
+      </span>
+      {extra && <span class="reqs-dlg-card-label">{extra}</span>}
     </div>
   );
 }

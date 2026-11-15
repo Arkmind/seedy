@@ -7,9 +7,8 @@ import { Link } from '../../lib/router';
 import { useAsync } from '../../lib/store';
 import { Row } from '../../ui/Row';
 import { Icon } from '../../ui/icons';
-import { ListFrame } from '../browse/Lists';
 import { EmptyState, ErrorState, Lazy } from '../browse/parts';
-import { Frame, NotSetUp, useServices } from './frame';
+import { BrowseFrame, Frame, NotSetUp, ResultsSection, useServices } from './frame';
 import { AlbumArt, cardStatus, initials, MediaTopLists, useAsked } from './media-parts';
 import { RequestMusicArtist } from './music-dialog';
 
@@ -206,13 +205,10 @@ function MusicResults({ query }: { query: string }) {
     );
   }
   return (
-    <section class="reqs-pad reqs-results" aria-labelledby="reqs-results-h">
-      <div class="reqs-col-head">
-        <h2 id="reqs-results-h" class="row-title">{t('Results for “{query}”', { query })}</h2>
-      </div>
+    <ResultsSection query={query}>
       {body}
       {dialog.dialog}
-    </section>
+    </ResultsSection>
   );
 }
 
@@ -232,13 +228,9 @@ export function MusicBrowse({ row }: { row: string }) {
   else if (!state.data?.results.length) body = <EmptyState icon="clock" title={t('Nothing here right now')} text={t('Check back later for new albums.')} />;
   else body = <div class="reqs-grid is-albums">{state.data.results.map((r) => <AlbumCard key={r.mbid} r={r} meta={releaseMeta(r, def.row)} onOpen={open} />)}</div>;
   return (
-    <ListFrame
-      active="requests"
-      title={def ? t(def.title) : t('List not found')}
-      lede={<Link to="/requests/music" class="list-seed"><Icon name="chevronLeft" size={14} stroke={2.4} />{t('Back to music requests')}</Link>}
-    >
+    <BrowseFrame title={def ? t(def.title) : t('List not found')} back="/requests/music" backLabel={t('Back to music requests')}>
       {body}
       {dialog.dialog}
-    </ListFrame>
+    </BrowseFrame>
   );
 }

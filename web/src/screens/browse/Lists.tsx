@@ -107,7 +107,7 @@ function SimilarList() {
     <ListFrame
       title={<><span class="lead">{t('Because you watched')}</span> {name || t('this')}</>}
       count={countOf(state.data)}
-      lede={seed ? <Link to={`/details/${seed}`} class="list-seed"><Icon name="chevronLeft" size={14} stroke={2.4} />{t('Back to {name}', { name: name || t('the title') })}</Link> : undefined}
+      lede={seed ? <BackLink to={`/details/${seed}`} label={t('Back to {name}', { name: name || t('the title') })} /> : undefined}
     >
       <Body state={{ ...state, data: state.data ? items : undefined }} empty={<EmptyState icon="film" title={t('No suggestions yet')} text={t('Jellyfin hasn\'t found anything similar on this server.')} />}>
         {(list) => <CardGrid items={list} onReplace={replace} origin="because" />}
@@ -149,6 +149,11 @@ function PagedGrid({ paged, empty }: { paged: ReturnType<typeof usePaged>; empty
     </>
   );
 }
+
+/* "‹ Back to …" under a list's title. */
+export const BackLink = ({ to, label }: { to: string; label: string }) => (
+  <Link to={to} class="list-seed"><Icon name="chevronLeft" size={14} stroke={2.4} />{label}</Link>
+);
 
 /* ───────── Latest in a library ───────── */
 

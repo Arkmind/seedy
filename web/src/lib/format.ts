@@ -35,6 +35,8 @@ export function progressFraction(item: BaseItem): number {
 }
 
 export const pct = (f: number) => `${(Math.max(0, Math.min(1, f)) * 100).toFixed(2)}%`;
+/* [n] of [of] as a CSS width, unrounded (quota bars). */
+export const pctOf = (n: number, of: number) => `${of > 0 ? Math.max(0, Math.min(100, (n / of) * 100)) : 0}%`;
 
 /* Settings · Display › Dates and times: a 12- or 24-hour clock, month or day first, or ISO dates.
    Month and day names follow Seedy's language; the default is the boards' style ("19 Oct", "22:41"). */

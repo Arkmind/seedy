@@ -4,7 +4,10 @@ import { getEpisodes, getLocalTrailers, getSimilar, setPlayed } from '../../api/
 import { backdropUrl, cardArt } from '../../api/images';
 import type { BaseItem, Person } from '../../api/types';
 import { viewsStore } from '../../lib/app-state';
-import { fmtDate, score as fmtScore, fmtWeekdayDate, pct, plural, progressFraction, remainingSeconds, runtime, timeLeft, ratingLabel, dayOf, fitTitle } from '../../lib/format';
+import {
+  dayOf, fitTitle, fmtDate, fmtWeekdayDate, listText, pct, plural, progressFraction, ratingLabel, remainingSeconds, runtime, score as fmtScore,
+  timeLeft
+} from '../../lib/format';
 import { Link, href, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { Art, CastCard, ItemCard, WatchedCheck, playPath } from '../../ui/cards';
@@ -273,12 +276,11 @@ export function MoreActions({ item, children }: { item: BaseItem; children?: (cl
   return <ItemMenu item={item} shortcut>{children}</ItemMenu>;
 }
 
+/* "Mondays and Fridays", "daily": Jellyfin's air days ("Monday"), as a phrase. */
 export function airsPhrase(days?: string[]): string {
   if (!days?.length) return '';
-  const pluralDays = days.map((d) => d + 's');
-  if (pluralDays.length === 1) return pluralDays[0];
-  if (pluralDays.length === 7) return 'daily';
-  return pluralDays.slice(0, -1).join(', ') + ' and ' + pluralDays[pluralDays.length - 1];
+  if (days.length === 7) return t('daily');
+  return listText(days.map((d) => t(d + 's')));
 }
 
 export function seriesStatus(item: BaseItem): string | undefined {
@@ -290,7 +292,7 @@ export function seriesStatus(item: BaseItem): string | undefined {
     const end = item.EndDate ? dayOf(item.EndDate)!.getFullYear() : undefined;
     return end ? t('Ended · {year}', { year: end }) : t('Ended');
   }
-  return item.Status || undefined;
+  return item.Status ? t(item.Status) : undefined;
 }
 
 /* ───────── Seasons and episodes ───────── */

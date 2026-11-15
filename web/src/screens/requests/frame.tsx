@@ -10,6 +10,7 @@ import { EmptyState } from '../browse/parts';
 import { SERVICE_NAMES, useMediaSummary } from './media-parts';
 import { useSummary } from './parts';
 import { capitalize, listText } from '../../lib/format';
+import { BackLink, ListFrame } from '../browse/Lists';
 
 /* The Requests page's frame (Requests, RequestsMusic, RequestsBooks, RequestsMine boards): the title with the
    Movies and shows · Music · Books tabs (only for the services the server has), the line saying where requests go,
@@ -202,5 +203,27 @@ export function Frame({ service, tab, placeholder, label, results, children }: {
       </div>
       {query ? results(query) : children}
     </Shell>
+  );
+}
+
+/* "Results for “abba”" over what a search found. */
+export function ResultsSection({ query, sub, children }: { query: string; sub?: ComponentChildren; children: ComponentChildren }) {
+  return (
+    <section class="reqs-pad reqs-results" aria-labelledby="reqs-results-h">
+      <div class="reqs-col-head">
+        <h2 id="reqs-results-h" class="row-title">{t('Results for “{query}”', { query })}</h2>
+        {sub}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/* A Discover row's See all page, with the way back to its Discover page. */
+export function BrowseFrame({ title, back, backLabel, children }: { title: string; back: string; backLabel: string; children: ComponentChildren }) {
+  return (
+    <ListFrame active="requests" title={title} lede={<BackLink to={back} label={backLabel} />}>
+      {children}
+    </ListFrame>
   );
 }
