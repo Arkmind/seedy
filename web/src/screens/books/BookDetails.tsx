@@ -113,7 +113,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
   /* ── Meta line: author · 2023 · 412 pages · English ★ 4.3 ── */
   const self = lib.data?.all.find((o) => o.Id === item.Id) ?? item;
   // Jellyfin says per title whether this profile may download it; the policy is the fallback.
-  const mayDownload = (self as BaseItem & { CanDownload?: boolean }).CanDownload ?? policyDownload;
+  const mayDownload = self.CanDownload ?? policyDownload;
   const year = itemYear(item);
   // The language comes from the EPUB of this work (the PDF and the audiobook share it).
   const epubId = (formatOf(self) === 'epub' ? self : work.find((o) => formatOf(o) === 'epub'))?.Id;
@@ -317,7 +317,7 @@ function FormatCard({ item, current, canDownload }: { item: BaseItem; current: b
   const audio = f === 'audio';
   // A book in several files (an MP3 per chapter) says so: "MP3 · 8 files".
   const parts = partsOf(item);
-  const container = (parts ? (item as { Container?: string }).Container ?? '' : /\.(\w+)$/.exec((item as { Path?: string }).Path ?? '')?.[1] ?? '').toUpperCase();
+  const container = (parts ? item.Container ?? '' : /\.(\w+)$/.exec(item.Path ?? '')?.[1] ?? '').toUpperCase();
   const narrator = audio ? narratorOf(item) : undefined;
   const note = audio ? (narrator ? t('narrated by {name}', { name: narrator }) : item.RunTimeTicks ? duration(ticksToSeconds(item.RunTimeTicks)) : '')
     : f === 'epub' || f === 'cbz' ? t('reads in Seedy')

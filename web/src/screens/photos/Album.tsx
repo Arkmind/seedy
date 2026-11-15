@@ -100,7 +100,7 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
   const fi = info.data;
   const counts = fi ? countsLine(fi.photos, fi.videos) : '';
   const range = fi ? dateRange(fi.from, fi.to) : '';
-  const path = (item as PhotoItem).Path;
+  const path = item.Path;
   const covers = fi?.covers ?? [];
   const folders = subs.data?.Items ?? [];
   const empty = !paged.loading && !paged.items.length;

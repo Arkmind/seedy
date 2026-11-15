@@ -26,7 +26,6 @@ export type PhotoItem = BaseItem & {
   IsoSpeedRating?: number;
   Latitude?: number;
   Longitude?: number;
-  Path?: string;
   ImageBlurHashes?: Record<string, Record<string, string>>;
 };
 

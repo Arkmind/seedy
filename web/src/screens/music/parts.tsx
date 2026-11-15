@@ -223,7 +223,7 @@ export const GENRE_ORDER = [0, 8, 2, 6, 4, 3, 1, 7, 5];
 
 export function GenreTile({ genre, index, sample, to }: { genre: BaseItem; index: number; sample?: Track | null; to: string }) {
   const bg = PALETTES[GENRE_ORDER[index % GENRE_ORDER.length] % PALETTES.length][1];
-  const count = (genre as BaseItem & { AlbumCount?: number }).AlbumCount ?? genre.ChildCount;
+  const count = genre.AlbumCount ?? genre.ChildCount;
   return (
     <Link to={to} class="mu-genre" style={{ background: bg }}>
       <span class="mu-genre-name">{genre.Name}</span>

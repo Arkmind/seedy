@@ -503,7 +503,7 @@ function PersonPage({ item: initial }: { item: BaseItem }) {
   const portrait = personImageUrl({ Id: item.Id, PrimaryImageTag: item.ImageTags?.Primary }, 480);
   const born = item.PremiereDate ? dayOf(item.PremiereDate)! : undefined;
   const died = item.EndDate ? dayOf(item.EndDate)! : undefined;
-  const place = (item as BaseItem & { ProductionLocations?: string[] }).ProductionLocations?.[0];
+  const place = item.ProductionLocations?.[0];
   const birth = [
     born ? (place ? t('Born {date} in {place}', { date: fmtDate(born), place }) : t('Born {date}', { date: fmtDate(born) })) : place ? t('Born in {place}', { place }) : '',
     died ? t('Died {date}', { date: fmtDate(died) }) : ''

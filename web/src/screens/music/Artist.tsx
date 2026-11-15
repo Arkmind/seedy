@@ -58,7 +58,7 @@ export function MusicArtistPage({ item: initial }: { item: BaseItem }) {
   const list = songs.data ?? [];
   const playsHere = list.reduce((sum, x) => sum + (x.UserData?.PlayCount ?? 0), 0);
   const top = (list.some((x) => x.UserData?.PlayCount) ? list.filter((x) => x.UserData?.PlayCount) : list).slice(0, 5);
-  const place = (item as BaseItem & { ProductionLocations?: string[] }).ProductionLocations?.[0];
+  const place = item.ProductionLocations?.[0];
   const source = { kind: 'artist' as const, id: item.Id, name: item.Name };
   const here = !!s.current && s.source?.id === item.Id;
   const fav = !!item.UserData?.IsFavorite;

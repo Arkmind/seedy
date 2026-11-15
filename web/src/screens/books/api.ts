@@ -42,20 +42,17 @@ export {
 
 export const isAudioBook = (item: Pick<BaseItem, 'Type'>) => item.Type === 'AudioBook';
 
-type WithPath = BaseItem & { Path?: string; Container?: string; MediaSources?: { Path?: string; Container?: string; Size?: number }[] };
-
 export function formatOf(item: BaseItem): BookFormat | 'audio' {
   if (isAudioBook(item)) return 'audio';
-  const it = item as WithPath;
-  const path = it.Path ?? it.MediaSources?.[0]?.Path ?? '';
-  const ext = (/\.([a-z0-9]+)$/i.exec(path)?.[1] ?? it.Container ?? '').toLowerCase();
+  const path = item.Path ?? item.MediaSources?.[0]?.Path ?? '';
+  const ext = (/\.([a-z0-9]+)$/i.exec(path)?.[1] ?? item.Container ?? '').toLowerCase();
   if (ext === 'epub' || ext === 'pdf' || ext === 'cbz' || ext === 'cbr') return ext;
   return 'other';
 }
 
 export const isComic = (item: BaseItem) => { const f = formatOf(item); return f === 'cbz' || f === 'cbr'; };
 
-export const fileSize = (item: BaseItem): number | undefined => (item as WithPath).MediaSources?.[0]?.Size;
+export const fileSize = (item: BaseItem): number | undefined => item.MediaSources?.[0]?.Size;
 
 /* Who wrote it: Jellyfin keeps book authors as people (Author, or Writer from ComicInfo), audiobook authors as
    album artists or artists. */

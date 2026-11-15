@@ -399,13 +399,13 @@ async function readingEntry(item: BaseItem, r: Reading): Promise<ContinueEntry> 
     const pages = info?.Pages ?? 0;
     const page = Math.min(pages, (Number(r.Locator) || 0) + 1);
     return {
-      item, kind: t('Comic · {format}', { format: (/\.(\w+)$/.exec(String((item as { Path?: string }).Path ?? ''))?.[1] ?? 'CBZ').toUpperCase() }),
+      item, kind: t('Comic · {format}', { format: (/\.(\w+)$/.exec(item.Path ?? '')?.[1] ?? 'CBZ').toUpperCase() }),
       where: pages ? t('Page {n} of {total}', { n: page, total: pages }) : undefined,
       fraction, done: t('{n}% read', { n: Math.round(r.Percent) }),
       left: pages ? tn(Math.max(0, pages - page), '{n} page left', '{n} pages left') : undefined
     };
   }
-  const format = (/\.(\w+)$/.exec(String((item as { Path?: string }).Path ?? ''))?.[1] ?? 'EPUB').toUpperCase();
+  const format = (/\.(\w+)$/.exec(item.Path ?? '')?.[1] ?? 'EPUB').toUpperCase();
   const chapter = r.ChapterIndex && r.Chapter ? t('Chapter {n} · {title}', { n: r.ChapterIndex, title: r.Chapter }) : r.Chapter;
   const minutes = info?.Minutes ? info.Minutes * (1 - fraction) : 0;
   return {

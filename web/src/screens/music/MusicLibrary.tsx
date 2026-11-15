@@ -230,7 +230,7 @@ async function genreMixOf(g: BaseItem): Promise<Mix> {
 
 const getGenres = (viewId: string) =>
   get<ItemsResult>('/MusicGenres', { userId: currentUserId(), parentId: viewId, fields: 'ItemCounts', enableImages: false, sortBy: 'SortName' })
-    .then((r) => r.Items.slice().sort((a, b) => ((b as { AlbumCount?: number }).AlbumCount ?? b.ChildCount ?? 0) - ((a as { AlbumCount?: number }).AlbumCount ?? a.ChildCount ?? 0)));
+    .then((r) => r.Items.slice().sort((a, b) => (b.AlbumCount ?? b.ChildCount ?? 0) - (a.AlbumCount ?? a.ChildCount ?? 0)));
 
 function Mixes({ view, top }: { view: BaseItem; top?: TopArtist[] }) {
   const [more, setMore] = useState(false);
@@ -357,7 +357,7 @@ function TopArtists({ view, top, loading }: { view: BaseItem; top?: TopArtist[];
 }
 
 export const artistAlbums = (a: BaseItem) => {
-  const n = (a as BaseItem & { AlbumCount?: number }).AlbumCount ?? a.ChildCount;
+  const n = a.AlbumCount ?? a.ChildCount;
   return n ? tn(n, '{n} album', '{n} albums') : '';
 };
 
