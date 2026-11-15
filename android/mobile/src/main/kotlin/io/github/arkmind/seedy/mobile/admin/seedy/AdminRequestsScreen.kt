@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -196,7 +197,7 @@ private fun Connection(state: AdminRequestsState, actions: AdminRequestsActions,
                 withStyle(SpanStyle(fontWeight = FontWeight(800), color = SeedyColors.White)) { append(line.lead) }
                 if (line.rest.isNotEmpty()) append(" " + line.rest)
             }
-            androidx.compose.foundation.text.BasicText(
+            BasicText(
                 text, Modifier.weight(1f),
                 style = BaseText.copy(fontSize = 13.sp, lineHeight = (13 * 1.45).sp, color = SeedyColors.Text2),
             )

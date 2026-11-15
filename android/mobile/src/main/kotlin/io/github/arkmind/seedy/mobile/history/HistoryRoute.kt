@@ -55,6 +55,7 @@ import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
 import io.github.arkmind.seedy.mobile.settings.Card
+import io.github.arkmind.seedy.mobile.settings.Faint
 import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.SectionTitle
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
@@ -225,8 +226,6 @@ private fun HistoryRow(e: HistoryEntry, recent: Boolean, nav: HistoryNav, onMore
         }
     }
 }
-
-private val Faint = Color(0xFF6A6A6A)
 
 @Composable
 private fun RowButton(icon: IconDef, onClick: () -> Unit) {

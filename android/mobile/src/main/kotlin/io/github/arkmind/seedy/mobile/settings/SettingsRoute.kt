@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,6 +34,7 @@ import io.github.arkmind.seedy.core.settings.SettingsActions
 import io.github.arkmind.seedy.core.settings.SettingsState
 import io.github.arkmind.seedy.mobile.admin.IconTile
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
+import io.github.arkmind.seedy.mobile.nav.MobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Tab
 import io.github.arkmind.seedy.mobile.parts.tap
@@ -58,7 +58,6 @@ fun SettingsRoute(appVersion: String) {
     val session = currentSession()
     val core = checkNotNull(LocalCore.current)
     val nav = LocalMobileNav.current
-    val context = LocalContext.current
     val vm = viewModel { SettingsViewModel(core, session) }
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.load("home") }
@@ -66,14 +65,13 @@ fun SettingsRoute(appVersion: String) {
         state = state,
         appVersion = appVersion,
         actions = vm,
-        nav = settingsNav(state, nav, context),
+        nav = settingsNav(nav),
         requests = LocalViewer.current.requests,
     )
 }
 
 /** Where settings lead: their pages, the Requests tab, the server pages. */
-@Suppress("UNUSED_PARAMETER")
-internal fun settingsNav(state: SettingsState, nav: io.github.arkmind.seedy.mobile.nav.MobileNav, context: android.content.Context) = SettingsNav(
+internal fun settingsNav(nav: MobileNav) = SettingsNav(
     back = nav::back,
     open = { nav.go(Route.SettingsPage(it)) },
     requests = { nav.toTab(Tab.Requests) },

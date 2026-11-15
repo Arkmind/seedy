@@ -91,9 +91,11 @@ import kotlin.math.roundToInt
 /** #6a6a6a: the pages' foot notes. */
 val Faint = Color(0xFF6A6A6A)
 
+/** #5a5a5a: the ring of a radio, box or status dot that's off. */
+internal val OffRing = Color(0xFF5A5A5A)
+
 private val TagRing = Color(0xFF3A3A3A)
-private val TrackOff = Color(0xFF2A2A2A)
-private val CountOn = Color(0xFF5A5A5A)
+private val CountOn = OffRing
 
 /* ── Text as the boards' Chrome boxes it ── */
 
@@ -438,7 +440,7 @@ fun StackRow(name: String, help: String?, gap: Dp = 10.dp, content: @Composable 
 fun BoardSwitch(on: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) {
     val accent = LocalAccent.current
     Box(
-        Modifier.size(46.dp, 28.dp).clip(CircleShape).background(if (on) accent else TrackOff)
+        Modifier.size(46.dp, 28.dp).clip(CircleShape).background(if (on) accent else SeedyColors.Surface2)
             .tap(role = Role.Switch, enabled = enabled) { onChange(!on) },
     ) {
         Box(Modifier.padding(start = if (on) 22.dp else 4.dp, top = 4.dp).size(20.dp).background(if (on) SeedyColors.InkInverse else SeedyColors.Text3, CircleShape))

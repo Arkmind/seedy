@@ -2,10 +2,10 @@ package io.github.arkmind.seedy.mobile.admin
 
 import androidx.compose.runtime.Composable
 import io.github.arkmind.seedy.core.i18n.t
-import io.github.arkmind.seedy.mobile.admin.media.AdminLibrariesRoute
 import io.github.arkmind.seedy.mobile.admin.media.AdminLibraryRoute
-import io.github.arkmind.seedy.mobile.admin.media.ServerPlaybackRoute
-import io.github.arkmind.seedy.mobile.admin.media.ServerSettingsRoute
+import io.github.arkmind.seedy.mobile.admin.media.LibrariesRoute
+import io.github.arkmind.seedy.mobile.admin.media.PlaybackRoute
+import io.github.arkmind.seedy.mobile.admin.media.ServerSettingsPageRoute
 import io.github.arkmind.seedy.mobile.admin.people.ApiKeysRoute
 import io.github.arkmind.seedy.mobile.admin.people.DevicesRoute
 import io.github.arkmind.seedy.mobile.admin.people.UserRoute
@@ -41,10 +41,10 @@ fun AdminRoute(page: String, id: String?) {
         "devices" -> DevicesRoute()
         "apikeys" -> ApiKeysRoute()
         // Media: libraries, playback (transcoding), server settings.
-        "libraries" -> AdminLibrariesRoute()
+        "libraries" -> LibrariesRoute()
         "library" -> AdminLibraryRoute(id.orEmpty())
-        "playback" -> ServerPlaybackRoute()
-        "settings" -> ServerSettingsRoute()
+        "playback" -> PlaybackRoute()
+        "settings" -> ServerSettingsPageRoute()
         // System: tasks, activity, plugins, backups, logs.
         "tasks" -> TasksRoute()
         "activity" -> ActivityRoute()

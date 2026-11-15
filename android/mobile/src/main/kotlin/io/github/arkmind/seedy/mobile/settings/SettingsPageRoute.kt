@@ -3,7 +3,6 @@ package io.github.arkmind.seedy.mobile.settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.feature.SettingsViewModel
@@ -23,11 +22,10 @@ fun SettingsPageRoute(page: String, appVersion: String) {
     val session = currentSession()
     val core = checkNotNull(LocalCore.current)
     val nav = LocalMobileNav.current
-    val context = LocalContext.current
     val vm = viewModel { SettingsViewModel(core, session) }
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(page) { vm.load(if (page == "home" || page == "libraries") "homescreen" else page) }
-    val to = settingsNav(state, nav, context)
+    val to = settingsNav(nav)
     when (page) {
         "profile" -> ProfilePage(state, vm, to)
         "home" -> HomeScreenPage(state, vm, to)

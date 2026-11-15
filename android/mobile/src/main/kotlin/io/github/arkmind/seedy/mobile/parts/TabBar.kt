@@ -33,7 +33,7 @@ import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 
-/** The phone's four places. Requests only when the server's Seedy is connected to Seerr. */
+/** The phone's four places. Requests only when the server offers requests (Seerr, or music and book requests). */
 enum class Tab(val label: String, val icon: IconDef) {
     Home("Home", WebIcons.Home),
     Libraries("Libraries", AppIcons.Libraries),

@@ -3,6 +3,10 @@ package io.github.arkmind.seedy.mobile.nav
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.staticCompositionLocalOf
 import io.github.arkmind.seedy.core.audio.isAudioItem
+import io.github.arkmind.seedy.core.mediarequests.MusicRow
+import io.github.arkmind.seedy.core.photos.PhotoQueue
+import io.github.arkmind.seedy.core.requests.TitlesKind
+import io.github.arkmind.seedy.mobile.parts.Tab
 import io.github.arkmind.seedy.player.audio.AudioEngine
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -28,7 +32,7 @@ sealed interface Route {
     data class Player(val id: UUID, val startTicks: Long? = null, val maxBitrate: Int? = null) : Route
     /** A title that's on Seerr but not on the server (search, Discover…). */
     data class SeerrTitle(val mediaType: String, val tmdbId: Int) : Route
-    /** A Discover row's "See all" (a [io.github.arkmind.seedy.core.requests.TitlesKind] key). */
+    /** A Discover row's "See all" (a [TitlesKind] key). */
     data class SeerrTitles(val kind: String) : Route
     /** A server page for admins: "server" (the hub), "users", "user" (with [id]), "libraries", "playback"… */
     data class Admin(val page: String, val id: String? = null) : Route
@@ -52,18 +56,18 @@ sealed interface Route {
     data class Photos(val id: UUID) : Route
     /** A folder of photos (the web's Photos · Folder board); [photo] opens the viewer on that photo. */
     data class PhotoFolder(val id: UUID, val photo: UUID? = null) : Route
-    /** The photo viewer over the list the page handed it ([io.github.arkmind.seedy.core.photos.PhotoQueue]); [play] starts the slideshow. */
+    /** The photo viewer over the list the page handed it ([PhotoQueue]); [play] starts the slideshow. */
     data class PhotoViewer(val id: UUID, val play: Boolean = false) : Route
     /** Music or book requests' search: MusicBrainz artists and albums, or books. */
     data class MediaRequestsSearch(val music: Boolean) : Route
-    /** A music or books Discover row's "See all" (a [io.github.arkmind.seedy.core.mediarequests.MusicRow] or BookRow key). */
+    /** A music or books Discover row's "See all" (a [MusicRow] or BookRow key). */
     data class MediaRequestsRow(val music: Boolean, val row: String) : Route
 }
 
 /** Moves between pages; every screen reaches it through [LocalMobileNav]. */
-class MobileNav(private val stack: SnapshotStateList<Any>, private val selectTab: (io.github.arkmind.seedy.mobile.parts.Tab) -> Unit = {}) {
+class MobileNav(private val stack: SnapshotStateList<Any>, private val selectTab: (Tab) -> Unit = {}) {
     /** Back to the tabs, on [tab] (the tab bar under a page). */
-    fun toTab(tab: io.github.arkmind.seedy.mobile.parts.Tab) {
+    fun toTab(tab: Tab) {
         while (stack.size > 1) stack.removeAt(stack.lastIndex)
         selectTab(tab)
     }

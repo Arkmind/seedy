@@ -89,7 +89,6 @@ internal sealed interface LiveSub {
 }
 
 private val GuideDays = listOf(0, 1, 3, 7, 14)
-private val PaddingMinutes = listOf(0, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60, 90, 120)
 
 /** Which recording setting a sheet edits. */
 private enum class RecSheet { Folder, Movies, Series, Padding, Post }

@@ -19,23 +19,11 @@ import io.github.arkmind.seedy.ui.theme.currentSession
  * Settings. AdminRoute opens them by page key.
  */
 
-/** Board "Android · Server · Libraries". */
-@Composable
-fun AdminLibrariesRoute() = LibrariesRoute()
-
 /** One library, or with [id] "display", "metadata" or "nfo" the settings every library shares. */
 @Composable
 fun AdminLibraryRoute(id: String) {
     if (id in LibraryPages.all) LibraryDefaultsRoute(id) else LibraryRoute(id)
 }
-
-/** Board "Android · Server · Playback". */
-@Composable
-fun ServerPlaybackRoute() = PlaybackRoute()
-
-/** Board "Android · Server · Settings". */
-@Composable
-fun ServerSettingsRoute() = ServerSettingsPageRoute()
 
 @Composable
 private fun LibraryDefaultsRoute(page: String) {

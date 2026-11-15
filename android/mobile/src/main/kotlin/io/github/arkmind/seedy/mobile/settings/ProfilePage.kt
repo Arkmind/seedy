@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +43,7 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.settings.SettingsActions
 import io.github.arkmind.seedy.core.settings.SettingsState
+import io.github.arkmind.seedy.mobile.notify.rememberNotificationAsk
 import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.mobile.parts.PrimaryButton
 import io.github.arkmind.seedy.mobile.parts.SeedyField
@@ -113,7 +115,7 @@ fun ProfilePage(state: SettingsState, actions: SettingsActions, nav: SettingsNav
                     PickRow(t("Seerr account"), help, (account?.name ?: state.name).lowercase(), onClick = nav.requests)
                 }
                 row {
-                    val ask = io.github.arkmind.seedy.mobile.notify.rememberNotificationAsk()
+                    val ask = rememberNotificationAsk()
                     SwitchRow(t("Tell me when a request is ready"), t("A notification on this phone when something you asked for arrives"), state.device.notifyRequests, device = true) { on ->
                         actions.setDevice { it.copy(notifyRequests = on) }
                         if (on) ask(true)
@@ -153,7 +155,7 @@ internal fun signedInOn(state: SettingsState): String =
     if (state.deviceName.isEmpty()) t("Seedy for Android") else t("Signed in on {device} · {app}", "device" to state.deviceName, "app" to t("Seedy for Android"))
 
 @Composable
-internal fun WideButton(label: String, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+internal fun WideButton(label: String, color: Color, onClick: () -> Unit) {
     Box(Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(16.dp)).background(SeedyColors.Panel).tap(onClick = onClick), contentAlignment = Alignment.Center) {
         SText(label, size = 14.sp, weight = 800, color = color, maxLines = 1)
     }

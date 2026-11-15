@@ -26,7 +26,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -35,6 +34,7 @@ import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.mobile.settings.OffRing
 import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -76,7 +76,7 @@ fun CheckBox(on: Boolean, size: Dp = 22.dp) {
     val accent = LocalAccent.current
     Box(
         Modifier.size(size).clip(RoundedCornerShape(7.dp))
-            .then(if (on) Modifier.background(accent) else Modifier.border(2.dp, Color(0xFF5A5A5A), RoundedCornerShape(7.dp))),
+            .then(if (on) Modifier.background(accent) else Modifier.border(2.dp, OffRing, RoundedCornerShape(7.dp))),
         contentAlignment = Alignment.Center,
     ) { if (on) SIcon(WebIcons.Check, size = size * 0.64f, color = SeedyColors.InkInverse, stroke = 3.2f) }
 }

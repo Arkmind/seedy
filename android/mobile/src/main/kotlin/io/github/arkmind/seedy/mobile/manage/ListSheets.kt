@@ -225,70 +225,68 @@ private fun AudienceOption(icon: io.github.arkmind.seedy.ui.icons.IconDef, name:
 private fun People(state: NewPlaylistState, actions: NewPlaylistActions) {
     val accent = LocalAccent.current
     val images = LocalViewer.current.images
-    run {
-        Column(
-            Modifier.fillMaxWidth().padding(start = 2.dp).drawBehind { drawRect(SeedyColors.Surface2, size = Size(2.dp.toPx(), size.height)) }.padding(start = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            for ((i, shared) in state.people.withIndex()) {
-                val p = shared.person
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(SeedyColors.Row).padding(start = 10.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    val index = state.everyone.orEmpty().indexOfFirst { it.id == p.id }.coerceAtLeast(i)
-                    AdminAvatar(p.name, avatarColour(index + 1), 30.dp, 13.sp, imageUrl = if (p.hasImage) images?.userPicture(p.id, 96) else null)
-                    SText(p.name, Modifier.weight(1f), size = 14.sp, weight = 700, color = SeedyColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    var open by remember { mutableStateOf(false) }
-                    Box {
-                        Row(
-                            Modifier.height(34.dp).clip(RoundedCornerShape(10.dp)).background(SeedyColors.Surface).tap { open = true }.padding(start = 12.dp, end = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
-                            SText(if (shared.canEdit) t("Can edit") else t("Can watch"), size = 13.sp, weight = 700, color = SeedyColors.White, maxLines = 1)
-                            SIcon(WebIcons.ChevronDown, size = 14.dp, color = SeedyColors.White, stroke = 2.4f)
-                        }
-                        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = SeedyColors.Row, shape = RoundedCornerShape(12.dp)) {
-                            for ((edit, label) in listOf(true to t("Can edit"), false to t("Can watch"))) {
-                                DropdownMenuItem(
-                                    text = { SText(label, size = 14.sp, weight = if (edit == shared.canEdit) 800 else 600, color = SeedyColors.White) },
-                                    trailingIcon = if (edit == shared.canEdit) ({ SIcon(WebIcons.Check, size = 16.dp, color = accent) }) else null,
-                                    onClick = { open = false; actions.setCanEdit(p.id, edit) },
-                                )
-                            }
-                        }
-                    }
-                    Box(Modifier.size(34.dp).clip(CircleShape).tap { actions.removePerson(p.id) }, contentAlignment = Alignment.Center) {
-                        SIcon(WebIcons.Close, size = 14.dp, color = SeedyColors.Text2, stroke = 2.4f)
-                    }
-                }
-            }
-            val others = state.others
-            if (others.isNotEmpty()) {
+    Column(
+        Modifier.fillMaxWidth().padding(start = 2.dp).drawBehind { drawRect(SeedyColors.Surface2, size = Size(2.dp.toPx(), size.height)) }.padding(start = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        for ((i, shared) in state.people.withIndex()) {
+            val p = shared.person
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(SeedyColors.Row).padding(start = 10.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                val index = state.everyone.orEmpty().indexOfFirst { it.id == p.id }.coerceAtLeast(i)
+                AdminAvatar(p.name, avatarColour(index + 1), 30.dp, 13.sp, imageUrl = if (p.hasImage) images?.userPicture(p.id, 96) else null)
+                SText(p.name, Modifier.weight(1f), size = 14.sp, weight = 700, color = SeedyColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 var open by remember { mutableStateOf(false) }
                 Box {
                     Row(
-                        Modifier.heightIn(min = 40.dp).clip(RoundedCornerShape(10.dp)).tap { open = true }.padding(horizontal = 10.dp),
+                        Modifier.height(34.dp).clip(RoundedCornerShape(10.dp)).background(SeedyColors.Surface).tap { open = true }.padding(start = 12.dp, end = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        SIcon(WebIcons.Plus, size = 15.dp, color = SeedyColors.White, stroke = 2.6f)
-                        SText(t("Add someone"), size = 14.sp, weight = 700, color = SeedyColors.White)
+                        SText(if (shared.canEdit) t("Can edit") else t("Can watch"), size = 13.sp, weight = 700, color = SeedyColors.White, maxLines = 1)
+                        SIcon(WebIcons.ChevronDown, size = 14.dp, color = SeedyColors.White, stroke = 2.4f)
                     }
                     DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = SeedyColors.Row, shape = RoundedCornerShape(12.dp)) {
-                        for (p in others) {
+                        for ((edit, label) in listOf(true to t("Can edit"), false to t("Can watch"))) {
                             DropdownMenuItem(
-                                text = { SText(p.name, size = 14.sp, weight = 600, color = SeedyColors.White) },
-                                onClick = { open = false; actions.addPerson(p.id) },
+                                text = { SText(label, size = 14.sp, weight = if (edit == shared.canEdit) 800 else 600, color = SeedyColors.White) },
+                                trailingIcon = if (edit == shared.canEdit) ({ SIcon(WebIcons.Check, size = 16.dp, color = accent) }) else null,
+                                onClick = { open = false; actions.setCanEdit(p.id, edit) },
                             )
                         }
                     }
                 }
-            } else if (state.people.isEmpty()) {
-                SText(t("There’s nobody else on this server yet."), Modifier.padding(10.dp), size = 13.sp, color = SeedyColors.Text3)
+                Box(Modifier.size(34.dp).clip(CircleShape).tap { actions.removePerson(p.id) }, contentAlignment = Alignment.Center) {
+                    SIcon(WebIcons.Close, size = 14.dp, color = SeedyColors.Text2, stroke = 2.4f)
+                }
             }
+        }
+        val others = state.others
+        if (others.isNotEmpty()) {
+            var open by remember { mutableStateOf(false) }
+            Box {
+                Row(
+                    Modifier.heightIn(min = 40.dp).clip(RoundedCornerShape(10.dp)).tap { open = true }.padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    SIcon(WebIcons.Plus, size = 15.dp, color = SeedyColors.White, stroke = 2.6f)
+                    SText(t("Add someone"), size = 14.sp, weight = 700, color = SeedyColors.White)
+                }
+                DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = SeedyColors.Row, shape = RoundedCornerShape(12.dp)) {
+                    for (p in others) {
+                        DropdownMenuItem(
+                            text = { SText(p.name, size = 14.sp, weight = 600, color = SeedyColors.White) },
+                            onClick = { open = false; actions.addPerson(p.id) },
+                        )
+                    }
+                }
+            }
+        } else if (state.people.isEmpty()) {
+            SText(t("There’s nobody else on this server yet."), Modifier.padding(10.dp), size = 13.sp, color = SeedyColors.Text3)
         }
     }
 }

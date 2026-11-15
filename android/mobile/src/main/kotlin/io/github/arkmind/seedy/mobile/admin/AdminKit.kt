@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -83,6 +84,7 @@ import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.CssBox
 import io.github.arkmind.seedy.mobile.settings.CssColumn
 import io.github.arkmind.seedy.mobile.settings.Faint
+import io.github.arkmind.seedy.mobile.settings.OffRing
 import io.github.arkmind.seedy.mobile.settings.SheetList
 import io.github.arkmind.seedy.mobile.settings.cssRow
 import io.github.arkmind.seedy.mobile.settings.FormSheet
@@ -185,7 +187,7 @@ fun MenuPill(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
 /** Live: a green dot while new lines show up as they happen, grey while paused. */
 @Composable
 fun LivePill(on: Boolean, onClick: () -> Unit, onLabel: String = t("Live"), offLabel: String = t("Paused"), enabled: Boolean = true) {
-    PillButton(if (on) onLabel else offLabel, onClick, enabled = enabled, leading = { Dot(if (on) SeedyColors.Ok else Color(0xFF5A5A5A)) })
+    PillButton(if (on) onLabel else offLabel, onClick, enabled = enabled, leading = { Dot(if (on) SeedyColors.Ok else OffRing) })
 }
 
 /**
@@ -486,7 +488,7 @@ fun RadioDot(on: Boolean) {
     Box(
         Modifier.size(22.dp).drawBehind {
             val w = 2.dp.toPx()
-            drawCircle(if (on) accent else Color(0xFF5A5A5A), radius = size.minDimension / 2 - w / 2, style = androidx.compose.ui.graphics.drawscope.Stroke(w))
+            drawCircle(if (on) accent else OffRing, radius = size.minDimension / 2 - w / 2, style = Stroke(w))
         },
         contentAlignment = Alignment.Center,
     ) { if (on) Box(Modifier.size(10.dp).background(accent, CircleShape)) }
@@ -575,7 +577,7 @@ val Mono = BaseText.copy(fontFamily = FontFamily.Monospace)
 /** A path in monospace ("/media/movies"). */
 @Composable
 fun MonoText(text: String, modifier: Modifier = Modifier, size: TextUnit = 13.sp, color: Color = SeedyColors.Text, maxLines: Int = Int.MAX_VALUE) {
-    androidx.compose.foundation.text.BasicText(
+    BasicText(
         text,
         modifier,
         style = Mono.copy(fontSize = size, fontWeight = FontWeight(500), color = color),
@@ -620,7 +622,7 @@ fun RemovableChip(label: String, small: Boolean = false, onRemove: () -> Unit) {
 /** The "+ Add" chip: dashed, or the people pages' 32 px ringed one when [small]. */
 @Composable
 fun AddChip(label: String, onClick: () -> Unit, small: Boolean = false, icon: IconDef = WebIcons.Plus) {
-    val ring = Color(0xFF4A4A4A)
+    val ring = SeedyColors.Stroke
     val ink = if (small) SeedyColors.Text2 else SeedyColors.Text
     Row(
         Modifier.height(if (small) 32.dp else 34.dp).clip(CircleShape)
@@ -701,7 +703,7 @@ fun BoardField(
         contentAlignment = if (multi) Alignment.TopStart else Alignment.CenterStart,
     ) {
         if (value.isEmpty() && placeholder.isNotEmpty()) {
-            androidx.compose.foundation.text.BasicText(placeholder, style = style.copy(color = SeedyColors.Text3), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            BasicText(placeholder, style = style.copy(color = SeedyColors.Text3), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         BasicTextField(
             value = value,

@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.mobile
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,16 +9,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -26,6 +30,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import io.github.arkmind.seedy.core.SeedyCore
+import io.github.arkmind.seedy.core.browse.Browse
 import io.github.arkmind.seedy.core.data.SavedServer
 import io.github.arkmind.seedy.core.feature.AddServerViewModel
 import io.github.arkmind.seedy.core.feature.HomeViewModel
@@ -33,7 +38,7 @@ import io.github.arkmind.seedy.core.feature.PasswordViewModel
 import io.github.arkmind.seedy.core.feature.ProfilesViewModel
 import io.github.arkmind.seedy.core.format.Images
 import io.github.arkmind.seedy.core.format.uuidOf
-import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.requests.TitlesKind
 import io.github.arkmind.seedy.core.session.SessionState
 import io.github.arkmind.seedy.core.session.UserSession
 import io.github.arkmind.seedy.mobile.admin.AdminRoute
@@ -45,40 +50,41 @@ import io.github.arkmind.seedy.mobile.books.AudiobookPlayerRoute
 import io.github.arkmind.seedy.mobile.books.BookRoute
 import io.github.arkmind.seedy.mobile.books.BooksRoute
 import io.github.arkmind.seedy.mobile.books.reader.ReaderRoute
+import io.github.arkmind.seedy.mobile.details.DetailsRoute
+import io.github.arkmind.seedy.mobile.favorites.FavoritesTab
+import io.github.arkmind.seedy.mobile.history.HistoryRoute
+import io.github.arkmind.seedy.mobile.home.AccountActions
+import io.github.arkmind.seedy.mobile.home.HomeScreen
+import io.github.arkmind.seedy.mobile.library.LibrariesTab
+import io.github.arkmind.seedy.mobile.library.LibraryRoute
+import io.github.arkmind.seedy.mobile.livetv.LiveTvRoute
 import io.github.arkmind.seedy.mobile.music.AlbumRoute
 import io.github.arkmind.seedy.mobile.music.ArtistRoute
 import io.github.arkmind.seedy.mobile.music.MusicRoute
 import io.github.arkmind.seedy.mobile.music.NowPlayingRoute
-import io.github.arkmind.seedy.mobile.parts.barHeight
-import io.github.arkmind.seedy.player.audio.AudioEngine
-import androidx.compose.ui.platform.LocalContext
-import io.github.arkmind.seedy.mobile.details.DetailsRoute
-import io.github.arkmind.seedy.mobile.favorites.FavoritesTab
-import io.github.arkmind.seedy.mobile.library.LibrariesTab
-import io.github.arkmind.seedy.mobile.library.LibraryRoute
-import io.github.arkmind.seedy.mobile.livetv.LiveTvRoute
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.MobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
+import io.github.arkmind.seedy.mobile.notify.RequestLink
+import io.github.arkmind.seedy.mobile.notify.RequestLinks
+import io.github.arkmind.seedy.mobile.parts.Tab
+import io.github.arkmind.seedy.mobile.parts.TabBar
+import io.github.arkmind.seedy.mobile.parts.barHeight
+import io.github.arkmind.seedy.mobile.parts.tabBarHeight
+import io.github.arkmind.seedy.mobile.photos.PhotoFolderRoute
+import io.github.arkmind.seedy.mobile.photos.PhotoViewerRoute
+import io.github.arkmind.seedy.mobile.photos.PhotosRoute
 import io.github.arkmind.seedy.mobile.player.MobileDataSheet
 import io.github.arkmind.seedy.mobile.player.PlayerRoute
-import io.github.arkmind.seedy.core.requests.TitlesKind
+import io.github.arkmind.seedy.mobile.requests.MediaRowRoute
+import io.github.arkmind.seedy.mobile.requests.MediaSearchRoute
 import io.github.arkmind.seedy.mobile.requests.RequestsTab
-import io.github.arkmind.seedy.mobile.requests.openSeerr
-import io.github.arkmind.seedy.mobile.requests.SeerrTitlesRoute
 import io.github.arkmind.seedy.mobile.requests.SeerrTitleRoute
+import io.github.arkmind.seedy.mobile.requests.SeerrTitlesRoute
+import io.github.arkmind.seedy.mobile.requests.openSeerr
 import io.github.arkmind.seedy.mobile.search.SearchRoute
 import io.github.arkmind.seedy.mobile.settings.SettingsPageRoute
 import io.github.arkmind.seedy.mobile.settings.SettingsRoute
-import io.github.arkmind.seedy.ui.theme.LocalCore
-import io.github.arkmind.seedy.ui.theme.LocalSession
-import io.github.arkmind.seedy.mobile.home.AccountActions
-import io.github.arkmind.seedy.mobile.home.HomeScreen
-import io.github.arkmind.seedy.mobile.parts.Tab
-import io.github.arkmind.seedy.mobile.parts.TabBar
-import io.github.arkmind.seedy.ui.components.LocalOverlayHost
-import io.github.arkmind.seedy.ui.components.OverlayHost
-import io.github.arkmind.seedy.mobile.parts.tabBarHeight
 import io.github.arkmind.seedy.mobile.signin.AddServerScreen
 import io.github.arkmind.seedy.mobile.signin.ForgotSheet
 import io.github.arkmind.seedy.mobile.signin.PasswordScreen
@@ -86,17 +92,18 @@ import io.github.arkmind.seedy.mobile.signin.ProfilesScreen
 import io.github.arkmind.seedy.mobile.signin.QuickConnectSheet
 import io.github.arkmind.seedy.mobile.signin.SignInFor
 import io.github.arkmind.seedy.mobile.signin.UnreachableScreen
-import io.github.arkmind.seedy.mobile.notify.RequestLink
-import io.github.arkmind.seedy.mobile.notify.RequestLinks
+import io.github.arkmind.seedy.player.Network
+import io.github.arkmind.seedy.player.audio.AudioEngine
+import io.github.arkmind.seedy.ui.components.LocalOverlayHost
+import io.github.arkmind.seedy.ui.components.OverlayHost
+import io.github.arkmind.seedy.ui.theme.LocalCore
+import io.github.arkmind.seedy.ui.theme.LocalSession
+import io.github.arkmind.seedy.ui.theme.LocalViewer
+import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.SessionTheme
 import io.github.arkmind.seedy.ui.theme.rememberRetryClock
-import androidx.activity.compose.BackHandler
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberUpdatedState
-import kotlinx.coroutines.flow.filterNotNull
-import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.rememberViewer
-import io.github.arkmind.seedy.ui.theme.SeedyColors
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 /** The phone app: follows the session from "Add your server" through sign-in to the signed-in tabs. */
@@ -223,7 +230,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
     // Settings · Playback › Ask before using mobile data: a video asks for its quality first (board "Android · Mobile data prompt").
     var asking by remember { mutableStateOf<Route.Player?>(null) }
     nav.beforePlay = { r ->
-        val ask = r.maxBitrate == null && core.device.current.askMobileData && io.github.arkmind.seedy.player.Network.onMobileData(context)
+        val ask = r.maxBitrate == null && core.device.current.askMobileData && Network.onMobileData(context)
         if (ask) asking = r
         ask
     }
@@ -238,7 +245,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
         RequestLinks.pending.filterNotNull().collect { l ->
             RequestLinks.clear()
             if (l.server != session.server.id || l.user != session.account.userId) return@collect
-            val item = uuidOf(l.itemId)?.let { id -> runCatching { io.github.arkmind.seedy.core.browse.Browse(session).item(id) }.getOrNull() }
+            val item = uuidOf(l.itemId)?.let { id -> runCatching { Browse(session).item(id) }.getOrNull() }
             when (l.action) {
                 RequestLink.Requests -> if (requestsTab) nav.toTab(Tab.Requests)
                 RequestLink.Play -> item?.let(nav::play)
@@ -250,88 +257,88 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
         }
     }
     CompositionLocalProvider(LocalViewer provides viewer, LocalSession provides session, LocalCore provides core, LocalMobileNav provides nav, LocalAudio provides audio) {
-      AudioScope {
-       Box(Modifier.fillMaxSize()) {
-        NavDisplay(
-            backStack = stack,
-            onBack = { nav.back() },
-            entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
-            entryProvider = entryProvider {
-                entry<TabsKey> {
-                    val overlay = remember { OverlayHost() }
-                    Box(Modifier.fillMaxSize()) {
-                        CompositionLocalProvider(LocalOverlayHost provides overlay) {
-                        when (tab) {
-                            Tab.Home -> {
-                                val vm = viewModel { HomeViewModel(session) }
-                                val state by vm.state.collectAsStateWithLifecycle()
-                                HomeScreen(
-                                    state, account,
-                                    onOpen = nav::open, onPlay = nav::play, onSearch = { nav.go(Route.Search) },
-                                    onSeeAll = { row ->
-                                        when (row.row.kind) {
-                                            "discover" -> tab = Tab.Requests
-                                            "upcomingMovies" -> nav.go(Route.SeerrTitles(TitlesKind.UpcomingMovies.key))
-                                            else -> uuidOf(row.row.libraryId)?.let { nav.go(Route.Library(it)) }
+        AudioScope {
+            Box(Modifier.fillMaxSize()) {
+                NavDisplay(
+                    backStack = stack,
+                    onBack = { nav.back() },
+                    entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
+                    entryProvider = entryProvider {
+                        entry<TabsKey> {
+                            val overlay = remember { OverlayHost() }
+                            Box(Modifier.fillMaxSize()) {
+                                CompositionLocalProvider(LocalOverlayHost provides overlay) {
+                                    when (tab) {
+                                        Tab.Home -> {
+                                            val vm = viewModel { HomeViewModel(session) }
+                                            val state by vm.state.collectAsStateWithLifecycle()
+                                            HomeScreen(
+                                                state, account,
+                                                onOpen = nav::open, onPlay = nav::play, onSearch = { nav.go(Route.Search) },
+                                                onSeeAll = { row ->
+                                                    when (row.row.kind) {
+                                                        "discover" -> tab = Tab.Requests
+                                                        "upcomingMovies" -> nav.go(Route.SeerrTitles(TitlesKind.UpcomingMovies.key))
+                                                        else -> uuidOf(row.row.libraryId)?.let { nav.go(Route.Library(it)) }
+                                                    }
+                                                },
+                                                onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
+                                                bottomPadding = tabBarHeight(),
+                                                onFinish = vm::finishWatching,
+                                                onRefresh = vm::refresh,
+                                            )
                                         }
-                                    },
-                                    onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
-                                    bottomPadding = tabBarHeight(),
-                                    onFinish = vm::finishWatching,
-                                    onRefresh = vm::refresh,
-                                )
+                                        Tab.Libraries -> LibrariesTab()
+                                        Tab.Favorites -> FavoritesTab()
+                                        Tab.Requests -> RequestsTab()
+                                    }
+                                }
+                                AudioMiniBar(Modifier.align(Alignment.BottomCenter).padding(bottom = barHeight() + 8.dp))
+                                TabBar(tabs, tab, { tab = it }, Modifier.align(Alignment.BottomCenter))
+                                overlay.content?.invoke()
                             }
-                            Tab.Libraries -> LibrariesTab()
-                            Tab.Favorites -> FavoritesTab()
-                            Tab.Requests -> RequestsTab()
                         }
-                        }
-                        AudioMiniBar(Modifier.align(Alignment.BottomCenter).padding(bottom = barHeight() + 8.dp))
-                        TabBar(tabs, tab, { tab = it }, Modifier.align(Alignment.BottomCenter))
-                        overlay.content?.invoke()
-                    }
+                        // The boards keep the tab bar under these pages, lit on the tab they were opened from.
+                        entry<Route.Details> { WithTabBar(tabs, tab, nav, reserve = true) { DetailsRoute(it.id) } }
+                        entry<Route.Library> { WithTabBar(tabs, tab, nav, reserve = true) { LibraryRoute(it.id) } }
+                        entry<Route.Music> { WithTabBar(tabs, tab, nav) { MusicRoute(it.id) } }
+                        entry<Route.Album> { WithTabBar(tabs, tab, nav) { AlbumRoute(it.id) } }
+                        entry<Route.Artist> { WithTabBar(tabs, tab, nav) { ArtistRoute(it.id) } }
+                        entry<Route.NowPlaying> { WithOverlay { NowPlayingRoute() } }
+                        entry<Route.Books> { WithTabBar(tabs, tab, nav) { BooksRoute(it.id, it.view, it.focus) } }
+                        entry<Route.Book> { WithTabBar(tabs, tab, nav) { BookRoute(it.id) } }
+                        entry<Route.Photos> { WithTabBar(tabs, tab, nav) { PhotosRoute(it.id) } }
+                        entry<Route.PhotoFolder> { WithTabBar(tabs, tab, nav) { PhotoFolderRoute(it.id, it.photo) } }
+                        entry<Route.PhotoViewer> { WithOverlay { PhotoViewerRoute(it.id, it.play) } }
+                        entry<Route.Reader> { WithOverlay { ReaderRoute(it.id, it.percent) } }
+                        entry<Route.AudiobookPlayer> { WithOverlay { AudiobookPlayerRoute() } }
+                        entry<Route.Search> { SearchRoute() }
+                        entry<Route.LiveTv> { LiveTvRoute() }
+                        entry<Route.Settings> { WithTabBar(tabs, tab, nav, reserve = true) { SettingsRoute(appVersion) } }
+                        entry<Route.SettingsPage> { SettingsPageRoute(it.page, appVersion) }
+                        entry<Route.History> { WithTabBar(tabs, tab, nav, reserve = true) { HistoryRoute() } }
+                        entry<Route.Player> { PlayerRoute(it.id, it.startTicks, it.maxBitrate) }
+                        entry<Route.SeerrTitle> { WithTabBar(tabs, tab, nav, reserve = true) { SeerrTitleRoute(it.mediaType, it.tmdbId) } }
+                        entry<Route.SeerrTitles> { WithTabBar(tabs, tab, nav, reserve = true) { SeerrTitlesRoute(it.kind) } }
+                        entry<Route.MediaRequestsSearch> { WithTabBar(tabs, tab, nav, reserve = true) { MediaSearchRoute(it.music) } }
+                        entry<Route.MediaRequestsRow> { WithTabBar(tabs, tab, nav, reserve = true) { MediaRowRoute(it.music, it.row) } }
+                        entry<Route.Admin> { WithOverlay { AdminRoute(it.page, it.id) } }
+                    },
+                )
+                asking?.let { r ->
+                    val device by core.device.flow.collectAsStateWithLifecycle()
+                    MobileDataSheet(
+                        r.id, device,
+                        onPlay = { choice, never ->
+                            if (never) core.device.update { it.copy(askMobileData = false, qualityMobile = choice.bitrate) }
+                            asking = null
+                            nav.go(r.copy(maxBitrate = choice.bitrate))
+                        },
+                        onWait = { asking = null },
+                    )
                 }
-                // The boards keep the tab bar under these pages, lit on the tab they were opened from.
-                entry<Route.Details> { WithTabBar(tabs, tab, nav, reserve = true) { DetailsRoute(it.id) } }
-                entry<Route.Library> { WithTabBar(tabs, tab, nav, reserve = true) { LibraryRoute(it.id) } }
-                entry<Route.Music> { WithTabBar(tabs, tab, nav) { MusicRoute(it.id) } }
-                entry<Route.Album> { WithTabBar(tabs, tab, nav) { AlbumRoute(it.id) } }
-                entry<Route.Artist> { WithTabBar(tabs, tab, nav) { ArtistRoute(it.id) } }
-                entry<Route.NowPlaying> { WithOverlay { NowPlayingRoute() } }
-                entry<Route.Books> { WithTabBar(tabs, tab, nav) { BooksRoute(it.id, it.view, it.focus) } }
-                entry<Route.Book> { WithTabBar(tabs, tab, nav) { BookRoute(it.id) } }
-                entry<Route.Photos> { WithTabBar(tabs, tab, nav) { io.github.arkmind.seedy.mobile.photos.PhotosRoute(it.id) } }
-                entry<Route.PhotoFolder> { WithTabBar(tabs, tab, nav) { io.github.arkmind.seedy.mobile.photos.PhotoFolderRoute(it.id, it.photo) } }
-                entry<Route.PhotoViewer> { WithOverlay { io.github.arkmind.seedy.mobile.photos.PhotoViewerRoute(it.id, it.play) } }
-                entry<Route.Reader> { WithOverlay { ReaderRoute(it.id, it.percent) } }
-                entry<Route.AudiobookPlayer> { WithOverlay { AudiobookPlayerRoute() } }
-                entry<Route.Search> { SearchRoute() }
-                entry<Route.LiveTv> { LiveTvRoute() }
-                entry<Route.Settings> { WithTabBar(tabs, tab, nav, reserve = true) { SettingsRoute(appVersion) } }
-                entry<Route.SettingsPage> { SettingsPageRoute(it.page, appVersion) }
-                entry<Route.History> { WithTabBar(tabs, tab, nav, reserve = true) { io.github.arkmind.seedy.mobile.history.HistoryRoute() } }
-                entry<Route.Player> { PlayerRoute(it.id, it.startTicks, it.maxBitrate) }
-                entry<Route.SeerrTitle> { WithTabBar(tabs, tab, nav, reserve = true) { SeerrTitleRoute(it.mediaType, it.tmdbId) } }
-                entry<Route.SeerrTitles> { WithTabBar(tabs, tab, nav, reserve = true) { SeerrTitlesRoute(it.kind) } }
-                entry<Route.MediaRequestsSearch> { WithTabBar(tabs, tab, nav, reserve = true) { io.github.arkmind.seedy.mobile.requests.MediaSearchRoute(it.music) } }
-                entry<Route.MediaRequestsRow> { WithTabBar(tabs, tab, nav, reserve = true) { io.github.arkmind.seedy.mobile.requests.MediaRowRoute(it.music, it.row) } }
-                entry<Route.Admin> { WithOverlay { AdminRoute(it.page, it.id) } }
-            },
-        )
-        asking?.let { r ->
-            val device by core.device.flow.collectAsStateWithLifecycle()
-            MobileDataSheet(
-                r.id, device,
-                onPlay = { choice, never ->
-                    if (never) core.device.update { it.copy(askMobileData = false, qualityMobile = choice.bitrate) }
-                    asking = null
-                    nav.go(r.copy(maxBitrate = choice.bitrate))
-                },
-                onWait = { asking = null },
-            )
+            }
         }
-       }
-      }
     }
 }
 

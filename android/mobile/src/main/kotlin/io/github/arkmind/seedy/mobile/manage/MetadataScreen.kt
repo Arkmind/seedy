@@ -3,6 +3,7 @@ package io.github.arkmind.seedy.mobile.manage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +21,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +52,7 @@ import io.github.arkmind.seedy.mobile.admin.ChipFlow
 import io.github.arkmind.seedy.mobile.admin.ErrorCard
 import io.github.arkmind.seedy.mobile.admin.FieldSection
 import io.github.arkmind.seedy.mobile.admin.PinnedBar
+import io.github.arkmind.seedy.mobile.admin.SheetButtons
 import io.github.arkmind.seedy.mobile.admin.leaveGuard
 import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.PillButton
@@ -256,7 +259,7 @@ fun LockChip(locked: Boolean, shown: Boolean, onClick: () -> Unit) {
     val accent = LocalAccent.current
     val ink = if (locked) accent else SeedyColors.Text3
     Row(
-        Modifier.height(24.dp).clip(RoundedCornerShape(7.dp)).background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.06f)).tap(onClick = onClick).padding(horizontal = 6.dp),
+        Modifier.height(24.dp).clip(RoundedCornerShape(7.dp)).background(Color.White.copy(alpha = 0.06f)).tap(onClick = onClick).padding(horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -301,7 +304,7 @@ private fun personType(type: String): String = when (type) {
 
 /** The pinned foot: Lock all fields, and Save changes. */
 @Composable
-private fun androidx.compose.foundation.layout.BoxScope.MetaFooter(state: MetadataState, actions: MetadataActions, onSave: () -> Unit) {
+private fun BoxScope.MetaFooter(state: MetadataState, actions: MetadataActions, onSave: () -> Unit) {
     PinnedBar(12.dp) {
         BoardSwitch(state.lockAll, actions::setLockAll)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
@@ -351,6 +354,6 @@ private fun PersonSheet(onAdd: (MetaPerson) -> Unit, onDismiss: () -> Unit) {
         BoardField(name, { name = it }, placeholder = t("Name"), autoCorrect = false)
         BoardField(role, { role = it }, placeholder = t("Role (optional)"))
         Segmented(listOf(Choice("Actor", t("Actor")), Choice("Director", t("Director")), Choice("Writer", t("Writer")), Choice("Producer", t("Producer"))), type, { type = it })
-        io.github.arkmind.seedy.mobile.admin.SheetButtons(t("Add"), { onAdd(MetaPerson(name.trim(), role.trim(), type)); onDismiss() }, onDismiss, enabled = name.isNotBlank())
+        SheetButtons(t("Add"), { onAdd(MetaPerson(name.trim(), role.trim(), type)); onDismiss() }, onDismiss, enabled = name.isNotBlank())
     }
 }

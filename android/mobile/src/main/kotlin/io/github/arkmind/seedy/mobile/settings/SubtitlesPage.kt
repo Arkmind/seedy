@@ -116,7 +116,7 @@ fun SubtitlesContent(state: SettingsState, actions: SettingsActions, sheet: Shee
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    Box(Modifier.size(22.dp).border(2.dp, if (on) accent else Color(0xFF5A5A5A), CircleShape), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(22.dp).border(2.dp, if (on) accent else OffRing, CircleShape), contentAlignment = Alignment.Center) {
                         if (on) Box(Modifier.size(10.dp).background(accent, CircleShape))
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
