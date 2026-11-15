@@ -13,10 +13,10 @@ import { EmptyState, ErrorState, Sentinel, usePaged } from '../browse/parts';
 import { useSelection } from '../browse/library-select';
 import { manageChanged } from '../browse/manage/host';
 import {
-  MEDIA_TYPES, PHOTO_FIELDS, ancestorsOf, dateRange, folderInfo, getMedia, groupByDay, isVideo, subfolders, thumbUrl, type FolderInfo, type PhotoItem
+  MEDIA_TYPES, PHOTO_FIELDS, ancestorsOf, countsLabel, dateRange, folderInfo, getMedia, groupByDay, isVideo, subfolders, thumbUrl, type FolderInfo, type PhotoItem
 } from './api';
 import { PIcon } from './icons';
-import { FolderCard, FolderGrid, JustifiedRows, rowFor, TabRow, Timeline, countsLine, openPhoto, useTileSize } from './parts';
+import { FolderCard, FolderGrid, JustifiedRows, rowFor, TabRow, Timeline, openPhoto, useTileSize } from './parts';
 import { PhotoSelectionBar } from './PhotosLibrary';
 import { PhotoViewer } from './Viewer';
 import { downloadZip } from './zip';
@@ -99,7 +99,7 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
   };
 
   const fi = info.data;
-  const counts = fi ? countsLine(fi.photos, fi.videos) : '';
+  const counts = fi ? countsLabel(fi.photos, fi.videos, ' · ') : '';
   const range = fi ? dateRange(fi.from, fi.to) : '';
   const path = item.Path;
   const covers = fi?.covers ?? [];

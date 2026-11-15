@@ -14,7 +14,8 @@ import {
   screenUrl, takenAt, thumbUrl, downloadUrl, type PhotoItem
 } from './api';
 import { PIcon, type PIconName } from './icons';
-import { clockOf, viewerOpened } from './parts';
+import { viewerOpened } from './parts';
+import { clock as mediaClock } from '../../audio/parts';
 
 /* The photo viewer (Photos · Viewer board): the photo over black with Close, its name, date and place in the list,
    Favorite, Rotate, Slideshow, Download and Details; Previous and Next at the sides, the neighbours in a strip below,
@@ -363,7 +364,7 @@ function Stage({ item, rotation, view, setView, onSwipe }: { item: PhotoItem; ro
           {video && (
             <button type="button" class="ph-v-play" aria-label={t('Play {name}', { name: item.Name })} onClick={() => navigate(`/play/${item.Id}`)}>
               <PIcon name="play" size={34} />
-              <span>{clockOf(ticksToSeconds(item.RunTimeTicks))}</span>
+              <span>{mediaClock(Math.round(ticksToSeconds(item.RunTimeTicks)))}</span>
             </button>
           )}
         </div>

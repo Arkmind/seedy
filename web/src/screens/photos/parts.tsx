@@ -1,18 +1,17 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import type { BaseItem } from '../../api/types';
-import { dot, duration, ticksToSeconds } from '../../lib/format';
-import { t, tn } from '../../lib/i18n';
+import { clock } from '../../audio/parts';
+import { dot, duration, fmtMonthYear, fmtWeekdayDate, ticksToSeconds } from '../../lib/format';
+import { t } from '../../lib/i18n';
 import { Link, setQuery } from '../../lib/router';
 import { safeLocal, saveLocal } from '../../lib/store';
-import { useInView } from '../browse/parts';
-import type { GridSelect } from '../browse/parts';
+import { useInView, type GridSelect } from '../browse/parts';
 import {
   countsLabel, daySub, folderInfo, isVideo, monthYear, ratioOf, thumbUrl, type Day, type FolderInfo, type Memory, type Month, type PhotoItem,
   yearsAgo
 } from './api';
 import { PIcon } from './icons';
-import { fmtMonthYear, fmtWeekdayDate } from '../../lib/format';
 
 /* Pieces shared by the photos library, folder and viewer (Photos boards). Prefix ph-. */
 
@@ -95,7 +94,7 @@ export function Tile({ item, row, index, select, onOpen }: { item: PhotoItem; ro
       }}
     >
       {src && <img src={src} alt="" loading="lazy" decoding="async" draggable={false} />}
-      {video && <span class="ph-dur"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>{clockOf(secs)}</span>}
+      {video && <span class="ph-dur"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>{clock(Math.round(secs))}</span>}
       {fav && <span class="ph-fav" aria-label={t('Favorite')}><PIcon name="heart" size={16} filled /></span>}
       {select && (
         <>
@@ -113,13 +112,6 @@ export function Tile({ item, row, index, select, onOpen }: { item: PhotoItem; ro
       )}
     </a>
   );
-}
-
-/* "0:42", "2:10", "1:04:09". */
-export function clockOf(secs: number): string {
-  const s = Math.max(0, Math.round(secs));
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
-  return h ? `${h}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}` : `${m}:${String(r).padStart(2, '0')}`;
 }
 
 /* One day: "Sat 17 Oct  14 photos · Home", then its photos in justified rows. */
@@ -204,11 +196,6 @@ export function FolderCard({ item, to }: { item: BaseItem; to: string }) {
 
 export function FolderGrid({ children }: { children: ComponentChildren }) {
   return <div class="ph-folder-grid">{children}</div>;
-}
-
-/* "212 photos · 14 videos". */
-export function countsLine(photos: number, videos: number): string {
-  return dot(photos || !videos ? tn(photos, '{n} photo', '{n} photos') : '', videos ? tn(videos, '{n} video', '{n} videos') : '');
 }
 
 /* A row's height for a tile size; phones take smaller rows so two or three photos share one. */

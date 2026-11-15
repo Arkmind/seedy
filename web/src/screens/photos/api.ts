@@ -103,11 +103,11 @@ export function fileInfo(id: string): Promise<{ size?: number; type?: string }> 
 
 /* ───────── Words ───────── */
 
-export function countsLabel(photos: number, videos: number): string {
+export function countsLabel(photos: number, videos: number, sep = ', '): string {
   const parts: string[] = [];
   if (photos || !videos) parts.push(tn(photos, '{n} photo', '{n} photos'));
   if (videos) parts.push(tn(videos, '{n} video', '{n} videos'));
-  return parts.join(', ');
+  return parts.join(sep);
 }
 
 export function bytesLabel(n?: number): string {

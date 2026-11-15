@@ -5,7 +5,7 @@ import type { BaseItem } from '../../api/types';
 import { partsOf } from '../../audio/api';
 import { playAudiobook } from '../../audio/engine';
 import { canDownload, userStore } from '../../lib/app-state';
-import { capitalize, dayOf, displayLanguage, dot, duration, itemYear, longDate, pct, ticksToSeconds, timeLeft } from '../../lib/format';
+import { capitalize, dayOf, displayLanguage, dot, itemYear, longDate, pct, runtime, ticksToSeconds, timeLeft } from '../../lib/format';
 import { formatNumber, locale, t, tc, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -121,11 +121,11 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
   const lang = languageName(fileLang.data);
   const meta = [
     year ? String(year) : '',
-    audio ? (item.RunTimeTicks ? duration(ticksToSeconds(item.RunTimeTicks)) : '') : info.data?.Pages ? tn(info.data.Pages, '{n} page', '{n} pages') : '',
+    audio ? runtime(item) : info.data?.Pages ? tn(info.data.Pages, '{n} page', '{n} pages') : '',
     lang
   ].filter(Boolean);
 
-  const listenLabel = audioTwin?.RunTimeTicks ? t('Listen · {time}', { time: duration(ticksToSeconds(audioTwin.RunTimeTicks)) }) : t('Listen');
+  const listenLabel = audioTwin?.RunTimeTicks ? t('Listen · {time}', { time: runtime(audioTwin) }) : t('Listen');
   const listen = () => { if (audioTwin) void playAudiobook(audioTwin.Id, { open: true }); };
   const readLabel = (rec?: Reading) => (rec && !rec.Finished && rec.Percent > 0 ? t('Continue reading') : t('Read'));
 
@@ -319,7 +319,7 @@ function FormatCard({ item, current, canDownload }: { item: BaseItem; current: b
   const parts = partsOf(item);
   const container = (parts ? item.Container ?? '' : /\.(\w+)$/.exec(item.Path ?? '')?.[1] ?? '').toUpperCase();
   const narrator = audio ? narratorOf(item) : undefined;
-  const note = audio ? (narrator ? t('narrated by {name}', { name: narrator }) : item.RunTimeTicks ? duration(ticksToSeconds(item.RunTimeTicks)) : '')
+  const note = audio ? (narrator ? t('narrated by {name}', { name: narrator }) : runtime(item))
     : f === 'epub' || f === 'cbz' ? t('reads in Seedy')
     : f === 'pdf' ? t('print edition')
     : f === 'cbr' ? t('download to read') : '';

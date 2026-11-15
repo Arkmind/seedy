@@ -18,11 +18,11 @@ import { openManage } from '../browse/manage/host';
 import { manageChanged } from '../browse/manage/host';
 import { Icon } from '../../ui/icons';
 import {
-  allMedia, cameraName, getMedia, groupByDay, isVideo, mediaQuery, memoriesOf, monthsOf, yearsOf, type Memory, type PhotoItem
+  allMedia, cameraName, countsLabel, getMedia, groupByDay, isVideo, mediaQuery, memoriesOf, monthsOf, yearsOf, type Memory, type PhotoItem
 } from './api';
 import { PIcon } from './icons';
 import {
-  FolderCard, FolderGrid, MemoryCard, rowFor, SizeSwitch, TabRow, Timeline, countsLine, openPhoto, useTileSize
+  FolderCard, FolderGrid, MemoryCard, rowFor, SizeSwitch, TabRow, Timeline, openPhoto, useTileSize
 } from './parts';
 import { PhotoViewer } from './Viewer';
 import { downloadZip } from './zip';
@@ -102,7 +102,7 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
     else toast(t('No photos here yet'), 'error');
   };
 
-  const countText = counts.data ? countsLine(counts.data.photos, counts.data.videos) : '';
+  const countText = counts.data ? countsLabel(counts.data.photos, counts.data.videos, ' · ') : '';
   const shownList = viewerList ?? list;
 
   return (

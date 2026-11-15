@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useLayoutEffect, useState } from 'preact/hooks';
 import type { BaseItem } from '../../api/types';
-import { dot, duration, itemYear, pct, ticksToSeconds } from '../../lib/format';
+import { dot, duration, itemYear, pct, runtime } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { playAudiobook } from '../../audio/engine';
@@ -48,7 +48,6 @@ export function comicSub(item: BaseItem, reading: Reading | undefined, running: 
   return dot(author, year ? String(year) : '') || t('One-shot');
 }
 
-export const audioLength = (item: BaseItem) => (item.RunTimeTicks ? duration(ticksToSeconds(item.RunTimeTicks)) : '');
 
 /* ───────── Columns that fit: overview rows show one row of whatever fits ───────── */
 
@@ -126,7 +125,7 @@ export function HeadphonesIcon({ size = 13 }: { size?: number }) {
 }
 
 export function AudioCard({ item }: { item: BaseItem }) {
-  const len = audioLength(item);
+  const len = runtime(item);
   return (
     <Link to={`/details/${item.Id}`} class="bk-card is-audio" aria-label={item.Name}>
       <span class="bk-card-art"><AudioCover item={item} /></span>
