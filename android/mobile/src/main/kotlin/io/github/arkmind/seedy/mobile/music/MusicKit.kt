@@ -48,6 +48,7 @@ import io.github.arkmind.seedy.core.admin.sameId
 import io.github.arkmind.seedy.core.music.Mix
 import io.github.arkmind.seedy.core.music.artistsOf
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.mobile.audio.AudioIcons
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.player.audio.AudioState
@@ -61,6 +62,8 @@ import io.github.arkmind.seedy.ui.components.webId
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.IconPart
 import io.github.arkmind.seedy.ui.icons.SIcon
+import io.github.arkmind.seedy.ui.icons.SettingsIcons
+import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.SText
@@ -73,7 +76,7 @@ import java.util.UUID
 /** The music boards' icons, path for path (web/src/audio/icons.tsx). */
 object MusicIcons {
     val Back = IconDef(2.2f, "M15 5l-7 7 7 7")
-    val Down = IconDef(2.2f, "M6 9l6 6 6-6")
+    val Down = WebIcons.ChevronDown
     val Search = IconDef(2.2f, "M4 11a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z", "M20 20l-4-4")
     val Cast = IconDef(2.2f, "M3 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6", "M3 12a8 8 0 0 1 8 8", "M3 16a4 4 0 0 1 4 4", "M3 20h.01")
     val More = IconDef(
@@ -92,27 +95,21 @@ object MusicIcons {
     val PlaylistAdd = IconDef(2.2f, "M4 6h12", "M4 11h12", "M4 16h7", "M18 14v7", "M14.5 17.5h7")
     val Shuffle = IconDef(2.2f, "M16 3h5v5", "M4 20L21 3", "M21 16v5h-5", "M15 15l6 6", "M4 4l5 5")
     val Repeat = IconDef(2.2f, "M17 2l3 3-3 3", "M4 11V9a4 4 0 0 1 4-4h12", "M7 22l-3-3 3-3", "M20 13v2a4 4 0 0 1-4 4H4")
-    val Play = IconDef(0f, listOf(IconPart("M7 4.5v15l12-7.5z", filled = true)))
+    val Play = AudioIcons.Play
     val Previous = io.github.arkmind.seedy.mobile.audio.AudioIcons.Previous
     val Next = io.github.arkmind.seedy.mobile.audio.AudioIcons.Next
-    val Pause = IconDef(
-        0f,
-        listOf(
-            IconPart("M7.2 4.5h1.6a1.2 1.2 0 0 1 1.2 1.2v12.6a1.2 1.2 0 0 1 -1.2 1.2h-1.6a1.2 1.2 0 0 1 -1.2 -1.2v-12.6a1.2 1.2 0 0 1 1.2 -1.2Z", filled = true),
-            IconPart("M15.2 4.5h1.6a1.2 1.2 0 0 1 1.2 1.2v12.6a1.2 1.2 0 0 1 -1.2 1.2h-1.6a1.2 1.2 0 0 1 -1.2 -1.2v-12.6a1.2 1.2 0 0 1 1.2 -1.2Z", filled = true),
-        ),
-    )
+    val Pause = AudioIcons.Pause
     val Radio = IconDef(2.2f, "M10 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0Z", "M8.5 8.5a5 5 0 0 0 0 7", "M15.5 8.5a5 5 0 0 1 0 7", "M5.6 5.6a9 9 0 0 0 0 12.8", "M18.4 5.6a9 9 0 0 1 0 12.8")
     val Mix = IconDef(2.2f, "M3 12h3l3-7 4 14 3-7h5")
     val Lyrics = IconDef(2.2f, "M4 6h10", "M4 11h7", "M4 16h5", "M14 16a3 3 0 1 0 6 0a3 3 0 1 0 -6 0Z", "M20 16V6l-3 1")
     val Album = IconDef(2.2f, "M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0Z", "M9.5 12a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0Z")
-    val Artist = IconDef(2.2f, "M8 8a4 4 0 1 0 8 0a4 4 0 1 0 -8 0Z", "M4 21a8 8 0 0 1 16 0")
+    val Artist = WebIcons.Person
     val Info = IconDef(2.2f, "M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0Z", "M12 11v5", "M12 8h.01")
     val Close = IconDef(2.4f, "M6 6l12 12", "M18 6L6 18")
-    val Handle = IconDef(2.2f, "M5 9h14", "M5 15h14")
+    val Handle = SettingsIcons.Grip
     val Trash = IconDef(2.2f, "M4 7h16", "M10 11v6", "M14 11v6", "M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12", "M9 7V4h6v3")
-    val Sort = IconDef(2f, "M7 4v16", "M3 16l4 4 4-4", "M12 6h9", "M12 11h6", "M12 16h3")
-    val Check = IconDef(2.2f, "M5 12.5l4.5 4.5L19 7.5")
+    val Sort = WebIcons.Sort
+    val Check = WebIcons.Check
     val Plus = IconDef(2.4f, "M12 5v14", "M5 12h14")
 }
 

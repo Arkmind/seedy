@@ -47,11 +47,14 @@ import io.github.arkmind.seedy.core.photos.isVideo
 import io.github.arkmind.seedy.core.photos.monthTitle
 import io.github.arkmind.seedy.core.photos.ratioOf
 import io.github.arkmind.seedy.core.photos.yearsAgo
+import io.github.arkmind.seedy.mobile.music.MusicIcons
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.Artwork
+import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.IconPart
 import io.github.arkmind.seedy.ui.icons.SIcon
+import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
@@ -71,7 +74,7 @@ val LocalPhotosApi = staticCompositionLocalOf<PhotosApi?> { null }
 val LocalPhotoArt = staticCompositionLocalOf<(@Composable (BaseItemDto, Modifier) -> Unit)?> { null }
 
 object PhotoIcons {
-    val Back = IconDef(2.2f, "M15 5l-7 7 7 7")
+    val Back = MusicIcons.Back
     val Slideshow = IconDef(
         2.2f,
         listOf(IconPart("M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"), IconPart("M10 9.5v5l4-2.5z", filled = true)),
@@ -83,22 +86,15 @@ object PhotoIcons {
             IconPart("M15.2 4.5h1.6a1.2 1.2 0 0 1 1.2 1.2v12.6a1.2 1.2 0 0 1-1.2 1.2h-1.6a1.2 1.2 0 0 1-1.2-1.2V5.7a1.2 1.2 0 0 1 1.2-1.2z", filled = true),
         ),
     )
-    val More = IconDef(
-        0f,
-        listOf(
-            IconPart("M3.8 12a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0 -3.4 0Z", filled = true),
-            IconPart("M10.3 12a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0 -3.4 0Z", filled = true),
-            IconPart("M16.8 12a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0 -3.4 0Z", filled = true),
-        ),
-    )
-    val Heart = IconDef(2.2f, "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z")
-    val HeartFilled = IconDef(2.2f, listOf(IconPart("M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z", filled = true)))
+    val More = MusicIcons.More
+    val Heart = MusicIcons.Heart
+    val HeartFilled = MusicIcons.HeartOn
     val Folder = IconDef(2.2f, "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z")
-    val Shuffle = IconDef(2.2f, "M16 3h5v5", "M4 20L21 3", "M21 16v5h-5", "M15 15l6 6", "M4 4l5 5")
-    val Download = IconDef(2.2f, "M12 3v12", "M7 10l5 5 5-5", "M5 20h14")
-    val ChevronDown = IconDef(2.2f, "M6 9l6 6 6-6")
-    val ChevronRight = IconDef(2.4f, "M9 6l6 6-6 6")
-    val Play = IconDef(0f, listOf(IconPart("M8 5v14l11-7z", filled = true)))
+    val Shuffle = MusicIcons.Shuffle
+    val Download = MusicIcons.Download
+    val ChevronDown = WebIcons.ChevronDown
+    val ChevronRight = AppIcons.Chevron
+    val Play = WebIcons.PlayRound
     val Close = IconDef(2.2f, "M6 6l12 12", "M18 6L6 18")
     val Rotate = IconDef(2.2f, "M20 11a8 8 0 1 0-2.3 5.7", "M20 4v7h-7")
     val Info = IconDef(2.2f, "M3.5 12a8.5 8.5 0 1 0 17 0a8.5 8.5 0 1 0 -17 0Z", "M12 11v5", "M12 8h.01")
@@ -113,8 +109,8 @@ object PhotoIcons {
         "M5.5 13.5h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5Z",
         "M15 13.5h3.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5h-3.5a1.5 1.5 0 0 1-1.5-1.5v-3.5a1.5 1.5 0 0 1 1.5-1.5Z",
     )
-    val Refresh = IconDef(2f, "M19.5 12a7.5 7.5 0 1 1-2.3-5.4", "M19.5 4v3.5H16")
-    val Sort = IconDef(2f, "M7 4v16", "M3 16l4 4 4-4", "M12 6h9", "M12 11h6", "M12 16h3")
+    val Refresh = WebIcons.Refresh
+    val Sort = WebIcons.Sort
 }
 
 /* ───────── Images ───────── */

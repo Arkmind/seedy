@@ -27,11 +27,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.books.AuthorGroup
+import io.github.arkmind.seedy.core.books.BookFormat
 import io.github.arkmind.seedy.core.books.ContinueEntry
 import io.github.arkmind.seedy.core.books.ContinueKind
 import io.github.arkmind.seedy.core.books.SeriesGroup
 import io.github.arkmind.seedy.core.books.audioLength
 import io.github.arkmind.seedy.core.books.authorCounts
+import io.github.arkmind.seedy.core.books.formatOf
 import io.github.arkmind.seedy.core.books.seriesFan
 import io.github.arkmind.seedy.core.books.sortItems
 import io.github.arkmind.seedy.core.books.BookSort
@@ -46,6 +48,13 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 /* Pieces of the books screens (boards "Android · Books" and "Android · Book details"): section heads, cards and rows. */
 
 internal val Dim = Color(0xFF6A6A6A)
+
+/** A book's format for a label: Audiobook, File, or EPUB, PDF… */
+internal fun formatName(item: BaseItemDto): String = when (val f = formatOf(item)) {
+    BookFormat.Audio -> t("Audiobook")
+    BookFormat.Other -> t("File")
+    else -> f.name.uppercase()
+}
 
 /** A 4 px progress line: white on the dark track. */
 @Composable

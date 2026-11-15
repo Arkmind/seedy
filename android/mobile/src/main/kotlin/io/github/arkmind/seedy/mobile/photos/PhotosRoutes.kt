@@ -42,6 +42,7 @@ import io.github.arkmind.seedy.mobile.manage.MenuEntry
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Toast
+import io.github.arkmind.seedy.mobile.parts.downloadFile
 import io.github.arkmind.seedy.mobile.settings.PickOption
 import io.github.arkmind.seedy.mobile.settings.SheetHead
 import io.github.arkmind.seedy.mobile.settings.SheetList
@@ -223,7 +224,7 @@ fun PhotoViewerRoute(id: UUID, play: Boolean) {
                                 }
                             }
                         },
-                        onDownload = if (canDownload) ({ item -> message = download(context, api.downloadUrl(item.id), fileName(item)) }) else null,
+                        onDownload = if (canDownload) ({ item -> message = downloadFile(context, api.downloadUrl(item.id), fileName(item)) }) else null,
                         onPlayVideo = { nav.go(Route.Player(it.id)) },
                         onSlideshow = { playing = it },
                         onInfo = { info = it },
@@ -258,24 +259,6 @@ fun PhotoViewerRoute(id: UUID, play: Boolean) {
             Toast(message, { message = null }, Modifier.align(Alignment.BottomCenter).padding(bottom = 140.dp))
         }
     }
-}
-
-/** Downloads a file into the phone's Downloads (Android 10+ through the download manager, older ones the browser). */
-private fun download(context: Context, url: String, name: String): String? {
-    if (Build.VERSION.SDK_INT >= 29) {
-        val ok = runCatching {
-            context.getSystemService(DownloadManager::class.java).enqueue(
-                DownloadManager.Request(url.toUri()).setTitle(name)
-                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                    .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name),
-            )
-        }.isSuccess
-        if (ok) return t("Downloading {name}", "name" to name)
-    }
-    return runCatching {
-        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        null
-    }.getOrElse { t("Couldn’t download {name}", "name" to name) }
 }
 
 /** A folder's photos and videos, each its own download (Android 10+). */

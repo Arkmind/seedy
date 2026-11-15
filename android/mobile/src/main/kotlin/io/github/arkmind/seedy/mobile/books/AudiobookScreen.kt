@@ -44,6 +44,8 @@ import io.github.arkmind.seedy.mobile.audio.AudioIcons
 import io.github.arkmind.seedy.mobile.audio.OutputChip
 import io.github.arkmind.seedy.mobile.browse.topInset
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
+import io.github.arkmind.seedy.mobile.parts.rememberDominant
+import io.github.arkmind.seedy.mobile.parts.scaledColor
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.player.audio.AudioState
 import io.github.arkmind.seedy.player.audio.AudioTime
@@ -115,7 +117,7 @@ fun AudiobookScreen(
     val book = state.book ?: return
     val accent = LocalAccent.current
     val seed = webId(uuidOf(book.id)) ?: book.id
-    val rgb = rememberDominant(art)
+    val rgb = rememberDominant(art, requestSize = 16, cacheMisses = false)
     val tint = rgb?.let { scaledColor(it, 104f) } ?: coverPalette(seed)[1]
     val pos = time.position
     val total = book.duration.takeIf { it > 0 } ?: time.duration

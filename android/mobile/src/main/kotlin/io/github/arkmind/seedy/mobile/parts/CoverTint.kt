@@ -1,4 +1,4 @@
-package io.github.arkmind.seedy.mobile.books
+package io.github.arkmind.seedy.mobile.parts
 
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
@@ -22,34 +22,40 @@ import java.util.concurrent.ConcurrentHashMap
 
 /*
  * The main colour of a cover (web audio/cover.tsx `dominant`): its most common colourful shade, greys, black and white
- * counting little. The players' and the book page's backdrops take it, brought to the boards' brightness.
+ * counting little. The players', the book page's and the mix cards' backdrops take it, brought to the boards'
+ * brightness.
  */
 
+/** Found colours by request size and url; an empty array is a cover known to have none. */
 private val cache = ConcurrentHashMap<String, FloatArray>()
+private val noColour = FloatArray(0)
 
-/** The cover's main colour as r, g, b (0–255), or null while it loads, without a picture or when it can't be read. */
+/**
+ * The picture at [url]'s main colour as r, g, b (0–255), loaded at [requestSize] px; null while it loads, without a
+ * picture or when it can't be read. With [cacheMisses] a picture without one isn't asked again.
+ */
 @Composable
-fun rememberDominant(url: String?): FloatArray? {
+fun rememberDominant(url: String?, requestSize: Int, cacheMisses: Boolean): FloatArray? {
     val context = LocalContext.current
-    var rgb by remember(url) { mutableStateOf(url?.let { cache[it] }) }
+    val key = url?.let { "$requestSize:$it" }
+    var rgb by remember(url) { mutableStateOf(key?.let { cache[it] }?.takeIf { it.isNotEmpty() }) }
     LaunchedEffect(url) {
-        if (url == null || rgb != null) return@LaunchedEffect
+        if (url == null || key == null || cache.containsKey(key)) return@LaunchedEffect
         val found = withContext(Dispatchers.IO) {
             runCatching {
-                val request = ImageRequest.Builder(context).data(url).size(16, 16).allowHardware(false).build()
+                val request = ImageRequest.Builder(context).data(url).size(requestSize, requestSize).allowHardware(false).build()
                 (SingletonImageLoader.get(context).execute(request) as? SuccessResult)?.image?.toBitmap()?.let(::dominantOf)
             }.getOrNull()
         }
-        if (found != null) {
-            cache[url] = found
-            rgb = found
-        }
+        if (found != null) cache[key] = found else if (cacheMisses) cache[key] = noColour
+        rgb = found
     }
     return rgb
 }
 
-private class Bucket(var n: Float = 0f, var r: Float = 0f, var g: Float = 0f, var b: Float = 0f)
+private class Bucket(var n: Double = 0.0, var r: Double = 0.0, var g: Double = 0.0, var b: Double = 0.0)
 
+/** The picture shrunk to 16 × 16, its colours in buckets weighted by how colourful they are; the heaviest one's mean. */
 private fun dominantOf(bitmap: Bitmap): FloatArray? {
     val small = if (bitmap.width != 16 || bitmap.height != 16) bitmap.scale(16, 16) else bitmap
     val buckets = HashMap<Int, Bucket>()
@@ -61,7 +67,7 @@ private fun dominantOf(bitmap: Bitmap): FloatArray? {
         val max = maxOf(r, g, b)
         val min = minOf(r, g, b)
         if (max < 24) continue
-        val w = 0.15f + (max - min) / 255f
+        val w = 0.15 + (max - min) / 255.0
         val k = ((r shr 5) shl 6) or ((g shr 5) shl 3) or (b shr 5)
         val bucket = buckets.getOrPut(k) { Bucket() }
         bucket.n += w
@@ -70,7 +76,7 @@ private fun dominantOf(bitmap: Bitmap): FloatArray? {
         bucket.b += b * w
     }
     val best = buckets.values.maxByOrNull { it.n } ?: return null
-    return floatArrayOf(best.r / best.n, best.g / best.n, best.b / best.n)
+    return floatArrayOf((best.r / best.n).toFloat(), (best.g / best.n).toFloat(), (best.b / best.n).toFloat())
 }
 
 /** [rgb] scaled so its brightest channel is [top] (the boards' glow like #2f4a66 is 104, the edge 58). */

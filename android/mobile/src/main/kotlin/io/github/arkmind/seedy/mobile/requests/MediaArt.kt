@@ -36,6 +36,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import io.github.arkmind.seedy.mobile.books.BookPalettes
+import io.github.arkmind.seedy.mobile.books.drawBookArt
+import io.github.arkmind.seedy.mobile.books.drawSpine
 import io.github.arkmind.seedy.ui.theme.cssLineBox
 import io.github.arkmind.seedy.core.mediarequests.MediaFormat
 import io.github.arkmind.seedy.ui.components.CoverPalettes
@@ -43,7 +46,6 @@ import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import io.github.arkmind.seedy.ui.theme.parseHexColor
 
 /*
  * The request pages' covers (web: media-parts.tsx AlbumArt, BookArt): the image when there is one, laid over the
@@ -53,17 +55,6 @@ import io.github.arkmind.seedy.ui.theme.parseHexColor
 
 private val AlbumPaths = listOf(
     "M0 140 Q50 110 100 140 T200 140 V200 H0Z", "M0 200 L200 70 V200Z", "M0 150 L50 110 L90 140 L140 90 L200 130 V200 H0Z", "M0 0 H200 V40 Q100 70 0 40Z",
-).map { PathParser().parsePathString(it).toPath() }
-
-/** The book boards' eight palettes: background, sun, hill and ink. */
-private val BookPalettes: List<List<Color>> = listOf(
-    listOf("#e8dcc8", "#c9583e", "#2c3a49", "#1e1e1e"), listOf("#1f3a3c", "#a8e6df", "#0f1c1d", "#def4f1"), listOf("#2f2840", "#e3c4ff", "#16121f", "#efe6fb"),
-    listOf("#f2cf86", "#1d170f", "#5c4a2c", "#1d170f"), listOf("#3d2424", "#f0b9a0", "#1c1111", "#f6e3da"), listOf("#dfe7ef", "#2f4a7a", "#9fb2c6", "#141b22"),
-    listOf("#26362b", "#d9e3b5", "#121a14", "#eef2e0"), listOf("#141414", "#ff9fff", "#2a2a2a", "#f0f0f0"),
-).map { p -> p.map { parseHexColor(it)!! } }
-
-private val BookPaths = listOf(
-    "M0 300 L0 210 Q100 170 200 210 V300Z", "M0 300 L200 160 V300Z", "M0 230 L50 190 L100 220 L150 170 L200 200 V300 H0Z", "M0 300 V240 H200 V300Z",
 ).map { PathParser().parsePathString(it).toPath() }
 
 /**
@@ -164,19 +155,9 @@ fun RequestBookArt(
     val s = (index % 4).toInt()
     BoxWithConstraints(modifier.background(c[0])) {
         Canvas(Modifier.fillMaxSize()) {
-            if (spine) {
-                // inset 5px 0 0 rgba(0,0,0,.22), inset 6px 0 0 rgba(255,255,255,.06)
-                drawRect(Color.White.copy(alpha = 0.06f), size = Size(6.dp.toPx(), size.height))
-                drawRect(Color.Black.copy(alpha = 0.22f), size = Size(5.dp.toPx(), size.height))
-            }
-            // viewBox 0 0 200 300, preserveAspectRatio xMidYMid slice.
-            val k = maxOf(size.width / 200f, size.height / 300f)
-            translate((size.width - 200f * k) / 2f, (size.height - 300f * k) / 2f) {
-                scale(k, k, pivot = Offset.Zero) {
-                    drawCircle(c[1], radius = listOf(44f, 60f, 36f, 50f)[s], center = Offset(listOf(140f, 60f, 100f, 150f)[s], listOf(150f, 170f, 130f, 120f)[s]))
-                    drawPath(BookPaths[s], c[2])
-                }
-            }
+            // The spine under the drawing, over the background.
+            if (spine) drawSpine()
+            drawBookArt(c, s)
         }
         if (titleSize.value > 0f) {
             CssText(

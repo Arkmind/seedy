@@ -55,6 +55,7 @@ import io.github.arkmind.seedy.core.books.sortItems
 import io.github.arkmind.seedy.core.books.sortSeries
 import io.github.arkmind.seedy.core.books.volumeLabel
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.i18n.tc
 import io.github.arkmind.seedy.mobile.browse.EmptyNote
 import io.github.arkmind.seedy.mobile.browse.SectionHead
 import io.github.arkmind.seedy.mobile.browse.SquareChip
@@ -125,13 +126,6 @@ fun BooksScreen(state: BooksViewModel.State, actions: BooksActions, bottomPaddin
             }
         }
     }
-}
-
-/** A word whose translation depends on where it stands ("Series|tab" is plural in French). */
-internal fun tc(text: String, context: String): String {
-    val key = "$text|$context"
-    val out = t(key)
-    return if (out == key) text else out
 }
 
 @Composable

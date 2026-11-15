@@ -68,6 +68,8 @@ import io.github.arkmind.seedy.mobile.browse.EmptyNote
 import io.github.arkmind.seedy.mobile.browse.SectionHead
 import io.github.arkmind.seedy.mobile.browse.topInset
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
+import io.github.arkmind.seedy.mobile.parts.rememberDominant
+import io.github.arkmind.seedy.mobile.parts.scaledColor
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -182,7 +184,7 @@ fun BookScreen(state: BookViewModel.State, actions: BookActions, bottomPadding: 
 @Composable
 private fun heroGlow(item: BaseItemDto, audio: Boolean): Color {
     val url = bookArt(item, 64)
-    val rgb = rememberDominant(url)
+    val rgb = rememberDominant(url, requestSize = 16, cacheMisses = false)
     return when {
         url != null && rgb != null -> scaledColor(rgb, 40f)
         url != null -> SeedyColors.Bg
@@ -303,12 +305,6 @@ fun progressOf(state: BookViewModel.State, item: BaseItemDto): Pair<Float, Strin
         },
     ).joinToString(" · ")
     return fraction.toFloat() to text
-}
-
-private fun formatName(item: BaseItemDto): String = when (formatOf(item)) {
-    BookFormat.Audio -> t("Audiobook")
-    BookFormat.Other -> t("File")
-    else -> formatOf(item).name.uppercase()
 }
 
 /** "2.1 MB", "640 KB". */
