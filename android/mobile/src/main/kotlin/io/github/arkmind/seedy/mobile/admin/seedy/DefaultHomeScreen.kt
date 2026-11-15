@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -297,7 +298,8 @@ private fun RowsEditor(rows: List<HomeRowConfig>, onChange: (List<HomeRowConfig>
     }
 
     Column(Modifier.fillMaxWidth().background(SeedyColors.Panel, RoundedCornerShape(18.dp))) {
-        shown.forEachIndexed { i, r ->
+        // Keyed, so a row keeps its gesture while it moves past the others.
+        shown.forEachIndexed { i, r -> key(r.kind) {
             val locked = r.kind in LockedRows
             val lifted = r.kind == (drag ?: preview)
             if (i > 0 && !lifted) RowLine()
@@ -323,7 +325,7 @@ private fun RowsEditor(rows: List<HomeRowConfig>, onChange: (List<HomeRowConfig>
                 onToggle = { on -> onChange(rows.map { if (it.kind == r.kind) it.copy(enabled = on) else it }) },
                 onCount = { n -> onChange(rows.map { if (it.kind == r.kind) it.copy(count = n) else it }) },
             )
-        }
+        } }
     }
 }
 
