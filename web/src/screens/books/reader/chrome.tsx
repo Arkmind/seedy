@@ -1,8 +1,7 @@
 import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { pct } from '../../../lib/format';
-import { t } from '../../../lib/i18n';
-import { tc } from '../parts';
+import { t, tc } from '../../../lib/i18n';
 import {
   SIZE_MAX, SIZE_MIN, THEMES, type ComicSettings, type EpubSettings, type Fit, type FontChoice, type Layout, type Margins,
   type PageTheme, type Spacing, type Direction

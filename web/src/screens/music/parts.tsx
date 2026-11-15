@@ -4,7 +4,7 @@ import { get, currentUserId } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { itemYear, ticksToSeconds } from '../../lib/format';
-import { t, tn } from '../../lib/i18n';
+import { t, tc, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { Popover, toast } from '../../ui/overlay';
@@ -50,12 +50,6 @@ export const yearOf = (a: Pick<BaseItem, 'ProductionYear' | 'PremiereDate'>) => 
 export { longDate } from '../../lib/format';
 
 export const dot = (...parts: (string | number | undefined | null | false)[]) => parts.filter((p) => p !== undefined && p !== null && p !== false && p !== '').join(' · ');
-
-/* A word that means something else elsewhere ("Time" of day): its dictionary key says which, English shows [en]. */
-export function inContext(key: string, en: string): string {
-  const v = t(key);
-  return v === key ? en : v;
-}
 
 /* ───────── Section heads ───────── */
 
@@ -431,7 +425,7 @@ export function TrackTable({ tracks, cols = 'album', source, numbers, extra, lab
         <span role="columnheader">{t('Title')}</span>
         {cols === 'list' && <span role="columnheader">{t('Album')}</span>}
         <span role="columnheader">{t('Plays')}</span>
-        <span role="columnheader" class="is-right">{inContext('Time (song length)', 'Time')}</span>
+        <span role="columnheader" class="is-right">{tc('Time', 'song length')}</span>
         <span role="columnheader"><span class="sr-only">{t('Favorite')}</span></span>
       </div>
       {rows}

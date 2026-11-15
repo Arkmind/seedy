@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { deviceId, get } from '../../api/client';
 import type { BaseItem, SessionInfo } from '../../api/types';
 import { plural, ticksToSeconds, timeLeft } from '../../lib/format';
-import { t, tn } from '../../lib/i18n';
+import { t, tc, tn } from '../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
@@ -15,7 +15,7 @@ import { AudioCover, BookCover } from './covers';
 import { isBookOrPart, mergePlace, partsOf } from '../../audio/api';
 import { authorLine, authorsOf, formatOf, getBookInfo, isAudioBook, isComic, listReading, loadLibraryItems, normalize, seriesOf, workKey, type Reading } from './api';
 import {
-  AudioCard, BookCard, ContinueCard, SectionHead, SeriesCard, bookSub, comicSub, roughTime, tc, useColumns,
+  AudioCard, BookCard, ContinueCard, SectionHead, SeriesCard, bookSub, comicSub, roughTime, useColumns,
   type ContinueEntry, type SeriesGroup
 } from './parts';
 import { LibraryMenuItems } from '../../ui/library-menu';

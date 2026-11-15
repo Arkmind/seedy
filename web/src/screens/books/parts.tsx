@@ -11,14 +11,6 @@ import '@fontsource-variable/noto-serif/wght.css';
 
 /* Pieces shared by the books screens: cards, section heads, a few labels. */
 
-/* A word whose translation depends on where it stands ("Series" the tab is plural in French, "Normal" agrees with
-   what it describes): the dictionary key is "Series|tab", English shows the word itself. */
-export function tc(text: string, context: string): string {
-  const key = `${text}|${context}`;
-  const out = t(key);
-  return out === key ? text : out;
-}
-
 /* "About 3 h", "1 h 30 min", "25 min": rough reading/listening time for cards. */
 export function roughTime(minutes: number): string {
   const m = Math.max(1, Math.round(minutes));
