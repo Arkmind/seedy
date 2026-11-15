@@ -35,8 +35,6 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.admin.Chip
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.Dot
-import io.github.arkmind.seedy.mobile.admin.PillButton
-import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.admin.RadioRow
 import io.github.arkmind.seedy.mobile.admin.SaveBar
 import io.github.arkmind.seedy.mobile.admin.SaveBarRoom
@@ -106,11 +104,8 @@ fun PlaybackScreen(state: PlaybackState, actions: PlaybackActions, page: String?
         },
     ) {
         when {
-            !state.loaded && state.loadError != null -> {
-                SText(state.loadError.orEmpty(), Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp), size = 13.sp, color = SeedyColors.Danger)
-                PillRow { PillButton(t("Try again"), actions::retry) }
-            }
-            !state.loaded -> SText("…", Modifier.padding(20.dp), size = 13.sp, color = SeedyColors.Text3)
+            !state.loaded && state.loadError != null -> PageLoadError(state.loadError.orEmpty(), actions::retry)
+            !state.loaded -> PageLoading()
             page == PlaybackPages.Resume -> SettingCards(state.resume, rows, sheets)
             page == PlaybackPages.Streaming -> SettingCards(state.streaming, rows, sheets)
             page == PlaybackPages.Previews -> SettingCards(state.previews, rows, sheets)

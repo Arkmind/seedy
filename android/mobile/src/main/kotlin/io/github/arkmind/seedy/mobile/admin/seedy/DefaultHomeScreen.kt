@@ -69,15 +69,18 @@ import io.github.arkmind.seedy.mobile.settings.SegRow
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.mobile.settings.SheetHead
 import io.github.arkmind.seedy.mobile.settings.SheetHost
+import io.github.arkmind.seedy.mobile.settings.SheetList
 import io.github.arkmind.seedy.mobile.settings.SheetState
 import io.github.arkmind.seedy.mobile.settings.StackRow
 import io.github.arkmind.seedy.mobile.settings.SwitchRow
+import io.github.arkmind.seedy.mobile.settings.choices
 import io.github.arkmind.seedy.mobile.settings.cssText
 import io.github.arkmind.seedy.mobile.settings.liftedCard
 import io.github.arkmind.seedy.mobile.settings.rememberReorder
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.mobile.settings.reorderDrag
 import io.github.arkmind.seedy.mobile.settings.reorderLift
+import io.github.arkmind.seedy.mobile.settings.withValue
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.SettingsIcons
@@ -329,7 +332,7 @@ private fun GenreSheet(chosen: List<String>, actions: HomeAdminActions, onAdd: (
     BottomSheet(onDismiss) {
         SheetHead(t("Add a starting genre"))
         if ((all?.size ?: 0) > 8) BoardField(q, { q = it }, Modifier.padding(start = 20.dp, end = 20.dp, bottom = 8.dp), placeholder = t("Find a genre"))
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+        SheetList {
             when {
                 failed -> SText(t("Couldn’t load genres"), Modifier.padding(12.dp), size = 13.sp, color = SeedyColors.Danger)
                 all == null -> SText(t("Loading genres…"), Modifier.padding(12.dp), size = 13.sp, color = SeedyColors.Text3)

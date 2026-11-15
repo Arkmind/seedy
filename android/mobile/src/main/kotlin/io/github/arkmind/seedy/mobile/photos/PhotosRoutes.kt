@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +44,7 @@ import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.settings.PickOption
 import io.github.arkmind.seedy.mobile.settings.SheetHead
+import io.github.arkmind.seedy.mobile.settings.SheetList
 import io.github.arkmind.seedy.ui.theme.currentSession
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -167,7 +166,7 @@ fun PhotoFolderRoute(id: UUID, photo: UUID? = null) {
             if (sorting) {
                 BottomSheet({ sorting = false }) {
                     SheetHead(t("Sort by"))
-                    Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+                    SheetList {
                         for (s in FolderSort.entries) PickOption(t(s.label), s == state.sort) { vm.setSort(s); sorting = false }
                     }
                 }

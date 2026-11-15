@@ -74,8 +74,6 @@ import kotlinx.serialization.json.put
 /* A user's other tabs (web/src/screens/server/UserEdit.tsx, built from the phone kit): libraries and devices,
  * parental controls, password and Seedy. */
 
-private const val DevicePage = 40
-
 private fun toggleIn(list: List<String>, id: String, on: Boolean): List<String> {
     val rest = list.filter { !sameId(it, id) && it != id }
     return if (on) rest + id else rest
@@ -92,7 +90,7 @@ private fun NoteRow(text: String, color: androidx.compose.ui.graphics.Color = Se
 @Composable
 internal fun AccessTab(state: UserEditState, actions: UserEditActions) {
     var allDevices by remember { mutableStateOf(false) }
-    var shown by remember { mutableIntStateOf(DevicePage) }
+    var shown by remember { mutableIntStateOf(DevicePageSize) }
     val p = state.policy
     val name = state.name
     Section(t("Libraries"), foot = t("What {name} can browse and play.", "name" to name)) {
@@ -119,12 +117,12 @@ internal fun AccessTab(state: UserEditState, actions: UserEditActions) {
                     SwitchRow(d.name, d.sub.ifEmpty { null }, p.allows(d.id), device = d.mine) { on -> actions.set("EnabledDevices", json(toggleIn(enabled, d.id, on))) }
                 }
             }
-            if (list.size > shown) row { AccentRow(t("Show more") + " · " + t("{n} more", "n" to formatNumber(list.size - shown)), { shown += DevicePage }, icon = null) }
+            if (list.size > shown) row { AccentRow(t("Show more") + " · " + t("{n} more", "n" to formatNumber(list.size - shown)), { shown += DevicePageSize }, icon = null) }
             if (state.devices.size > relevant.size || allDevices) {
                 row {
                     AccentRow(
                         if (allDevices) t("Only {name}’s devices", "name" to name) else t("Show every device on the server ({n})", "n" to formatNumber(state.devices.size)),
-                        { allDevices = !allDevices; shown = DevicePage },
+                        { allDevices = !allDevices; shown = DevicePageSize },
                         icon = null,
                     )
                 }

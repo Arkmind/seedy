@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
+import io.github.arkmind.seedy.mobile.admin.IconTile
+import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -174,7 +175,7 @@ fun NewPlaylistContent(state: NewPlaylistState, actions: NewPlaylistActions, onD
     ) {
         SText(t("New playlist"), size = 20.sp, weight = 900, color = SeedyColors.White)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            FieldLabel(t("Name"))
+            FieldLabel(t("Name"), color = SeedyColors.Text2)
             BoardField(state.name, actions::setName, placeholder = t("Name it"), autoCorrect = true)
         }
         if (state.startsWith.isNotEmpty()) Row(
@@ -189,7 +190,7 @@ fun NewPlaylistContent(state: NewPlaylistState, actions: NewPlaylistActions, onD
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            FieldLabel(t("Who can see it"))
+            FieldLabel(t("Who can see it"), color = SeedyColors.Text2)
             AudienceOption(ManageIcons.Me, t("Only me"), t("Nobody else sees it"), state.audience == Audience.OnlyMe) { actions.setAudience(Audience.OnlyMe) }
             if (state.canPick) {
                 AudienceOption(ManageIcons.People, t("People I pick"), t("They see it in their Playlists"), state.audience == Audience.People) { actions.setAudience(Audience.People) }

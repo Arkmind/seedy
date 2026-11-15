@@ -185,10 +185,10 @@ fun SeedyField(
     }
 }
 
-/** A form label above a field (13 px bold). */
+/** A form label above a field (13 px bold; the boards' dialogs label theirs in [SeedyColors.Text2]). */
 @Composable
-fun FieldLabel(text: String, modifier: Modifier = Modifier) {
-    SText(text, modifier, size = 13.sp, weight = 700, color = SeedyColors.Text)
+fun FieldLabel(text: String, modifier: Modifier = Modifier, color: Color = SeedyColors.Text) {
+    SText(text, modifier, size = 13.sp, weight = 700, color = color)
 }
 
 /** The web's toast: a short note over the page's foot that goes after a few seconds; [onDone] clears it. */

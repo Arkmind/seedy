@@ -70,14 +70,6 @@ object ManageIcons {
     val Select = IconDef(2.2f, "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z", "M8 12.5l2.8 2.8L16 10")
 }
 
-/** A 36 px tile around an icon (the menu's playlists, the audience options). */
-@Composable
-fun IconTile(icon: IconDef, tint: Color = SeedyColors.Text2, size: Dp = 36.dp, iconSize: Dp = 18.dp, background: Color = SeedyColors.Surface, radius: Dp = 10.dp) {
-    Box(Modifier.size(size).clip(RoundedCornerShape(radius)).background(background), contentAlignment = Alignment.Center) {
-        SIcon(icon, size = iconSize, color = tint)
-    }
-}
-
 /** The boards' 22 px checkbox: the accent with a dark tick when on, a grey ring when off. */
 @Composable
 fun CheckBox(on: Boolean, size: Dp = 22.dp) {
@@ -161,12 +153,6 @@ fun BigButton(label: String, onClick: () -> Unit, enabled: Boolean = true, icon:
         if (icon != null) SIcon(icon, size = 19.dp, color = ink)
         SText(label, size = 15.sp, weight = 800, color = ink, maxLines = 1)
     }
-}
-
-/** A field's name over it (13 px bold grey), as the boards' dialogs label them. */
-@Composable
-fun FieldLabel(text: String, modifier: Modifier = Modifier) {
-    SText(text, modifier, size = 13.sp, weight = 700, color = SeedyColors.Text2)
 }
 
 /** A tappable row with a checkbox, its label and a line under it ("Also clear it in Seerr"). */

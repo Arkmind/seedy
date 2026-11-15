@@ -34,6 +34,7 @@ import io.github.arkmind.seedy.mobile.admin.AdminIcons
 import io.github.arkmind.seedy.mobile.admin.CardNote
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.FormError
+import io.github.arkmind.seedy.mobile.admin.LoadingDots
 import io.github.arkmind.seedy.mobile.admin.Mono
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillRow
@@ -84,7 +85,7 @@ fun ApiKeysScreen(state: ApiKeysState, actions: ApiKeysActions, onBack: () -> Un
         Card(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
             when {
                 keys == null && state.error != null -> CardNote(t("Couldn’t load the keys.") + " " + state.error, action = t("Try again"), onAction = actions::reload)
-                keys == null -> SText("…", Modifier.padding(16.dp), size = 13.sp, color = SeedyColors.Text3)
+                keys == null -> LoadingDots()
                 keys.isEmpty() -> CardNote(t("No keys yet. Create one for each app that needs to reach the server."))
                 else -> keys.forEachIndexed { i, k ->
                     if (i > 0) RowLine()

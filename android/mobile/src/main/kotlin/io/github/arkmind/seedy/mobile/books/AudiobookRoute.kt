@@ -15,9 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,6 +51,7 @@ import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.PickOption
 import io.github.arkmind.seedy.mobile.settings.SheetHead
+import io.github.arkmind.seedy.mobile.settings.SheetList
 import io.github.arkmind.seedy.player.audio.BookChapter
 import io.github.arkmind.seedy.player.audio.BookInfo
 import io.github.arkmind.seedy.player.audio.Sleep
@@ -185,7 +184,7 @@ private fun placeOf(book: BookInfo, pos: Double): Reading {
 private fun SpeedSheet(speed: Float, onPick: (Float) -> Unit, onClose: () -> Unit) {
     BottomSheet(onClose) {
         SheetHead(t("Playback speed"))
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+        SheetList {
             for (v in Speeds) PickOption(speedLabel(v), abs(speed - v) < 0.001f, sub = if (v == 1f) t("Normal") else null) { onPick(v); onClose() }
         }
     }
@@ -195,7 +194,7 @@ private fun SpeedSheet(speed: Float, onPick: (Float) -> Unit, onClose: () -> Uni
 internal fun SleepSheet(sleep: Sleep?, chapter: BookChapter?, onPick: (Sleep?) -> Unit, onClose: () -> Unit) {
     BottomSheet(onClose) {
         SheetHead(t("Sleep timer"))
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+        SheetList {
             PickOption(t("Off"), sleep == null) { onPick(null); onClose() }
             if (chapter != null) {
                 PickOption(t("At the end of the chapter"), sleep is Sleep.Chapter, sub = chapter.name) { onPick(Sleep.Chapter(chapter.index)); onClose() }
@@ -261,7 +260,7 @@ internal fun BookmarksSheet(
     }
     BottomSheet(onClose) {
         SheetHead(t("Bookmarks"))
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+        SheetList {
             MarkRow(BookIcons.Bookmark, accent, t("Add bookmark"), where(pos), onClick = { onAdd() })
             if (bookmarks.isEmpty()) {
                 SText(t("No bookmarks yet"), Modifier.padding(horizontal = 12.dp, vertical = 12.dp), size = 13.sp, color = SeedyColors.Text3)

@@ -11,13 +11,10 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -43,7 +40,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -60,16 +56,15 @@ import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.MenuPill
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.admin.PillStyle
+import io.github.arkmind.seedy.mobile.admin.PinnedBar
 import io.github.arkmind.seedy.mobile.admin.SaveBarRoom
 import io.github.arkmind.seedy.mobile.admin.SearchPickSheet
 import io.github.arkmind.seedy.mobile.parts.Toast
-import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.RowLine
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
 import io.github.arkmind.seedy.ui.components.Artwork
-import io.github.arkmind.seedy.ui.components.boxShadow
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
@@ -307,15 +302,7 @@ private fun useLabel(type: String): String = when (type) {
 /** The pinned foot: changes save as they're made, and Done. */
 @Composable
 private fun BoxScope.ImagesFooter(onDone: () -> Unit) {
-    val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    Row(
-        Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-            .boxShadow(Color.Black.copy(alpha = 0.5f), blur = 30.dp, y = (-10).dp)
-            .background(SeedyColors.Row).blockTaps()
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = max(26.dp, nav + 12.dp)),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
+    PinnedBar(10.dp) {
         SIcon(WebIcons.Check, size = 15.dp, color = SeedyColors.Ok, stroke = 2.8f)
         SText(t("Changes save right away"), Modifier.weight(1f), size = 13.sp, color = SeedyColors.Text2, maxLines = 1)
         PillButton(t("Done"), onDone, style = PillStyle.Light, height = 44.dp)

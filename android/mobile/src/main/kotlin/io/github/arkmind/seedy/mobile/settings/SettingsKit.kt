@@ -552,8 +552,9 @@ fun SwatchRow(name: String, help: String?, swatches: List<Swatch>, value: String
     }
 }
 
+/** A 34 px colour swatch; the chosen one has a white ring. */
 @Composable
-private fun SwatchDot(s: Swatch, on: Boolean, onClick: () -> Unit) {
+internal fun SwatchDot(s: Swatch, on: Boolean, onClick: () -> Unit) {
     val stripe = SeedyColors.Text3
     Canvas(Modifier.size(34.dp).tap(role = Role.RadioButton, onClick = onClick)) {
         val r = size.minDimension / 2
@@ -600,17 +601,27 @@ class SheetState {
 @Composable
 fun rememberSheet(): SheetState = remember { SheetState() }
 
+/** A choice list with [value] in it (in order) when the server has one the list doesn't. */
+fun <T : Comparable<T>> withValue(list: List<T>, value: T): List<T> = if (value in list) list else (list + value).sorted()
+
+fun <T> choices(values: List<T>, label: (T) -> String): List<Choice<T>> = values.map { Choice(it, label(it)) }
+
 /** Draws the page's open sheet. */
 @Composable
 fun SheetHost(sheet: SheetState) {
     sheet.pick?.let { spec -> PickSheet(spec, sheet::close) }
 }
 
+/** A list sheet's options, scrolling when there are many. */
+@Composable
+fun ColumnScope.SheetList(content: @Composable ColumnScope.() -> Unit) =
+    Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp), content = content)
+
 @Composable
 private fun <T> PickSheet(spec: PickSpec<T>, onClose: () -> Unit) {
     BottomSheet(onDismiss = onClose) {
         SheetHead(spec.title)
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 24.dp)) {
+        SheetList {
             for (o in spec.options) PickOption(o.label, o.value == spec.value) { spec.onPick(o.value); onClose() }
         }
     }

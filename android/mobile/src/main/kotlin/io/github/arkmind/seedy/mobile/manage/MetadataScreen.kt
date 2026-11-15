@@ -5,12 +5,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -33,7 +30,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -53,6 +49,7 @@ import io.github.arkmind.seedy.mobile.admin.BoardField
 import io.github.arkmind.seedy.mobile.admin.ChipFlow
 import io.github.arkmind.seedy.mobile.admin.ErrorCard
 import io.github.arkmind.seedy.mobile.admin.FieldSection
+import io.github.arkmind.seedy.mobile.admin.PinnedBar
 import io.github.arkmind.seedy.mobile.admin.leaveGuard
 import io.github.arkmind.seedy.mobile.admin.LoadingCards
 import io.github.arkmind.seedy.mobile.admin.PillButton
@@ -62,17 +59,15 @@ import io.github.arkmind.seedy.mobile.admin.SearchPickSheet
 import io.github.arkmind.seedy.mobile.admin.TabPills
 import io.github.arkmind.seedy.mobile.admin.TextSheet
 import io.github.arkmind.seedy.mobile.admin.avatarColour
+import io.github.arkmind.seedy.mobile.parts.FieldLabel
 import io.github.arkmind.seedy.mobile.parts.Toast
-import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.BoardSwitch
 import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.FormSheet
 import io.github.arkmind.seedy.mobile.settings.RowLine
-import io.github.arkmind.seedy.mobile.settings.SectionFoot
 import io.github.arkmind.seedy.mobile.settings.Segmented
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
-import io.github.arkmind.seedy.ui.components.boxShadow
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
@@ -244,7 +239,7 @@ private fun MetaField(
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth().heightIn(min = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-            FieldLabel(label, Modifier.weight(1f))
+            FieldLabel(label, Modifier.weight(1f), color = SeedyColors.Text2)
             if (lock != null && state != null && actions != null) {
                 val locked = lock in state.locked
                 LockChip(locked, locked || lock in state.toggled) { actions.toggleLock(lock) }
@@ -307,15 +302,7 @@ private fun personType(type: String): String = when (type) {
 /** The pinned foot: Lock all fields, and Save changes. */
 @Composable
 private fun androidx.compose.foundation.layout.BoxScope.MetaFooter(state: MetadataState, actions: MetadataActions, onSave: () -> Unit) {
-    val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    Row(
-        Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-            .boxShadow(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f), blur = 30.dp, y = (-10).dp)
-            .background(SeedyColors.Row).blockTaps()
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = max(26.dp, nav + 12.dp)),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    PinnedBar(12.dp) {
         BoardSwitch(state.lockAll, actions::setLockAll)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
             SText(t("Lock all fields"), size = 13.sp, weight = 700, color = SeedyColors.White, maxLines = 1)

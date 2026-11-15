@@ -1,26 +1,17 @@
 package io.github.arkmind.seedy.mobile.admin.media
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.admin.media.LibraryDefaultsActions
 import io.github.arkmind.seedy.core.admin.media.LibraryDefaultsState
 import io.github.arkmind.seedy.core.admin.media.LibraryDefaultsViewModel
 import io.github.arkmind.seedy.core.admin.media.LibraryPages
-import io.github.arkmind.seedy.core.i18n.t
-import io.github.arkmind.seedy.mobile.admin.PillButton
-import io.github.arkmind.seedy.mobile.admin.PillRow
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.settings.SaveLine
 import io.github.arkmind.seedy.mobile.settings.SettingsPage
-import io.github.arkmind.seedy.ui.theme.SText
-import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
 
 /*
@@ -64,11 +55,8 @@ fun LibraryDefaultsScreen(state: LibraryDefaultsState, actions: LibraryDefaultsA
         val groups = state.groups
         val error = state.loadError
         when {
-            groups == null && error != null -> {
-                SText(error, Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp), size = 13.sp, color = SeedyColors.Danger)
-                PillRow { PillButton(t("Try again"), actions::retry) }
-            }
-            groups == null -> SText("…", Modifier.padding(20.dp), size = 13.sp, color = SeedyColors.Text3)
+            groups == null && error != null -> PageLoadError(error, actions::retry)
+            groups == null -> PageLoading()
             else -> SettingCards(groups, actions, sheets)
         }
         SaveLine(state.saving, state.error)

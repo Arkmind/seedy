@@ -33,6 +33,7 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.settings.SettingsActions
 import io.github.arkmind.seedy.core.settings.SettingsState
+import io.github.arkmind.seedy.mobile.admin.IconTile
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Tab
@@ -205,9 +206,7 @@ private fun PageItem(name: String, sub: String, icon: IconDef, ink: Color, onCli
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(SeedyColors.Surface), contentAlignment = Alignment.Center) {
-            SIcon(icon, size = 19.dp, color = ink)
-        }
+        IconTile(icon, ink, 36.dp, 19.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             SText(name, size = 14.sp, weight = 700, color = SeedyColors.White, maxLines = 1)
             SText(sub, size = 12.sp, color = SeedyColors.Text3, maxLines = 1, overflow = TextOverflow.Ellipsis)
