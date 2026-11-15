@@ -105,7 +105,7 @@ function RowsSection() {
     ids: rows.map((r) => r.kind),
     listRef,
     itemSelector: '.rows-item',
-    name: (id) => ROW_INFO[id as RowKind]?.name ?? id,
+    name: (id) => { const n = ROW_INFO[id as RowKind]?.name; return n ? t(n) : id; },
     // In automatic order, moving a row pins it where it was put.
     onMove: (from, to) => {
       const next = moveItem(rows, from, to);
