@@ -10,7 +10,7 @@ import { Icon } from '../../ui/icons';
 import { Sheet, toast, toastError } from '../../ui/overlay';
 import { t } from '../../lib/i18n';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
-import { patchRow, PROFILE_COLOURS, ProfileAvatar, roleOf, TableError, TableSkeleton } from './parts';
+import { ApiKeyRow, ApiKeySheet, ConnLine, OpenAppButton, patchRow, PROFILE_COLOURS, ProfileAvatar, roleOf, TableError, TableSkeleton, TestButton, UrlInput } from './parts';
 import {
   accountsStore, editConfig, flushConfig, loadAccounts, mergeServerConfig, seerrTestStore, testSeerr, useAdminConfig
 } from './config';
@@ -65,15 +65,10 @@ export function AdminRequests() {
 function ConnectionPanel({ req }: { req: Req }) {
   // Browsers use Seerr's own Application URL when it has one; the address above is how the server reaches it.
   const publicUrl = useStore(meStore).requests.seerrUrl;
-  const [url, setUrl] = useState(req.url);
   const [keyOpen, setKeyOpen] = useState(false);
-  useEffect(() => setUrl(req.url), [req.url]);
+  const test = useStore(seerrTestStore);
 
-  const commitUrl = async () => {
-    let v = url.trim().replace(/\/+$/, '');
-    if (v && !/^https?:\/\//i.test(v)) v = 'http://' + v;
-    if (v !== url) setUrl(v);
-    if (v === req.url) return;
+  const commitUrl = async (v: string) => {
     setReq({ url: v }, 0);
     if (!v) return;
     try { await flushConfig(); } catch { return; }
@@ -83,55 +78,30 @@ function ConnectionPanel({ req }: { req: Req }) {
   return (
     <Panel id="conn" title={t('Seerr connection')}>
       <SettingRow name={t('Address')} help={t('As this Jellyfin server reaches it')} htmlFor="seerr-url">
-        <input
-          id="seerr-url"
-          class="field is-340"
-          type="url"
-          inputMode="url"
-          value={url}
-          placeholder="http://seerr.local:5055"
-          autoComplete="off"
-          spellcheck={false}
-          onInput={(e) => setUrl((e.currentTarget as HTMLInputElement).value)}
-          onBlur={() => void commitUrl()}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') { e.preventDefault(); void commitUrl(); }
-            if (e.key === 'Escape') setUrl(req.url);
-          }}
-        />
+        <UrlInput id="seerr-url" value={req.url} placeholder="http://seerr.local:5055" onCommit={commitUrl} />
       </SettingRow>
-      <SettingRow name={t('API key')} help={t('Stored on the server, never sent to browsers')}>
-        <div class="setting-controls is-10">
-          <span class="key-saved">
-            <Icon name="lock" size={16} />
-            {req.apiKeyHint ? t('Saved · ends in {hint}', { hint: req.apiKeyHint }) : t('No key saved')}
-          </span>
-          <button type="button" class="btn btn-secondary" onClick={() => setKeyOpen(true)}>{req.apiKeyHint ? t('Replace key') : t('Add key')}</button>
-        </div>
-      </SettingRow>
+      <ApiKeyRow name={t('API key')} help={t('Stored on the server, never sent to browsers')} hint={req.apiKeyHint} onOpen={() => setKeyOpen(true)} />
       <div class="setting is-last">
         <ConnState hasUrl={!!req.url} hasKey={!!req.apiKeyHint} />
         <div class="setting-controls">
-          <TestButton disabled={!req.url} />
-          {req.url ? (
-            <a class="btn btn-secondary" href={publicUrl ?? req.url} target="_blank" rel="noreferrer">{t('Open Seerr')}<Icon name="external" size={16} /></a>
-          ) : (
-            <button type="button" class="btn btn-secondary" disabled>{t('Open Seerr')}<Icon name="external" size={16} /></button>
-          )}
+          <TestButton disabled={!req.url} testing={test.state === 'testing'} onTest={() => void testSeerr()} />
+          <OpenAppButton href={req.url ? publicUrl ?? req.url : undefined} label={t('Open Seerr')} />
         </div>
       </div>
-      <KeySheet open={keyOpen} onClose={() => setKeyOpen(false)} replacing={!!req.apiKeyHint} />
+      <ApiKeySheet
+        open={keyOpen}
+        onClose={() => setKeyOpen(false)}
+        title={req.apiKeyHint ? t('Replace API key') : t('Add API key')}
+        text={t('Copy the key from Settings › General in Seerr. Seedy keeps it on the server and only shows its last four characters.')}
+        label={t('Seerr API key')}
+        formClass="key-sheet"
+        save={async (key) => {
+          const res = await adminSeerrSetKey(key);
+          mergeServerConfig(res, (server, local) => ({ ...local, requests: { ...local.requests, apiKeyHint: server.requests.apiKeyHint } }));
+        }}
+        onSaved={() => void testSeerr()}
+      />
     </Panel>
-  );
-}
-
-function TestButton({ disabled }: { disabled: boolean }) {
-  const test = useStore(seerrTestStore);
-  const testing = test.state === 'testing';
-  return (
-    <button type="button" class="btn btn-primary is-sm" disabled={disabled || testing} aria-busy={testing ? 'true' : undefined} onClick={() => void testSeerr()}>
-      {testing ? t('Testing…') : t('Test connection')}
-    </button>
   );
 }
 
@@ -173,60 +143,7 @@ function ConnState({ hasUrl, hasKey }: { hasUrl: boolean; hasKey: boolean }) {
     lead = t('Not tested yet.');
     rest = t('Test the connection to check the address and key.');
   }
-  return (
-    <span class="conn-state" role="status" aria-live="polite">
-      <span class={'dot ' + dot} />
-      <span><b>{lead}</b>{rest ? ' ' + rest : ''}</span>
-    </span>
-  );
-}
-
-function KeySheet({ open, onClose, replacing }: { open: boolean; onClose: () => void; replacing: boolean }) {
-  const [key, setKey] = useState('');
-  const [busy, setBusy] = useState(false);
-  useEffect(() => { if (open) setKey(''); }, [open]);
-
-  const submit = async (e: Event) => {
-    e.preventDefault();
-    const v = key.trim();
-    if (!v) return;
-    setBusy(true);
-    try {
-      await flushConfig().catch(() => { /* the key is saved separately */ });
-      const res = await adminSeerrSetKey(v);
-      mergeServerConfig(res, (server, local) => ({ ...local, requests: { ...local.requests, apiKeyHint: server.requests.apiKeyHint } }));
-      toast(t('API key saved'));
-      onClose();
-      void testSeerr();
-    } catch (err) {
-      toastError(t('Couldn’t save the key.'), err);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Sheet open={open} onClose={onClose} label={replacing ? t('Replace API key') : t('Add API key')}>
-      <form class="key-sheet" style={{ display: 'contents' }} onSubmit={submit}>
-        <div class="sheet-head"><h2 class="sheet-title">{replacing ? t('Replace API key') : t('Add API key')}</h2></div>
-        <p class="sheet-text">{t('Copy the key from Settings › General in Seerr. Seedy keeps it on the server and only shows its last four characters.')}</p>
-        <input
-          class="field"
-          type="password"
-          value={key}
-          aria-label={t('Seerr API key')}
-          placeholder={t('Seerr API key')}
-          autoComplete="off"
-          spellcheck={false}
-          onInput={(e) => setKey((e.currentTarget as HTMLInputElement).value)}
-        />
-        <div class="sheet-actions">
-          <button type="button" class="btn btn-ghost is-light" onClick={onClose}>{t('Cancel')}</button>
-          <button type="submit" class="btn btn-primary is-sm" disabled={!key.trim() || busy}>{busy ? t('Saving…') : t('Save key')}</button>
-        </div>
-      </form>
-    </Sheet>
-  );
+  return <ConnLine dot={dot} lead={lead} rest={rest} />;
 }
 
 /* ── What Seedy shows / Who can request ── */

@@ -10,10 +10,10 @@ import { t } from '../../lib/i18n';
 import { createStore, useStore } from '../../lib/store';
 import { Panel, SavedNote, SelectField, SettingRow, Switch } from '../../ui/controls';
 import { Icon, type IconName } from '../../ui/icons';
-import { MenuButton, MenuItem, Sheet, toast, toastError } from '../../ui/overlay';
+import { MenuButton, MenuItem, toastError } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
 import { editConfig, flushConfig, mergeServerConfig, useAdminConfig } from './config';
-import { patchRow, ProfileAvatar, roleOf, TableError, TableSkeleton } from './parts';
+import { ApiKeyRow, ApiKeySheet, ConnLine, OpenAppButton, patchRow, ProfileAvatar, roleOf, TableError, TableSkeleton, TestButton, UrlInput } from './parts';
 import { capitalize, joinNames } from '../../lib/format';
 import '../requests/media.css';
 
@@ -113,36 +113,14 @@ function Head({ icon, title, sub, id }: { icon: IconName; title: string; sub: st
 }
 
 function UrlRow({ service, value, onCommit, placeholder }: { service: MediaService; value: string; onCommit: (v: string) => void; placeholder: string }) {
-  const [url, setUrl] = useState(value);
-  useEffect(() => setUrl(value), [value]);
-  const commit = async () => {
-    let v = url.trim().replace(/\/+$/, '');
-    if (v && !/^https?:\/\//i.test(v)) v = 'http://' + v;
-    if (v !== url) setUrl(v);
-    if (v === value) return;
+  const commit = async (v: string) => {
     onCommit(v);
     try { await flushConfig(); } catch { return; }
     if (v) { void test(service); if (service === 'lidarr') loadInfo(); }
   };
   return (
     <SettingRow name={t('Server address')} help={t('As this Jellyfin server reaches it')} htmlFor={service + '-url'}>
-      <input
-        id={service + '-url'}
-        class="field is-340"
-        type="url"
-        inputMode="url"
-        value={url}
-        placeholder={placeholder}
-        autoComplete="off"
-        spellcheck={false}
-        aria-label={t('{app} server address', { app: APP_NAMES[service] })}
-        onInput={(e) => setUrl((e.currentTarget as HTMLInputElement).value)}
-        onBlur={() => void commit()}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') { e.preventDefault(); void commit(); }
-          if (e.key === 'Escape') setUrl(value);
-        }}
-      />
+      <UrlInput id={service + '-url'} value={value} placeholder={placeholder} label={t('{app} server address', { app: APP_NAMES[service] })} onCommit={commit} />
     </SettingRow>
   );
 }
@@ -150,16 +128,20 @@ function UrlRow({ service, value, onCommit, placeholder }: { service: MediaServi
 function KeyRow({ service, hint, name, help }: { service: MediaService; hint?: string; name: string; help: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <SettingRow name={name} help={help}>
-      <div class="setting-controls is-10">
-        <span class="key-saved">
-          <Icon name="lock" size={16} />
-          {hint ? t('Saved · ends in {hint}', { hint }) : t('No key saved')}
-        </span>
-        <button type="button" class="btn btn-secondary" onClick={() => setOpen(true)}>{hint ? t('Replace key') : t('Add key')}</button>
-      </div>
-      <KeySheet service={service} open={open} onClose={() => setOpen(false)} replacing={!!hint} />
-    </SettingRow>
+    <ApiKeyRow name={name} help={help} hint={hint} onOpen={() => setOpen(true)}>
+      <ApiKeySheet
+        open={open}
+        onClose={() => setOpen(false)}
+        title={hint ? t('Replace {app} key', { app: APP_NAMES[service] }) : t('Add {app} key', { app: APP_NAMES[service] })}
+        text={t(KEY_HELP[service])}
+        label={t('{app} API key', { app: APP_NAMES[service] })}
+        save={async (key) => {
+          const res = await adminMediaKey(service, key);
+          mergeServerConfig(res, (server, local) => ({ ...local, media: { ...media(local), [service]: { ...media(local)[service], apiKeyHint: server.media?.[service]?.apiKeyHint } } }));
+        }}
+        onSaved={() => { void test(service); if (service === 'lidarr') loadInfo(); }}
+      />
+    </ApiKeyRow>
   );
 }
 
@@ -169,45 +151,6 @@ const KEY_HELP: Record<MediaService, string> = {
   librarr: 'Copy the key from Settings in Librarr. Seedy sends it as X-Api-Key, keeps it on the server and only shows its last four characters.',
   readarr: 'Copy the key from Settings › General in the app. Seedy keeps it on the server and only shows its last four characters.'
 };
-
-function KeySheet({ service, open, onClose, replacing }: { service: MediaService; open: boolean; onClose: () => void; replacing: boolean }) {
-  const [key, setKey] = useState('');
-  const [busy, setBusy] = useState(false);
-  useEffect(() => { if (open) setKey(''); }, [open]);
-  const submit = async (e: Event) => {
-    e.preventDefault();
-    const v = key.trim();
-    if (!v) return;
-    setBusy(true);
-    try {
-      await flushConfig().catch(() => { /* the key is saved on its own */ });
-      const res = await adminMediaKey(service, v);
-      mergeServerConfig(res, (server, local) => ({ ...local, media: { ...media(local), [service]: { ...media(local)[service], apiKeyHint: server.media?.[service]?.apiKeyHint } } }));
-      toast(t('API key saved'));
-      onClose();
-      void test(service);
-      if (service === 'lidarr') loadInfo();
-    } catch (err) {
-      toastError(t('Couldn’t save the key.'), err);
-    } finally {
-      setBusy(false);
-    }
-  };
-  const title = replacing ? t('Replace {app} key', { app: APP_NAMES[service] }) : t('Add {app} key', { app: APP_NAMES[service] });
-  return (
-    <Sheet open={open} onClose={onClose} label={title}>
-      <form style={{ display: 'contents' }} onSubmit={submit}>
-        <div class="sheet-head"><h2 class="sheet-title">{title}</h2></div>
-        <p class="sheet-text">{t(KEY_HELP[service])}</p>
-        <input class="field" type="password" value={key} aria-label={t('{app} API key', { app: APP_NAMES[service] })} placeholder={t('{app} API key', { app: APP_NAMES[service] })} autoComplete="off" spellcheck={false} onInput={(e) => setKey((e.currentTarget as HTMLInputElement).value)} />
-        <div class="sheet-actions">
-          <button type="button" class="btn btn-ghost is-light" onClick={onClose}>{t('Cancel')}</button>
-          <button type="submit" class="btn btn-primary is-sm" disabled={!key.trim() || busy}>{busy ? t('Saving…') : t('Save key')}</button>
-        </div>
-      </form>
-    </Sheet>
-  );
-}
 
 /* "Connected. Lidarr 3.1 · 41 artists monitored · 2 downloads running", worded from the test's numbers. */
 function connectedLine(r: MediaTestResult): string {
@@ -237,17 +180,11 @@ function ConnRow({ service, ready, children }: { service: MediaService; ready: b
   else if (s?.result?.ok) { dot = ''; lead = t('Connected.'); rest = connectedLine(s.result); }
   else if (s?.result) { dot = 'is-danger'; lead = t('Not connected.'); rest = t(s.result.message); }
   else { dot = 'is-pending'; lead = t('Not tested yet.'); rest = t('Test the connection to check the address and key.'); }
-  const testing = s?.state === 'testing';
   return (
     <div class="setting is-last">
-      <span class="conn-state" role="status" aria-live="polite">
-        <span class={'dot ' + dot} />
-        <span><b>{lead}</b>{rest ? ' ' + rest : ''}</span>
-      </span>
+      <ConnLine dot={dot} lead={lead} rest={rest} />
       <div class="setting-controls">
-        <button type="button" class="btn btn-primary is-sm" disabled={!ready || testing} aria-busy={testing ? 'true' : undefined} onClick={() => void test(service)}>
-          {testing ? t('Testing…') : t('Test connection')}
-        </button>
+        <TestButton disabled={!ready} testing={s?.state === 'testing'} onTest={() => void test(service)} />
         {children}
       </div>
     </div>
@@ -291,9 +228,7 @@ function LidarrPanel({ m }: { m: Media }) {
         <Switch label={t('Search as soon as it’s approved')} checked={l.searchOnApprove} onChange={(v) => set({ searchOnApprove: v })} />
       </SettingRow>
       <ConnRow service="lidarr" ready={ready}>
-        {l.url
-          ? <a class="btn btn-secondary" href={l.url} target="_blank" rel="noreferrer">{t('Open Lidarr')}<Icon name="external" size={16} /></a>
-          : <button type="button" class="btn btn-secondary" disabled>{t('Open Lidarr')}<Icon name="external" size={16} /></button>}
+        <OpenAppButton href={l.url || undefined} label={t('Open Lidarr')} />
       </ConnRow>
     </section>
   );
