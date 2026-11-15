@@ -467,6 +467,8 @@ export class PlaybackSession {
     }
     this.dropSoft();
     const el = this.el;
+    // The experimental player's copy for picture in picture would win over any src.
+    if (el.srcObject) el.srcObject = null;
     if (stream.isHls && Hls.isSupported() && !(isSafari() && browserSupport().nativeHls)) {
       const hls = new Hls({
         startPosition: startAt,
@@ -524,9 +526,11 @@ export class PlaybackSession {
     const { SoftMedia } = await import('./soft-media');
     if (this.stopped || this.stream !== stream) return;
     if (!host) throw new PlaybackError('media');
+    const keepPip = document.pictureInPictureElement === el;
     this.dropSoft();
     const soft = new SoftMedia(host);
     this.soft = soft;
+    if (keepPip) soft.keepPictureInPicture(el);
     soft.addEventListener('error', () => {
       if (this.soft === soft && !this.stopped) this.events.onFatal(soft.error?.code === 'slow' ? 'soft-slow' : 'soft', stream);
     });
@@ -540,6 +544,11 @@ export class PlaybackSession {
       fps: v?.RealFrameRate || v?.AverageFrameRate,
       ext: stream.ext
     });
+  }
+
+  /* Picture in picture on the page's <video>, where the experimental player plays a copy of its canvas. */
+  pictureInPicture(): Promise<unknown> {
+    return this.soft ? this.soft.pictureInPicture(this.el) : this.el.requestPictureInPicture();
   }
 
   private dropSoft() {
@@ -711,6 +720,7 @@ export class PlaybackSession {
     this.dropSoft();
     try {
       this.el.pause();
+      this.el.srcObject = null;
       this.el.removeAttribute('src');
       this.el.load();
     } catch { /* element already gone */ }

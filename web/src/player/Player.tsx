@@ -41,8 +41,8 @@ import { loadPgs } from './pgs';
 import { Scrubber, VolumeSlider } from './Scrubber';
 import {
   applyCastQuality, AUTO_BITRATE, autoBitrate, bitrateLabel, customPlayback, detectLocation, deviceStore, locationStore, maxVideoWidth,
-  resolveStyle, seekSteps, segmentMode, setSubtitleStyle, SIZE_FROM_PREFS, SIZE_TO_PREFS, type DeviceSettings, type NetworkLocation,
-  type SubtitleStyle
+  resolveStyle, seekSteps, segmentMode, setSubtitleStyle, SIZE_FROM_PREFS, SIZE_TO_PREFS, softPlayerSlow, type DeviceSettings,
+  type NetworkLocation, type SubtitleStyle
 } from './settings';
 import { StillWatching } from './StillWatching';
 import { SubtitleLayer, type LoadedSubtitles } from './SubtitleLayer';
@@ -496,9 +496,12 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     console.warn('[seedy] playback error', code, st.method, part ?? '', me ? `${me.code} ${me.message}` : '');
     /* The experimental player couldn't play it, or not fast enough: the server converts it, as without that player. */
     if (st.engine === 'soft') {
-      toast(code === 'soft-slow'
-        ? tr('This device couldn’t keep up, so the server is converting this video')
-        : tr('The experimental player couldn’t play this, so the server is converting it'));
+      const slow = code === 'soft-slow';
+      toast(slow && softPlayerSlow()
+        ? tr('This device couldn’t keep up again, so the experimental player is now off (Settings › Playback)')
+        : slow
+          ? tr('This device couldn’t keep up, so the server is converting this video')
+          : tr('The experimental player couldn’t play this, so the server is converting it'));
       s.change({ soft: 'off' }).then((ns) => { if (ns && wantPlay.current && !inGroup()) s.play(); }, fail);
       return;
     }
@@ -756,8 +759,8 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const setVolume = (v: number) => setMediaVolume(el(), v);
   const toggleMute = () => toggleMediaMute(el());
   const toggleFullscreen = () => toggleFullscreenOf(mediaRef.current);
-  const canPip = !isAudio && !soft && typeof document !== 'undefined' && pipSupported();
-  const togglePip = () => togglePipOf(mediaRef.current);
+  const canPip = !isAudio && typeof document !== 'undefined' && pipSupported();
+  const togglePip = () => togglePipOf(() => sess()?.pictureInPicture());
 
   const exit = () => {
     if (inGroup()) void leaveGroup();
