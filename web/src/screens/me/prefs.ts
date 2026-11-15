@@ -1,4 +1,5 @@
 import { authHeader, currentUserId, get, post, request, url } from '../../api/client';
+import { fileBase64 } from '../../api/images';
 import { CARD_FIELDS, getMe, getUserViews } from '../../api/jellyfin';
 import { getMe as getSeedyMe, savePrefs, type PlaybackPrefs, type UserPrefs } from '../../api/seedy';
 import type { ItemsResult, User, UserConfiguration } from '../../api/types';
@@ -337,12 +338,7 @@ export function withEpisodeArt<T extends { Type?: string; ImageTags?: Record<str
 /* ── Profile picture ── */
 
 export async function uploadUserImage(userId: string, file: File) {
-  const data = await new Promise<string>((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result).replace(/^data:[^,]*,/, ''));
-    r.onerror = () => reject(r.error);
-    r.readAsDataURL(file);
-  });
+  const data = await fileBase64(file);
   // The route Jellyfin's own apps use (also proxied by the dev server).
   const res = await fetch(url(`/Users/${userId}/Images/Primary`), {
     method: 'POST', headers: { Authorization: authHeader(), 'Content-Type': file.type || 'image/jpeg' }, body: data

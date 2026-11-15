@@ -1,4 +1,5 @@
 import { ApiError, authHeader, del, deviceId, get, getSession, JELLYFIN_WEB, post, request, sessionToken, url } from '../../api/client';
+import { fileBase64 } from '../../api/images';
 import type { BaseItem, ItemsResult, User, UserConfiguration } from '../../api/types';
 import { t } from '../../lib/i18n';
 import { createStore } from '../../lib/store';
@@ -161,12 +162,7 @@ export function patchNamedConfig<T extends object>(key: string, patch: Partial<T
 
 /* Images go up as base64 with the image's own content type (Jellyfin's AcceptsImageFile endpoints). */
 async function postImage(path: string, file: File, query?: Record<string, string>): Promise<void> {
-  const data = await new Promise<string>((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result).replace(/^data:[^,]*,/, ''));
-    r.onerror = () => reject(r.error ?? new Error(t('The file could not be read')));
-    r.readAsDataURL(file);
-  });
+  const data = await fileBase64(file);
   const res = await fetch(url(path, query), {
     method: 'POST',
     headers: { Authorization: authHeader(), 'Content-Type': file.type || 'image/png' },

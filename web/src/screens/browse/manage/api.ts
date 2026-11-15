@@ -1,4 +1,5 @@
 import { del, get, post, request, currentUserId } from '../../../api/client';
+import { fileBase64 } from '../../../api/images';
 import type { BaseItem, ItemKind } from '../../../api/types';
 import { locale, t } from '../../../lib/i18n';
 import { capitalize, displayLanguage } from '../../../lib/format';
@@ -91,13 +92,7 @@ export const deleteImage = (id: string, type: ImageKind, index?: number) =>
 
 /* Jellyfin reads an uploaded image as base64 text, sent with the image's own content type. */
 export async function uploadImage(id: string, type: ImageKind, file: File) {
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error ?? new Error('Unreadable file'));
-    reader.readAsDataURL(file);
-  });
-  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  const base64 = await fileBase64(file);
   return request<void>('POST', `/Items/${id}/Images/${type}`, { data: { type: file.type || 'image/jpeg', body: base64 } });
 }
 
