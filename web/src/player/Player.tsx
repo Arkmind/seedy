@@ -253,7 +253,7 @@ const NO_CUES: Cue[] = [];
 const skippedCopy = (type: string) =>
   tr(type === 'Intro' ? 'Skipped intro' : type === 'Recap' ? 'Skipped recap' : type === 'Preview' ? 'Skipped preview' : type === 'Commercial' ? 'Skipped ad' : 'Skipped');
 
-/* "Are you still watching?": episodes auto-played in a row, and since when nobody has touched anything. */
+/* "Still watching?": episodes auto-played in a row, and since when nobody has touched anything. */
 const presence = { episodes: 0, since: Date.now(), auto: false };
 
 const prefQuality = (q: PlaybackPrefs['maxQuality']): QualityId => (q === '4k' || q === '1080p' || q === '720p' ? q : 'auto');
@@ -762,12 +762,15 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const canPip = !isAudio && typeof document !== 'undefined' && pipSupported();
   const togglePip = () => togglePipOf(() => sess()?.pictureInPicture());
 
-  const exit = () => {
+  /* Closes the player, back where it came from or on to [to]. */
+  const leavePlayer = (to?: string) => {
     if (inGroup()) void leaveGroup();
     sess()?.stop();
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
-    back('/');
+    if (to) navigate(to, { replace: true });
+    else back('/');
   };
+  const exit = () => leavePlayer();
   /* In the credits (an Outro segment in the second half) or, without one, the last seconds where Up next opens. */
   const inEndZone = () => {
     if (duration <= 0) return false;
@@ -782,6 +785,11 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
        Continue watching with the credits left. Earlier on, it keeps its place. */
     if (inEndZone()) sess()?.stop({ ended: true });
     navigate(nextPath + (fromStart ? (nextPath.includes('?') ? '&' : '?') + 'restart=1' : ''), { replace: true });
+  };
+  /* Leaving "Still watching?": from the credits, this one counts as finished, as moving on would. */
+  const doneForNow = (to?: string) => {
+    if (inEndZone()) sess()?.stop({ ended: true });
+    leavePlayer(to);
   };
   /* Auto-play, unless it's time to ask whether anyone is still there. */
   const autoNext = () => {
@@ -1088,7 +1096,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
        the player" on this device, and otherwise hides the controls. */
     const leave = a === 'escape' || (a === 'remoteBack' && dev.backClosesPlayer);
     if (ask) {
-      if (isBack) { e.preventDefault(); exit(); }
+      if (isBack) { e.preventDefault(); doneForNow(); }
       return;
     }
     if (pauseScreen) {
@@ -1521,12 +1529,15 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
 
       {ask && next && (
         <StillWatching
+          item={item}
           next={next}
           episodes={ask.episodes}
           minutes={ask.minutes}
           byTime={ask.byTime}
+          fraction={fraction}
           onContinue={() => { presence.episodes = 0; presence.since = Date.now(); setAsk(null); goNext(true); }}
-          onLeave={exit}
+          onLeave={() => doneForNow()}
+          onSettings={() => doneForNow('/settings/playback')}
         />
       )}
 
