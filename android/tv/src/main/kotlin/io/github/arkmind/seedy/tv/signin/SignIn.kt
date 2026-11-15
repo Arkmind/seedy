@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import io.github.arkmind.seedy.core.data.host
 import io.github.arkmind.seedy.tv.parts.TvBigButton
 import io.github.arkmind.seedy.ui.components.DeepScenes
 import io.github.arkmind.seedy.ui.components.DeepSea
@@ -434,7 +435,6 @@ private fun FoundServer(server: AddServerViewModel.Found, modifier: Modifier, on
 }
 
 /** "192.168.1.20:8096": a server's address as the unreachable page prints it. */
-private fun hostOf(server: SavedServer): String = server.address.substringAfter("://").trimEnd('/')
 
 /**
  * Board "Android TV · Server unreachable": Medu dropped the cable. Try again (the remote starts there), or pick another
@@ -470,7 +470,7 @@ fun TvUnreachableScreen(server: SavedServer, retryIn: Int?, onRetry: () -> Unit,
                     Box(Modifier.size(12.bp).background(SeedyColors.Danger, CircleShape))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         SText("${server.name} · ", size = 21.bsp, color = SeedyColors.Text2, maxLines = 1)
-                        BasicText(hostOf(server), style = BaseText.copy(fontFamily = FontFamily.Monospace, fontSize = 21.bsp, color = SeedyColors.Text2), maxLines = 1)
+                        BasicText(server.host, style = BaseText.copy(fontFamily = FontFamily.Monospace, fontSize = 21.bsp, color = SeedyColors.Text2), maxLines = 1)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.bp)) {

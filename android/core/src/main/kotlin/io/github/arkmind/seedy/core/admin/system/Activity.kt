@@ -10,6 +10,8 @@ import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.admin.hhmm
 import io.github.arkmind.seedy.core.admin.normId
 import io.github.arkmind.seedy.core.admin.realDate
+import io.github.arkmind.seedy.core.data.bool
+import io.github.arkmind.seedy.core.data.intOrNull
 import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.Lang
@@ -27,7 +29,6 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -403,7 +404,7 @@ class ActivityViewModel(
     fun load() {
         viewModelScope.launch {
             runCatching { http.getObject("/System/Configuration") }.onSuccess { cfg ->
-                val days = (cfg["ActivityLogRetentionDays"] as? JsonPrimitive)?.intOrNull
+                val days = cfg.intOrNull("ActivityLogRetentionDays")
                 _state.update {
                     it.copy(
                         lede = if (days != null && days > 0) t("Sign-ins, playback, changes and server events. Kept for {days}.", "days" to tn(days, "{n} day", "{n} days"))
@@ -653,7 +654,7 @@ class ActivityViewModel(
             try {
                 val net = http.getObject("/System/Configuration/network")
                 val list = (net["RemoteIPFilter"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
-                val black = (net["IsRemoteIPFilterBlacklist"] as? JsonPrimitive)?.booleanOrNull == true
+                val black = net.bool("IsRemoteIPFilterBlacklist")
                 val next: JsonObject
                 if (black || list.isEmpty()) {
                     if (black && ip in list) return@launch say(t("{ip} is already blocked", "ip" to ip))
@@ -679,7 +680,7 @@ class ActivityViewModel(
             try {
                 val user = http.getObject("/Users/$userId")
                 val policy = user["Policy"] as? JsonObject ?: JsonObject(emptyMap())
-                if ((policy["IsDisabled"] as? JsonPrimitive)?.booleanOrNull != true) return@launch say(t("{name} can already sign in", "name" to name))
+                if (!policy.bool("IsDisabled")) return@launch say(t("{name} can already sign in", "name" to name))
                 http.send("/Users/$userId/Policy", JsonObject(policy + ("IsDisabled" to JsonPrimitive(false))))
                 say(t("{name} can sign in again", "name" to name))
             } catch (e: Throwable) {

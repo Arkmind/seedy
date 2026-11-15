@@ -19,6 +19,7 @@ import io.github.arkmind.seedy.core.admin.shortVersion
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.session.UserSession
+import io.github.arkmind.seedy.core.session.serverBase
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -317,7 +318,7 @@ class PluginsViewModel(private val session: UserSession) : ViewModel(), PluginsA
     }
 
     private fun configUrl(page: ConfigPage): String =
-        session.api.baseUrl.orEmpty().trimEnd('/') + "/web/#/configurationpage?name=" + URLEncoder.encode(page.name, "UTF-8").replace("+", "%20")
+        session.api.serverBase + "/web/#/configurationpage?name=" + URLEncoder.encode(page.name, "UTF-8").replace("+", "%20")
 
     private fun row(v: PluginView): PluginRow {
         val p = v.plugin

@@ -29,12 +29,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.data.SavedServer
 import io.github.arkmind.seedy.core.feature.PasswordViewModel
+import io.github.arkmind.seedy.core.format.hourMinute
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.SignIn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.ui.text.font.FontFamily
 import io.github.arkmind.seedy.ui.theme.BaseText
-import java.time.format.DateTimeFormatter
 import io.github.arkmind.seedy.mobile.parts.ActionCard
 import io.github.arkmind.seedy.mobile.parts.bleed
 import io.github.arkmind.seedy.mobile.parts.FieldLabel
@@ -218,7 +218,7 @@ fun ForgotSheet(f: PasswordViewModel.ForgotState, onPin: (String) -> Unit, onRed
                 }
                 a is SignIn.Forgot.Pin -> {
                     Title(t("Get the PIN from the server"))
-                    val until = a.until?.format(DateTimeFormatter.ofPattern("HH:mm"))
+                    val until = a.until?.let(::hourMinute)
                     Text(
                         if (until != null) t("The server wrote a PIN to a file on its disk. Whoever runs the server can open it and read it to you. It works until {time}.", "time" to until)
                         else t("The server wrote a PIN to a file on its disk. Whoever runs the server can open it and read it to you."),

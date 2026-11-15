@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
+import io.github.arkmind.seedy.core.format.clockOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
@@ -51,7 +52,7 @@ fun SleptSheet(title: String, slept: Slept, onResume: () -> Unit, onMore: () -> 
     BackHandler(onBack = onDismiss)
     val shown = remember { MutableTransitionState(false).apply { targetState = true } }
     val bottom = max(30.dp, WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp)
-    val at = audioClock(slept.position)
+    val at = clockOf(slept.position)
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .64f)).tap(onClick = onDismiss))
         AnimatedVisibility(shown, Modifier.align(Alignment.BottomCenter), enter = slideInVertically { it / 3 } + fadeIn()) {

@@ -2,6 +2,8 @@ package io.github.arkmind.seedy.core.music
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.arkmind.seedy.core.data.plusNew
+import io.github.arkmind.seedy.core.format.favorited
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -256,11 +258,9 @@ class MusicLibraryViewModel(
             }
             result.onSuccess { r ->
                 set(tab) { p ->
-                    val seen = p.items.mapTo(HashSet()) { it.id }
-                    val fresh = r.items.filter { it.id !in seen }
-                    val items = p.items + fresh
+                    val items = p.items.plusNew(r.items) { it.id }
                     val random = (if (tab == MusicTab.Artists) s.artistSort else if (tab == MusicTab.Songs) s.songSort else s.albumSort).id == "Random"
-                    p.copy(items = items, total = r.totalRecordCount, loading = false, loaded = true, done = items.size >= r.totalRecordCount || fresh.isEmpty() || (random && tab != MusicTab.Genres))
+                    p.copy(items = items, total = r.totalRecordCount, loading = false, loaded = true, done = items.size >= r.totalRecordCount || items.size == p.items.size || (random && tab != MusicTab.Genres))
                 }
             }.onFailure { set(tab) { it.copy(loading = false, error = true, loaded = true) } }
         }
@@ -286,7 +286,7 @@ class MusicLibraryViewModel(
 
     /** A song's favourite changed from a player or a menu: its row follows. */
     fun patchFavorite(itemId: UUID, on: Boolean) = _state.update { s ->
-        s.copy(songs = s.songs.copy(items = s.songs.items.map { if (it.id == itemId) it.copy(userData = it.userData?.copy(isFavorite = on)) else it }))
+        s.copy(songs = s.songs.copy(items = s.songs.items.favorited(itemId, on)))
     }
 
     /** Songs for "Play" on a genre (its albums' songs, random). */

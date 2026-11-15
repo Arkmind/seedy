@@ -54,11 +54,11 @@ import io.github.arkmind.seedy.core.feature.SeerrTitleViewModel.Companion.reques
 import io.github.arkmind.seedy.core.format.duration
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.format.parseDay
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.seedy.SeerrDetails
 import io.github.arkmind.seedy.core.seedy.SeerrSeason
-import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.core.seedy.tmdbImage
 import io.github.arkmind.seedy.mobile.browse.topInset
 import io.github.arkmind.seedy.mobile.library.Message
@@ -110,7 +110,7 @@ fun SeerrTitleRoute(mediaType: String, tmdbId: Int) {
         }
     }
     val d = state.details
-    val local = libraryUuid(d?.jellyfinItemId)
+    val local = uuidOf(d?.jellyfinItemId)
     Box(Modifier.fillMaxSize()) {
         SeerrTitleScreen(
             state,

@@ -26,6 +26,7 @@ import io.github.arkmind.seedy.core.data.AppData
 import io.github.arkmind.seedy.core.data.SavedServer
 import io.github.arkmind.seedy.core.feature.seasonList
 import io.github.arkmind.seedy.core.format.episodeTag
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
@@ -40,7 +41,6 @@ import io.github.arkmind.seedy.core.requests.RequestsApi
 import io.github.arkmind.seedy.core.requests.SeerrRequest
 import io.github.arkmind.seedy.core.seedy.SeedyApi
 import io.github.arkmind.seedy.core.seedy.SeedyMe
-import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.mobile.R
 import io.github.arkmind.seedy.ui.components.MeduMood
 import io.github.arkmind.seedy.ui.components.meduBitmap
@@ -153,7 +153,7 @@ object RequestAlerts {
     )
 
     private class Ctx(val context: Context, val server: String, val user: String, val api: ApiClient, val accent: androidx.compose.ui.graphics.Color) {
-        val userId: UUID? = runCatching { UUID.fromString(user.let(::dashed)) }.getOrNull()
+        val userId: UUID? = uuidOf(user)
 
         fun link(action: String, itemId: String? = null, type: String? = null, tmdb: Int? = null) = RequestLink(server, user, action, itemId, type, tmdb)
 
@@ -165,7 +165,7 @@ object RequestAlerts {
         }.getOrNull()
 
         suspend fun seerrNote(r: SeerrRequest, c: Change): Note {
-            val itemId = libraryUuid(r.jellyfinItemId)
+            val itemId = uuidOf(r.jellyfinItemId)
             val requests = link(RequestLink.Requests)
             val open = if (itemId != null) link(RequestLink.Open, itemId.toString()) else link(RequestLink.Open, type = r.mediaType, tmdb = r.tmdbId)
             val tv = r.mediaType == "tv"
@@ -224,7 +224,7 @@ object RequestAlerts {
                 else t("{title} · {what}. {service} is looking for it now.", "title" to r.title, "what" to what, "service" to service)
                 return Note(idOf(c), t("Request approved"), text, requests)
             }
-            val item = libraryUuid(r.itemId)?.toString()
+            val item = uuidOf(r.itemId)?.toString()
             return Note(
                 idOf(c), t("{title} is ready", "title" to r.title),
                 if (r.music) t("The music you asked for is on the server.") else t("The book you asked for is on the server."),
@@ -250,9 +250,6 @@ object RequestAlerts {
             }.getOrNull()
         }
     }
-
-    private fun dashed(id: String): String =
-        if (id.length == 32 && '-' !in id) "${id.substring(0, 8)}-${id.substring(8, 12)}-${id.substring(12, 16)}-${id.substring(16, 20)}-${id.substring(20)}" else id
 
     private fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < 26) return

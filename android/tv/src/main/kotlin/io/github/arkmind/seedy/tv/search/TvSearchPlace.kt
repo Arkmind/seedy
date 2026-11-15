@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.style.TextAlign
+import io.github.arkmind.seedy.core.format.nameInitials
 import io.github.arkmind.seedy.tv.parts.TvBigButton
+import io.github.arkmind.seedy.tv.requests.openSeerr
 import io.github.arkmind.seedy.ui.components.Medu
 import io.github.arkmind.seedy.ui.components.MeduMood
 import androidx.compose.foundation.layout.Arrangement
@@ -80,7 +82,6 @@ import io.github.arkmind.seedy.core.seedy.tmdbImage
 import io.github.arkmind.seedy.tv.browse.TvTab
 import io.github.arkmind.seedy.tv.browse.ringRoom
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
-import io.github.arkmind.seedy.tv.nav.TvRoute
 import io.github.arkmind.seedy.tv.parts.TvPressable
 import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
@@ -101,7 +102,6 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
-import java.util.UUID
 import kotlin.math.roundToInt
 
 /** Board "Android TV · Search". */
@@ -131,18 +131,10 @@ fun TvSearchPlace() {
             },
             onOpen = { vm.remember(); nav.open(it) },
             onSeerr = vm::askSeerr,
-            onSeerrTitle = { s ->
-                vm.remember()
-                val local = s.jellyfinItemId?.let { runCatching { UUID.fromString(dashed(it)) }.getOrNull() }
-                if (local != null) nav.go(TvRoute.Details(local)) else nav.go(TvRoute.SeerrTitle(s.mediaType, s.tmdbId))
-            },
+            onSeerrTitle = { s -> vm.remember(); nav.openSeerr(s.mediaType, s.tmdbId, s.jellyfinItemId) },
         ),
     )
 }
-
-/** Jellyfin ids come without dashes. */
-fun dashed(id: String): String =
-    if (id.length == 32 && '-' !in id) "${id.substring(0, 8)}-${id.substring(8, 12)}-${id.substring(12, 16)}-${id.substring(16, 20)}-${id.substring(20)}" else id
 
 class TvSearchActions(
     val onText: (String) -> Unit = {},
@@ -349,7 +341,7 @@ private fun SideRow(hit: Hit, state: SearchViewModel.State, actions: TvSearchAct
                     .clip(if (person) CircleShape else RoundedCornerShape(14.bp)).background(if (person) Color(0xFF3D2436) else Color(0xFF2F2840)),
                 contentAlignment = Alignment.Center,
             ) {
-                SText(initials(item.name.orEmpty()), size = 26.bsp, weight = 900, color = if (person) Color(0xFFFFB3E6) else Color(0xFFE3C4FF))
+                SText(nameInitials(item.name.orEmpty()), size = 26.bsp, weight = 900, color = if (person) Color(0xFFFFB3E6) else Color(0xFFE3C4FF))
                 val url = if (person) viewer.images?.primary(item, 200) else viewer.images?.landscape(item, 320, viewer.episodeImages)
                 url?.let { AsyncImage(it, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop) }
             }
@@ -475,9 +467,6 @@ private fun Poster(item: SeerrItem, modifier: Modifier = Modifier, onClick: () -
         }
     }
 }
-
-/** "IN" for Ines Northey. */
-private fun initials(name: String): String = name.split(' ').filter { w -> w.any { it.isLetter() } }.take(2).joinToString("") { it.first().uppercase() }
 
 /** [text] with the parts matching [query] in the accent; [lineHeight] below Noto's own trims the box the CSS way. */
 @Composable

@@ -35,6 +35,7 @@ import io.github.arkmind.seedy.core.feature.HomeViewModel
 import io.github.arkmind.seedy.core.feature.PasswordViewModel
 import io.github.arkmind.seedy.core.feature.ProfilesViewModel
 import io.github.arkmind.seedy.core.format.Images
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.SessionState
 import io.github.arkmind.seedy.core.session.UserSession
@@ -65,7 +66,6 @@ import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.player.MobileDataSheet
 import io.github.arkmind.seedy.mobile.player.PlayerRoute
 import io.github.arkmind.seedy.core.requests.TitlesKind
-import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.mobile.requests.RequestsTab
 import io.github.arkmind.seedy.mobile.requests.openSeerr
 import io.github.arkmind.seedy.mobile.requests.SeerrTitlesRoute
@@ -265,7 +265,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
         RequestLinks.pending.filterNotNull().collect { l ->
             RequestLinks.clear()
             if (l.server != session.server.id || l.user != session.account.userId) return@collect
-            val item = libraryUuid(l.itemId)?.let { id -> runCatching { io.github.arkmind.seedy.core.browse.Browse(session).item(id) }.getOrNull() }
+            val item = uuidOf(l.itemId)?.let { id -> runCatching { io.github.arkmind.seedy.core.browse.Browse(session).item(id) }.getOrNull() }
             when (l.action) {
                 RequestLink.Requests -> if (requestsTab) nav.toTab(Tab.Requests)
                 RequestLink.Play -> item?.let(nav::play)
@@ -299,7 +299,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                                         when (row.row.kind) {
                                             "discover" -> tab = Tab.Requests
                                             "upcomingMovies" -> nav.go(Route.SeerrTitles(TitlesKind.UpcomingMovies.key))
-                                            else -> libraryUuid(row.row.libraryId)?.let { nav.go(Route.Library(it)) }
+                                            else -> uuidOf(row.row.libraryId)?.let { nav.go(Route.Library(it)) }
                                         }
                                     },
                                     onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },

@@ -27,8 +27,11 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.text.style.TextAlign
+import io.github.arkmind.seedy.core.format.cardTitle
+import io.github.arkmind.seedy.core.format.nameInitials
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.seedy.tmdbImage
+import io.github.arkmind.seedy.mobile.requests.openSeerr
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.components.Medu
 import io.github.arkmind.seedy.ui.components.MeduMood
@@ -86,11 +89,9 @@ import io.github.arkmind.seedy.mobile.browse.NoticeCard
 import io.github.arkmind.seedy.mobile.browse.Portrait
 import io.github.arkmind.seedy.mobile.browse.SectionLabel
 import io.github.arkmind.seedy.mobile.browse.SeerrPoster
-import io.github.arkmind.seedy.mobile.browse.initials
 import io.github.arkmind.seedy.mobile.browse.marked
 import io.github.arkmind.seedy.mobile.browse.topInset
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
-import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.bleed
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.icons.AppIcons
@@ -104,7 +105,6 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
-import java.util.UUID
 
 /** Board "Android · Search". */
 @Composable
@@ -122,20 +122,12 @@ fun SearchRoute() {
             onOpen = { vm.remember(); nav.open(it) },
             onPlay = { vm.remember(); nav.play(it) },
             onSeerr = vm::askSeerr,
-            onSeerrTitle = { s ->
-                vm.remember()
-                val local = s.jellyfinItemId?.let { runCatching { UUID.fromString(dashed(it)) }.getOrNull() }
-                if (local != null) nav.go(Route.Details(local)) else nav.go(Route.SeerrTitle(s.mediaType, s.tmdbId))
-            },
+            onSeerrTitle = { s -> vm.remember(); nav.openSeerr(s.mediaType, s.tmdbId, s.jellyfinItemId) },
             onRetry = vm::retry,
         ),
         bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
     )
 }
-
-/** Jellyfin ids come without dashes. */
-fun dashed(id: String): String =
-    if (id.length == 32 && '-' !in id) "${id.substring(0, 8)}-${id.substring(8, 12)}-${id.substring(12, 16)}-${id.substring(16, 20)}-${id.substring(20)}" else id
 
 class SearchActions(
     val onText: (String) -> Unit = {},
@@ -442,7 +434,7 @@ private fun ResultRow(hit: Hit, state: SearchViewModel.State, actions: SearchAct
             Portrait(item, 54.dp)
         } else {
             Box(Modifier.size(96.dp, 54.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFF2F2840)), contentAlignment = Alignment.Center) {
-                SText(initials(item.cardTitleForInitials()), size = 15.sp, weight = 900, color = Color(0xFFE3C4FF))
+                SText(nameInitials(item.cardTitle), size = 15.sp, weight = 900, color = Color(0xFFE3C4FF))
                 viewer.images?.landscape(item, 240, viewer.episodeImages)?.let { AsyncImage(it, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop) }
             }
         }
@@ -454,8 +446,6 @@ private fun ResultRow(hit: Hit, state: SearchViewModel.State, actions: SearchAct
         }
     }
 }
-
-private fun BaseItemDto.cardTitleForInitials(): String = if (type == BaseItemKind.EPISODE) seriesName ?: name.orEmpty() else name.orEmpty()
 
 @Composable
 private fun RowSkeleton() {

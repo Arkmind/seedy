@@ -1,8 +1,7 @@
 package io.github.arkmind.seedy.core.browse
 
+import io.github.arkmind.seedy.core.data.io
 import io.github.arkmind.seedy.core.session.UserSession
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import org.jellyfin.sdk.api.client.extensions.get
 import org.jellyfin.sdk.api.client.extensions.libraryApi
@@ -15,7 +14,6 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
-import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.SortOrder
 import java.util.UUID
 
@@ -115,8 +113,6 @@ class Browse(private val session: UserSession) {
         if (on) api.userDataApi.markPlayedItem(itemId = id, userId = userId) else api.userDataApi.markUnplayedItem(itemId = id, userId = userId)
         Unit
     }
-
-    private suspend fun <T> io(block: suspend () -> T): T = withContext(Dispatchers.IO) { block() }
 
     data class Target(val item: BaseItemDto, val resume: Boolean)
 

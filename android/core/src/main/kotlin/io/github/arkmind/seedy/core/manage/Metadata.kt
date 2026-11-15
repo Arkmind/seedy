@@ -3,6 +3,9 @@ package io.github.arkmind.seedy.core.manage
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.arkmind.seedy.core.admin.errorText
+import io.github.arkmind.seedy.core.data.bool
+import io.github.arkmind.seedy.core.data.str
+import io.github.arkmind.seedy.core.data.strings
 import io.github.arkmind.seedy.core.format.dayMonth
 import io.github.arkmind.seedy.core.format.fullDate
 import io.github.arkmind.seedy.core.i18n.t
@@ -16,15 +19,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.time.Instant
 import java.time.LocalDate
@@ -222,8 +222,7 @@ class MetadataViewModel(session: UserSession, private val id: String) : ViewMode
     }
 
     companion object {
-        private fun JsonObject.text(key: String): String = (this[key] as? JsonPrimitive)?.contentOrNull.orEmpty()
-        private fun JsonObject.texts(key: String): List<String> = (this[key] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+        private fun JsonObject.text(key: String): String = str(key).orEmpty()
         private fun JsonObject.day(key: String): LocalDate? = text(key).takeIf { it.length >= 10 }?.let { runCatching { LocalDate.parse(it.substring(0, 10)) }.getOrNull() }
         private fun JsonObject.number(key: String): String = (this[key] as? JsonPrimitive)?.doubleOrNull?.let { n ->
             if (n % 1.0 == 0.0) n.toLong().toString() else String.format(Locale.US, "%.1f", n)
@@ -272,8 +271,8 @@ class MetadataViewModel(session: UserSession, private val id: String) : ViewMode
                 rating = current,
                 ratings = (if (current.isNotEmpty() && current !in ratings) listOf(current) else emptyList<String>()) + ratings,
                 overview = i.text("Overview"),
-                genres = i.texts("Genres"),
-                tags = i.texts("Tags"),
+                genres = i.strings("Genres"),
+                tags = i.strings("Tags"),
                 studios = (i["Studios"] as? JsonArray).orEmpty().mapNotNull { (it as? JsonObject)?.text("Name")?.ifEmpty { null } },
                 community = i.number("CommunityRating"),
                 critic = i.number("CriticRating"),
@@ -284,8 +283,8 @@ class MetadataViewModel(session: UserSession, private val id: String) : ViewMode
                 languages = languages,
                 countries = countries,
                 displayOrder = i.text("DisplayOrder"),
-                locked = i.texts("LockedFields").toSet(),
-                lockAll = (i["LockData"] as? JsonPrimitive)?.booleanOrNull == true,
+                locked = i.strings("LockedFields").toSet(),
+                lockAll = i.bool("LockData"),
             )
         }
 
@@ -306,4 +305,3 @@ class MetadataViewModel(session: UserSession, private val id: String) : ViewMode
 }
 
 private fun JsonObject?.orEmpty(): JsonObject = this ?: JsonObject(emptyMap())
-private fun JsonArray?.orEmpty(): List<JsonElement> = this ?: emptyList()

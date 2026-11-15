@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.core.feature
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.arkmind.seedy.core.data.plusNew
 import io.github.arkmind.seedy.core.requests.RequestsApi
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.requests.TitlesKind
@@ -40,8 +41,7 @@ class SeerrTitlesViewModel(session: UserSession, val kind: TitlesKind) : ViewMod
                     st.copy(loading = false, failed = true, items = st.items ?: emptyList())
                 } else {
                     // Seerr repeats a title across pages now and then.
-                    val seen = st.items.orEmpty().map { it.mediaType to it.tmdbId }.toSet()
-                    st.copy(items = st.items.orEmpty() + r.results.filter { (it.mediaType to it.tmdbId) !in seen }, page = st.page + 1, pages = r.pages, loading = false, failed = false)
+                    st.copy(items = st.items.orEmpty().plusNew(r.results) { it.mediaType to it.tmdbId }, page = st.page + 1, pages = r.pages, loading = false, failed = false)
                 }
             }
         }

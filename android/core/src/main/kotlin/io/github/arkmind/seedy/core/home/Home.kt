@@ -1,16 +1,15 @@
 package io.github.arkmind.seedy.core.home
 
 import io.github.arkmind.seedy.core.browse.continueWatching
+import io.github.arkmind.seedy.core.data.io
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.requests.RequestsApi
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.seedy.FeaturedEntry
 import io.github.arkmind.seedy.core.seedy.HomeRow
 import io.github.arkmind.seedy.core.seedy.Top10Entry
-import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.core.session.UserSession
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -23,7 +22,6 @@ import org.jellyfin.sdk.model.api.CollectionType
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
-import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.SortOrder
 import java.time.LocalDateTime
 import java.util.UUID
@@ -86,7 +84,7 @@ class Home(private val session: UserSession) {
         when (row.kind) {
             "continue" -> session.continueWatching(limit = 16, fields = CardFields)
             "nextup" -> nextUp(limit = 16)
-            "because" -> libraryUuid(row.seedId)?.let { seed ->
+            "because" -> uuidOf(row.seedId)?.let { seed ->
                 api.libraryApi.getSimilarItems(itemId = seed, userId = userId, limit = 16, fields = CardFields).content.items
             }.orEmpty()
             "genres" -> row.genre?.let { genre ->
@@ -96,13 +94,13 @@ class Home(private val session: UserSession) {
                 ).content.items
             }.orEmpty()
             "mymedia" -> libraries.filter { it.collectionType in Browsable }
-            "latest" -> libraryUuid(row.libraryId)?.let { lib ->
+            "latest" -> uuidOf(row.libraryId)?.let { lib ->
                 api.libraryApi.getLatestMedia(
                     userId = userId, parentId = lib, limit = 16, enableUserData = true, imageTypeLimit = 1,
                     groupItems = true, enableImageTypes = CardImages, fields = CardFields,
                 ).content
             }.orEmpty()
-            "collections" -> libraryUuid(row.collectionId)?.let { id ->
+            "collections" -> uuidOf(row.collectionId)?.let { id ->
                 api.libraryApi.getItems(
                     userId = userId, parentId = id, limit = 20,
                     sortBy = listOf(ItemSortBy.PREMIERE_DATE, ItemSortBy.SORT_NAME), fields = CardFields,
@@ -145,8 +143,6 @@ class Home(private val session: UserSession) {
             libraries.filter { it.collectionType in LatestTypes }.map {
                 HomeRow(id = "latest:${it.id}", kind = "latest", libraryId = it.id.toString(), libraryName = it.name, collectionType = it.collectionType?.serialName)
             }
-
-    private suspend fun <T> io(block: suspend () -> T): T = withContext(Dispatchers.IO) { block() }
 
     companion object {
         /** Row kinds the apps show (all of Seedy's). */

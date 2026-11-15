@@ -57,10 +57,10 @@ import io.github.arkmind.seedy.core.books.isComic
 import io.github.arkmind.seedy.core.books.languageName
 import io.github.arkmind.seedy.core.books.roughTime
 import io.github.arkmind.seedy.core.books.volumeLabel
-import io.github.arkmind.seedy.core.books.yearOfBook
 import io.github.arkmind.seedy.core.format.fullDate
 import io.github.arkmind.seedy.core.format.ticksToSeconds
 import io.github.arkmind.seedy.core.format.timeLeft
+import io.github.arkmind.seedy.core.format.year
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
@@ -222,7 +222,7 @@ fun metaLine(state: BookViewModel.State, item: BaseItemDto): String {
         if (state.self?.let(::isComic) == true) t("{series} · No. {n}", "series" to name, "n" to n) else t("{series}, book {n}", "series" to name, "n" to n)
     }
     val length = if (state.audio) audioLength(item).ifEmpty { null } else state.info?.pages?.takeIf { it > 0 }?.let { tn(it, "{n} page", "{n} pages") }
-    return listOfNotNull(series, yearOfBook(item)?.toString(), length, languageName(state.language).ifEmpty { null }).joinToString(" · ")
+    return listOfNotNull(series, item.year?.toString(), length, languageName(state.language).ifEmpty { null }).joinToString(" · ")
 }
 
 private fun percentOf(r: io.github.arkmind.seedy.core.audio.Reading?): Int? = r?.takeIf { !it.finished && it.percent > 0 }?.percent?.roundToInt()

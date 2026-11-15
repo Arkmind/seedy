@@ -11,6 +11,11 @@ import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.admin.normId
 import io.github.arkmind.seedy.core.admin.realDate
 import io.github.arkmind.seedy.core.admin.sameId
+import io.github.arkmind.seedy.core.data.bool
+import io.github.arkmind.seedy.core.data.intOrNull
+import io.github.arkmind.seedy.core.data.json
+import io.github.arkmind.seedy.core.data.strings
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
@@ -105,10 +110,10 @@ data class UserEditState(
     val lede: String
         get() {
             if (!loaded) return ""
-            val role = if (saved.flag("IsAdministrator")) t("Administrator") else t("User")
+            val role = if (saved.bool("IsAdministrator")) t("Administrator") else t("User")
             val access = when {
-                saved.flag("IsDisabled") -> t("account disabled")
-                !saved.flag("EnableRemoteAccess", true) -> t("home network only")
+                saved.bool("IsDisabled") -> t("account disabled")
+                !saved.bool("EnableRemoteAccess", true) -> t("home network only")
                 else -> t("can sign in from anywhere")
             }
             return "$role · $access"
@@ -399,8 +404,8 @@ class UserEditViewModel(
                     changed.remove("IsDisabled")
                     val own = session.api.deviceInfo.id
                     val enabled = s.policy.strings("EnabledDevices")
-                    if (!s.policy.flag("EnableAllDevices", true) && ("EnableAllDevices" in changed || "EnabledDevices" in changed) && own !in enabled) {
-                        changed["EnabledDevices"] = strings(enabled + own)
+                    if (!s.policy.bool("EnableAllDevices", true) && ("EnableAllDevices" in changed || "EnabledDevices" in changed) && own !in enabled) {
+                        changed["EnabledDevices"] = json(enabled + own)
                     }
                 }
                 if (changed.isNotEmpty()) patchUserPolicy(http, id, changed)

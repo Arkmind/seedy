@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import io.github.arkmind.seedy.core.format.clock
 import io.github.arkmind.seedy.core.format.duration
+import io.github.arkmind.seedy.core.format.hourMinute
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.player.PlayerState
@@ -66,7 +67,6 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.MediaSegmentType
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 
 /** The TV player's tools, in the board's order. */
 enum class TvTool { Subtitles, Audio, Chapters, Episodes, Settings }
@@ -243,7 +243,7 @@ private fun streamLabel(label: String): String =
 /** "Ends at 22:41 · 50 min left" (allowing for the playback speed). */
 private fun endsLine(state: PlayerState, now: LocalTime): String {
     val leftMs = ((state.durationMs - state.positionMs) / state.speed.coerceAtLeast(0.25f)).toLong().coerceAtLeast(0)
-    val ends = now.plusSeconds(leftMs / 1000).format(DateTimeFormatter.ofPattern("HH:mm"))
+    val ends = hourMinute(now.plusSeconds(leftMs / 1000))
     return join(t("Ends at {time}", "time" to ends), t("{time} left", "time" to duration(leftMs / 1000.0)))
 }
 

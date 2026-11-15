@@ -9,6 +9,9 @@ import io.github.arkmind.seedy.core.admin.TaskInfo
 import io.github.arkmind.seedy.core.admin.Tone
 import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.admin.realDate
+import io.github.arkmind.seedy.core.data.bool
+import io.github.arkmind.seedy.core.data.int
+import io.github.arkmind.seedy.core.data.str
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.session.UserSession
@@ -28,9 +31,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.net.URI
@@ -130,19 +131,15 @@ data class RecSettings(
     ).count { !it }
 }
 
-private fun JsonObject.str(key: String): String = (this[key] as? JsonPrimitive)?.contentOrNull.orEmpty()
-private fun JsonObject.int(key: String): Int = (this[key] as? JsonPrimitive)?.intOrNull ?: 0
-private fun JsonObject.bool(key: String): Boolean = (this[key] as? JsonPrimitive)?.booleanOrNull ?: false
-
 fun recSettings(o: JsonObject) = RecSettings(
     guideDays = o.int("GuideDays"),
-    recordingPath = o.str("RecordingPath"),
-    movieRecordingPath = o.str("MovieRecordingPath"),
-    seriesRecordingPath = o.str("SeriesRecordingPath"),
+    recordingPath = o.str("RecordingPath").orEmpty(),
+    movieRecordingPath = o.str("MovieRecordingPath").orEmpty(),
+    seriesRecordingPath = o.str("SeriesRecordingPath").orEmpty(),
     prePaddingSeconds = o.int("PrePaddingSeconds"),
     postPaddingSeconds = o.int("PostPaddingSeconds"),
-    recordingPostProcessor = o.str("RecordingPostProcessor"),
-    recordingPostProcessorArguments = o.str("RecordingPostProcessorArguments"),
+    recordingPostProcessor = o.str("RecordingPostProcessor").orEmpty(),
+    recordingPostProcessorArguments = o.str("RecordingPostProcessorArguments").orEmpty(),
     saveRecordingNfo = o.bool("SaveRecordingNFO"),
     saveRecordingImages = o.bool("SaveRecordingImages"),
 )
@@ -612,4 +609,3 @@ class LiveTvAdminViewModel(
     override fun messageShown() = _state.update { it.copy(message = null) }
 }
 
-private fun JsonArray?.orEmpty(): List<JsonElement> = this ?: emptyList()

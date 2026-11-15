@@ -27,15 +27,16 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.arkmind.seedy.core.format.clockOf
 import io.github.arkmind.seedy.core.format.monthYear
 import io.github.arkmind.seedy.core.format.ticksToSeconds
+import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.photos.FolderInfo
 import io.github.arkmind.seedy.core.photos.Memory
 import io.github.arkmind.seedy.core.photos.PhotoMonth
 import io.github.arkmind.seedy.core.photos.PhotosApi
 import io.github.arkmind.seedy.core.photos.countsLabel
-import io.github.arkmind.seedy.core.photos.dayLabel
 import io.github.arkmind.seedy.core.photos.daySub
 import io.github.arkmind.seedy.core.photos.isVideo
 import io.github.arkmind.seedy.core.photos.monthTitle
@@ -178,7 +179,7 @@ fun Tile(item: BaseItemDto, modifier: Modifier, height: Dp, onClick: () -> Unit)
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 SIcon(PhotoIcons.Play, size = 10.dp, color = SeedyColors.White)
-                SText(clockOf(ticksToSeconds(item.runTimeTicks)), size = 11.sp, weight = 700, color = SeedyColors.White)
+                SText(roundedClock(ticksToSeconds(item.runTimeTicks)), size = 11.sp, weight = 700, color = SeedyColors.White)
             }
         }
         if (item.userData?.isFavorite == true) {
@@ -187,14 +188,8 @@ fun Tile(item: BaseItemDto, modifier: Modifier, height: Dp, onClick: () -> Unit)
     }
 }
 
-/** "0:42", "2:10", "1:04:09". */
-fun clockOf(secs: Double): String {
-    val s = secs.roundToInt().coerceAtLeast(0)
-    val h = s / 3600
-    val m = (s % 3600) / 60
-    val r = s % 60
-    return if (h > 0) "%d:%02d:%02d".format(h, m, r) else "%d:%02d".format(m, r)
-}
+/** "0:42", "2:10", "1:04:09": a video's length to the nearest second. */
+fun roundedClock(secs: Double): String = clockOf(secs.roundToInt().toDouble())
 
 /* ───────── The timeline as list entries ───────── */
 
@@ -210,7 +205,7 @@ fun timelineLines(months: List<PhotoMonth>, width: Float, row: Float, gap: Float
     months.forEachIndexed { mi, m ->
         if (headings) add(Line.Month(monthTitle(m.year, m.month), mi == 0, "m${m.year}-${m.month}"))
         for (d in m.days) {
-            add(Line.Day(dayLabel(d.date), daySub(d, own), "d${d.date}"))
+            add(Line.Day(weekdayDate(d.date), daySub(d, own), "d${d.date}"))
             justify(d.items, width, row, gap, d.offset).forEachIndexed { i, r -> add(Line.Tiles(r, "r${d.date}-$i-${r.first}")) }
         }
     }

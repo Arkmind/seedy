@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.browse.marks
 import io.github.arkmind.seedy.core.format.inProgress
 import io.github.arkmind.seedy.core.format.libraryMeta
+import io.github.arkmind.seedy.core.format.nameInitials
 import io.github.arkmind.seedy.core.format.progress
 import io.github.arkmind.seedy.core.seedy.SeerrItem
 import io.github.arkmind.seedy.core.seedy.tmdbImage
@@ -291,11 +292,8 @@ fun seerrMeta(item: SeerrItem): String = io.github.arkmind.seedy.core.format.joi
 fun Portrait(item: BaseItemDto, size: Dp, modifier: Modifier = Modifier, letters: TextUnit = 15.sp) {
     val images = LocalViewer.current.images
     Box(modifier.size(size).clip(CircleShape).background(Color(0xFF3D2436)), contentAlignment = Alignment.Center) {
-        SText(initials(item.name.orEmpty()), size = letters, weight = 900, color = Color(0xFFFFB3E6))
+        SText(nameInitials(item.name.orEmpty()), size = letters, weight = 900, color = Color(0xFFFFB3E6))
         Artwork(images?.primary(item, 240), Modifier.matchParentSize(), placeholder = Color.Transparent)
     }
 }
 
-/** "IN" for Ines Northey. */
-fun initials(name: String): String =
-    name.split(' ').filter { w -> w.any { it.isLetter() } }.take(2).joinToString("") { it.first().uppercase() }

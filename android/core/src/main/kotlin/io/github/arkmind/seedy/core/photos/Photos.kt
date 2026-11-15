@@ -1,16 +1,17 @@
 package io.github.arkmind.seedy.core.photos
 
-import io.github.arkmind.seedy.core.format.weekdayDate
+import io.github.arkmind.seedy.core.data.io
+import io.github.arkmind.seedy.core.format.hourMinute
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.Lang
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.session.UserSession
-import kotlinx.coroutines.Dispatchers
+import io.github.arkmind.seedy.core.session.serverBase
+import io.github.arkmind.seedy.core.session.withApiKey
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.post
 import org.jellyfin.sdk.api.client.extensions.userDataApi
@@ -26,7 +27,6 @@ import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.SortOrder
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.URLEncoder
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -125,9 +125,6 @@ fun daySub(day: PhotoDay, own: String? = null): String {
     return if (top != null) "$counts · $top" else counts
 }
 
-/** "Sat 17 Oct". */
-fun dayLabel(d: LocalDate): String = weekdayDate(d)
-
 private fun cap(s: String) = s.replaceFirstChar { it.titlecase(I18n.locale) }
 
 /** "October 2026". */
@@ -141,7 +138,7 @@ fun longDay(d: LocalDate): String {
 }
 
 /** "19:42". */
-fun timeOfDay(d: LocalDateTime): String = "%02d:%02d".format(d.hour, d.minute)
+fun timeOfDay(d: LocalDateTime): String = hourMinute(d)
 
 /** "9 to 16 August 2026", "28 July to 3 August 2026". */
 fun dateRange(a: LocalDate?, b: LocalDate?): String {
@@ -224,8 +221,7 @@ data class FolderInfo(val item: BaseItemDto, val count: Int, val photos: Int, va
 class PhotosApi(private val session: UserSession) {
     private val api get() = session.api
     private val userId get() = session.userId
-    private val base get() = api.baseUrl.orEmpty().trimEnd('/')
-    private val token get() = URLEncoder.encode(api.accessToken.orEmpty(), "UTF-8")
+    private val base get() = api.serverBase
 
     /** A tile: the photo scaled to cover [h]×(h × its ratio) pixels. */
     fun thumbUrl(item: BaseItemDto, h: Int): String? {
@@ -241,7 +237,7 @@ class PhotosApi(private val session: UserSession) {
         return "$base/Items/${item.id}/Images/Primary?tag=$tag&maxWidth=${minOf(w, item.width ?: w)}&maxHeight=${minOf(h, item.height ?: h)}&quality=90"
     }
 
-    fun downloadUrl(id: UUID): String = "$base/Items/$id/Download?ApiKey=$token"
+    fun downloadUrl(id: UUID): String = api.withApiKey("/Items/$id/Download")
 
     suspend fun media(
         parentId: UUID, start: Int = 0, limit: Int? = 100, types: List<BaseItemKind> = MediaTypes, favorite: Boolean? = null,
@@ -347,7 +343,7 @@ class PhotosApi(private val session: UserSession) {
         fileCache[id]?.let { return it }
         val out = io {
             runCatching {
-                val c = URL("$base/Items/$id/File?ApiKey=$token").openConnection() as HttpURLConnection
+                val c = URL(api.withApiKey("/Items/$id/File")).openConnection() as HttpURLConnection
                 c.setRequestProperty("Range", "bytes=0-0")
                 c.connectTimeout = 15_000
                 c.readTimeout = 15_000
@@ -361,8 +357,6 @@ class PhotosApi(private val session: UserSession) {
         if (out.first != null) fileCache[id] = out
         return out
     }
-
-    private suspend fun <T> io(block: suspend () -> T): T = withContext(Dispatchers.IO) { block() }
 
     companion object {
         private val folderCache = ConcurrentHashMap<String, Pair<Long, FolderInfo>>()

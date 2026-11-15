@@ -44,6 +44,7 @@ import io.github.arkmind.seedy.core.manage.MetaTab
 import io.github.arkmind.seedy.core.manage.MetadataActions
 import io.github.arkmind.seedy.core.manage.MetadataState
 import io.github.arkmind.seedy.core.manage.MetadataViewModel
+import io.github.arkmind.seedy.core.session.serverBase
 import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.AccentRow
@@ -88,7 +89,7 @@ fun MetadataRoute(id: String, onBack: () -> Unit) {
     val session = currentSession()
     val vm = viewModel(key = "metadata:$id") { MetadataViewModel(session, id) }
     val state by vm.state.collectAsStateWithLifecycle()
-    val poster = session.api.baseUrl.orEmpty().trimEnd('/') + "/Items/$id/Images/Primary?maxWidth=160&quality=90"
+    val poster = session.api.serverBase + "/Items/$id/Images/Primary?maxWidth=160&quality=90"
     MetadataScreen(state, vm, poster, onBack)
 }
 

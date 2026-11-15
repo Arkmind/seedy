@@ -7,6 +7,7 @@ import io.github.arkmind.seedy.core.admin.SeedyJson
 import io.github.arkmind.seedy.core.admin.Tone
 import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.format.Images
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.CancellationException

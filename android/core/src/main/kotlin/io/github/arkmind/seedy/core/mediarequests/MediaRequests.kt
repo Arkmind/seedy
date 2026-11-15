@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.core.mediarequests
 
+import io.github.arkmind.seedy.core.format.uuidOf
 import kotlinx.serialization.Serializable
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.delete
@@ -261,7 +262,7 @@ class MediaRequestsApi(private val api: ApiClient) {
     suspend fun bookDetails(card: BookCard): BookCard = api.post<BookCard>("$M/Books/Details", requestBody = card).content
 
     /** A book card's cover: its own, else the cover of the edition on the server. */
-    fun bookCover(b: BookCard): String? = b.coverUrl ?: io.github.arkmind.seedy.core.seedy.libraryUuid(b.coverItemId)?.let {
+    fun bookCover(b: BookCard): String? = b.coverUrl ?: uuidOf(b.coverItemId)?.let {
         api.imageApi.getItemImageUrl(itemId = it, imageType = ImageType.PRIMARY, maxWidth = 400)
     }
 

@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.core.format
 
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
+import java.util.UUID
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.LocationType
@@ -10,6 +11,7 @@ import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import org.jellyfin.sdk.model.api.UserItemDataDto
 
 /* Item labels, as the web app writes them (web/src/lib/format.ts). */
 
@@ -160,6 +162,21 @@ fun subtitleTrackLabel(s: org.jellyfin.sdk.model.api.MediaStream): Pair<String, 
     return name to join(title, if (s.isDefault) t("Default") else null)
 }
 
+/** "1:48", "4:12", "1:02:09": a length or a position in whole seconds. */
+fun clockOf(seconds: Double): String {
+    val s = max(0, seconds.toInt())
+    val h = s / 3600
+    val m = (s % 3600) / 60
+    val sec = (s % 60).toString().padStart(2, '0')
+    return if (h > 0) "$h:${m.toString().padStart(2, '0')}:$sec" else "$m:$sec"
+}
+
+/** "1×", "1.25×": the player's speed. */
+fun playbackSpeedLabel(speed: Float): String = (if (speed % 1f == 0f) speed.toInt().toString() else speed.toString().trimEnd('0')) + "×"
+
+/** "IN" for Ines Northey: the first letters of a name's first two words. */
+fun nameInitials(name: String): String = name.split(' ').filter { w -> w.any { it.isLetter() } }.take(2).joinToString("") { it.first().uppercase() }
+
 /** "01:48", "1:02:03". */
 fun clock(ms: Long): String {
     val total = (ms / 1000).coerceAtLeast(0)
@@ -225,3 +242,16 @@ val BaseItemDto.isVirtual: Boolean get() = locationType == LocationType.VIRTUAL
 
 /** The day a title premiered (Jellyfin's premiere dates are calendar days). */
 val BaseItemDto.premiereDay: LocalDate? get() = premiereDate?.toLocalDate()
+
+/** The user data Jellyfin leaves out until this profile touches [item]. */
+fun blankUserData(item: BaseItemDto): UserItemDataDto =
+    UserItemDataDto(playbackPositionTicks = 0, playCount = 0, isFavorite = false, played = false, key = item.id.toString(), itemId = item.id)
+
+/** The item with its heart set, making its user data when it has none. */
+fun BaseItemDto.withFavorite(on: Boolean): BaseItemDto = copy(userData = (userData ?: blankUserData(this)).copy(isFavorite = on))
+
+/** The item with its heart set; an item without user data stays without. */
+fun BaseItemDto.favorited(on: Boolean): BaseItemDto = copy(userData = userData?.copy(isFavorite = on))
+
+/** [id]'s heart set in a list (see [favorited]). */
+fun List<BaseItemDto>.favorited(id: UUID, on: Boolean): List<BaseItemDto> = map { if (it.id == id) it.favorited(on) else it }

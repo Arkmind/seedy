@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.feature.RequestsViewModel
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.mediarequests.MediaRequestsViewModel
 import io.github.arkmind.seedy.core.mediarequests.MediaTab
@@ -40,7 +41,6 @@ import io.github.arkmind.seedy.core.mediarequests.RequestService
 import io.github.arkmind.seedy.core.requests.SeerrRequest
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.requests.TitlesKind
-import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.mobile.browse.topInset
 import io.github.arkmind.seedy.mobile.library.Message
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
@@ -173,7 +173,7 @@ private fun MediaRequestsTab(vm: MediaRequestsViewModel, music: Boolean, service
 
 /** A Seerr title opens its library page when it's on the server, else its Seerr page. */
 fun MobileNav.openSeerr(mediaType: String, tmdbId: Int, jellyfinItemId: String?) {
-    val local = libraryUuid(jellyfinItemId)
+    val local = uuidOf(jellyfinItemId)
     go(if (local != null) Route.Details(local) else Route.SeerrTitle(mediaType, tmdbId))
 }
 

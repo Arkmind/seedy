@@ -35,8 +35,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.arkmind.seedy.core.books.uuidOf
+import io.github.arkmind.seedy.core.format.clockOf
 import io.github.arkmind.seedy.core.format.duration
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.audio.AudioIcons
@@ -84,14 +85,6 @@ val Speeds = listOf(0.75f, 0.9f, 1f, 1.1f, 1.2f, 1.25f, 1.5f, 1.75f, 2f)
 /** "1.2×", "1,25×". */
 fun speedLabel(v: Float): String = NumberFormat.getInstance(I18n.locale).apply { maximumFractionDigits = 2 }.format(v) + "×"
 
-/** "18:02", "1:02:03" (web audio/parts.tsx). */
-fun audioClock(seconds: Double): String {
-    val s = seconds.coerceAtLeast(0.0).toLong()
-    val h = s / 3600
-    val m = (s % 3600) / 60
-    val sec = (s % 60).toString().padStart(2, '0')
-    return if (h > 0) "$h:${m.toString().padStart(2, '0')}:$sec" else "$m:$sec"
-}
 
 /** The chapter of [book] at [pos] seconds. */
 fun chapterOf(book: BookInfo?, pos: Double): BookChapter? {
@@ -174,8 +167,8 @@ fun AudiobookScreen(
                     track = Color(0x33FFFFFF), thumb = DpSize(6.dp, 16.dp), thumbRadius = 3.dp, height = 18.dp,
                 )
                 Row(Modifier.fillMaxWidth()) {
-                    SText(audioClock(inChapter), Modifier.weight(1f), size = 12.sp, weight = 600, color = SeedyColors.Text2, maxLines = 1)
-                    SText("−" + audioClock(length - inChapter), size = 12.sp, weight = 600, color = SeedyColors.Text2, maxLines = 1)
+                    SText(clockOf(inChapter), Modifier.weight(1f), size = 12.sp, weight = 600, color = SeedyColors.Text2, maxLines = 1)
+                    SText("−" + clockOf(length - inChapter), size = 12.sp, weight = 600, color = SeedyColors.Text2, maxLines = 1)
                 }
             }
             SText(

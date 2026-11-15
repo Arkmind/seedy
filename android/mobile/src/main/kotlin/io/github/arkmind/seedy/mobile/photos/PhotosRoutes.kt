@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.arkmind.seedy.core.format.withFavorite
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.photos.FolderSort
@@ -36,7 +37,6 @@ import io.github.arkmind.seedy.core.photos.PhotosViewModel
 import io.github.arkmind.seedy.core.photos.TileSize
 import io.github.arkmind.seedy.core.photos.fileName
 import io.github.arkmind.seedy.core.photos.isVideo
-import io.github.arkmind.seedy.core.photos.withFavorite
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
 import io.github.arkmind.seedy.mobile.manage.ItemMenuSheet
 import io.github.arkmind.seedy.mobile.manage.ManagePerms

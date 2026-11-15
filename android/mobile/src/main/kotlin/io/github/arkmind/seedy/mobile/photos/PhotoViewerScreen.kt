@@ -283,7 +283,7 @@ private fun ZoomPage(item: BaseItemDto, rotation: Int, active: Boolean, onZoom: 
                     Box(Modifier.size(72.dp).clip(CircleShape).background(Color(0xB30E0E0E)), contentAlignment = Alignment.Center) {
                         SIcon(PhotoIcons.Play, Modifier.padding(start = 4.dp), size = 30.dp, color = SeedyColors.White)
                     }
-                    SText(clockOf(ticksToSeconds(item.runTimeTicks)), size = 13.sp, weight = 700, color = SeedyColors.White)
+                    SText(roundedClock(ticksToSeconds(item.runTimeTicks)), size = 13.sp, weight = 700, color = SeedyColors.White)
                 }
             }
         }
@@ -336,7 +336,7 @@ fun PhotoDetails(item: BaseItemDto, file: Pair<Long?, String?>?, cover: BaseItem
         val h = item.height
         val size = listOfNotNull(
             if (w != null && h != null) "$w × $h" else null,
-            if (item.isVideo) clockOf(ticksToSeconds(item.runTimeTicks)) else if (w != null && h != null) "${(w.toLong() * h / 1_000_000.0).roundToInt()} MP" else null,
+            if (item.isVideo) roundedClock(ticksToSeconds(item.runTimeTicks)) else if (w != null && h != null) "${(w.toLong() * h / 1_000_000.0).roundToInt()} MP" else null,
         ).joinToString(" · ")
         val fileLine = listOf(formatName(item, file?.second), bytesLabel(file?.first)).filter { it.isNotEmpty() }.joinToString(" · ")
         if (size.isNotEmpty() || fileLine.isNotEmpty()) Fact(if (item.isVideo) PhotoIcons.Video else PhotoIcons.File, size.ifEmpty { fileLine }, if (size.isNotEmpty()) fileLine else null)

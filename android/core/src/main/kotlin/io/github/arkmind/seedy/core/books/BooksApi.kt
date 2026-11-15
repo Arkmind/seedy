@@ -1,6 +1,7 @@
 package io.github.arkmind.seedy.core.books
 
 import io.github.arkmind.seedy.core.session.UserSession
+import io.github.arkmind.seedy.core.session.withApiKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -8,7 +9,6 @@ import kotlinx.serialization.Serializable
 import org.jellyfin.sdk.api.client.extensions.get
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
-import java.net.URLEncoder
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -41,8 +41,6 @@ data class BookInfo(
  */
 class BooksApi(private val session: UserSession) {
     private val api get() = session.api
-    private val base get() = api.baseUrl.orEmpty().trimEnd('/')
-    private val token get() = URLEncoder.encode(api.accessToken.orEmpty(), "UTF-8")
 
     /** Book info rarely changes: one request per book while the app runs. */
     suspend fun info(id: UUID): BookInfo = infoCache[id] ?: withContext(Dispatchers.IO) {
@@ -50,13 +48,13 @@ class BooksApi(private val session: UserSession) {
     }.also { infoCache[id] = it }
 
     /** The book file (EPUB, PDF, CBZ…), with the token in the address. */
-    fun fileUrl(id: UUID): String = "$base/Seedy/Books/$id/File?ApiKey=$token"
+    fun fileUrl(id: UUID): String = api.withApiKey("/Seedy/Books/$id/File")
 
     /** One page of a comic (CBZ), from 0. */
-    fun pageUrl(id: UUID, index: Int): String = "$base/Seedy/Books/$id/Pages/$index?ApiKey=$token"
+    fun pageUrl(id: UUID, index: Int): String = api.withApiKey("/Seedy/Books/$id/Pages/$index")
 
     /** Jellyfin's download of the original file. */
-    fun downloadUrl(id: UUID): String = "$base/Items/$id/Download?ApiKey=$token"
+    fun downloadUrl(id: UUID): String = api.withApiKey("/Items/$id/Download")
 
     private companion object {
         val infoCache = ConcurrentHashMap<UUID, BookInfo>()

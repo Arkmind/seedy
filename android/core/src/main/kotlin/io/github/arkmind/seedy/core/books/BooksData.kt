@@ -7,6 +7,8 @@ import io.github.arkmind.seedy.core.audio.authorsOf
 import io.github.arkmind.seedy.core.audio.mergePlace
 import io.github.arkmind.seedy.core.format.duration
 import io.github.arkmind.seedy.core.format.ticksToSeconds
+import io.github.arkmind.seedy.core.format.uuidOf
+import io.github.arkmind.seedy.core.format.year
 import io.github.arkmind.seedy.core.i18n.t
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -45,8 +47,6 @@ fun seriesOf(item: BaseItemDto): String? {
 /** One work whatever its format: the EPUB, the PDF and the audiobook of a book share it. */
 fun workKey(item: BaseItemDto): String = "${normalize(item.name)}|${normalize(authorLine(item))}"
 
-fun yearOfBook(item: BaseItemDto): Int? = item.productionYear ?: item.premiereDate?.year
-
 /** "about 3 h", "1 h 30 min", "25 min": rough reading time for cards. */
 fun roughTime(minutes: Double): String {
     val m = max(1, minutes.roundToInt())
@@ -61,7 +61,7 @@ fun roughTime(minutes: Double): String {
 /** Under a cover in the grids: "Lantern Season — The Halden Cycle, 4", else "Author · 2026". */
 fun bookSub(item: BaseItemDto): String {
     seriesOf(item)?.let { return "$it, ${item.indexNumber}" }
-    val year = yearOfBook(item)?.toString() ?: item.genres?.firstOrNull()?.lowercase()
+    val year = item.year?.toString() ?: item.genres?.firstOrNull()?.lowercase()
     return listOfNotNull(authorLine(item).takeIf { it.isNotEmpty() }, year).joinToString(" · ")
 }
 
@@ -74,7 +74,7 @@ fun comicSub(item: BaseItemDto, reading: Reading?, running: Boolean): String {
     }
     val series = seriesOf(item)
     if (series != null && running) return "$series · $state"
-    return listOfNotNull(authorLine(item).takeIf { it.isNotEmpty() }, yearOfBook(item)?.toString()).joinToString(" · ").ifEmpty { t("One-shot") }
+    return listOfNotNull(authorLine(item).takeIf { it.isNotEmpty() }, item.year?.toString()).joinToString(" · ").ifEmpty { t("One-shot") }
 }
 
 /** An audiobook's length: "14 h 20 min". */
@@ -84,13 +84,6 @@ fun audioLength(item: BaseItemDto): String = item.runTimeTicks?.takeIf { it > 0 
 fun millisOf(d: LocalDateTime?): Long = d?.toInstant(ZoneOffset.UTC)?.toEpochMilli() ?: 0L
 
 fun millisOf(iso: String?): Long = iso?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() } ?: 0L
-
-/** Seedy's ids come without dashes ("54429509d9e4…"); Jellyfin's UUIDs with them. */
-fun uuidOf(s: String?): UUID? {
-    val v = s?.trim().orEmpty()
-    if (v.length == 32) return runCatching { UUID.fromString("${v.substring(0, 8)}-${v.substring(8, 12)}-${v.substring(12, 16)}-${v.substring(16, 20)}-${v.substring(20)}") }.getOrNull()
-    return runCatching { UUID.fromString(v) }.getOrNull()
-}
 
 /** A series with at least two volumes here: its name, who wrote it and how far this profile is. Times in epoch millis. */
 data class SeriesGroup(

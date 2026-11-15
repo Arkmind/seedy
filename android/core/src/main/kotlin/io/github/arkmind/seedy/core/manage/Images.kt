@@ -3,9 +3,13 @@ package io.github.arkmind.seedy.core.manage
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.arkmind.seedy.core.admin.errorText
+import io.github.arkmind.seedy.core.data.intOrNull
+import io.github.arkmind.seedy.core.data.str
+import io.github.arkmind.seedy.core.data.strings
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession
+import io.github.arkmind.seedy.core.session.serverBase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,8 +19,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import java.util.Locale
 
@@ -65,7 +67,7 @@ interface ImagesActions {
 
 class ImagesViewModel(session: UserSession, private val id: String) : ViewModel(), ImagesActions {
     private val api = ManageApi(session)
-    private val base = session.api.baseUrl.orEmpty().trimEnd('/')
+    private val base = session.api.serverBase
     private val _state = MutableStateFlow(ImagesState())
     val state: StateFlow<ImagesState> = _state.asStateFlow()
     private var offerJob: Job? = null
@@ -82,8 +84,8 @@ class ImagesViewModel(session: UserSession, private val id: String) : ViewModel(
         viewModelScope.launch {
             val result = runCatching {
                 val item = api.item(id)
-                itemType = (item["Type"] as? JsonPrimitive)?.contentOrNull.orEmpty()
-                (item["Name"] as? JsonPrimitive)?.contentOrNull.orEmpty() to slots(itemType, api.images(id))
+                itemType = item.str("Type").orEmpty()
+                item.str("Name").orEmpty() to slots(itemType, api.images(id))
             }
             result.onSuccess { (name, slots) ->
                 _state.update { it.copy(loading = false, name = name, slots = slots) }
@@ -100,13 +102,13 @@ class ImagesViewModel(session: UserSession, private val id: String) : ViewModel(
     }
 
     private fun slots(itemType: String, list: List<JsonObject>): List<ImageSlot> {
-        fun of(type: String) = list.filter { (it["ImageType"] as? JsonPrimitive)?.contentOrNull == type }.map { o ->
-            val index = (o["ImageIndex"] as? JsonPrimitive)?.intOrNull
-            val tag = (o["ImageTag"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+        fun of(type: String) = list.filter { it.str("ImageType") == type }.map { o ->
+            val index = o.intOrNull("ImageIndex")
+            val tag = o.str("ImageTag").orEmpty()
             SlotImage(
                 index,
                 "$base/Items/$id/Images/$type" + (index?.let { "/$it" } ?: "") + "?tag=$tag&maxWidth=480&quality=90",
-                (o["Width"] as? JsonPrimitive)?.intOrNull, (o["Height"] as? JsonPrimitive)?.intOrNull,
+                o.intOrNull("Width"), o.intOrNull("Height"),
             )
         }
         fun size(i: SlotImage?) = if (i?.width != null && i.height != null) "${i.width} × ${i.height}" else null
@@ -133,17 +135,16 @@ class ImagesViewModel(session: UserSession, private val id: String) : ViewModel(
             val result = runCatching { api.remoteImages(id, s.picked, s.provider, s.allLanguages) }
             result.onSuccess { o ->
                 val images = (o["Images"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }.map { img ->
-                    fun text(k: String) = (img[k] as? JsonPrimitive)?.contentOrNull
-                    val w = (img["Width"] as? JsonPrimitive)?.intOrNull
-                    val h = (img["Height"] as? JsonPrimitive)?.intOrNull
-                    val url = text("Url").orEmpty()
+                    val w = img.intOrNull("Width")
+                    val h = img.intOrNull("Height")
+                    val url = img.str("Url").orEmpty()
                     OfferedImage(
-                        url, text("ThumbnailUrl")?.takeIf { it.isNotBlank() } ?: url,
-                        listOfNotNull(if (w != null && h != null) "$w × $h" else null, text("ProviderName")?.let(::providerName), language(text("Language"))).joinToString(" · "),
+                        url, img.str("ThumbnailUrl")?.takeIf { it.isNotBlank() } ?: url,
+                        listOfNotNull(if (w != null && h != null) "$w × $h" else null, img.str("ProviderName")?.let(::providerName), language(img.str("Language"))).joinToString(" · "),
                         url in added,
                     )
                 }.filter { it.url.isNotEmpty() }
-                val providers = (o["Providers"] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                val providers = o.strings("Providers")
                 _state.update { it.copy(offered = images, offeredTotal = images.size, providers = providers.ifEmpty { it.providers }) }
             }.onFailure { e ->
                 if (e is CancellationException) throw e

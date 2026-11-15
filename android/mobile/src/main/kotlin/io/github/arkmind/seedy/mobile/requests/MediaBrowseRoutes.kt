@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.browse.Browse
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.mediarequests.BookCard
 import io.github.arkmind.seedy.core.mediarequests.BookRequestViewModel
@@ -62,7 +63,6 @@ import io.github.arkmind.seedy.core.mediarequests.MusicArtistRef
 import io.github.arkmind.seedy.core.mediarequests.MusicArtistViewModel
 import io.github.arkmind.seedy.core.mediarequests.MusicRelease
 import io.github.arkmind.seedy.core.mediarequests.MusicRow
-import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.mobile.browse.topInset
 import io.github.arkmind.seedy.mobile.library.Message
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
@@ -104,7 +104,7 @@ fun mediaOpeners(onMessage: (String) -> Unit): MediaOpeners {
     artist?.let { RequestArtistSheet(it, onDismiss = { artist = null }, onDone = onMessage) }
     book?.let { RequestBookSheet(it, onDismiss = { book = null }, onDone = onMessage) }
     val openItem: (String) -> Unit = { id ->
-        libraryUuid(id)?.let { uuid ->
+        uuidOf(id)?.let { uuid ->
             scope.launch { runCatching { Browse(session).item(uuid) }.getOrNull()?.let(nav::open) ?: nav.go(Route.Details(uuid)) }
         }
     }
@@ -121,7 +121,7 @@ fun mediaOpeners(onMessage: (String) -> Unit): MediaOpeners {
             },
             ready = { r ->
                 val id = r.itemId
-                val uuid = libraryUuid(id)
+                val uuid = uuidOf(id)
                 if (uuid != null && MediaFormat.opensReader(r)) nav.go(Route.Reader(uuid)) else if (id != null) openItem(id)
             },
             item = openItem,

@@ -42,10 +42,10 @@ import io.github.arkmind.seedy.core.feature.SeerrTitleViewModel.Companion.reques
 import io.github.arkmind.seedy.core.format.duration
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.format.parseDay
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.seedy.SeerrDetails
-import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.core.seedy.tmdbImage
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
 import io.github.arkmind.seedy.tv.nav.TvRoute
@@ -87,7 +87,7 @@ fun TvSeerrTitleRoute(mediaType: String, tmdbId: Int) {
     var seasons by remember { mutableStateOf(false) }
     val primary = remember { FocusRequester() }
     val d = state.details
-    val local = libraryUuid(d?.jellyfinItemId)
+    val local = uuidOf(d?.jellyfinItemId)
     TvSeerrTitleScreen(
         state, canRequest = vm.canRequest, allow4k = vm.allow4k,
         actions = TvSeerrTitleActions(

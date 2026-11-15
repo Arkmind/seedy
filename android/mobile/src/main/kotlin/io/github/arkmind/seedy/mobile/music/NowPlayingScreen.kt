@@ -51,12 +51,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.arkmind.seedy.core.format.clockOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.music.Lyrics
 import io.github.arkmind.seedy.core.music.SongFacts
 import io.github.arkmind.seedy.core.music.artistsOf
-import io.github.arkmind.seedy.core.music.clockOf
 import io.github.arkmind.seedy.core.music.longDate
 import io.github.arkmind.seedy.core.music.qualityOf
 import io.github.arkmind.seedy.core.music.sizeLabel

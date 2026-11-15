@@ -3,6 +3,7 @@ package io.github.arkmind.seedy.mobile.library
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.runtime.rememberCoroutineScope
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.manage.AddTarget
 import io.github.arkmind.seedy.core.manage.BulkViewModel
@@ -159,17 +160,13 @@ fun LibraryRoute(id: UUID) {
             )
         }
         ManageSheetHost(sheets, say = bulk::say) { gone, message ->
-            vm.removed(gone.mapNotNull { runCatching { UUID.fromString(dashed(it)) }.getOrNull() }.toSet())
+            vm.removed(gone.mapNotNull(::uuidOf).toSet())
             picked = null
             bulk.say(message)
         }
         Toast(bulkState.message, bulk::messageShown, Modifier.align(Alignment.BottomCenter))
     }
 }
-
-/** Jellyfin's 32-character ids as UUIDs. */
-private fun dashed(id: String): String =
-    if (id.length == 32) "${id.substring(0, 8)}-${id.substring(8, 12)}-${id.substring(12, 16)}-${id.substring(16, 20)}-${id.substring(20)}" else id
 
 class LibraryActions(
     val onBack: () -> Unit = {},

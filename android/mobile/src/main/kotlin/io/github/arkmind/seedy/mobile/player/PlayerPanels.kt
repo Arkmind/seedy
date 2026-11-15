@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.format.audioTrackLabel
 import io.github.arkmind.seedy.core.format.episodeMeta
+import io.github.arkmind.seedy.core.format.playbackSpeedLabel
 import io.github.arkmind.seedy.core.format.progress
 import io.github.arkmind.seedy.core.format.subtitleTrackLabel
 import io.github.arkmind.seedy.core.i18n.t
@@ -292,7 +293,7 @@ fun SpeedPanel(speed: Float, onSpeed: (Float) -> Unit, onClose: () -> Unit) {
                         Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(11.dp)).background(if (on) SeedyColors.Inverse else Color.Transparent).tap { onSpeed(s) },
                         contentAlignment = Alignment.Center,
                     ) {
-                        SText(speedLabel(s), size = 14.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.InkInverse else SeedyColors.Text)
+                        SText(playbackSpeedLabel(s), size = 14.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.InkInverse else SeedyColors.Text)
                     }
                 }
             }

@@ -6,6 +6,7 @@ import io.github.arkmind.seedy.core.admin.AdminHttp
 import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.admin.fmtSize
 import io.github.arkmind.seedy.core.admin.realDate
+import io.github.arkmind.seedy.core.data.intOrNull
 import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
@@ -18,7 +19,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
 import org.jellyfin.sdk.api.client.HttpMethod
 import java.time.Clock
@@ -221,7 +221,7 @@ class LogsViewModel(
         viewModelScope.launch { loadFiles()?.let { nameFfmpegLogs(it) } }
         viewModelScope.launch {
             runCatching { http.getObject("/System/Configuration") }.onSuccess { cfg ->
-                val days = (cfg["LogFileRetentionDays"] as? JsonPrimitive)?.intOrNull
+                val days = cfg.intOrNull("LogFileRetentionDays")
                 if (days != null && days > 0) _state.update {
                     it.copy(lede = tn(days, "The server's log files, newest first. Kept for {n} day and slow-response warnings are set in Settings.", "The server's log files, newest first. Kept for {n} days and slow-response warnings are set in Settings."))
                 }

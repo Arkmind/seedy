@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,6 +55,7 @@ import io.github.arkmind.seedy.core.format.audioTrackLabel
 import io.github.arkmind.seedy.core.format.clock
 import io.github.arkmind.seedy.core.format.episodeMeta
 import io.github.arkmind.seedy.core.format.join
+import io.github.arkmind.seedy.core.format.playbackSpeedLabel
 import io.github.arkmind.seedy.core.format.progress
 import io.github.arkmind.seedy.core.format.subtitleTrackLabel
 import io.github.arkmind.seedy.core.format.timeLeft
@@ -396,7 +396,7 @@ fun TvSettingsPanel(
                 val resolution = state.streamLabel.split(" · ").getOrNull(1).orEmpty()
                 val quality = if (state.quality == Quality.Auto) listOf(t("Original"), resolution.substringBefore(' ')).filter { it.isNotBlank() }.joinToString(" · ") else t(state.quality.label)
                 SettingRow(SettingsIcons.Quality, t("Quality"), method, quality, Modifier.focusRequester(first)) { onPage(SettingsPage.Quality) }
-                SettingRow(SettingsIcons.Speed, t("Speed"), t("Voices keep their normal pitch"), speedText(state.speed)) { onPage(SettingsPage.Speed) }
+                SettingRow(SettingsIcons.Speed, t("Speed"), t("Voices keep their normal pitch"), playbackSpeedLabel(state.speed)) { onPage(SettingsPage.Speed) }
                 SettingRow(SettingsIcons.Picture, t("Picture size"), t("Fit the whole picture on screen").takeIf { picture == PictureSize.Fit } ?: t("Fill the screen, cropping the edges").takeIf { picture == PictureSize.Fill } ?: t("Stretch the picture to the screen"), t(picture.label)) { onPage(SettingsPage.Picture) }
                 if (chapters.isNotEmpty()) {
                     SettingRow(SettingsIcons.Chapters, t("Chapters"), tn(chapters.size, "{n} chapter", "{n} chapters"), currentChapter?.name.orEmpty()) { onPage(SettingsPage.Chapters) }
@@ -416,7 +416,7 @@ fun TvSettingsPanel(
             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.bp), contentPadding = PaddingValues(8.bp)) {
                 items(TvSpeeds) { s ->
                     val on = s == state.speed
-                    Choice(speedText(s), "", on, { onSpeed(s) }, if (on) Modifier.focusRequester(first) else Modifier)
+                    Choice(playbackSpeedLabel(s), "", on, { onSpeed(s) }, if (on) Modifier.focusRequester(first) else Modifier)
                 }
             }
         }
@@ -442,7 +442,6 @@ fun TvSettingsPanel(
 
 val TvSpeeds = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
 
-fun speedText(speed: Float): String = (if (speed % 1f == 0f) speed.toInt().toString() else speed.toString().trimEnd('0')) + "×"
 
 @Composable
 private fun SettingRow(icon: IconDef, label: String, sub: String, value: String, modifier: Modifier = Modifier, onClick: () -> Unit) {

@@ -29,10 +29,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.music.AlbumViewModel
 import io.github.arkmind.seedy.core.music.codecOf
-import io.github.arkmind.seedy.core.music.dot
 import io.github.arkmind.seedy.core.music.lengthLabel
 import io.github.arkmind.seedy.core.music.longDate
 import io.github.arkmind.seedy.core.music.playlistCovers
@@ -137,7 +137,7 @@ fun AlbumScreen(
                     }
                     val total = tracks.sumOf { it.runTimeTicks ?: 0L } / 10_000_000.0
                     val kind = if (playlist) t("Playlist") else releaseLabel(releaseOf(item, tracks.size.takeIf { it > 0 }, (total * 10_000_000).toLong().takeIf { it > 0 }))
-                    val meta = dot(
+                    val meta = join(
                         kind, if (playlist) null else yearOf(item), if (tracks.isNotEmpty()) songsLabel(tracks.size) else null,
                         if (total > 0) lengthLabel(total) else null, if (playlist) null else codecOf(tracks),
                     )
@@ -218,8 +218,8 @@ private fun AlbumFoot(item: BaseItemDto, tracks: List<BaseItemDto>) {
     val added = item.dateCreated?.toLocalDate()
     val label = item.studios?.firstOrNull()?.name
     val bytes = tracks.sumOf { it.mediaSources?.firstOrNull()?.size ?: 0L }
-    val first = dot(released?.let { t("Released {date}", "date" to longDate(it)) }, label)
-    val second = dot(added?.let { t("Added to the server {date}", "date" to longDate(it)) }, if (bytes > 0) sizeLabel(bytes) else null)
+    val first = join(released?.let { t("Released {date}", "date" to longDate(it)) }, label)
+    val second = join(added?.let { t("Added to the server {date}", "date" to longDate(it)) }, if (bytes > 0) sizeLabel(bytes) else null)
     if (first.isEmpty() && second.isEmpty()) return
     Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         if (first.isNotEmpty()) SText(first, size = 12.sp, color = SeedyColors.Text3)

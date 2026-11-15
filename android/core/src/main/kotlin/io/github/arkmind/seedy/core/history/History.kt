@@ -3,6 +3,7 @@ package io.github.arkmind.seedy.core.history
 import io.github.arkmind.seedy.core.format.TICKS_PER_SECOND
 import io.github.arkmind.seedy.core.format.clock
 import io.github.arkmind.seedy.core.format.episodeTag
+import io.github.arkmind.seedy.core.format.hourMinute
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.format.ticksToSeconds
 import io.github.arkmind.seedy.core.format.timeLeft
@@ -79,7 +80,6 @@ data class HistoryGroup(val key: String, val label: String, val recent: Boolean,
 
 /** The History board's copy (web/src/screens/browse/History.tsx). */
 object HistoryFormat {
-    private val hhmm = DateTimeFormatter.ofPattern("HH:mm")
 
     fun at(e: HistoryEntry, zone: ZoneId = ZoneId.systemDefault()): LocalDateTime? =
         runCatching { Instant.parse(if (e.startedAt.endsWith("Z") || e.startedAt.contains('+')) e.startedAt else e.startedAt + "Z") }
@@ -117,7 +117,7 @@ object HistoryFormat {
     fun whenOf(e: HistoryEntry, recent: Boolean, zone: ZoneId = ZoneId.systemDefault()): String {
         val d = at(e, zone) ?: return e.deviceName ?: e.client.orEmpty()
         val device = e.deviceName?.takeIf { it.isNotEmpty() } ?: e.client
-        return join(if (recent) null else weekdayDate(d.toLocalDate()), d.format(hhmm), device)
+        return join(if (recent) null else weekdayDate(d.toLocalDate()), hourMinute(d), device)
     }
 
     /** Where a play goes: Today and Yesterday by day, then the last two weeks, this month, then by month. */

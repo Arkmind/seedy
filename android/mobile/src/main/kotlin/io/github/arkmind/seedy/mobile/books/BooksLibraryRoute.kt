@@ -22,7 +22,7 @@ import io.github.arkmind.seedy.core.books.BookSort
 import io.github.arkmind.seedy.core.books.BooksView
 import io.github.arkmind.seedy.core.books.BooksViewModel
 import io.github.arkmind.seedy.core.books.ContinueKind
-import io.github.arkmind.seedy.core.books.uuidOf
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.audio.LocalAudio
 import io.github.arkmind.seedy.mobile.audio.miniBarSpace

@@ -36,8 +36,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.audio.Reading
 import io.github.arkmind.seedy.core.books.AudiobookViewModel
 import io.github.arkmind.seedy.core.books.Bookmark
-import io.github.arkmind.seedy.core.books.uuidOf
+import io.github.arkmind.seedy.core.format.clockOf
 import io.github.arkmind.seedy.core.format.duration
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.mobile.audio.LocalAudio
@@ -235,7 +236,7 @@ internal fun ChaptersSheet(book: BookInfo, pos: Double, onPick: (Int) -> Unit, o
                         else SText("${c.index + 1}", size = 13.sp, weight = 700, color = if (on) accent else SeedyColors.Text3)
                     }
                     SText(c.name, Modifier.weight(1f), size = 14.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.White else if (done) SeedyColors.Text3 else SeedyColors.Text, maxLines = 1)
-                    SText(audioClock(c.end - c.start), size = 12.sp, color = SeedyColors.Text3, maxLines = 1)
+                    SText(clockOf(c.end - c.start), size = 12.sp, color = SeedyColors.Text3, maxLines = 1)
                 }
             }
         }
@@ -256,7 +257,7 @@ internal fun BookmarksSheet(
     val accent = LocalAccent.current
     fun where(at: Double): String {
         val ch = chapterOf(book, at)
-        return listOfNotNull(ch?.takeIf { book.chapters.size > 1 }?.let { t("Chapter {n}", "n" to it.index + 1) }, audioClock(at - (ch?.start ?: 0.0))).joinToString(" · ")
+        return listOfNotNull(ch?.takeIf { book.chapters.size > 1 }?.let { t("Chapter {n}", "n" to it.index + 1) }, clockOf(at - (ch?.start ?: 0.0))).joinToString(" · ")
     }
     BottomSheet(onClose) {
         SheetHead(t("Bookmarks"))

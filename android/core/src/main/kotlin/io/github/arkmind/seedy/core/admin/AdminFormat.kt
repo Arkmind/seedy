@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.core.admin
 
 import io.github.arkmind.seedy.core.format.dayMonth
 import io.github.arkmind.seedy.core.format.fullDate
+import io.github.arkmind.seedy.core.format.hourMinute
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.Lang
 import io.github.arkmind.seedy.core.i18n.formatNumber
@@ -60,7 +61,7 @@ private fun today(clock: Clock): LocalDate = LocalDate.now(clock)
 fun dayDiff(d: Instant, clock: Clock): Long = ChronoUnit.DAYS.between(local(d, clock).toLocalDate(), today(clock))
 
 /** "20:02". */
-fun hhmm(d: Instant, clock: Clock): String = local(d, clock).let { "%02d:%02d".format(it.hour, it.minute) }
+fun hhmm(d: Instant, clock: Clock): String = hourMinute(local(d, clock))
 
 /** "17 Oct", or "17 Oct 2025" outside this year. */
 fun shortDate(d: Instant, clock: Clock): String {

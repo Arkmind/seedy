@@ -2,7 +2,6 @@ package io.github.arkmind.seedy.mobile.music
 
 import android.app.DownloadManager
 import android.content.Context
-import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import androidx.compose.foundation.background
@@ -32,11 +31,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.manage.AddTarget
 import io.github.arkmind.seedy.core.music.CastTarget
 import io.github.arkmind.seedy.core.music.MusicApi
 import io.github.arkmind.seedy.core.session.UserSession
+import io.github.arkmind.seedy.core.session.withApiKey
 import io.github.arkmind.seedy.mobile.audio.LocalAudio
 import io.github.arkmind.seedy.mobile.audio.miniBarSpace
 import io.github.arkmind.seedy.mobile.browse.BottomSheet
@@ -164,13 +165,11 @@ class MusicController(
         val ctx = context ?: return
         val s = session ?: return
         val manager = ctx.getSystemService(DownloadManager::class.java) ?: return
-        val base = s.api.baseUrl.orEmpty().trimEnd('/')
-        val token = s.api.accessToken.orEmpty()
         val dir = folder.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim().ifEmpty { "Seedy" }
         for (tk in tracks) {
             val ext = tk.mediaSources?.firstOrNull()?.container?.substringBefore(',')?.takeIf { it.isNotBlank() } ?: "mp3"
             val file = listOfNotNull(tk.indexNumber?.toString()?.padStart(2, '0'), tk.name).joinToString(" ").replace(Regex("[\\\\/:*?\"<>|]"), "_") + ".$ext"
-            val request = DownloadManager.Request(Uri.parse("$base/Items/${tk.id}/Download?ApiKey=${Uri.encode(token)}"))
+            val request = DownloadManager.Request(s.api.withApiKey("/Items/${tk.id}/Download").toUri())
                 .setTitle(tk.name.orEmpty())
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             if (Build.VERSION.SDK_INT >= 29) request.setDestinationInExternalPublicDir(Environment.DIRECTORY_MUSIC, "$dir/$file")

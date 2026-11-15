@@ -3,6 +3,9 @@ package io.github.arkmind.seedy.core.music
 import io.github.arkmind.seedy.core.audio.audioStreamOf
 import io.github.arkmind.seedy.core.audio.qualityLabel
 import io.github.arkmind.seedy.core.format.TICKS_PER_SECOND
+import io.github.arkmind.seedy.core.format.clockOf
+import io.github.arkmind.seedy.core.format.join
+import io.github.arkmind.seedy.core.format.year
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
@@ -16,9 +19,6 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 /* Words the music screens share (web/src/screens/music/parts.tsx, web/src/audio/parts.tsx). */
-
-/** Joins the parts that aren't empty with " · ". */
-fun dot(vararg parts: String?): String = parts.filter { !it.isNullOrEmpty() }.joinToString(" · ")
 
 fun songsLabel(n: Int): String = tn(n, "{n} song", "{n} songs")
 fun albumsLabel(n: Int): String = tn(n, "{n} album", "{n} albums")
@@ -48,20 +48,11 @@ fun releaseLabel(r: Release): String = when (r) {
 fun albumArtistOf(a: BaseItemDto): String =
     a.albumArtist?.takeIf { it.isNotBlank() } ?: a.albumArtists?.firstOrNull()?.name ?: a.artists?.firstOrNull().orEmpty()
 
-fun yearOf(a: BaseItemDto): String = (a.productionYear ?: a.premiereDate?.year)?.toString().orEmpty()
+fun yearOf(a: BaseItemDto): String = a.year?.toString().orEmpty()
 
 /** A song's artists ("Ada Vale, Oren Moss"), else its album artist. */
 fun artistsOf(track: BaseItemDto?): String =
     track?.artists?.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: track?.albumArtist.orEmpty()
-
-/** "1:48", "4:12", "1:02:09". */
-fun clockOf(seconds: Double): String {
-    val s = max(0, seconds.toInt())
-    val h = s / 3600
-    val m = (s % 3600) / 60
-    val sec = (s % 60).toString().padStart(2, '0')
-    return if (h > 0) "$h:${m.toString().padStart(2, '0')}:$sec" else "$m:$sec"
-}
 
 /** A song's length as a clock ("3:42"); empty when the server doesn't know it. */
 fun trackTime(track: BaseItemDto): String = track.runTimeTicks?.takeIf { it > 0 }?.let { clockOf(it / TICKS_PER_SECOND.toDouble()) }.orEmpty()
@@ -79,7 +70,7 @@ fun lengthLabel(seconds: Double): String {
 }
 
 /** "48 songs · 3 h 12 min". */
-fun playlistSub(count: Int, seconds: Double): String = dot(songsLabel(count), if (seconds > 0) lengthLabel(seconds) else null)
+fun playlistSub(count: Int, seconds: Double): String = join(songsLabel(count), if (seconds > 0) lengthLabel(seconds) else null)
 
 /** Four covers from a playlist's songs, one per album. */
 fun playlistCovers(tracks: List<BaseItemDto>): List<BaseItemDto> = tracks.distinctBy { it.albumId ?: it.id }.take(4)

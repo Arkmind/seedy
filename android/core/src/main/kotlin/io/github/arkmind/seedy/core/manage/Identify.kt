@@ -3,9 +3,12 @@ package io.github.arkmind.seedy.core.manage
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.arkmind.seedy.core.admin.errorText
+import io.github.arkmind.seedy.core.data.intOrNull
+import io.github.arkmind.seedy.core.data.str
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.session.UserSession
+import io.github.arkmind.seedy.core.session.serverBase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -98,23 +101,21 @@ class IdentifyViewModel(session: UserSession, private val id: String) : ViewMode
         viewModelScope.launch {
             val result = runCatching { api.item(id) }
             result.onSuccess { item ->
-                val type = (item["Type"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+                val type = item.str("Type").orEmpty()
                 current = (item["ProviderIds"] as? JsonObject).orEmpty().mapNotNull { (k, v) -> (v as? JsonPrimitive)?.contentOrNull?.let { k.lowercase() to it } }.toMap()
                 val keys = when (type) {
                     "Series" -> listOf("Tmdb", "Tvdb", "Imdb")
-                    "Movie", "BoxSet", "Trailer" -> listOf("Tmdb", "Imdb")
-                    "Person" -> listOf("Tmdb", "Imdb")
                     "MusicAlbum" -> listOf("MusicBrainzAlbum")
                     "MusicArtist" -> listOf("MusicBrainzArtist")
                     else -> listOf("Tmdb", "Imdb")
                 }
-                val year = (item["ProductionYear"] as? JsonPrimitive)?.intOrNull?.toString().orEmpty()
+                val year = item.intOrNull("ProductionYear")?.toString().orEmpty()
                 val tag = ((item["ImageTags"] as? JsonObject)?.get("Primary") as? JsonPrimitive)?.contentOrNull
                 _state.value = IdentifyState(
                     loading = false,
                     type = type,
-                    poster = tag?.let { api.http.api.baseUrl.orEmpty().trimEnd('/') + "/Items/$id/Images/Primary?tag=$it&maxWidth=200&quality=90" },
-                    name = (item["Name"] as? JsonPrimitive)?.contentOrNull.orEmpty(),
+                    poster = tag?.let { api.http.api.serverBase + "/Items/$id/Images/Primary?tag=$it&maxWidth=200&quality=90" },
+                    name = item.str("Name").orEmpty(),
                     year = year,
                     // The ids start empty, as on the board: name and year find the title; an id narrows it down.
                     ids = keys.map { ProviderField(it, MetadataViewModel.providerLabel(it, it), "") },
@@ -152,7 +153,7 @@ class IdentifyViewModel(session: UserSession, private val id: String) : ViewMode
             val result = runCatching { api.remoteSearch(kind, body) }
             result.onSuccess { list ->
                 val matches = rank(list.map(::match), s.name, s.year.toIntOrNull())
-                val sources = list.mapNotNull { (it["SearchProviderName"] as? JsonPrimitive)?.contentOrNull?.let(::providerName) }.distinct()
+                val sources = list.mapNotNull { it.str("SearchProviderName")?.let(::providerName) }.distinct()
                 _state.update { it.copy(searching = false, matches = matches, sources = sources, picked = if (matches.isNotEmpty()) 0 else null) }
             }.onFailure { e ->
                 if (e is CancellationException) throw e
@@ -178,16 +179,15 @@ class IdentifyViewModel(session: UserSession, private val id: String) : ViewMode
     }
 
     private fun match(r: JsonObject): Match {
-        fun text(k: String) = (r[k] as? JsonPrimitive)?.contentOrNull
         val ids = (r["ProviderIds"] as? JsonObject).orEmpty().mapNotNull { (k, v) -> (v as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }?.let { k to it } }
-        val year = (r["ProductionYear"] as? JsonPrimitive)?.intOrNull ?: text("PremiereDate")?.take(4)?.toIntOrNull()
-        val meta = listOfNotNull(year?.toString(), text("AlbumArtist"), text("SearchProviderName")?.let { providerName(it) }).distinct().joinToString(" · ")
+        val year = r.intOrNull("ProductionYear") ?: r.str("PremiereDate")?.take(4)?.toIntOrNull()
+        val meta = listOfNotNull(year?.toString(), r.str("AlbumArtist"), r.str("SearchProviderName")?.let { providerName(it) }).distinct().joinToString(" · ")
         return Match(
-            title = text("Name").orEmpty(),
+            title = r.str("Name").orEmpty(),
             meta = meta,
             source = ids.filter { (k, _) -> k.lowercase() in setOf("tmdb", "tvdb", "imdb") }.sortedBy { listOf("tmdb", "tvdb", "imdb").indexOf(it.first.lowercase()) }
                 .joinToString(" · ") { (k, v) -> "${MetadataViewModel.providerLabel(k, k)} $v" },
-            art = text("ImageUrl")?.takeIf { it.isNotBlank() }?.let { api.remoteImageUrl(it) },
+            art = r.str("ImageUrl")?.takeIf { it.isNotBlank() }?.let { api.remoteImageUrl(it) },
             current = ids.any { (k, v) -> current[k.lowercase()] == v },
             result = r,
         )

@@ -6,6 +6,7 @@ import io.github.arkmind.seedy.core.audio.AudioPart
 import io.github.arkmind.seedy.core.audio.Reading
 import io.github.arkmind.seedy.core.audio.authorsOf
 import io.github.arkmind.seedy.core.browse.Browse
+import io.github.arkmind.seedy.core.format.year
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,7 +86,7 @@ class BookViewModel(private val session: UserSession, private val id: UUID) : Vi
             return data?.all.orEmpty()
                 .filter { o -> !isAudioBook(o) && o.id !in inSeries && authorsOf(o).any { normalize(it.first) == k } }
                 .filter { seen.add(normalize(it.name)) }
-                .sortedByDescending { yearOfBook(it) ?: 0 }
+                .sortedByDescending { it.year ?: 0 }
         }
 
         /** ✓: books follow the reader's record (the server marks them played); audiobooks Jellyfin's played state. */

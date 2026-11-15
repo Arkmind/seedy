@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.arkmind.seedy.core.admin.sameId
 import io.github.arkmind.seedy.core.music.Mix
 import io.github.arkmind.seedy.core.music.artistsOf
 import io.github.arkmind.seedy.core.i18n.t
@@ -127,14 +128,12 @@ data class Playing(
     fun isTrack(id: UUID?) = id != null && id == trackId
 
     /** Whether the queue plays from [id] (an album, playlist or artist). */
-    fun isSource(id: UUID?): Boolean = id != null && trackId != null && sameId(sourceId, id)
+    fun isSource(id: UUID?): Boolean = id != null && trackId != null && sameId(sourceId, id.toString())
 
     companion object {
         fun of(s: AudioState): Playing = Playing(
             s.current?.track?.id, s.source?.id, s.source?.kind, s.current?.track?.albumId, s.playing,
         )
-
-        fun sameId(a: String?, b: UUID): Boolean = a != null && a.replace("-", "").equals(b.toString().replace("-", ""), ignoreCase = true)
     }
 }
 
@@ -457,7 +456,7 @@ private fun MoreButton(onClick: () -> Unit) {
 }
 
 /** "Ada Vale · 3:42": a song's artists and length. */
-fun trackSub(track: BaseItemDto): String = io.github.arkmind.seedy.core.music.dot(artistsOf(track), io.github.arkmind.seedy.core.music.trackTime(track))
+fun trackSub(track: BaseItemDto): String = io.github.arkmind.seedy.core.format.join(artistsOf(track), io.github.arkmind.seedy.core.music.trackTime(track))
 
 /** A light 48 px button with an icon and a label (the artist's Play), or a dark one ([light] off: Radio). */
 @Composable

@@ -36,11 +36,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.feature.HistoryActions
 import io.github.arkmind.seedy.core.feature.HistoryState
 import io.github.arkmind.seedy.core.feature.HistoryViewModel
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.history.HistoryEntry
 import io.github.arkmind.seedy.core.history.HistoryFilter
 import io.github.arkmind.seedy.core.history.HistoryFormat
 import io.github.arkmind.seedy.core.i18n.t
-import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.mobile.admin.BoardField
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
@@ -87,8 +87,8 @@ fun HistoryRoute() {
         state, vm, LocalDate.now(),
         HistoryNav(
             back = nav::back,
-            play = { e, start -> libraryUuid(e.itemId)?.let { nav.go(Route.Player(it, start)) } },
-            open = { e -> libraryUuid(e.titleId)?.let { nav.go(Route.Details(it)) } },
+            play = { e, start -> uuidOf(e.itemId)?.let { nav.go(Route.Player(it, start)) } },
+            open = { e -> uuidOf(e.titleId)?.let { nav.go(Route.Details(it)) } },
             browse = { nav.toTab(Tab.Home) },
         ),
     )

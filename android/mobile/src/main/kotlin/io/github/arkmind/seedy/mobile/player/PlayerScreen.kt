@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.BasicText
 import io.github.arkmind.seedy.core.format.clock
+import io.github.arkmind.seedy.core.format.playbackSpeedLabel
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.player.PlayerState
@@ -237,14 +238,13 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
                 val episode = item?.type == BaseItemKind.EPISODE
                 if (episode) Action(PlayerIcons.Episodes, t("Episodes")) { actions.onPanel(PlayerPanel.Episodes) }
                 Action(PlayerIcons.Tracks, t("Subtitles and audio"), dot = state.subtitleIndex >= 0) { actions.onPanel(PlayerPanel.Tracks) }
-                if (!state.live) Action(PlayerIcons.Speed, t("Speed {speed}", "speed" to speedLabel(state.speed))) { actions.onPanel(PlayerPanel.Speed) }
+                if (!state.live) Action(PlayerIcons.Speed, t("Speed {speed}", "speed" to playbackSpeedLabel(state.speed))) { actions.onPanel(PlayerPanel.Speed) }
                 if (state.next != null) Action(PlayerIcons.Next, t("Next episode"), onClick = actions.onNext)
             }
         }
     }
 }
 
-fun speedLabel(speed: Float): String = (if (speed % 1f == 0f) speed.toInt().toString() else speed.toString().trimEnd('0')) + "×"
 
 private fun heading(item: BaseItemDto?): String =
     if (item?.type == BaseItemKind.TV_CHANNEL) io.github.arkmind.seedy.core.livetv.LiveTv.cleanName(item.name.orEmpty()) else item?.seriesName ?: item?.name.orEmpty()

@@ -41,18 +41,17 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.feature.RequestsViewModel
 import io.github.arkmind.seedy.core.format.join
+import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.requests.RequestFormat
 import io.github.arkmind.seedy.core.requests.RequestState
 import io.github.arkmind.seedy.core.requests.SeerrRequest
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.requests.TitlesKind
-import io.github.arkmind.seedy.core.seedy.libraryUuid
 import io.github.arkmind.seedy.core.seedy.tmdbImage
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
 import io.github.arkmind.seedy.tv.nav.TvNav
@@ -107,7 +106,7 @@ fun TvRequestsPlace(onSearch: () -> Unit) {
 
 /** A Seerr title opens its library page when it's on the server, else its Seerr page. */
 fun TvNav.openSeerr(mediaType: String, tmdbId: Int, jellyfinItemId: String?) {
-    val local = libraryUuid(jellyfinItemId)
+    val local = uuidOf(jellyfinItemId)
     go(if (local != null) TvRoute.Details(local) else TvRoute.SeerrTitle(mediaType, tmdbId))
 }
 

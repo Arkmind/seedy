@@ -36,6 +36,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.arkmind.seedy.core.admin.sameId
+import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.music.Mix
@@ -47,7 +49,6 @@ import io.github.arkmind.seedy.core.music.Paged
 import io.github.arkmind.seedy.core.music.albumArtistOf
 import io.github.arkmind.seedy.core.music.albumsLabel
 import io.github.arkmind.seedy.core.music.artistsOf
-import io.github.arkmind.seedy.core.music.dot
 import io.github.arkmind.seedy.core.music.playsLabel
 import io.github.arkmind.seedy.core.music.songsLabel
 import io.github.arkmind.seedy.core.music.yearOf
@@ -146,7 +147,7 @@ private fun LazyListScope.home(state: MusicLibraryViewModel.State, playing: Play
         item(key = "jump") {
             val curId = playing.sourceId ?: playing.albumId?.toString()
             val list = jump.orEmpty().take(6).let { l ->
-                val at = l.indexOfFirst { Playing.sameId(curId, it.id) }
+                val at = l.indexOfFirst { sameId(curId, it.id.toString()) }
                 if (at > 0) listOf(l[at]) + l.filterIndexed { i, _ -> i != at } else l
             }
             Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -154,7 +155,7 @@ private fun LazyListScope.home(state: MusicLibraryViewModel.State, playing: Play
                 for (pair in list.chunked(2)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for (it in pair) {
-                            val current = playing.trackId != null && Playing.sameId(curId, it.id)
+                            val current = playing.trackId != null && sameId(curId, it.id.toString())
                             JumpTile(it, current, playing.playing, { actions.onOpen(it) }, Modifier.weight(1f))
                         }
                         if (pair.size == 1) Spacer(Modifier.weight(1f))
@@ -306,7 +307,7 @@ private fun LazyListScope.albums(p: Paged, state: MusicLibraryViewModel.State, a
             if (state.favorites) Message(t("No favourite albums yet"), t("Tap the heart on an album and it shows up here."))
             else Message(t("No albums yet"), t("Albums show up here once the server finds them."))
         }
-        else -> grid(p.items, 2, "al") { a, m -> AlbumCard(a, dot(albumArtistOf(a), yearOf(a)), { actions.onOpen(a) }, m, coverTitle = 15.sp) }
+        else -> grid(p.items, 2, "al") { a, m -> AlbumCard(a, join(albumArtistOf(a), yearOf(a)), { actions.onOpen(a) }, m, coverTitle = 15.sp) }
     }
     more(p, "al", { actions.onMore(tab) }, { actions.onMore(tab) })
 }
@@ -336,7 +337,7 @@ private fun LazyListScope.songs(state: MusicLibraryViewModel.State, playing: Pla
             else Message(t("No songs yet"), t("Songs show up here once the server finds them."))
         }
         else -> itemsIndexed(p.items, key = { i, tk -> "s$i-${tk.id}" }) { i, tk ->
-            CoverRow(tk, null, dot(artistsOf(tk), tk.album), playing.isTrack(tk.id), { actions.onSong(p.items, i) }, { actions.onSongMenu(tk) }, Modifier.padding(horizontal = 8.dp))
+            CoverRow(tk, null, join(artistsOf(tk), tk.album), playing.isTrack(tk.id), { actions.onSong(p.items, i) }, { actions.onSongMenu(tk) }, Modifier.padding(horizontal = 8.dp))
         }
     }
     more(p, "so", { actions.onMore(MusicTab.Songs) }, { actions.onMore(MusicTab.Songs) })
