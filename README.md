@@ -79,7 +79,8 @@ tries hard not to make your server convert anything it doesn't have to.
   can't keep up, it hands the video back to the server, and after the second time it turns itself off on that device.
 - **A play log** behind the Top 10, the viewing history page, row order, genre rows and the admin Statistics. Jellyfin
   itself only keeps the last play of each title.
-- **Personal settings** at `/settings`: profile and sign-in, home screen, playback, subtitles, display (accent,
+- **Personal settings** at `/settings`: profile and sign-in, the devices you're signed in on (sign out one or all the
+  others; new devices from outside your home network are flagged), home screen, playback, subtitles, display (accent,
   language, dates, screensaver, TV layout, custom CSS) and controls.
 - **A full admin dashboard** at `/admin` that replaces Jellyfin's: branding, home screen, requests, the play log and
   statistics (watch time per day, who watches what and when, devices, how often the server transcodes and why, and a
@@ -107,7 +108,7 @@ tries hard not to make your server convert anything it doesn't have to.
 - **Works without the plugin.** On a plain Jellyfin server you get your libraries, search, Live TV and the player.
   When the server has Seedy, the app also shows its home rows and the Requests tab.
 - **Settings** for playback, subtitles and the home screen, some per device and some per profile. With the plugin,
-  the profile ones are the same as on the web.
+  the profile ones are the same as on the web, and Profile › Signed in on lists your devices and signs them out.
 - **Server pages for admins** on the phone, under Settings › Server: what's playing (message or stop it), running
   tasks, disk space, users and their access, libraries and scans, transcoding, server settings, networking, Live TV, devices,
   the activity log, plugins, scheduled tasks, backups, logs and API keys. With the plugin, Seedy's own admin pages
