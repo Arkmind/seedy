@@ -51,6 +51,7 @@ import io.github.arkmind.seedy.core.format.inProgress
 import io.github.arkmind.seedy.core.format.libraryMeta
 import io.github.arkmind.seedy.core.format.nameInitials
 import io.github.arkmind.seedy.core.format.progress
+import io.github.arkmind.seedy.core.format.starRating
 import io.github.arkmind.seedy.core.seedy.SeerrItem
 import io.github.arkmind.seedy.core.seedy.tmdbImage
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
@@ -307,7 +308,7 @@ fun SeerrPoster(item: SeerrItem, onClick: () -> Unit, modifier: Modifier = Modif
 /** "2021 · ★ 7.0 · Requested", what a Seerr title's card says under its name. */
 fun seerrMeta(item: SeerrItem): String = io.github.arkmind.seedy.core.format.join(
     item.year,
-    item.rating?.takeIf { it > 0 }?.let { "★ " + String.format(java.util.Locale.US, "%.1f", it) },
+    starRating(item.rating),
     when (item.status) {
         "available", "partial" -> io.github.arkmind.seedy.core.i18n.t("On the server")
         "pending", "processing" -> io.github.arkmind.seedy.core.i18n.t("Requested")

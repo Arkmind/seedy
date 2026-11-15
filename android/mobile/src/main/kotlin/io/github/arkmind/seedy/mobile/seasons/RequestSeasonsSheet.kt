@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.arkmind.seedy.core.feature.AdvancedActions
 import io.github.arkmind.seedy.core.feature.RequestSeasonsViewModel
 import io.github.arkmind.seedy.core.feature.SeasonsResult
 import io.github.arkmind.seedy.core.feature.SeasonsTarget
@@ -79,9 +80,6 @@ fun RequestSeasonsSheet(
         onDismiss = onDismiss,
     )
 }
-
-/** The Advanced section's choices. */
-class AdvancedActions(val server: (Int) -> Unit, val profile: (Int) -> Unit, val folder: (String) -> Unit, val user: (Int) -> Unit)
 
 /** The sheet itself, over a dimmed page (stateless, for previews and screenshot tests). */
 @Composable

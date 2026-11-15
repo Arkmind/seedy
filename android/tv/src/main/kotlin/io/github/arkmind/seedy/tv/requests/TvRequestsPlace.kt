@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.feature.RequestsViewModel
 import io.github.arkmind.seedy.core.format.join
+import io.github.arkmind.seedy.core.format.starRating
 import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.requests.RequestFormat
@@ -74,7 +75,6 @@ import io.github.arkmind.seedy.ui.theme.currentSession
 import io.github.arkmind.seedy.ui.theme.toneColour
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.util.Locale
 
 /** What OK does on a Discover card. */
 enum class TitleAction { Open, Details }
@@ -310,7 +310,7 @@ fun TitleCard(
             }
             Column(verticalArrangement = Arrangement.spacedBy(3.bp)) {
                 SText(title.title, size = if (focused) 20.bsp else 18.bsp, weight = 800, color = SeedyColors.White, maxLines = 1)
-                val (meta, soon) = if (upcoming) RequestFormat.upcoming(title, today) else join(title.year, title.rating?.takeIf { it > 0 }?.let { "★ " + String.format(Locale.US, "%.1f", it) }) to false
+                val (meta, soon) = if (upcoming) RequestFormat.upcoming(title, today) else join(title.year, starRating(title.rating)) to false
                 SText(meta, size = 16.bsp, color = if (soon) LocalAccent.current else SeedyColors.Text3, maxLines = 1)
                 if (focused) {
                     val hint = when (action) {

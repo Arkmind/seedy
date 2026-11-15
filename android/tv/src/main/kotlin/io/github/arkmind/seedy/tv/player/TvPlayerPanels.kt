@@ -63,6 +63,7 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.player.PlayerState
 import io.github.arkmind.seedy.player.Quality
+import io.github.arkmind.seedy.player.offsetLabel
 import io.github.arkmind.seedy.tv.parts.TvPressable
 import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
@@ -209,7 +210,7 @@ private fun Timing(offset: Long, onOffset: (Long) -> Unit) {
                 Box(Modifier.size(52.bp).clip(RoundedCornerShape(13.bp)).background(Color.Black.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
                     SIcon(WebIcons.Minus, size = 24.bp, color = ink, stroke = 2.6f)
                 }
-                SText(offsetText(offset), Modifier.widthIn(min = 92.bp), size = 24.bsp, weight = 900, color = ink, align = TextAlign.Center)
+                SText(offsetLabel(offset), Modifier.widthIn(min = 92.bp), size = 24.bsp, weight = 900, color = ink, align = TextAlign.Center)
                 Box(Modifier.size(52.bp).clip(RoundedCornerShape(13.bp)).background(Color.Black.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
                     SIcon(WebIcons.Plus, size = 24.bp, color = ink, stroke = 2.6f)
                 }
@@ -226,12 +227,6 @@ private fun Timing(offset: Long, onOffset: (Long) -> Unit) {
             }
         }
     }
-}
-
-private fun offsetText(ms: Long): String = when {
-    ms > 0 -> "+%.1f s".format(ms / 1000.0)
-    ms < 0 -> "−%.1f s".format(-ms / 1000.0)
-    else -> "0 s"
 }
 
 private fun timingSentence(ms: Long): String = when {

@@ -42,6 +42,13 @@ fun problemText(code: String): Pair<String, String> = when (code) {
     else -> t("Couldn't start playback") to code
 }
 
+/** A subtitle or sound offset in the delay controls: "+0.5 s", "−1.0 s", "0 s". */
+fun offsetLabel(ms: Long): String = when {
+    ms > 0 -> "+%.1f s".format(ms / 1000.0)
+    ms < 0 -> "−%.1f s".format(-ms / 1000.0)
+    else -> "0 s"
+}
+
 /** What to ask the server for. Stream indexes are Jellyfin's; subtitle -1 is off. */
 data class StreamOptions(
     val mediaSourceId: String? = null,

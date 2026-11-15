@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import io.github.arkmind.seedy.core.feature.AdvancedActions
 import io.github.arkmind.seedy.core.feature.RequestSeasonsViewModel
 import io.github.arkmind.seedy.core.feature.SeasonsResult
 import io.github.arkmind.seedy.core.feature.SeasonsTarget
@@ -102,14 +103,12 @@ fun TvRequestSeasonsDialog(
     TvRequestSeasonsContent(
         state,
         onToggle = vm::toggle, onToggleAll = vm::toggleAll, on4k = vm::set4k,
-        advanced = TvAdvancedActions(vm::setServer, vm::setProfile, vm::setFolder, vm::setUser),
+        advanced = AdvancedActions(vm::setServer, vm::setProfile, vm::setFolder, vm::setUser),
         onRetry = vm::retry,
         onSubmit = { vm.submit { r -> onDone(r); onDismiss() } },
         onDismiss = onDismiss,
     )
 }
-
-class TvAdvancedActions(val server: (Int) -> Unit, val profile: (Int) -> Unit, val folder: (String) -> Unit, val user: (Int) -> Unit)
 
 /** The dialog itself over the dimmed page (stateless, for screenshot tests). */
 @Composable
@@ -118,7 +117,7 @@ fun TvRequestSeasonsContent(
     onToggle: (Int) -> Unit,
     onToggleAll: () -> Unit,
     on4k: (Boolean) -> Unit,
-    advanced: TvAdvancedActions,
+    advanced: AdvancedActions,
     onRetry: () -> Unit,
     onSubmit: () -> Unit,
     onDismiss: () -> Unit,
@@ -286,7 +285,7 @@ private fun TvSwitch(on: Boolean) {
 
 /** Advanced: "HD-1080p · /data/tv · as you"; OK opens its choices, each OK moves to the next option. */
 @Composable
-private fun Advanced(state: RequestSeasonsViewModel.State, actions: TvAdvancedActions, modifier: Modifier) {
+private fun Advanced(state: RequestSeasonsViewModel.State, actions: AdvancedActions, modifier: Modifier) {
     var open by remember { mutableStateOf(false) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.bp)) {
         Option(t("Advanced"), state.advancedSummary, { open = !open }) {

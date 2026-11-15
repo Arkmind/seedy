@@ -4,9 +4,11 @@ import io.github.arkmind.seedy.core.data.io
 import io.github.arkmind.seedy.core.format.duration
 import io.github.arkmind.seedy.core.format.episodeTag
 import io.github.arkmind.seedy.core.format.hourMinute
+import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession
+import java.time.LocalDate
 import org.jellyfin.sdk.api.client.extensions.liveTvApi
 import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -160,6 +162,16 @@ class LiveTv(private val session: UserSession) {
 
         /** "20:45 – 22:45". */
         fun timeRange(p: BaseItemDto): String = "${clockOf(p.startDate)} – ${clockOf(p.endDate)}"
+
+        /** The guide's day: "Today, Mon 3", "Tomorrow, Tue 4", else "Wed 5 March". */
+        fun dayLabel(day: LocalDate, today: LocalDate = LocalDate.now()): String {
+            val short = weekdayDate(day).substringBeforeLast(' ')
+            return when (day) {
+                today -> t("Today, {day}", "day" to short)
+                today.plusDays(1) -> t("Tomorrow, {day}", "day" to short)
+                else -> weekdayDate(day)
+            }
+        }
 
         fun isAiring(p: BaseItemDto?, now: LocalDateTime): Boolean = p?.startDate != null && p.endDate != null && !p.startDate!!.isAfter(now) && now.isBefore(p.endDate)
 

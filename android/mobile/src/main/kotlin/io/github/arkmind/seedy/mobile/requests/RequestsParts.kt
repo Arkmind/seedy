@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.format.join
+import io.github.arkmind.seedy.core.format.starRating
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.requests.RequestFormat
 import io.github.arkmind.seedy.core.requests.SeerrRequest
@@ -37,7 +38,6 @@ import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.toneColour
 import java.time.LocalDate
-import java.util.Locale
 
 /** "★ 7.4 · 2026", or an upcoming title's date (lit when it's soon). */
 @Composable
@@ -46,7 +46,7 @@ fun titleMeta(title: SeerrTitle, upcoming: Boolean, today: LocalDate = LocalDate
         val (text, soon) = RequestFormat.upcoming(title, today)
         return text to (if (soon) LocalAccent.current else SeedyColors.Text3)
     }
-    val rating = title.rating?.takeIf { it > 0 }?.let { "★ " + String.format(Locale.US, "%.1f", it) }
+    val rating = starRating(title.rating)
     return join(rating, title.year) to SeedyColors.Text3
 }
 

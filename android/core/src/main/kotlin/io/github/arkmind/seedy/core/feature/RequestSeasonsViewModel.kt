@@ -47,6 +47,9 @@ data class SeasonsTarget(
 /** What a request did, for the page behind the sheet. */
 data class SeasonsResult(val status: String, val seasons: List<Int>, val is4k: Boolean)
 
+/** The request window's Advanced choices (server, quality profile, folder, request as), wired to the view model's setters. */
+class AdvancedActions(val server: (Int) -> Unit, val profile: (Int) -> Unit, val folder: (String) -> Unit, val user: (Int) -> Unit)
+
 /**
  * Request seasons (boards "Android · Request seasons" and "Android TV · Request seasons"), shared by every place that
  * asks Seerr for a series: which seasons are on the server or already asked for, the rest to pick, the week's quota,

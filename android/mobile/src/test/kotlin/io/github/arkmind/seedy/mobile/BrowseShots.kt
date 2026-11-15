@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.mobile
 
+import io.github.arkmind.seedy.core.feature.AdvancedActions
 import io.github.arkmind.seedy.mobile.player.MobileDataSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -26,7 +27,6 @@ import io.github.arkmind.seedy.mobile.search.SearchScreen
 import io.github.arkmind.seedy.mobile.parts.Tab
 import io.github.arkmind.seedy.mobile.parts.TabBar
 import io.github.arkmind.seedy.mobile.parts.tabBarHeight
-import io.github.arkmind.seedy.mobile.seasons.AdvancedActions
 import io.github.arkmind.seedy.mobile.seasons.RequestSeasonsContent
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.SeedyColors

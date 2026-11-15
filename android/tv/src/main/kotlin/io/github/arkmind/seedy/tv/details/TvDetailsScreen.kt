@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import io.github.arkmind.seedy.core.format.seasonEpisodeMeta
 import io.github.arkmind.seedy.tv.parts.FocusWhen
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
@@ -56,15 +57,12 @@ import io.github.arkmind.seedy.core.format.isNewEpisode
 import io.github.arkmind.seedy.core.format.isVirtual
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.format.playLabel
-import io.github.arkmind.seedy.core.format.premiereDay
 import io.github.arkmind.seedy.core.format.progress
 import io.github.arkmind.seedy.core.format.rating
 import io.github.arkmind.seedy.core.format.remainingSeconds
 import io.github.arkmind.seedy.core.format.runtime
 import io.github.arkmind.seedy.core.format.score
 import io.github.arkmind.seedy.core.format.timeLeft
-import io.github.arkmind.seedy.core.format.dayMonth
-import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.format.year
 import io.github.arkmind.seedy.core.format.yearRange
 import io.github.arkmind.seedy.core.i18n.t
@@ -385,24 +383,10 @@ private fun EpisodeCard(ep: BaseItemDto, today: LocalDate, onPlay: () -> Unit, m
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.bp)) {
                 SText(join(ep.episodeNumber, ep.name), size = 20.bsp, weight = 700, color = if (upcoming) SeedyColors.Text2 else SeedyColors.White, maxLines = 1)
-                SText(tvEpisodeMeta(ep, today), size = 16.bsp, color = SeedyColors.Text3, maxLines = 1)
+                SText(seasonEpisodeMeta(ep, today, showWatched = true), size = 16.bsp, color = SeedyColors.Text3, maxLines = 1)
             }
         }
     }
-}
-
-/** "54 min · Watched", "52 min · 34 min left", "49 min · 9 Oct", "Airs Fri 23 Oct". */
-fun tvEpisodeMeta(ep: BaseItemDto, today: LocalDate): String {
-    val day = ep.premiereDay
-    if (ep.isVirtual) return day?.let { if (it.isAfter(today)) t("Airs {date}", "date" to weekdayDate(it)) else dayMonth(it) }.orEmpty()
-    return join(
-        ep.runtime,
-        when {
-            ep.userData?.played == true -> t("Watched")
-            ep.inProgress -> timeLeft(ep.remainingSeconds)
-            else -> day?.let(::dayMonth)
-        },
-    )
 }
 
 @Composable

@@ -183,7 +183,7 @@ fun TvGuide(
                 SText(if (state.favoritesOnly) t("Favorites") else t("All channels"), size = 19.bsp, weight = 700, color = ink)
             }
             Pill({ onDay(if (state.day == LocalDate.now()) LocalDate.now().plusDays(1) else LocalDate.now()) }) { ink ->
-                SText(dayLabel(state.day), size = 19.bsp, weight = 700, color = ink)
+                SText(LiveTv.dayLabel(state.day), size = 19.bsp, weight = 700, color = ink)
                 SIcon(WebIcons.ChevronDown, size = 20.bp, color = ink.copy(alpha = 0.7f), stroke = 2.4f)
             }
             Spacer(Modifier.weight(1f))
@@ -257,16 +257,6 @@ fun TvGuide(
         }
     }
     FocusWhen(shown.isNotEmpty(), first)
-}
-
-private fun dayLabel(day: LocalDate): String {
-    val today = LocalDate.now()
-    val short = weekdayDate(day).substringBeforeLast(' ')
-    return when (day) {
-        today -> t("Today, {day}", "day" to short)
-        today.plusDays(1) -> t("Tomorrow, {day}", "day" to short)
-        else -> weekdayDate(day)
-    }
 }
 
 @Composable

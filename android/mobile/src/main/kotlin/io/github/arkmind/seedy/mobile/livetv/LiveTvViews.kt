@@ -46,7 +46,6 @@ import io.github.arkmind.seedy.core.feature.LiveTvViewModel
 import io.github.arkmind.seedy.core.format.dayMonth
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.format.runtime
-import io.github.arkmind.seedy.core.format.weekdayDate
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.livetv.LiveChannel
 import io.github.arkmind.seedy.core.livetv.LiveTv
@@ -309,11 +308,7 @@ fun GuideView(
 private fun DayPicker(day: LocalDate, onDay: (LocalDate) -> Unit) {
     var open by remember { mutableStateOf(false) }
     val today = LocalDate.now()
-    fun label(d: LocalDate) = when (d) {
-        today -> t("Today, {day}", "day" to weekdayDate(d).substringBeforeLast(' '))
-        today.plusDays(1) -> t("Tomorrow, {day}", "day" to weekdayDate(d).substringBeforeLast(' '))
-        else -> weekdayDate(d)
-    }
+    fun label(d: LocalDate) = LiveTv.dayLabel(d, today)
     Box {
         Row(
             Modifier.height(40.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Row).tap { open = true }.padding(start = 12.dp, end = 10.dp),

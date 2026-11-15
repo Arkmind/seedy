@@ -192,6 +192,23 @@ fun episodeMeta(e: BaseItemDto): String {
     return join(e.runtime, if (started) timeLeft(e.remainingSeconds) else date?.let(::dayMonth))
 }
 
+/**
+ * An episode's line in a season's list: "54 min · 25 Sep", "52 min · 34 min left", "Airs Fri 23 Oct"; with
+ * [showWatched], "54 min · Watched" once it's seen.
+ */
+fun seasonEpisodeMeta(ep: BaseItemDto, today: LocalDate = LocalDate.now(), showWatched: Boolean = false): String {
+    val day = ep.premiereDay
+    if (ep.isVirtual) return day?.let { if (it.isAfter(today)) t("Airs {date}", "date" to weekdayDate(it)) else dayMonth(it) }.orEmpty()
+    return join(
+        ep.runtime,
+        when {
+            showWatched && ep.userData?.played == true -> t("Watched")
+            ep.inProgress -> timeLeft(ep.remainingSeconds)
+            else -> day?.let(::dayMonth)
+        },
+    )
+}
+
 /** "3 seasons": a series' ChildCount is its season count. */
 val BaseItemDto.seasonsLabel: String
     get() = childCount?.takeIf { it > 0 }?.let { tn(it, "{n} season", "{n} seasons") }.orEmpty()
@@ -227,6 +244,9 @@ val BaseItemDto.libraryMetaLong: String
 
 /** The score shown with a star ("8.4"), or null. */
 val BaseItemDto.score: String? get() = communityRating?.takeIf { it > 0f }?.let { String.format(Locale.US, "%.1f", it) }
+
+/** A TMDB-style score as "★ 7.4", or null without one. */
+fun starRating(r: Double?): String? = r?.takeIf { it > 0 }?.let { "★ " + String.format(Locale.US, "%.1f", it) }
 
 /** An episode's number in its season: "2", "2–3". */
 val BaseItemDto.episodeNumber: String

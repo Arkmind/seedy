@@ -52,6 +52,7 @@ import io.github.arkmind.seedy.mobile.settings.SubtitlesContent
 import io.github.arkmind.seedy.mobile.settings.rememberSheet
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.player.PlayerState
+import io.github.arkmind.seedy.player.offsetLabel
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
@@ -233,16 +234,6 @@ fun StylePanel(state: SettingsState, actions: SettingsActions, onBack: () -> Uni
             }
             SheetHost(sheet)
         }
-    }
-}
-
-/** "+0.3 s", "−0.5 s", "0 s". */
-fun offsetLabel(ms: Long): String {
-    val s = ms / 1000.0
-    return when {
-        ms > 0 -> "+%.1f s".format(s)
-        ms < 0 -> "−%.1f s".format(-s)
-        else -> "0 s"
     }
 }
 

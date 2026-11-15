@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.style.TextAlign
 import io.github.arkmind.seedy.core.format.nameInitials
+import io.github.arkmind.seedy.core.format.starRating
 import io.github.arkmind.seedy.tv.parts.TvBigButton
 import io.github.arkmind.seedy.tv.requests.openSeerr
 import io.github.arkmind.seedy.ui.components.Medu
@@ -461,7 +462,7 @@ private fun Poster(item: SeerrItem, modifier: Modifier = Modifier, onClick: () -
             }
             Column(verticalArrangement = Arrangement.spacedBy(3.bp)) {
                 SText(item.title, size = 18.bsp, weight = 800, color = SeedyColors.White, maxLines = 1)
-                SText(join(item.year, item.rating?.takeIf { it > 0 }?.let { "★ " + String.format(java.util.Locale.US, "%.1f", it) }), size = 16.bsp, color = SeedyColors.Text3, maxLines = 1)
+                SText(join(item.year, starRating(item.rating)), size = 16.bsp, color = SeedyColors.Text3, maxLines = 1)
             }
         }
     }
