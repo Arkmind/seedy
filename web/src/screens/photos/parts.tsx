@@ -134,7 +134,7 @@ export function JustifiedRows({ items, row, offset = 0, select, onOpen }: { item
 }
 
 /* Months and days, as on the Timeline board ("October 2026", then each day). */
-/* A folder of one month lists its days only (Folder board); `months` false hides the headings. */
+/* A folder of one month lists its days only (Folder board); `headings` false hides the month headings. */
 export function Timeline({ months, row, select, own, onOpen, headings = true }: { months: Month[]; row: number; select?: GridSelect; own?: string; onOpen: (item: PhotoItem) => void; headings?: boolean }) {
   let offset = 0;
   return (

@@ -158,7 +158,7 @@ export function SeriesCard({ group, to }: { group: SeriesGroup; to: string }) {
     <Link to={to} class="bk-series" aria-label={group.name}>
       <span class="bk-fan" aria-hidden="true">
         {fan.map((v, i) => (
-          <span key={v.Id} class={'bk-fan-cover ' + pos[fan.length === 1 ? 1 : fan.length === 2 ? i : i]}>
+          <span key={v.Id} class={'bk-fan-cover ' + pos[fan.length === 1 ? 1 : i]}>
             <BookCover item={v} size="xs" width={220} />
           </span>
         ))}

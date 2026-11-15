@@ -14,8 +14,7 @@ import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { headerHeight } from '../../ui/sticky';
 import { EmptyState, ErrorState, Sentinel, usePaged } from '../browse/parts';
 import { SelectionHead, useSelection, type Selection } from '../browse/library-select';
-import { openManage } from '../browse/manage/host';
-import { manageChanged } from '../browse/manage/host';
+import { manageChanged, openManage } from '../browse/manage/host';
 import { Icon } from '../../ui/icons';
 import {
   allMedia, cameraName, countsLabel, getMedia, groupByDay, isVideo, mediaQuery, memoriesOf, monthsOf, yearsOf, type Memory, type PhotoItem
@@ -61,12 +60,9 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
 
   // The grid tabs page through the library, newest first.
   const grid = tab === 'timeline' || tab === 'videos' || tab === 'favorites';
+  const tabQuery = { includeItemTypes: tab === 'videos' ? ['Video'] : undefined, isFavorite: tab === 'favorites' ? true : undefined };
   const paged = usePaged((start, limit, signal) => (grid
-    ? getMedia(mediaQuery(view.Id, {
-      startIndex: start, limit,
-      includeItemTypes: tab === 'videos' ? ['Video'] : undefined,
-      isFavorite: tab === 'favorites' ? true : undefined
-    }), signal)
+    ? getMedia(mediaQuery(view.Id, { startIndex: start, limit, ...tabQuery }), signal)
     : Promise.resolve({ Items: [], TotalRecordCount: 0 })), [view.Id, tab, managed.n], 150);
 
   // Cameras: every photo, grouped by the camera that took it.
@@ -80,8 +76,8 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
     }
     return [...map].sort((a, b) => (a[0] ? 0 : 1) - (b[0] ? 0 : 1) || b[1].length - a[1].length);
   }, [everything.data]);
-  const cameraName_ = camera ?? cameras[0]?.[0];
-  const cameraItems = cameras.find(([k]) => k === cameraName_)?.[1] ?? [];
+  const currentCamera = camera ?? cameras[0]?.[0];
+  const cameraItems = cameras.find(([k]) => k === currentCamera)?.[1] ?? [];
 
   const [local, setLocal] = useState<Record<string, PhotoItem>>({});
   const patch = (list: PhotoItem[]) => list.map((x) => local[x.Id] ?? x);
@@ -128,7 +124,7 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
             setLocal((m) => ({ ...m, ...Object.fromEntries(changed.map((x) => [x.Id, x])) }));
           }} onSelectAll={async () => {
             if (tab === 'cameras') { sel.set(list); return; }
-            const r = await getMedia(mediaQuery(view.Id, { includeItemTypes: tab === 'videos' ? ['Video'] : undefined, isFavorite: tab === 'favorites' ? true : undefined, limit: paged.total }));
+            const r = await getMedia(mediaQuery(view.Id, { ...tabQuery, limit: paged.total }));
             sel.set(r.Items);
           }} onShow={(photos) => { setViewerList(photos); openPhoto(photos[0].Id, true); }} />}
         </div>
@@ -157,13 +153,13 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
               <>
                 <div class="ph-chips" role="list" aria-label={t('Cameras')}>
                   {cameras.map(([k, items]) => (
-                    <a key={k || 'none'} role="listitem" href={`${base}?tab=cameras&camera=${encodeURIComponent(k)}`} class="ph-chip" aria-current={k === cameraName_ ? 'true' : undefined}
+                    <a key={k || 'none'} role="listitem" href={`${base}?tab=cameras&camera=${encodeURIComponent(k)}`} class="ph-chip" aria-current={k === currentCamera ? 'true' : undefined}
                       onClick={(e) => { e.preventDefault(); navigate(`${base}?tab=cameras&camera=${encodeURIComponent(k)}`, { replace: true, keepScroll: true }); }}>
                       <PIcon name="camera" size={15} />{k || t('No camera details')} <span>{items.length}</span>
                     </a>
                   ))}
                 </div>
-                <div class="ph-timeline"><div class="ph-days"><Timeline months={groupByDay(cameraItems.map((x) => local[x.Id] ?? x))} row={row} select={sel.grid} onOpen={(it) => openPhoto(it.Id)} /></div></div>
+                <div class="ph-timeline"><div class="ph-days"><Timeline months={groupByDay(list)} row={row} select={sel.grid} onOpen={(it) => openPhoto(it.Id)} /></div></div>
               </>
             )
         )}
@@ -271,8 +267,7 @@ function Memories({ view, onOpen }: { view: BaseItem; onOpen: (m: Memory) => voi
   const memories = useAsync(() => memoriesOf(view.Id, new Date(), all ? 15 : 3), [view.Id, all]);
   const [shown, setShown] = useState<Memory[]>([]);
   useEffect(() => { if (memories.data) setShown(memories.data); }, [memories.data]);
-  const list = shown;
-  if (!list.length) return null;
+  if (!shown.length) return null;
   return (
     <section class="ph-memories" aria-labelledby="ph-mem-h">
       <div class="ph-sec-head">
@@ -280,7 +275,7 @@ function Memories({ view, onOpen }: { view: BaseItem; onOpen: (m: Memory) => voi
         <button type="button" class="ph-sec-link" aria-expanded={all ? 'true' : 'false'} onClick={() => setAll((v) => !v)}>{all ? t('Fewer memories') : t('All memories')}</button>
       </div>
       <div class="ph-memory-grid">
-        {(all ? list : list.slice(0, 4)).map((m) => <MemoryCard key={m.key} memory={m} onOpen={() => onOpen(m)} />)}
+        {(all ? shown : shown.slice(0, 4)).map((m) => <MemoryCard key={m.key} memory={m} onOpen={() => onOpen(m)} />)}
       </div>
     </section>
   );
