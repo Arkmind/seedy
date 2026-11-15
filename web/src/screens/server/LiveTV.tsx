@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { currentUserId } from '../../api/client';
 import { t, tn } from '../../lib/i18n';
-import { Segmented } from '../../ui/controls';
+import { Segmented, Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { confirm, Sheet, toast } from '../../ui/overlay';
 import { AdminLayout } from '../admin/AdminLayout';
 import { type ChannelMappingOptions, deleteListingProvider, deleteTuner, discoverTuners, errText, getChannelCount, getChannelMappingOptions, getLineups, getLiveTv, getSdCountries, getTasks, type ListingsProvider, type LiveTvOptions, type NameIdPair, saveListingProvider, saveLiveTv, saveTuner, setChannelMapping, startTask, type TaskInfo, type TunerHostInfo } from './api';
 import { getGuideInfo, type GuideInfo } from '../../api/livetv';
-import { LoadFailed, NumBox, PathField, Select, SettingRow, SwitchCtl, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
+import { LoadFailed, NumBox, PathField, Select, SettingRow, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
 import { Glyph } from './glyphs';
 import { capitalize } from '../../lib/format';
 ;
@@ -356,10 +356,10 @@ export function ServerLiveTV() {
               </div>
             </SettingRow>
             <SettingRow name={t('Save guide info as NFO')} help={t('Store listing details next to each recording')} cls="is-rec-switch" labelCls="is-free is-normal">
-              <SwitchCtl on={r.SaveRecordingNFO} set={(v) => setR({ SaveRecordingNFO: v })} label={t('Save guide info as NFO')} />
+              <Switch checked={r.SaveRecordingNFO} onChange={(v) => setR({ SaveRecordingNFO: v })} label={t('Save guide info as NFO')} />
             </SettingRow>
             <SettingRow name={t('Save guide images')} help={t('Store listing artwork next to each recording')} cls="is-rec-switch" labelCls="is-free is-normal">
-              <SwitchCtl on={r.SaveRecordingImages} set={(v) => setR({ SaveRecordingImages: v })} label={t('Save guide images')} />
+              <Switch checked={r.SaveRecordingImages} onChange={(v) => setR({ SaveRecordingImages: v })} label={t('Save guide images')} />
             </SettingRow>
           </section>
         </>
@@ -488,7 +488,7 @@ function TunerEditor({ draft, isNew, channels, onChange, onCancel, onSaved }: {
         </SettingRow>
         {TUNER_SWITCHES.filter((s) => s.types.includes(type)).map((s) => (
           <SettingRow key={s.key} name={t(s.name)} help={t(s.help)} labelCls="is-560">
-            <SwitchCtl on={!!draft[s.key]} set={(v) => set({ [s.key]: v } as Partial<TunerHostInfo>)} label={t(s.name)} />
+            <Switch checked={!!draft[s.key]} onChange={(v) => set({ [s.key]: v } as Partial<TunerHostInfo>)} label={t(s.name)} />
           </SettingRow>
         ))}
         <div class="srv-editor-foot">

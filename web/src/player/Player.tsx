@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { ApiError, get } from '../api/client';
-import { PLAYER_FIELDS, getEpisodes, getItem, getMediaSegments, getSimilar, sendPlayCommand } from '../api/jellyfin';
+import { PLAYER_FIELDS, getEpisodes, getItem, getMediaSegments, getSimilar } from '../api/jellyfin';
 import { castTarget } from '../lib/cast';
 import { isAudioItem } from '../audio/api';
 import { holdSession, playItem, playTracks, releaseSession } from '../audio/engine';
@@ -56,6 +56,7 @@ import { TracksPanel, channelsLabel, subtitleTitle, type TracksTab } from './Tra
 import { EdgeProgress, UpNext } from './UpNext';
 import { useWakeLock } from './wake-lock';
 import { LivePlayer } from './LivePlayer';
+import { sendToDevice } from '../ui/cast-menu';
 
 /* ───────────────────────── Route entry ───────────────────────── */
 
@@ -123,14 +124,7 @@ export function Player({ id }: { id: string }) {
         const target = castTarget.get();
         if (target && isPlayable(item)) {
           const ticks = params.t ? Number(params.t) || 0 : params.restart ? 0 : item.UserData?.PlaybackPositionTicks ?? 0;
-          try {
-            await sendPlayCommand(target.Id, [item.Id], ticks);
-            applyCastQuality(target.Id);
-            const name = target.DeviceName || target.Client;
-            toast(name ? tr('Playing on {device}', { device: name }) : tr('Playing on the other device'));
-          } catch {
-            toast(target.DeviceName ? tr("Couldn't reach {device}", { device: target.DeviceName }) : tr("Couldn't reach that device"), 'error');
-          }
+          if (await sendToDevice(target, [item.Id], ticks)) applyCastQuality(target.Id);
           if (alive) back('/');
           return;
         }

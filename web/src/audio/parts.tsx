@@ -1,15 +1,14 @@
 import type { JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { sendPlayCommand } from '../api/jellyfin';
 import type { SessionInfo } from '../api/types';
-import { listCastTargets } from '../lib/cast';
 import { secondsToTicks } from '../lib/format';
 import { t } from '../lib/i18n';
 import { useStore } from '../lib/store';
-import { MenuButton, MenuItem, toast } from '../ui/overlay';
+import { MenuButton } from '../ui/overlay';
 import { audioStore, pause, position, upNext } from './engine';
 import { AIcon } from './icons';
 import type { Track } from './api';
+import { CastTargets, sendToDevice, useCastSessions } from '../ui/cast-menu';
 
 /* "1:48", "4:12", "1:02:09". */
 export function clock(seconds: number): string {
@@ -84,41 +83,25 @@ export const volumeIcon = (volume: number, muted: boolean) => (muted || volume =
 /* "Play on another device": hands the queue to another Jellyfin app and pauses here. */
 export function CastMenu({ class: cls, size = 18, button }: { class: string; size?: number; button?: (open: boolean) => JSX.Element }) {
   const s = useStore(audioStore);
-  const [sessions, setSessions] = useState<SessionInfo[] | null>(null);
+  const { sessions, load } = useCastSessions();
   const send = async (target: SessionInfo) => {
     const cur = s.current;
     if (!cur) return;
     const ids = [cur.track.Id, ...upNext().map((e) => e.track.Id)].slice(0, 100);
-    try {
-      await sendPlayCommand(target.Id, ids, secondsToTicks(position()));
-      pause();
-      const name = target.DeviceName || target.Client || '';
-      toast(name ? t('Playing on {device}', { device: name }) : t('Playing on the other device'));
-    } catch {
-      toast(target.DeviceName ? t("Couldn't reach {device}", { device: target.DeviceName }) : t("Couldn't reach that device"), 'error');
-    }
+    if (await sendToDevice(target, ids, secondsToTicks(position()))) pause();
   };
   return (
     <MenuButton
       width={300}
       button={({ ref, open, toggle }) => (
         <button ref={ref} type="button" class={cls} data-tip={t('Play on another device')} aria-label={t('Play on another device')} aria-expanded={open ? 'true' : 'false'}
-          onClick={() => { if (!open) { setSessions(null); listCastTargets().then(setSessions, () => setSessions([])); } toggle(); }}>
+          onClick={() => { if (!open) load(); toggle(); }}>
           {button ? button(open) : <AIcon name="cast" size={size} />}
         </button>
       )}
     >
       {(close) => (
-        <>
-          <span class="menu-label">{t('Play on')}</span>
-          <MenuItem label={t('This device')} sub={t('Play here')} pressed onSelect={close} />
-          {sessions === null && <span class="menu-item is-muted" aria-busy="true">{t('Looking for devices…')}</span>}
-          {sessions?.length === 0 && <span class="menu-item is-muted">{t('No other Jellyfin apps are open')}</span>}
-          {sessions?.map((x) => (
-            <MenuItem key={x.Id} label={x.DeviceName || x.Client || t('Device')} sub={[x.Client, x.UserName].filter(Boolean).join(' · ')}
-              onSelect={() => { close(); void send(x); }} />
-          ))}
-        </>
+        <CastTargets sessions={sessions} hereSub={t('Play here')} herePressed onHere={close} onPick={(x) => { close(); void send(x); }} />
       )}
     </MenuButton>
   );

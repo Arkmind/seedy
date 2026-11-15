@@ -7,7 +7,7 @@ import { meStore } from '../../lib/app-state';
 import { episodeTag, plural, yearRange } from '../../lib/format';
 import { navigate, setQuery, useLocation } from '../../lib/router';
 import { useStore } from '../../lib/store';
-import { CastCard, ItemCard, PosterCard } from '../../ui/cards';
+import { CastCard, ItemCard, PosterCard, SkeletonCards } from '../../ui/cards';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { Medu } from '../../ui/medu';
@@ -142,7 +142,7 @@ function LibraryResults({ q }: { q: string }) {
     return (
       <section class="search-section" aria-busy="true" aria-label={t('Searching')}>
         <div class="search-head"><span class="skel skel-line" style={{ width: '160px', height: '18px' }} /></div>
-        <div class="search-grid"><GridSkeleton count={8} /></div>
+        <div class="search-grid"><SkeletonCards count={8} /></div>
       </section>
     );
   }
@@ -250,7 +250,7 @@ function SeerrResults({ q, seerr, requesting, onRequest, more }: {
           {items ? t('From Seerr · {count}', { count: plural(total, 'result') }) : seerr.error ? t('From Seerr') : t('Asking Seerr…')}
         </span>
       </div>
-      {!items && !seerr.error && <div class="search-posters"><GridSkeleton count={4} poster /></div>}
+      {!items && !seerr.error && <div class="search-posters"><SkeletonCards count={4} poster /></div>}
       {seerr.error && <p class="search-note">{t('Seerr didn\'t answer, so requests can\'t be made right now.')}</p>}
       {items && items.length === 0 && <p class="search-note">{t('Seerr doesn’t know “{q}” either. Check the spelling, or try the original title.', { q })}</p>}
       {items && items.length > 0 && (
@@ -342,7 +342,7 @@ function GenreResults({ genre }: { genre: string }) {
           {items.map((it) => (
             <ItemCard key={it.Id} item={it} meta={titleMeta(it)} titleSize={14} titleWeight={600} artWidth={520} watched={!!it.UserData?.Played} />
           ))}
-          {loading && <GridSkeleton count={page === 0 ? 12 : 4} />}
+          {loading && <SkeletonCards count={page === 0 ? 12 : 4} />}
         </div>
       )}
       {more && !loading && <div ref={sentinel} aria-hidden="true" />}
@@ -362,21 +362,5 @@ function Section({ title, count, children }: { title: string; count: number; chi
       </div>
       {children}
     </section>
-  );
-}
-
-function GridSkeleton({ count, poster }: { count: number; poster?: boolean }) {
-  return (
-    <>
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} class="card" aria-hidden="true">
-          <div class={'card-media skel' + (poster ? ' is-poster' : '')} />
-          <div class="card-text" style={{ gap: '8px' }}>
-            <span class="skel skel-line" style={{ width: '70%' }} />
-            <span class="skel skel-line" style={{ width: '45%' }} />
-          </div>
-        </div>
-      ))}
-    </>
   );
 }

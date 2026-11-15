@@ -1,28 +1,15 @@
-import type { ComponentChildren } from 'preact';
+import type { ComponentChildren, RefObject } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Link } from '../lib/router';
 import { Icon } from './icons';
 import { t } from '../lib/i18n';
 
-export function Row({
-  title, sub, seeAll, tools, children, label, gap, tight, centerHead, id
-}: {
-  title: ComponentChildren;
-  sub?: ComponentChildren;
-  seeAll?: string;
-  tools?: ComponentChildren;
-  children: ComponentChildren;
-  label?: string;
-  gap?: 16 | 18 | 20;
-  tight?: boolean;
-  centerHead?: boolean;
-  id?: string;
-}) {
-  const scroller = useRef<HTMLDivElement>(null);
+/* Whether a horizontal scroller has more to show on its left and right (4 px of slack), kept up to date as it
+   scrolls or resizes; [deps] say when its content changed. */
+export function useScrollEdges(ref: RefObject<HTMLElement>, deps: unknown[]) {
   const [edges, setEdges] = useState({ left: false, right: false });
-
   useEffect(() => {
-    const el = scroller.current;
+    const el = ref.current;
     if (!el) return;
     const update = () => setEdges({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
     update();
@@ -33,7 +20,24 @@ export function Row({
       el.removeEventListener('scroll', update);
       ro.disconnect();
     };
-  }, [children]);
+  }, deps);
+  return edges;
+}
+
+export function Row({
+  title, sub, seeAll, tools, children, label, gap, tight
+}: {
+  title: ComponentChildren;
+  sub?: ComponentChildren;
+  seeAll?: string;
+  tools?: ComponentChildren;
+  children: ComponentChildren;
+  label?: string;
+  gap?: 16 | 18 | 20;
+  tight?: boolean;
+}) {
+  const scroller = useRef<HTMLDivElement>(null);
+  const edges = useScrollEdges(scroller, [children]);
 
   const page = (dir: 1 | -1) => {
     const el = scroller.current;
@@ -42,8 +46,8 @@ export function Row({
   };
 
   return (
-    <section class={'row' + (tight ? ' is-tight' : '')} aria-label={label} id={id}>
-      <div class={'row-head' + (centerHead || tools ? ' is-center' : '')}>
+    <section class={'row' + (tight ? ' is-tight' : '')} aria-label={label}>
+      <div class={'row-head' + (tools ? ' is-center' : '')}>
         <div class="row-head-main">
           <h2 class="row-title">{title}</h2>
           {sub && <span class="row-sub">{sub}</span>}

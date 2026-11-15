@@ -7,6 +7,7 @@ import { Icon } from '../../ui/icons';
 import { confirm, Popover, Sheet } from '../../ui/overlay';
 import { errText, type FsEntry, getDirectory, getDrives, getParentPath } from './api';
 import { avatarColour } from './format';
+import { SelectField } from '../../ui/controls';
 import './server.css';
 
 /* Pieces shared by the server dashboard pages: loading, drafts with an explicit save, setting rows and controls,
@@ -192,33 +193,9 @@ export function NumBox({ value, onChange, min, max, unit, label, width = 52, ste
   );
 }
 
-export function Select<T extends string | number>({ value, options, onChange, label, id, minWidth, mono }: {
+export const Select = <T extends string | number>({ mono, ...p }: {
   value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label?: string; id?: string; minWidth?: number; mono?: boolean;
-}) {
-  return (
-    <span class={'select-wrap' + (mono ? ' srv-mono-select' : '')}>
-      <select
-        id={id}
-        class="select"
-        aria-label={label}
-        style={minWidth ? { minWidth: minWidth + 'px' } : undefined}
-        value={String(value)}
-        onChange={(e) => {
-          const raw = (e.currentTarget as HTMLSelectElement).value;
-          const opt = options.find((o) => String(o.value) === raw);
-          if (opt) onChange(opt.value);
-        }}
-      >
-        {options.map((o) => <option key={String(o.value)} value={String(o.value)}>{o.label}</option>)}
-      </select>
-      <Icon name="chevronDown" size={16} />
-    </span>
-  );
-}
-
-export const SwitchCtl = ({ on, set, label, disabled }: { on: boolean; set: (v: boolean) => void; label: string; disabled?: boolean }) => (
-  <button type="button" role="switch" class="switch" aria-checked={on ? 'true' : 'false'} aria-label={label} disabled={disabled} onClick={() => set(!on)} />
-);
+}) => <SelectField {...p} class={mono ? 'srv-mono-select' : undefined} />;
 
 /* Select options whose labels are English keys: translated where they're rendered. */
 export const tOpts = <T,>(opts: { value: T; label: string }[]) => opts.map((o) => ({ ...o, label: t(o.label) }));

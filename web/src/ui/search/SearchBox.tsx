@@ -12,8 +12,8 @@ import { Icon } from '../icons';
 import { NbIcon } from '../navbar/icons';
 import { addRecent } from './recent';
 import { moveFocusFrom, tvActive } from '../../screens/me/effects';
-import { bestMeta, bestPlay, cached, pick, rowMeta, rowTitle, search, type BestPlay, type Hit, type Results } from './engine';
-import { Marked, PersonLine, SearchIdle, Thumb, moveChip, useSeerrSearch } from './parts';
+import { bestMeta, bestPlay, pick, rowMeta, rowTitle, type BestPlay, type Hit } from './engine';
+import { Marked, moveChip, PersonLine, SEARCH_MIN, SEARCH_PAUSE, SearchIdle, Thumb, useSearchResults, useSeerrSearch } from './parts';
 import { PhoneSearch } from './PhoneSearch';
 import './search.css';
 import { t, tn } from '../../lib/i18n';
@@ -25,8 +25,6 @@ import { t, tn } from '../../lib/i18n';
    - On phones it's a button by the cast button that opens the full-screen search (as in the Android app); the
      Search page keeps its box under the bar. */
 
-const MIN = 2;
-const PAUSE = 250;
 
 const editable = (el: Element | null) =>
   !!el && (el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement || (el as HTMLElement).isContentEditable
@@ -96,7 +94,7 @@ export function SearchBox({ glass, pageMode, phone, placeholder }: { glass?: boo
   }, [urlQ, pageMode]);
   useEffect(() => {
     if (!pageMode) return;
-    const t = window.setTimeout(() => commitPage(text), PAUSE);
+    const t = window.setTimeout(() => commitPage(text), SEARCH_PAUSE);
     return () => window.clearTimeout(t);
   }, [text, pageMode]);
   const commitPage = (value: string) => {
@@ -218,37 +216,14 @@ function Dropdown({ text, panel, setText, close, keysRef, input }: {
   input: { current: HTMLInputElement | null };
 }) {
   const term = text.trim();
-  const [query, setQ] = useState(term.length >= MIN ? term : '');
-  const [state, setState] = useState<{ q: string; data?: Results; error?: boolean } | null>(() => {
-    const c = term.length >= MIN ? cached(term, 'dropdown') : undefined;
-    return c ? { q: term, data: c } : null;
-  });
+  const { query, state, retry } = useSearchResults(term, 'dropdown', true);
   const [active, setActive] = useState(-1);
   // Keyboard highlight gets the accent ring; the mouse just raises the row.
   const [via, setVia] = useState<'key' | 'mouse'>('key');
-  const [tick, setTick] = useState(0);
-
-  /* From the second letter, after a short pause (a remembered query shows at once). */
-  useEffect(() => {
-    if (term.length < MIN) { setQ(''); return; }
-    if (cached(term, 'dropdown')) { setQ(term); return; }
-    const t = window.setTimeout(() => setQ(term), PAUSE);
-    return () => window.clearTimeout(t);
-  }, [term]);
-
-  useEffect(() => {
-    if (!query) return;
-    const ctrl = new AbortController();
-    search(query, 'dropdown', ctrl.signal).then(
-      (data) => { if (!ctrl.signal.aborted) setState({ q: query, data }); },
-      (e: Error) => { if (!ctrl.signal.aborted && e?.name !== 'AbortError') setState({ q: query, error: true }); }
-    );
-    return () => ctrl.abort();
-  }, [query, tick]);
 
   useEffect(() => { setActive(-1); }, [state?.q]);
 
-  const idle = term.length < MIN;
+  const idle = term.length < SEARCH_MIN;
   // While a newer query loads, the last results stay (they're usually close); the first load shows skeletons.
   const data = !idle && state?.data ? state.data : undefined;
   const loading = !idle && (!state || state.q !== query || (!state.data && !state.error) || query !== term);
@@ -296,7 +271,7 @@ function Dropdown({ text, panel, setText, close, keysRef, input }: {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (active >= 0 && opts[active]) opts[active].open();
-      else if (term.length >= MIN) go(allPath);
+      else if (term.length >= SEARCH_MIN) go(allPath);
     } else if (e.key === 'Escape') {
       // Esc drops the highlight first, then closes search.
       e.preventDefault();
@@ -328,7 +303,7 @@ function Dropdown({ text, panel, setText, close, keysRef, input }: {
       <div class="nb-drop-note" role="alert">
         <span class="nb-drop-note-title">{t('Search didn\'t work')}</span>
         <span>{t('The server didn\'t answer.')}</span>
-        <button type="button" class="btn btn-secondary is-xs" onClick={() => setTick((n) => n + 1)}>{t('Try again')}</button>
+        <button type="button" class="btn btn-secondary is-xs" onClick={retry}>{t('Try again')}</button>
       </div>
     );
   } else if (!data) {

@@ -5,8 +5,8 @@ import { detailsPath } from '../cards';
 import { Icon } from '../icons';
 import { NbIcon } from '../navbar/icons';
 import { addRecent } from './recent';
-import { bestPlay, cached, phoneMeta, rowTitle, search, type Hit, type Kind, type Results } from './engine';
-import { Marked, PersonLine, SearchIdle, Thumb, useSeerrSearch } from './parts';
+import { bestPlay, phoneMeta, rowTitle, type Hit, type Kind } from './engine';
+import { Marked, PersonLine, SEARCH_MIN, SearchIdle, Thumb, useSearchResults, useSeerrSearch } from './parts';
 import { t } from '../../lib/i18n';
 
 /* Phone search (Navigation bar board, "Phone, searching"): full screen over the page and its tab bar, with type
@@ -23,14 +23,12 @@ const FILTERS: { id: Filter; label: string }[] = [
 export function PhoneSearch({ onClose }: { onClose: () => void }) {
   const [text, setText] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
-  const [query, setQ] = useState('');
-  const [state, setState] = useState<{ q: string; data?: Results; error?: boolean } | null>(null);
-  const [tick, setTick] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const seerr = useSeerrSearch();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const term = text.trim();
+  const { state, retry } = useSearchResults(term, 'phone');
 
   useLayoutEffect(() => {
     // Take over from the stand-in field that kept the keyboard up (and anything typed into it meanwhile).
@@ -54,30 +52,13 @@ export function PhoneSearch({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
-  useEffect(() => {
-    if (term.length < 2) { setQ(''); return; }
-    if (cached(term, 'phone')) { setQ(term); return; }
-    const t = window.setTimeout(() => setQ(term), 250);
-    return () => window.clearTimeout(t);
-  }, [term]);
-
-  useEffect(() => {
-    if (!query) return;
-    const ctrl = new AbortController();
-    search(query, 'phone', ctrl.signal).then(
-      (data) => { if (!ctrl.signal.aborted) setState({ q: query, data }); },
-      (e: Error) => { if (!ctrl.signal.aborted && e?.name !== 'AbortError') setState({ q: query, error: true }); }
-    );
-    return () => ctrl.abort();
-  }, [query, tick]);
-
   const go = (to: string) => {
     addRecent(term);
     onClose();
     navigate(to);
   };
 
-  const idle = term.length < 2;
+  const idle = term.length < SEARCH_MIN;
   const data = !idle ? state?.data : undefined;
   const failed = !idle && state?.error && state.q === term;
   const ranked: Hit[] = data ? (data.best ? [data.best, ...data.hits.filter((h) => h !== data.best)] : data.hits) : [];
@@ -120,7 +101,7 @@ export function PhoneSearch({ onClose }: { onClose: () => void }) {
             <div class="nb-drop-note" role="alert">
               <span class="nb-drop-note-title">{t('Search didn\'t work')}</span>
               <span>{t('The server didn\'t answer.')}</span>
-              <button type="button" class="btn btn-secondary is-xs" onClick={() => setTick((t) => t + 1)}>Try again</button>
+              <button type="button" class="btn btn-secondary is-xs" onClick={retry}>{t('Try again')}</button>
             </div>
           )}
           {!failed && !data && (

@@ -1,3 +1,4 @@
+import type { RefObject } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { ApiError, SERVER_URL, request } from '../api/client';
 import { authenticateByName, authenticateWithQuickConnect, forgotPassword, forgotPasswordPin, getPublicUsers, quickConnectEnabled, quickConnectInitiate, quickConnectState, type ForgotPasswordResult } from '../api/jellyfin';
@@ -241,23 +242,32 @@ function PasswordStep({ user, onBack, onDone, onForgot }: { user: User; onBack: 
       <form class="signin-form" onSubmit={submit}>
         {/* Lets the browser's password manager match the saved login. */}
         <input type="text" name="username" autoComplete="username" value={user.Name} hidden readOnly />
-        <label class="signin-label">
-          <span>{t('Password')}</span>
-          <input
-            ref={ref}
-            class="field signin-field"
-            type="password"
-            autoComplete="current-password"
-            value={pw}
-            aria-invalid={error ? 'true' : undefined}
-            onInput={(e) => setPw((e.currentTarget as HTMLInputElement).value)}
-          />
-        </label>
-        {error && <p class="form-error signin-error" role="alert"><Icon name="alert" size={16} />{error}</p>}
-        <button type="submit" class="btn btn-primary is-block" disabled={busy}>{busy ? t('Signing in…') : t('Sign in')}</button>
+        <PasswordFields pw={pw} setPw={setPw} error={error} busy={busy} inputRef={ref} />
       </form>
       <button type="button" class="signin-back" onClick={onForgot}>{t('Forgot password?')}</button>
     </section>
+  );
+}
+
+/* The password field, the error under it and Sign in, the same in both sign-in forms. */
+function PasswordFields({ pw, setPw, error, busy, inputRef }: { pw: string; setPw: (v: string) => void; error: string; busy: boolean; inputRef?: RefObject<HTMLInputElement> }) {
+  return (
+    <>
+      <label class="signin-label">
+        <span>{t('Password')}</span>
+        <input
+          ref={inputRef}
+          class="field signin-field"
+          type="password"
+          autoComplete="current-password"
+          value={pw}
+          aria-invalid={error ? 'true' : undefined}
+          onInput={(e) => setPw((e.currentTarget as HTMLInputElement).value)}
+        />
+      </label>
+      {error && <p class="form-error signin-error" role="alert"><Icon name="alert" size={16} />{error}</p>}
+      <button type="submit" class="btn btn-primary is-block" disabled={busy}>{busy ? t('Signing in…') : t('Sign in')}</button>
+    </>
   );
 }
 
@@ -310,19 +320,7 @@ function ManualStep({ onDone, onBack, quickConnect, onForgot }: { onDone: (a: Au
             onInput={(e) => setName((e.currentTarget as HTMLInputElement).value)}
           />
         </label>
-        <label class="signin-label">
-          <span>{t('Password')}</span>
-          <input
-            class="field signin-field"
-            type="password"
-            autoComplete="current-password"
-            value={pw}
-            aria-invalid={error ? 'true' : undefined}
-            onInput={(e) => setPw((e.currentTarget as HTMLInputElement).value)}
-          />
-        </label>
-        {error && <p class="form-error signin-error" role="alert"><Icon name="alert" size={16} />{error}</p>}
-        <button type="submit" class="btn btn-primary is-block" disabled={busy}>{busy ? t('Signing in…') : t('Sign in')}</button>
+        <PasswordFields pw={pw} setPw={setPw} error={error} busy={busy} />
       </form>
       <button
         type="button"

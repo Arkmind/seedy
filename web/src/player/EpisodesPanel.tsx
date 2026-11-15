@@ -6,6 +6,7 @@ import { Art, Progress } from '../ui/cards';
 import { Segmented } from '../ui/controls';
 import { Icon } from '../ui/icons';
 import { t } from '../lib/i18n';
+import { useScrollEdges } from '../ui/Row';
 
 /* Episodes of the playing season, with a season switcher. */
 export function EpisodesPanel({ current, episodes, onPlay }: { current: BaseItem; episodes: BaseItem[] | null; onPlay: (ep: BaseItem) => void }) {
@@ -97,21 +98,7 @@ const reveal = (el: HTMLElement, tab: HTMLElement) => {
 function SeasonTabs({ value, options, onChange }: { value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
   const track = useRef<HTMLDivElement>(null);
   const placed = useRef(false);
-  const [edges, setEdges] = useState({ left: false, right: false });
-
-  useEffect(() => {
-    const el = track.current;
-    if (!el) return;
-    const update = () => setEdges({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
-    update();
-    el.addEventListener('scroll', update, { passive: true });
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => {
-      el.removeEventListener('scroll', update);
-      ro.disconnect();
-    };
-  }, [options.length]);
+  const edges = useScrollEdges(track, [options.length]);
 
   // Centred when the panel opens; later, brought out from under an arrow, like a tab the keyboard lands on.
   useLayoutEffect(() => {

@@ -5,7 +5,8 @@ import { href, setQuery, useLocation } from '../../lib/router';
 import { toast } from '../../ui/overlay';
 import { AdminLayout, PanelSkeletons } from '../admin/AdminLayout';
 import { type EncodingOptions, errText, ffmpegVersion, getEncoding, getServerConfig, getSessions, getSystemInfo, type GpuScan, type HwAccel, saveEncoding, saveServerConfig, scanGpus, type ServerConfig, type TrickplayOptions } from './api';
-import { ChipList, LoadFailed, NumBox, PathField, Select, SettingRow, SwitchCtl, tOpts, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
+import { ChipList, LoadFailed, NumBox, PathField, Select, SettingRow, tOpts, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
+import { Switch } from '../../ui/controls';
 ;
 
 type Tab = 'transcoding' | 'resume' | 'streaming' | 'previews';
@@ -236,7 +237,7 @@ function Group({ title, children }: { title: string; children: ComponentChildren
 }
 
 const Sw = ({ name, help, on, set }: { name: string; help: string; on: boolean; set: (v: boolean) => void }) => (
-  <SettingRow name={name} help={help}><SwitchCtl on={on} set={set} label={name} /></SettingRow>
+  <SettingRow name={name} help={help}><Switch checked={on} onChange={set} label={name} /></SettingRow>
 );
 
 /* ── Transcoding ── */

@@ -3,9 +3,8 @@ import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
 import { logoUrl as seedyLogoUrl, type Me } from '../../api/seedy';
 import { userImageUrl } from '../../api/images';
 import { JELLYFIN_WEB } from '../../api/client';
-import type { SessionInfo } from '../../api/types';
 import { brandingStore, meStore, signOut, userStore, viewsStore } from '../../lib/app-state';
-import { castTarget, listCastTargets } from '../../lib/cast';
+import { castTarget } from '../../lib/cast';
 import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { Icon, type IconName } from '../icons';
@@ -14,6 +13,7 @@ import { MenuButton, MenuItem, toast } from '../overlay';
 import { LibrariesButton, LibrariesSheet, currentView } from './LibrariesMenu';
 import { NbIcon, type NbIconName } from './icons';
 import { SearchBox } from '../search/SearchBox';
+import { CastTargets, useCastSessions } from '../cast-menu';
 import './navbar.css';
 import { t } from '../../lib/i18n';
 
@@ -181,13 +181,9 @@ function TabBar({ active }: { active: HeaderActive }) {
   );
 }
 
-export function CastButton({ glass, player }: { glass?: boolean; player?: boolean }) {
+export function CastButton({ glass }: { glass?: boolean }) {
   const target = useStore(castTarget);
-  const [sessions, setSessions] = useState<SessionInfo[] | null>(null);
-  const load = () => {
-    setSessions(null);
-    listCastTargets().then(setSessions, () => setSessions([]));
-  };
+  const { sessions, load } = useCastSessions();
   return (
     <MenuButton
       width={300}
@@ -197,34 +193,27 @@ export function CastButton({ glass, player }: { glass?: boolean; player?: boolea
           type="button"
           aria-label={target ? t('Casting to {device}', { device: target.DeviceName ?? '' }) : t('Cast to a device')}
           aria-expanded={open ? 'true' : 'false'}
-          class={player ? 'btn player-btn' : 'btn icon-btn nb-cast' + (glass ? ' is-glass' : '')}
+          class={'btn icon-btn nb-cast' + (glass ? ' is-glass' : '')}
           style={target ? { color: 'var(--seedy-accent)' } : undefined}
           onClick={() => { if (!open) load(); toggle(); }}
         >
-          <Icon name="cast" size={player ? 22 : 20} />
+          <Icon name="cast" size={20} />
         </button>
       )}
     >
       {(close) => (
-        <>
-          <span class="menu-label">{t('Play on')}</span>
-          <MenuItem label={t('This device')} sub={t('Play here')} pressed={!target} onSelect={() => { castTarget.set(null); close(); }} />
-          {sessions === null && <span class="menu-item is-muted" aria-busy="true">{t('Looking for devices…')}</span>}
-          {sessions?.length === 0 && <span class="menu-item is-muted">{t('No other Jellyfin apps are open')}</span>}
-          {sessions?.map((s) => (
-            <MenuItem
-              key={s.Id}
-              label={s.DeviceName || s.Client || t('Device')}
-              sub={[s.Client, s.UserName].filter(Boolean).join(' · ')}
-              pressed={target?.Id === s.Id}
-              onSelect={() => {
-                castTarget.set(s);
-                toast(`Playing on ${s.DeviceName || s.Client}`);
-                close();
-              }}
-            />
-          ))}
-        </>
+        <CastTargets
+          sessions={sessions}
+          target={target}
+          hereSub={t('Play here')}
+          herePressed={!target}
+          onHere={() => { castTarget.set(null); close(); }}
+          onPick={(s) => {
+            castTarget.set(s);
+            toast(t('Playing on {device}', { device: s.DeviceName || s.Client || '' }));
+            close();
+          }}
+        />
       )}
     </MenuButton>
   );

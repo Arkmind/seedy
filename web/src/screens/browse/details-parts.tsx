@@ -7,13 +7,13 @@ import { viewsStore } from '../../lib/app-state';
 import { fmtDate, score as fmtScore, fmtWeekdayDate, pct, plural, progressFraction, remainingSeconds, runtime, timeLeft, ratingLabel, dayOf, fitTitle } from '../../lib/format';
 import { Link, href, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
-import { Art, CastCard, ItemCard, SkeletonCards, WatchedCheck, playPath } from '../../ui/cards';
+import { Art, CastCard, ItemCard, WatchedCheck, playPath } from '../../ui/cards';
 import { Icon } from '../../ui/icons';
 import { toast } from '../../ui/overlay';
 import { Row } from '../../ui/Row';
 import { CUSTOM, useCustom } from '../me/prefs';
 import { useThemeMedia } from '../me/theme';
-import { findView, isNewEpisode, join, yearOf } from './parts';
+import { findView, isNewEpisode, join, RowSkeleton, yearOf } from './parts';
 import { t } from '../../lib/i18n';
 import { ItemMenu } from './manage/menu';
 
@@ -223,7 +223,7 @@ export function SimilarRow({ id, title: given }: { id: string; title?: string })
   if (loading && !data) {
     return (
       <div class="details-similar">
-        <section class="row"><div class="row-head"><h2 class="row-title">{title}</h2></div><div class="row-shell"><div class="row-scroller hscroll"><SkeletonCards count={6} width={300} /></div></div></section>
+        <RowSkeleton title={title} />
       </div>
     );
   }

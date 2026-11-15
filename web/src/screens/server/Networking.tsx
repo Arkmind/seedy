@@ -2,11 +2,11 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { t, tn } from '../../lib/i18n';
 import { useStore } from '../../lib/store';
-import { Segmented } from '../../ui/controls';
+import { Segmented, Switch } from '../../ui/controls';
 import { confirm, toast } from '../../ui/overlay';
 import { AdminLayout, PanelSkeletons } from '../admin/AdminLayout';
 import { errText, getNetwork, getSessions, type NetworkConfig, restartingStore, restartServer, saveNetwork } from './api';
-import { ChipList, LoadFailed, SettingRow, SwitchCtl, UnsavedBar, useDraft, useLoad, useUnsavedGuard, validAddress } from './parts';
+import { ChipList, LoadFailed, SettingRow, UnsavedBar, useDraft, useLoad, useUnsavedGuard, validAddress } from './parts';
 ;
 
 /* Jellyfin keeps "" for the root; the board shows it as "/". */
@@ -242,5 +242,5 @@ function Group({ title, help, children }: { title: string; help: string; childre
 }
 
 const Sw = ({ name, help, on, set }: { name: string; help: string; on: boolean; set: (v: boolean) => void }) => (
-  <SettingRow name={name} help={help} labelCls="is-420"><SwitchCtl on={on} set={set} label={name} /></SettingRow>
+  <SettingRow name={name} help={help} labelCls="is-420"><Switch checked={on} onChange={set} label={name} /></SettingRow>
 );

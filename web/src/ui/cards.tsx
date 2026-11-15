@@ -432,16 +432,16 @@ export function CastCard({ person, index, role }: { person: { Id: string; Name: 
   );
 }
 
-/* Skeleton placeholders sized like the real cards. */
-export function SkeletonCards({ count, width, poster }: { count: number; width: number; poster?: boolean }) {
+/* Skeleton placeholders sized like the real cards: [width] for a row's fixed cards, none in a grid. */
+export function SkeletonCards({ count, width, poster, second = '45%' }: { count: number; width?: number; poster?: boolean; second?: string }) {
   return (
     <>
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} class="card" style={{ flex: `0 0 ${width}px`, width: width + 'px' }} aria-hidden="true">
+        <div key={i} class="card" style={width ? { flex: `0 0 ${width}px`, width: width + 'px' } : undefined} aria-hidden="true">
           <div class={'card-media skel' + (poster ? ' is-poster' : '')} />
           <div class="card-text" style={{ gap: '8px' }}>
             <span class="skel skel-line" style={{ width: '70%' }} />
-            <span class="skel skel-line" style={{ width: '45%' }} />
+            <span class="skel skel-line" style={{ width: second }} />
           </div>
         </div>
       ))}

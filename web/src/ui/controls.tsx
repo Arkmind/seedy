@@ -57,7 +57,7 @@ export function Segmented<T extends string | number>({
 }
 
 export function SelectField<T extends string | number>({
-  id, value, options, onChange, minWidth, label
+  id, value, options, onChange, minWidth, label, disabled, class: cls, selectClass
 }: {
   id?: string;
   value: T;
@@ -65,13 +65,18 @@ export function SelectField<T extends string | number>({
   onChange: (v: T) => void;
   minWidth?: number;
   label?: string;
+  disabled?: boolean;
+  /* Extra classes on the wrapper and on the <select> itself. */
+  class?: string;
+  selectClass?: string;
 }) {
   return (
-    <span class="select-wrap">
+    <span class={'select-wrap' + (cls ? ' ' + cls : '')}>
       <select
         id={id}
-        class="select"
+        class={'select' + (selectClass ? ' ' + selectClass : '')}
         aria-label={label}
+        disabled={disabled}
         style={minWidth ? { minWidth: minWidth + 'px' } : undefined}
         value={String(value)}
         onChange={(e) => {

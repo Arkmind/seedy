@@ -410,15 +410,7 @@ export function ErrorState({ error, retry, title }: { error?: Error; retry?: () 
 export function GridSkeleton({ count = 12, poster }: { count?: number; poster?: boolean }) {
   return (
     <div class={poster ? 'poster-grid' : 'lib-grid'} aria-busy="true" aria-label={t('Loading')}>
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} class="card" aria-hidden="true">
-          <div class={'card-media skel' + (poster ? ' is-poster' : '')} />
-          <div class="card-text" style={{ gap: '8px' }}>
-            <span class="skel skel-line" style={{ width: '70%' }} />
-            <span class="skel skel-line" style={{ width: '40%' }} />
-          </div>
-        </div>
-      ))}
+      <SkeletonCards count={count} poster={poster} second="40%" />
     </div>
   );
 }
