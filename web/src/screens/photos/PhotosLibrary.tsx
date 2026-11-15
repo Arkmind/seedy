@@ -1,11 +1,11 @@
 import { Fragment } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
-import { getItems, setFavorite } from '../../api/jellyfin';
+import { getItems } from '../../api/jellyfin';
 import type { BaseItem } from '../../api/types';
-import { canDownload, meStore } from '../../lib/app-state';
+import { meStore } from '../../lib/app-state';
 import { CUSTOM, readCustom } from '../me/prefs';
-import { t, tn } from '../../lib/i18n';
+import { t } from '../../lib/i18n';
 import { fmtShortMonth } from '../../lib/format';
 import { navigate, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -13,19 +13,17 @@ import { Header } from '../../ui/navbar/Header';
 import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { headerHeight } from '../../ui/sticky';
 import { EmptyState, ErrorState, Sentinel, usePaged } from '../browse/parts';
-import { SelectionHead, useSelection, type Selection } from '../browse/library-select';
-import { manageChanged, openManage } from '../browse/manage/host';
+import { type Selection, useSelection } from '../browse/library-select';
+import { manageChanged } from '../browse/manage/host';
 import { Icon } from '../../ui/icons';
 import {
   allMedia, cameraName, countsLabel, getMedia, groupByDay, isVideo, mediaQuery, memoriesOf, monthsOf, yearsOf, type Memory, type PhotoItem
 } from './api';
 import { PIcon } from './icons';
 import {
-  FolderCard, FolderGrid, MemoryCard, rowFor, SizeSwitch, TabRow, Timeline, openPhoto, useTileSize
+  FolderCard, FolderGrid, MemoryCard, PhotoSelectionBar, rowFor, SizeSwitch, TabRow, Timeline, openPhoto, useTileSize
 } from './parts';
 import { PhotoViewer } from './Viewer';
-import { downloadZip } from './zip';
-import { canDeleteAny } from '../browse/manage/actions';
 import { LibraryMenuItems } from '../../ui/library-menu';
 import './photos.css';
 
@@ -317,54 +315,5 @@ function LibraryMenu({ view, onRefresh }: { view: BaseItem; onRefresh: () => voi
         </>
       )}
     </MenuButton>
-  );
-}
-
-/* ───────── Selection ───────── */
-
-
-export function PhotoSelectionBar({ sel, total, name, onChanged, onSelectAll, onShow }: {
-  sel: Selection; total: number; name: string; onChanged: (items: PhotoItem[]) => void; onSelectAll: () => Promise<void>; onShow: (photos: PhotoItem[]) => void;
-}) {
-  const [busy, setBusy] = useState<string | null>(null);
-  const n = sel.items.length;
-  const fav = async (on: boolean) => {
-    setBusy('fav');
-    const items = sel.items as PhotoItem[];
-    const results = await Promise.allSettled(items.map((it) => setFavorite(it.Id, on)));
-    setBusy(null);
-    const ok = items.filter((_, i) => results[i].status === 'fulfilled').map((it) => ({ ...it, UserData: { ...(it.UserData ?? {}), IsFavorite: on } }));
-    onChanged(ok);
-    sel.set(ok.length === items.length ? ok : items);
-    if (ok.length < items.length) toast(tn(items.length - ok.length, 'Couldn’t update {n} photo', 'Couldn’t update {n} photos'), 'error');
-    else toast(on ? tn(ok.length, 'Added {n} photo to favorites', 'Added {n} photos to favorites') : tn(ok.length, 'Removed {n} photo from favorites', 'Removed {n} photos from favorites'));
-  };
-  const allFav = n > 0 && sel.items.every((x) => x.UserData?.IsFavorite);
-  return (
-    <div role="toolbar" aria-label={t('{n} selected', { n })} class="lib-sel ph-sel">
-      <SelectionHead sel={sel} total={total} busy={busy} setBusy={setBusy} onSelectAll={onSelectAll} />
-      <div class="lib-sel-actions">
-        <button type="button" class="lib-sel-btn" disabled={!n || busy !== null} onClick={() => void fav(!allFav)}>
-          <PIcon name="heart" size={18} filled={allFav} />{busy === 'fav' ? t('Working…') : allFav ? t('Remove from favorites') : t('Add to favorites')}
-        </button>
-        <button type="button" class="lib-sel-btn" disabled={!sel.items.some((x) => !isVideo(x))} onClick={() => {
-          const photos = (sel.items as PhotoItem[]).filter((x) => !isVideo(x));
-          sel.stop();
-          onShow(photos);
-        }}>
-          <PIcon name="slideshow" size={18} />{t('Slideshow')}
-        </button>
-        {canDownload() && (
-          <button type="button" class="lib-sel-btn" disabled={!n || busy !== null} onClick={() => { setBusy('zip'); downloadZip(name, sel.items).finally(() => setBusy(null)); }}>
-            <PIcon name="download" size={18} />{busy === 'zip' ? t('Working…') : t('Download')}
-          </button>
-        )}
-        {canDeleteAny() && (
-          <button type="button" class="lib-sel-btn is-danger" disabled={!n || busy !== null} onClick={() => openManage('delete', sel.items)}>
-            <Icon name="trash" size={18} />{t('Delete')}
-          </button>
-        )}
-      </div>
-    </div>
   );
 }

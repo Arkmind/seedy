@@ -8,7 +8,7 @@ import { t, tc, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { Popover, toast } from '../../ui/overlay';
-import { TRACK_FIELDS, instantMix, type Track } from '../../audio/api';
+import { TRACK_FIELDS, instantMix, playlistTracks, type Track } from '../../audio/api';
 import { Cover, initialsOf, PALETTES, useNearestPalette } from '../../audio/cover';
 import {
   addToQueue, audioStore, favoriteStore, playItem, playLoaded, toggleTrackFavorite, togglePlay, type PlayOptions
@@ -448,3 +448,30 @@ export async function countOf(parentId: string, type: string): Promise<number> {
 
 export const songsOf = (q: Parameters<typeof getItems>[0]) => getItems({ ...q, includeItemTypes: ['Audio'], recursive: true, fields: TRACK_FIELDS }).then((r) => r.Items as Track[]);
 
+/* ───────── Pieces the library tabs and artist pages share ───────── */
+
+export function CardSkel({ round }: { round?: boolean }) {
+  return (
+    <div class="mu-card" aria-hidden="true">
+      <span class={'skel mu-skel-art' + (round ? ' is-round' : '')} />
+      <span class="skel skel-line" style={{ width: '70%' }} />
+    </div>
+  );
+}
+
+export interface PlaylistPreview { playlist: BaseItem; covers: Track[]; sub: string }
+
+export async function playlistPreview(pl: BaseItem): Promise<PlaylistPreview> {
+  const tracks = await playlistTracks(pl.Id).catch(() => [] as Track[]);
+  const secs = tracks.reduce((s, x) => s + (x.RunTimeTicks ?? 0), 0);
+  return { playlist: pl, covers: playlistCovers(tracks), sub: playlistSub({ ...pl, CumulativeRunTimeTicks: secs || undefined } as BaseItem, tracks.length || pl.ChildCount) };
+}
+
+export const audioPlaylists = (limit?: number) =>
+  getItems({ includeItemTypes: ['Playlist'], recursive: true, mediaTypes: ['Audio'], sortBy: ['DateCreated', 'SortName'], sortOrder: 'Descending', limit, fields: ['ChildCount', 'DateCreated'] });
+
+/* "12 albums" under an artist, nothing when the server doesn't say. */
+export const artistAlbums = (a: BaseItem) => {
+  const n = a.AlbumCount ?? a.ChildCount;
+  return n ? albumsLabel(n) : '';
+};

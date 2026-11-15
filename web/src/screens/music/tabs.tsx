@@ -15,9 +15,9 @@ import { playContainer, playLoaded } from '../../audio/engine';
 import { AIcon } from '../../audio/icons';
 import { Cover } from '../../audio/cover';
 import {
-  AlbumCard, ArtistCard, GenreTile, MUSIC_FIELDS, NewPlaylistTile, PlaylistCard, TrackTable, TracksSkeleton, albumArtist, songsLabel, yearOf
+  AlbumCard, ArtistCard, GenreTile, MUSIC_FIELDS, NewPlaylistTile, PlaylistCard, TrackTable, TracksSkeleton, albumArtist, songsLabel,
+  yearOf, CardSkel, artistAlbums, audioPlaylists, playlistPreview, type PlaylistPreview
 } from './parts';
-import { CardSkel, artistAlbums, audioPlaylists, playlistPreview, type PlaylistPreview } from './MusicLibrary';
 
 /* The music library's tabs (built in the MusicHome board's language): albums, artists and songs with sorting and a
    favourites filter, playlists, genres (each opening its albums) and the library's folders. */

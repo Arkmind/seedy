@@ -19,10 +19,10 @@ import {
   authorLine, authorsOf, bookFileUrl, deleteReading, downloadUrl, fileSize, formatOf, getBookInfo, getReading, isAudioBook, narratorOf,
   normalize, saveReading, seriesOf, isComic, type Reading
 } from './api';
-import { useBooksData, VolumeCard } from './BooksLibrary';
+import { useBooksData } from './library-data';
 import { epubLanguage } from './epub-meta';
 import { AudioCover, BookCover } from './covers';
-import { BookCard, HeadphonesIcon, plainText, roughTime } from './parts';
+import { BookCard, HeadphonesIcon, plainText, roughTime, VolumeCard } from './parts';
 import './books.css';
 import './details.css';
 

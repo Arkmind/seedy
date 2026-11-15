@@ -17,8 +17,7 @@ import { Cover, useNearestPalette } from '../../audio/cover';
 import { audioStore, playLoaded, playedStore, togglePlay } from '../../audio/engine';
 import { AIcon, EqIcon } from '../../audio/icons';
 import { clock } from '../../audio/parts';
-import { AlbumCard, ArtistCard, SectionHead, playsLabel, releaseOf, songsLabel, yearOf, type Release } from './parts';
-import { CardSkel, artistAlbums } from './MusicLibrary';
+import { AlbumCard, ArtistCard, SectionHead, playsLabel, releaseOf, songsLabel, yearOf, type Release, CardSkel, artistAlbums } from './parts';
 import './music.css';
 
 /* An artist (MusicArtist board): the name over their art; Play, Shuffle, Artist radio, favourite and ⋯; Most played

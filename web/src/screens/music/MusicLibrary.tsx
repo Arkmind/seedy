@@ -13,12 +13,13 @@ import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { useInView } from '../browse/parts';
 import { CUSTOM, readCustom } from '../me/prefs';
 import { manageChanged } from '../browse/manage/host';
-import { genreMix, instantMix, orderByIds, playlistTracks, type Track } from '../../audio/api';
+import { genreMix, instantMix, orderByIds, type Track } from '../../audio/api';
 import { audioStore, playContainer, playLoaded, playedStore, recentSources } from '../../audio/engine';
 import { AIcon } from '../../audio/icons';
 import {
-  AlbumCard, ArtistCard, GenreTile, JumpCard, MUSIC_FIELDS, MixCard, NewPlaylistTile, PlaylistCard, SectionHead, albumArtist, albumArtistsCount,
-  albumsLabel, countOf, playlistCovers, playlistSub, playsLabel, songsOf, songsLabel, yearOf, type Mix
+  AlbumCard, ArtistCard, GenreTile, JumpCard, MUSIC_FIELDS, MixCard, NewPlaylistTile, PlaylistCard, SectionHead, albumArtist,
+  albumArtistsCount, albumsLabel, countOf, playlistCovers, playsLabel, songsOf, songsLabel, yearOf, type Mix, CardSkel, artistAlbums,
+  audioPlaylists, playlistPreview
 } from './parts';
 import { AlbumsTab, ArtistsTab, FoldersTab, GenresTab, PlaylistsTab, SongsTab } from './tabs';
 import { LibraryMenuItems } from '../../ui/library-menu';
@@ -298,26 +299,6 @@ function RecentAlbums({ view }: { view: BaseItem }) {
   );
 }
 
-export function CardSkel({ round }: { round?: boolean }) {
-  return (
-    <div class="mu-card" aria-hidden="true">
-      <span class={'skel mu-skel-art' + (round ? ' is-round' : '')} />
-      <span class="skel skel-line" style={{ width: '70%' }} />
-    </div>
-  );
-}
-
-export interface PlaylistPreview { playlist: BaseItem; covers: Track[]; sub: string }
-
-export async function playlistPreview(pl: BaseItem): Promise<PlaylistPreview> {
-  const tracks = await playlistTracks(pl.Id).catch(() => [] as Track[]);
-  const secs = tracks.reduce((s, x) => s + (x.RunTimeTicks ?? 0), 0);
-  return { playlist: pl, covers: playlistCovers(tracks), sub: playlistSub({ ...pl, CumulativeRunTimeTicks: secs || undefined } as BaseItem, tracks.length || pl.ChildCount) };
-}
-
-export const audioPlaylists = (limit?: number) =>
-  getItems({ includeItemTypes: ['Playlist'], recursive: true, mediaTypes: ['Audio'], sortBy: ['DateCreated', 'SortName'], sortOrder: 'Descending', limit, fields: ['ChildCount', 'DateCreated'] });
-
 function YourPlaylists({ view }: { view: BaseItem }) {
   const [ref, seen] = useInView<HTMLElement>('600px');
   const managed = useStore(manageChanged);
@@ -356,11 +337,6 @@ function TopArtists({ view, top, loading }: { view: BaseItem; top?: TopArtist[];
     </section>
   );
 }
-
-export const artistAlbums = (a: BaseItem) => {
-  const n = a.AlbumCount ?? a.ChildCount;
-  return n ? tn(n, '{n} album', '{n} albums') : '';
-};
 
 function Genres({ view }: { view: BaseItem }) {
   const [ref, seen] = useInView<HTMLElement>('600px');

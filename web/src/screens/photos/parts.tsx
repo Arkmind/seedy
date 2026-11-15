@@ -1,17 +1,25 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
+import { setFavorite } from '../../api/jellyfin';
 import type { BaseItem } from '../../api/types';
 import { clock } from '../../audio/parts';
+import { canDownload } from '../../lib/app-state';
 import { dot, duration, fmtLongMonthYear, fmtMonthYear, fmtWeekdayDate, ticksToSeconds } from '../../lib/format';
-import { t } from '../../lib/i18n';
+import { t, tn } from '../../lib/i18n';
 import { Link, setQuery } from '../../lib/router';
 import { safeLocal, saveLocal } from '../../lib/store';
+import { Icon } from '../../ui/icons';
+import { toast } from '../../ui/overlay';
+import { SelectionHead, type Selection } from '../browse/library-select';
+import { canDeleteAny } from '../browse/manage/actions';
+import { openManage } from '../browse/manage/host';
 import { useInView, type GridSelect } from '../browse/parts';
 import {
   countsLabel, daySub, folderInfo, isVideo, ratioOf, thumbUrl, type Day, type FolderInfo, type Memory, type Month, type PhotoItem,
   yearsAgo
 } from './api';
 import { PIcon } from './icons';
+import { downloadZip } from './zip';
 
 /* Pieces shared by the photos library, folder and viewer (Photos boards). Prefix ph-. */
 
@@ -202,4 +210,52 @@ export function FolderGrid({ children }: { children: ComponentChildren }) {
 export function rowFor(size: TileSize): number {
   const phone = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 720px)').matches;
   return Math.round(ROW[size] * (phone ? 0.6 : 1));
+}
+
+/* ───────── Selection ───────── */
+
+export function PhotoSelectionBar({ sel, total, name, onChanged, onSelectAll, onShow }: {
+  sel: Selection; total: number; name: string; onChanged: (items: PhotoItem[]) => void; onSelectAll: () => Promise<void>; onShow: (photos: PhotoItem[]) => void;
+}) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const n = sel.items.length;
+  const fav = async (on: boolean) => {
+    setBusy('fav');
+    const items = sel.items as PhotoItem[];
+    const results = await Promise.allSettled(items.map((it) => setFavorite(it.Id, on)));
+    setBusy(null);
+    const ok = items.filter((_, i) => results[i].status === 'fulfilled').map((it) => ({ ...it, UserData: { ...(it.UserData ?? {}), IsFavorite: on } }));
+    onChanged(ok);
+    sel.set(ok.length === items.length ? ok : items);
+    if (ok.length < items.length) toast(tn(items.length - ok.length, 'Couldn’t update {n} photo', 'Couldn’t update {n} photos'), 'error');
+    else toast(on ? tn(ok.length, 'Added {n} photo to favorites', 'Added {n} photos to favorites') : tn(ok.length, 'Removed {n} photo from favorites', 'Removed {n} photos from favorites'));
+  };
+  const allFav = n > 0 && sel.items.every((x) => x.UserData?.IsFavorite);
+  return (
+    <div role="toolbar" aria-label={t('{n} selected', { n })} class="lib-sel ph-sel">
+      <SelectionHead sel={sel} total={total} busy={busy} setBusy={setBusy} onSelectAll={onSelectAll} />
+      <div class="lib-sel-actions">
+        <button type="button" class="lib-sel-btn" disabled={!n || busy !== null} onClick={() => void fav(!allFav)}>
+          <PIcon name="heart" size={18} filled={allFav} />{busy === 'fav' ? t('Working…') : allFav ? t('Remove from favorites') : t('Add to favorites')}
+        </button>
+        <button type="button" class="lib-sel-btn" disabled={!sel.items.some((x) => !isVideo(x))} onClick={() => {
+          const photos = (sel.items as PhotoItem[]).filter((x) => !isVideo(x));
+          sel.stop();
+          onShow(photos);
+        }}>
+          <PIcon name="slideshow" size={18} />{t('Slideshow')}
+        </button>
+        {canDownload() && (
+          <button type="button" class="lib-sel-btn" disabled={!n || busy !== null} onClick={() => { setBusy('zip'); downloadZip(name, sel.items).finally(() => setBusy(null)); }}>
+            <PIcon name="download" size={18} />{busy === 'zip' ? t('Working…') : t('Download')}
+          </button>
+        )}
+        {canDeleteAny() && (
+          <button type="button" class="lib-sel-btn is-danger" disabled={!n || busy !== null} onClick={() => openManage('delete', sel.items)}>
+            <Icon name="trash" size={18} />{t('Delete')}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }

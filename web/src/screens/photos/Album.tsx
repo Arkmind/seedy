@@ -16,8 +16,7 @@ import {
   MEDIA_TYPES, PHOTO_FIELDS, ancestorsOf, countsLabel, folderInfo, getMedia, groupByDay, isVideo, subfolders, thumbUrl, type FolderInfo, type PhotoItem
 } from './api';
 import { PIcon } from './icons';
-import { FolderCard, FolderGrid, JustifiedRows, rowFor, TabRow, Timeline, openPhoto, useTileSize } from './parts';
-import { PhotoSelectionBar } from './PhotosLibrary';
+import { FolderCard, FolderGrid, JustifiedRows, PhotoSelectionBar, rowFor, TabRow, Timeline, openPhoto, useTileSize } from './parts';
 import { PhotoViewer } from './Viewer';
 import { downloadZip } from './zip';
 import { LibraryMenuItems } from '../../ui/library-menu';

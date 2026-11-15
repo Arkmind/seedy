@@ -2,11 +2,12 @@ import type { ComponentChildren } from 'preact';
 import { useLayoutEffect, useState } from 'preact/hooks';
 import type { BaseItem } from '../../api/types';
 import { dot, duration, itemYear, pct, runtime } from '../../lib/format';
-import { t } from '../../lib/i18n';
+import { t, tc } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { playAudiobook } from '../../audio/engine';
-import { authorLine, isAudioBook, seriesOf, type Reading } from './api';
+import { authorLine, isAudioBook, isComic, type Reading, seriesOf } from './api';
 import { AudioCover, BookCover } from './covers';
+import { time } from './library-data';
 import '@fontsource-variable/noto-serif/wght.css';
 
 /* Pieces shared by the books screens: cards, section heads, a few labels. */
@@ -215,3 +216,22 @@ export function ContinueCard({ entry }: { entry: ContinueEntry }) {
   );
 }
 
+/* A volume in a series: "Book 2 · read" with a tick, "Book 3 · 46%" in the accent, "Book 4 · new". */
+export function VolumeCard({ item, reading, current }: { item: BaseItem; reading?: Reading; current?: boolean }) {
+  const n = item.IndexNumber;
+  const read = !!item.UserData?.Played || !!reading?.Finished;
+  const inProgress = !read && !!reading && reading.Percent > 0;
+  const fresh = !read && !reading && !!item.DateCreated && Date.now() - time(item.DateCreated) < 30 * 86_400_000;
+  const label = n !== undefined && n !== null ? (isComic(item) ? t('No. {n}', { n }) : t('Book {n}', { n })) : '';
+  const state = read ? t('read') : inProgress ? `${Math.round(reading!.Percent)}%` : fresh ? t('new') : '';
+  const sub = dot(label, state);
+  return (
+    <BookCard
+      item={item}
+      sub={sub}
+      subClass={read ? 'is-dimmer' : inProgress ? 'is-accent' : undefined}
+      titleClass={read ? 'is-dim' : current ? 'is-current' : undefined}
+      badge={read ? <span class="bk-read-badge" aria-label={tc('Read', 'done')}><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span> : undefined}
+    />
+  );
+}
