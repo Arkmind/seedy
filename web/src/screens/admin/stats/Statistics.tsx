@@ -7,9 +7,10 @@ import { toastError } from '../../../ui/overlay';
 import { AdminLayout, LoadError } from '../AdminLayout';
 import { exportStats, getStats, type Range, type Stats, type StatsFilters } from './api';
 import {
-  Avatar, Change, Kpi, KIND_COLOUR, KINDS, METHOD_COLOUR, Panel, Trend, codecName, dayKey, durationText, hoursText, hoursValue, kindLabel, longDay, methodLabel, parseDay, pctText, shortMoment, songs
+  Avatar, Change, Kpi, KpiSkeletons, KIND_COLOUR, KINDS, METHOD_COLOUR, Panel, Trend, durationText, hoursText, hoursValue, kindLabel, longDay, methodLabel, parseDay, pctText, shortMoment, songs
 } from './parts';
-import { capitalize, fmtIntl, listText } from '../../../lib/format';
+import { capitalize, dayKey, fmtIntl, listText } from '../../../lib/format';
+import { codecName } from '../../server/format';
 import './stats.css';
 
 const RANGES: { value: Range; label: string }[] = [
@@ -260,9 +261,10 @@ function WatchTime({ data }: { data: Stats }) {
   const avgText = data.bucket === 'month' ? t('Average {h} a month', { h: hoursText(avg, 1) })
     : data.bucket === 'week' ? t('Average {h} a week', { h: hoursText(avg, 1) }) : t('Average {h} a day', { h: hoursText(avg, 1) });
   return (
-    <section aria-labelledby="st-wt" class="st-panel">
-      <div class="st-panel-head">
-        <h2 id="st-wt">{per}</h2>
+    <Panel
+      id="st-wt"
+      title={per}
+      aside={
         <span class="st-wt-aside">
           <span class="st-avg-key">
             <svg viewBox="0 0 24 4" width="24" height="4" aria-hidden="true"><line x1="0" x2="24" y1="2" y2="2" /></svg>
@@ -270,9 +272,10 @@ function WatchTime({ data }: { data: Stats }) {
           </span>
           <button type="button" class="st-mini-btn" aria-pressed={asTable} onClick={() => setAsTable((v) => !v)}>{asTable ? t('Show as chart') : t('Show as table')}</button>
         </span>
-      </div>
+      }
+    >
       {asTable ? <WatchTable data={data} /> : <WatchChart data={data} avg={avg} />}
-    </section>
+    </Panel>
   );
 }
 
@@ -697,7 +700,7 @@ function MostWatched({ data }: { data: Stats }) {
 function Skeleton() {
   return (
     <div class="st-body" aria-hidden="true">
-      <div class="st-kpis">{[0, 1, 2, 3, 4].map((i) => <div key={i} class="st-kpi"><span class="skel skel-line" style={{ width: '60%' }} /><span class="skel skel-line" style={{ width: '40%', height: '28px' }} /><span class="skel skel-line" style={{ width: '80%' }} /></div>)}</div>
+      <KpiSkeletons count={5} />
       <section class="st-panel"><span class="skel skel-line" style={{ width: '200px', height: '18px' }} /><span class="skel" style={{ height: '220px', borderRadius: '12px' }} /></section>
     </div>
   );

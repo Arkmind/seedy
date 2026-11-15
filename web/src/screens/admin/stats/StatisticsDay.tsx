@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { capitalize, clock, episodeTag, fmtIntl, listText } from '../../../lib/format';
+import { capitalize, clock, dayKey, episodeTag, fmtIntl, listText } from '../../../lib/format';
 import { formatNumber, t, tn } from '../../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../../lib/router';
 import { BackBar } from '../../../ui/BackBar';
 import { AdminLayout, LoadError } from '../AdminLayout';
 import { getStatsDay, type Kind, type StatsDay, type StatsSession } from './api';
 import {
-  Avatar, Kpi, KIND_COLOUR, KINDS, MethodBadge, Trend, dayKey, hoursValue, kindLabel, longDay,
+  Avatar, Kpi, KIND_COLOUR, KINDS, KpiSkeletons, MethodBadge, Panel, Trend, hoursValue, kindLabel, longDay,
   mbps, parseDay, shortDuration, songs
 } from './parts';
 import './stats.css';
@@ -133,7 +133,7 @@ export function AdminStatisticsDay({ date }: { date: string }) {
         <LoadError error={error} onRetry={() => setAttempt((n) => n + 1)} what="this day" />
       ) : !current ? (
         <div class="st-body" aria-hidden="true">
-          <div class="st-kpis is-4">{[0, 1, 2, 3].map((i) => <div key={i} class="st-kpi"><span class="skel skel-line" style={{ width: '60%' }} /><span class="skel skel-line" style={{ width: '40%', height: '28px' }} /><span class="skel skel-line" style={{ width: '80%' }} /></div>)}</div>
+          <KpiSkeletons count={4} class="is-4" />
           <section class="st-panel"><span class="skel" style={{ height: '260px', borderRadius: '12px' }} /></section>
         </div>
       ) : (
@@ -291,13 +291,15 @@ function Timeline({ data, spans, window, peak }: { data: StatsDay; spans: Span[]
   for (let m = Math.ceil(axisFrom / 180) * 180; m <= axisTo; m += 180) ticks.push(m);
 
   return (
-    <section aria-labelledby="st-tl" class="st-panel">
-      <div class="st-panel-head">
-        <h2 id="st-tl">{t('Who watched when')}</h2>
+    <Panel
+      id="st-tl"
+      title={t('Who watched when')}
+      aside={
         <span class="st-kind-key">
           {kinds.map((k) => <span key={k}><span class="st-sq is-10" style={{ background: KIND_COLOUR[k] }} />{kindLabel(k)}</span>)}
         </span>
-      </div>
+      }
+    >
       {spans.length === 0 ? <p class="st-empty">{t('Nothing was played on this day.')}</p> : (
         <>
           <div class="st-hours">
@@ -377,7 +379,7 @@ function Timeline({ data, spans, window, peak }: { data: StatsDay; spans: Span[]
           </div>
         </>
       )}
-    </section>
+    </Panel>
   );
 }
 
@@ -405,11 +407,11 @@ function PlaysTable({ data, spans, window }: { data: StatsDay; spans: Span[]; wi
   const users = new Map(data.users.map((u) => [u.userId, u]));
 
   return (
-    <section aria-labelledby="st-pl" class="st-panel">
-      <div class="st-panel-head">
-        <h2 id="st-pl">{title}</h2>
-        {window && <button type="button" class="st-head-link" onClick={() => setQuery({ from: null, to: null })}>{tn(all, 'Show the one play of the day', 'Show all {n} plays of the day')}</button>}
-      </div>
+    <Panel
+      id="st-pl"
+      title={title}
+      aside={window && <button type="button" class="st-head-link" onClick={() => setQuery({ from: null, to: null })}>{tn(all, 'Show the one play of the day', 'Show all {n} plays of the day')}</button>}
+    >
       <span class="st-pl-sub">{watchedText}{peakText ? ` · ${peakText}` : ''}</span>
       <div class="st-scroll">
         <div role="table" aria-label={title} class="st-plays">
@@ -454,6 +456,6 @@ function PlaysTable({ data, spans, window }: { data: StatsDay; spans: Span[]; wi
           })}
         </div>
       </div>
-    </section>
+    </Panel>
   );
 }

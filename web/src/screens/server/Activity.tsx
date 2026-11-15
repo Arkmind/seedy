@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { currentUserId, get } from '../../api/client';
 import type { BaseItem } from '../../api/types';
-import { daysFromToday, episodeTag, fmtMonthShort, fmtWeekdayShort, hhmm24, startOfDay } from '../../lib/format';
+import { dayKey, daysFromToday, episodeTag, fmtMonthShort, fmtWeekdayShort, hhmm24, startOfDay } from '../../lib/format';
 import { getLang, t, tn, tx } from '../../lib/i18n';
 import { on, send } from '../../lib/remote';
 import { Link } from '../../lib/router';
@@ -427,8 +427,7 @@ export function ServerActivity() {
       const lines = [['Date', 'Time', 'Type', 'Level', 'What happened', 'Details', 'Person', 'Server message'].map((h) => esc(t(h))).join(',')];
       for (const r of out) {
         const d = r.date;
-        const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        lines.push([day, hhmm24(d), t(TAG[r.category]), t(r.level), r.title, r.detail, r.userName ?? '', r.entry.Name].map((v) => esc(String(v ?? ''))).join(','));
+        lines.push([dayKey(d), hhmm24(d), t(TAG[r.category]), t(r.level), r.title, r.detail, r.userName ?? '', r.entry.Name].map((v) => esc(String(v ?? ''))).join(','));
       }
       saveBlob(`activity-log-${new Date().toISOString().slice(0, 10)}.csv`, new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), 2000);
       toast(tn(out.length, 'Exported {n} entry', 'Exported {n} entries'));

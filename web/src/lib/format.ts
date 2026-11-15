@@ -98,8 +98,10 @@ export const fmtMonthShort = (d: Date) => MONTHS[d.getMonth()];
 export const fmtWeekdayShort = (d: Date) => DAYS[d.getDay()];
 
 export const fmtDayMonth = (d: Date) => (dateStyle.monthFirst ? `${MONTHS[d.getMonth()]} ${d.getDate()}` : `${d.getDate()} ${MONTHS[d.getMonth()]}`);
+/* "2026-11-08", in local time. */
+export const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 export const fmtDate = (d: Date) =>
-  dateStyle.iso ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  dateStyle.iso ? dayKey(d)
     : dateStyle.monthFirst ? `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`
     : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 export const fmtWeekdayDate = (d: Date) => `${DAYS[d.getDay()]} ${fmtDayMonth(d)}`;

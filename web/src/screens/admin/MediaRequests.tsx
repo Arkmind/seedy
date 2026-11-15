@@ -8,7 +8,7 @@ import type { AdminConfig } from '../../api/seedy';
 import { refreshMe } from '../../lib/app-state';
 import { t } from '../../lib/i18n';
 import { createStore, useStore } from '../../lib/store';
-import { SavedNote, SelectField, SettingRow, Switch } from '../../ui/controls';
+import { Panel, SavedNote, SelectField, SettingRow, Switch } from '../../ui/controls';
 import { Icon, type IconName } from '../../ui/icons';
 import { MenuButton, MenuItem, Sheet, toast, toastError } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
@@ -444,11 +444,7 @@ function LimitsPanel() {
   };
   const role = (p: AdminMediaProfile) => (p.isAdmin ? t('Administrator') : p.maxParentalRating ? t('Maturity limit: {rating}', { rating: p.maxParentalRating }) : t('User'));
   return (
-    <section aria-labelledby="lim-h" class="panel is-gap" style={{ gap: '14px' }}>
-      <div class="panel-head">
-        <h2 id="lim-h" class="panel-title">{t('Approvals and limits')}</h2>
-        <p class="panel-text">{t('Seedy handles approvals for music and books, then sends only approved requests. Librarr’s own approval queue is skipped.')}</p>
-      </div>
+    <Panel id="lim" title={t('Approvals and limits')} text={t('Seedy handles approvals for music and books, then sends only approved requests. Librarr’s own approval queue is skipped.')} gap={14}>
       {!data && error ? (
         <div class="admin-inline-error" role="alert"><span class="dot is-danger" />{t('Couldn’t load the profiles.')} {error.message}</div>
       ) : !data ? (
@@ -494,7 +490,7 @@ function LimitsPanel() {
           </div>
         </div>
       )}
-    </section>
+    </Panel>
   );
 }
 
@@ -507,13 +503,12 @@ function AfterPanel({ m }: { m: Media }) {
     { key: 'showRequesters', name: 'Show requests to everyone', help: 'Others see “Requested by Sam” on the cover' }
   ];
   return (
-    <section aria-labelledby="after-h" class="panel">
-      <div class="panel-head is-title-only"><h2 id="after-h" class="panel-title">{t('When a download finishes')}</h2></div>
+    <Panel id="after" title={t('When a download finishes')}>
       {rows.map((r, i) => (
         <SettingRow key={r.key} name={t(r.name)} help={t(r.help)} last={i === rows.length - 1}>
           <Switch label={t(r.name)} checked={m[r.key]} onChange={(v) => setMedia((x) => ({ ...x, [r.key]: v }))} />
         </SettingRow>
       ))}
-    </section>
+    </Panel>
   );
 }

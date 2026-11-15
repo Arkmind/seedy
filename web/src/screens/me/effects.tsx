@@ -3,7 +3,7 @@ import { getItems } from '../../api/jellyfin';
 import { backdropUrl, logoUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { DEFAULT_BRANDING, applyBranding, bootState, brandingStore, meStore, setAccentFilter } from '../../lib/app-state';
-import { setDateStyle } from '../../lib/format';
+import { dayKey, hhmm24, setDateStyle } from '../../lib/format';
 import { applyLanguagePref, resolveLang, t } from '../../lib/i18n';
 import { back, getLocation, useLocation } from '../../lib/router';
 import { createStore, useStore } from '../../lib/store';
@@ -43,8 +43,7 @@ export function resolveDateLocale(choice: string, language: string): string {
 
 export function dateExample(locale: string, d: Date): string {
   if (locale === 'iso') {
-    const p = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    return `${dayKey(d)} ${hhmm24(d)}`;
   }
   try { return new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(d); } catch { return d.toLocaleString(); }
 }
