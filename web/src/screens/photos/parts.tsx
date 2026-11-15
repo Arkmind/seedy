@@ -2,13 +2,13 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import type { BaseItem } from '../../api/types';
 import { clock } from '../../audio/parts';
-import { dot, duration, fmtMonthYear, fmtWeekdayDate, ticksToSeconds } from '../../lib/format';
+import { dot, duration, fmtLongMonthYear, fmtMonthYear, fmtWeekdayDate, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, setQuery } from '../../lib/router';
 import { safeLocal, saveLocal } from '../../lib/store';
 import { useInView, type GridSelect } from '../browse/parts';
 import {
-  countsLabel, daySub, folderInfo, isVideo, monthYear, ratioOf, thumbUrl, type Day, type FolderInfo, type Memory, type Month, type PhotoItem,
+  countsLabel, daySub, folderInfo, isVideo, ratioOf, thumbUrl, type Day, type FolderInfo, type Memory, type Month, type PhotoItem,
   yearsAgo
 } from './api';
 import { PIcon } from './icons';
@@ -141,7 +141,7 @@ export function Timeline({ months, row, select, own, onOpen, headings = true }: 
     <>
       {months.map((m, mi) => (
         <div key={m.key} class="ph-month" data-month={`${m.date.getFullYear()}-${m.date.getMonth()}`}>
-          {headings && <h2 class={'ph-month-h' + (mi ? ' is-next' : '')}>{monthYear(m.date)}</h2>}
+          {headings && <h2 class={'ph-month-h' + (mi ? ' is-next' : '')}>{fmtLongMonthYear(m.date)}</h2>}
           {m.days.map((d) => {
             const at = offset;
             offset += d.items.length;

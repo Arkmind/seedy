@@ -2,7 +2,7 @@ import { createPortal } from 'preact/compat';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { getItem, setFavorite } from '../../api/jellyfin';
 import { canDownload, userStore } from '../../lib/app-state';
-import { clock, dot, duration, ticksToSeconds } from '../../lib/format';
+import { clock, dot, duration, fmtLongWeekdayDate, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, back, navigate, setQuery, useLocation } from '../../lib/router';
 import { safeLocal, saveLocal, useStore } from '../../lib/store';
@@ -10,7 +10,7 @@ import { toast } from '../../ui/overlay';
 import { deviceStore } from '../me/prefs';
 import { patchUserData } from '../browse/parts';
 import {
-  PHOTO_FIELDS, bytesLabel, cameraName, coordsLabel, exposureLine, fileInfo, fileName, folderInfo, formatName, isVideo, longDay, ratioOf,
+  PHOTO_FIELDS, bytesLabel, cameraName, coordsLabel, exposureLine, fileInfo, fileName, folderInfo, formatName, isVideo, ratioOf,
   screenUrl, takenAt, thumbUrl, downloadUrl, type PhotoItem
 } from './api';
 import { PIcon, type PIconName } from './icons';
@@ -175,7 +175,7 @@ export function PhotoViewer({ list, total, more, done, onItem }: Props) {
 
   const taken = item ? takenAt(item) : undefined;
   const count = total ?? list.length;
-  const sub = dot(taken ? longDay(taken) : '', taken ? clock(taken) : '', index >= 0 ? t('{n} of {total}', { n: index + 1, total: count }) : '');
+  const sub = dot(taken ? fmtLongWeekdayDate(taken) : '', taken ? clock(taken) : '', index >= 0 ? t('{n} of {total}', { n: index + 1, total: count }) : '');
 
   return createPortal(
     <div class={'ph-viewer' + (info ? ' has-info' : '') + (idle ? ' is-idle' : '') + (playing ? ' is-playing' : '')} role="dialog" aria-modal="true" aria-label={item ? fileName(item) : t('Photo')}>
@@ -435,7 +435,7 @@ function Details({ item }: { item: PhotoItem }) {
   return (
     <aside class="ph-v-info" aria-labelledby="ph-info-h">
       <h2 id="ph-info-h">{t('Details')}</h2>
-      {taken && <Fact icon="calendar" title={`${longDay(taken)}, ${clock(taken)}`} sub={item.PremiereDate ? t('Camera’s local time') : t('Date the file was saved')} />}
+      {taken && <Fact icon="calendar" title={`${fmtLongWeekdayDate(taken)}, ${clock(taken)}`} sub={item.PremiereDate ? t('Camera’s local time') : t('Date the file was saved')} />}
       {camera && <Fact icon="camera" title={camera} sub={exposureLine(item) || undefined} />}
       {(sizeLine || fileLine) && <Fact icon={video ? 'video' : 'file'} title={sizeLine || fileLine} sub={sizeLine ? fileLine : undefined} />}
       {folderName && <Fact icon="folder" title={folderName} sub={folderPath || undefined} />}

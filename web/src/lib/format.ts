@@ -116,6 +116,29 @@ export function fmtIntl(d: Date, opts: Intl.DateTimeFormatOptions): string {
 /* "12 March 2024", "12 mars 2024". */
 export const longDate = (d: Date) => fmtIntl(d, { day: 'numeric', month: 'long', year: 'numeric' });
 
+/* "October 2026". */
+export function fmtLongMonthYear(d: Date): string {
+  try {
+    return capitalize(new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric' }).format(d));
+  } catch { return `${d.getMonth() + 1}/${d.getFullYear()}`; }
+}
+
+/* "Sun 9 August 2026". */
+export const fmtLongWeekdayDate = (d: Date) => capitalize(fmtIntl(d, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }).replace(/,/g, ''));
+
+/* "9 to 16 August 2026", "28 July to 3 August 2026", "30 December 2025 to 2 January 2026". */
+export function fmtDateRange(a?: Date, b?: Date): string {
+  if (!a || !b) return '';
+  const [from, to] = a <= b ? [a, b] : [b, a];
+  if (from.toDateString() === to.toDateString()) return longDate(from);
+  if (from.getFullYear() !== to.getFullYear()) return t('{from} to {to}', { from: longDate(from), to: longDate(to) });
+  if (from.getMonth() !== to.getMonth()) return t('{from} to {to}', { from: fmtIntl(from, { day: 'numeric', month: 'long' }), to: longDate(to) });
+  return t('{from} to {to}', { from: String(from.getDate()), to: longDate(to) });
+}
+
+/* A month's short name on its own, for a rail of months: "Jan", "Janv". */
+export const fmtShortMonth = (m: number) => capitalize(MONTHS[m].replace(/\.$/, ''));
+
 export function startOfDay(d: Date): Date {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);

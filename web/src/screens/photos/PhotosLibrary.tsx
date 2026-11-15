@@ -6,7 +6,7 @@ import type { BaseItem } from '../../api/types';
 import { canDownload, meStore } from '../../lib/app-state';
 import { CUSTOM, readCustom } from '../me/prefs';
 import { t, tn } from '../../lib/i18n';
-import { capitalize, fmtMonthShort } from '../../lib/format';
+import { fmtShortMonth } from '../../lib/format';
 import { navigate, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { Header } from '../../ui/navbar/Header';
@@ -239,9 +239,7 @@ function TimelineWithRail({ view, list, paged, row, select, rail, onOpen }: {
   };
 
   // "Oct", "Sep" (the app's short month names, as on the board).
-  const monthName = (m: number) => capitalize(fmtMonthShort(new Date(2000, m, 1)).replace(/\.$/, ''));
-
-  return (
+    return (
     <div class="ph-timeline" ref={wrap}>
       <div class="ph-days">
         <Timeline months={months} row={row} select={select.grid} onOpen={onOpen} />
@@ -255,7 +253,7 @@ function TimelineWithRail({ view, list, paged, row, select, rail, onOpen }: {
             <Fragment key={y}>
               <a href="#" class="ph-rail-y" aria-current={y === curYear && !(yearMonths.data?.length) ? 'true' : undefined} onClick={(e) => { e.preventDefault(); void jump(y); }}>{y}</a>
               {y === curYear && yearMonths.data?.map((m) => (
-                <a key={`${y}-${m}`} href="#" class="ph-rail-m" aria-current={cur?.m === m ? 'true' : undefined} onClick={(e) => { e.preventDefault(); void jump(y, m); }}>{monthName(m)}</a>
+                <a key={`${y}-${m}`} href="#" class="ph-rail-m" aria-current={cur?.m === m ? 'true' : undefined} onClick={(e) => { e.preventDefault(); void jump(y, m); }}>{fmtShortMonth(m)}</a>
               ))}
             </Fragment>
           ))}

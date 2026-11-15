@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 
 import type { BaseItem } from '../../api/types';
 import { canDownload, userStore } from '../../lib/app-state';
-import { dot } from '../../lib/format';
+import { dot, fmtDateRange } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -13,7 +13,7 @@ import { EmptyState, ErrorState, Sentinel, usePaged } from '../browse/parts';
 import { useSelection } from '../browse/library-select';
 import { manageChanged } from '../browse/manage/host';
 import {
-  MEDIA_TYPES, PHOTO_FIELDS, ancestorsOf, countsLabel, dateRange, folderInfo, getMedia, groupByDay, isVideo, subfolders, thumbUrl, type FolderInfo, type PhotoItem
+  MEDIA_TYPES, PHOTO_FIELDS, ancestorsOf, countsLabel, folderInfo, getMedia, groupByDay, isVideo, subfolders, thumbUrl, type FolderInfo, type PhotoItem
 } from './api';
 import { PIcon } from './icons';
 import { FolderCard, FolderGrid, JustifiedRows, rowFor, TabRow, Timeline, openPhoto, useTileSize } from './parts';
@@ -100,7 +100,7 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
 
   const fi = info.data;
   const counts = fi ? countsLabel(fi.photos, fi.videos, ' · ') : '';
-  const range = fi ? dateRange(fi.from, fi.to) : '';
+  const range = fi ? fmtDateRange(fi.from, fi.to) : '';
   const path = item.Path;
   const covers = fi?.covers ?? [];
   const folders = subs.data?.Items ?? [];

@@ -1,8 +1,8 @@
 import { SERVER_URL, currentUserId, get, withApiKey } from '../../api/client';
 import { getItems, type ItemsQuery } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
-import { formatNumber, getLang, locale, t, tn } from '../../lib/i18n';
-import { capitalize, fmtIntl } from '../../lib/format';
+import { formatNumber, getLang, tn } from '../../lib/i18n';
+import { fmtLongWeekdayDate } from '../../lib/format';
 
 /* Photos libraries (Photos boards). Jellyfin 12 keeps photos in "Home videos and photos" libraries (the old photos
    type still shows up on servers that were upgraded): Photo and Video items, in PhotoAlbum folders (a folder with
@@ -118,28 +118,6 @@ export function bytesLabel(n?: number): string {
   let v = n;
   while (v >= 1000 && i < units.length - 1) { v /= 1000; i++; }
   return `${formatNumber(v >= 100 || i === 0 ? Math.round(v) : Math.round(v * 10) / 10)} ${units[i]}`;
-}
-
-/* "October 2026". */
-export function monthYear(d: Date): string {
-  try {
-    return capitalize(new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric' }).format(d));
-  } catch { return `${d.getMonth() + 1}/${d.getFullYear()}`; }
-}
-
-/* "Sun 9 August 2026". */
-export const longDay = (d: Date) => capitalize(fmtIntl(d, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }).replace(/,/g, ''));
-
-/* "9 to 16 August 2026", "28 July to 3 August 2026", "30 December 2025 to 2 January 2026". */
-export function dateRange(a?: Date, b?: Date): string {
-  if (!a || !b) return '';
-  const [from, to] = a <= b ? [a, b] : [b, a];
-  if (from.toDateString() === to.toDateString()) return fmtIntl(from, { day: 'numeric', month: 'long', year: 'numeric' });
-  if (from.getFullYear() !== to.getFullYear())
-    return t('{from} to {to}', { from: fmtIntl(from, { day: 'numeric', month: 'long', year: 'numeric' }), to: fmtIntl(to, { day: 'numeric', month: 'long', year: 'numeric' }) });
-  if (from.getMonth() !== to.getMonth())
-    return t('{from} to {to}', { from: fmtIntl(from, { day: 'numeric', month: 'long' }), to: fmtIntl(to, { day: 'numeric', month: 'long', year: 'numeric' }) });
-  return t('{from} to {to}', { from: String(from.getDate()), to: fmtIntl(to, { day: 'numeric', month: 'long', year: 'numeric' }) });
 }
 
 /* "1 year ago", "3 years ago". */
@@ -262,7 +240,7 @@ export async function memoriesOf(parentId: string, today = new Date(), days = 3)
     }
     for (const [k, list] of groups) {
       const date = takenAt(list[0]) ?? new Date(y, today.getMonth(), today.getDate());
-      out.push({ key: `${y}:${k}`, years: today.getFullYear() - y, title: list[0].Album || longDay(date), date, items: list });
+      out.push({ key: `${y}:${k}`, years: today.getFullYear() - y, title: list[0].Album || fmtLongWeekdayDate(date), date, items: list });
     }
   }
   return out.sort((a, b) => a.years - b.years || b.items.length - a.items.length);
