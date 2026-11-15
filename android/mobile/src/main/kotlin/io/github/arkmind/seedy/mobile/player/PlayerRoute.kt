@@ -20,6 +20,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -131,11 +132,16 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
         seasonEpisodes = null
     }
     // "Still watching?" covers the player: no panel stays open under it.
-    LaunchedEffect(state.ask) { if (state.ask != null) panel = null }
+    LaunchedEffect(state.ask, state.endShown) { if (state.ask != null || state.endShown) panel = null }
+    // "I’m done for now", Back to browse, Back: leaving from the credits counts the title as watched.
+    val leave = { player.doneForNow(); nav.back() }
+    // One video surface, moved into the end-of-movie tile and back without being rebuilt.
+    val videoFrame = remember(player) { movableContentOf { ContentFrame(player = player.exo, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) } }
 
     BackHandler {
         when {
-            state.problem != null || state.ask != null -> nav.back()
+            state.problem != null -> nav.back()
+            state.ask != null || state.endShown -> leave()
             panel == PlayerPanel.Style -> panel = PlayerPanel.Tracks
             panel != null -> panel = null
             locked -> controls = true
@@ -163,7 +169,7 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
     ) {
         PhonePlayerScreen(
             state = state,
-            controls = controls && !pip && panel == null && state.problem == null,
+            controls = controls && !pip && panel == null && state.problem == null && !state.endShown,
             locked = locked,
             seekBack = player.seekBackSeconds,
             seekForward = player.seekForwardSeconds,
@@ -191,7 +197,8 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
                 onPanel = { panel = it },
             ),
             onToggleControls = { controls = !controls; touched++ },
-            video = { ContentFrame(player = player.exo, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) },
+            // In a picture-in-picture window the movie stays full size.
+            video = { if (!state.endShown || pip) videoFrame() },
             panel = {
                 when (panel) {
                     PlayerPanel.Episodes -> EpisodesPanel(
@@ -221,9 +228,19 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
         )
 
         state.problem?.let { problem -> Problem(problem, onBack = { nav.back() }) }
-        val ask = state.ask
         val item = state.item
-        val next = state.next
+        if (state.endShown && item != null && !pip) {
+            EndOfMovieScreen(
+                item = item, picks = state.picks, positionMs = state.positionMs, durationMs = state.durationMs,
+                left = state.pickLeft, total = player.pickSeconds,
+                onWatchCredits = { if (state.ended) leave() else player.watchCredits() },
+                onBack = leave,
+                onPlay = player::playPick,
+                video = videoFrame,
+            )
+        }
+        val ask = state.ask
+        val next = state.asked ?: state.next
         if (ask != null && item != null && next != null) {
             // Nobody answers: the player closes when the countdown ends, freeing the server.
             val left by produceState((StillWatchingStopMs / 1000).toInt(), ask) {
@@ -234,13 +251,13 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
                     if (ms <= 0) break
                     delay(1000 - ms % 1000)
                 }
-                nav.back()
+                leave()
             }
             StillWatchingScreen(
                 item = item, next = next, ask = ask, secondsLeft = left,
                 fraction = if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 1f,
                 onKeep = player::keepWatching,
-                onDone = { nav.back() },
+                onDone = leave,
             )
         }
     }

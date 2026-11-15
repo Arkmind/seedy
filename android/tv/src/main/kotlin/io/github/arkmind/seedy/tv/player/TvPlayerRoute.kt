@@ -16,6 +16,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.produceState
@@ -97,7 +98,7 @@ fun TvPlayerRoute(id: UUID) {
     var saver by remember { mutableStateOf(false) }
     LaunchedEffect(state.playing, touched, state.problem, state.item?.id) {
         saver = false
-        if (!state.playing && state.item != null && state.problem == null && !state.live && state.ask == null) {
+        if (!state.playing && state.item != null && state.problem == null && !state.live && state.ask == null && !state.endShown) {
             delay(ScreensaverAfterMs)
             saver = true
         }
@@ -111,9 +112,9 @@ fun TvPlayerRoute(id: UUID) {
     }
     // Where the remote lands: the button whose panel just closed; else Skip when there's something to skip, else
     // Pause; the hidden-controls catcher when the controls are away.
-    LaunchedEffect(controls, tool, state.ask) {
+    LaunchedEffect(controls, tool, state.ask, state.endShown) {
         when {
-            tool != null || state.ask != null -> Unit
+            tool != null || state.ask != null || state.endShown -> Unit
             controls -> {
                 val back = opener?.let { focus.tools.getValue(it) }
                 opener = null
@@ -127,12 +128,17 @@ fun TvPlayerRoute(id: UUID) {
         seasonEpisodes = null
     }
     // "Still watching?" covers the player: no panel stays open under it.
-    LaunchedEffect(state.ask) { if (state.ask != null) tool = null }
+    LaunchedEffect(state.ask, state.endShown) { if (state.ask != null || state.endShown) tool = null }
+    // "I’m done for now", Back to browse, Back: leaving from the credits counts the title as watched.
+    val leave = { player.doneForNow(); nav.back() }
+    // One video surface, moved into the end-of-movie tile and back without being rebuilt.
+    val videoFrame = remember(player) { movableContentOf { ContentFrame(player = player.exo, modifier = Modifier.fillMaxSize(), contentScale = picture.scale) } }
 
     BackHandler {
         when {
             saver -> touched++
-            state.problem != null || state.ask != null -> nav.back()
+            state.problem != null -> nav.back()
+            state.ask != null || state.endShown -> leave()
             // A settings page goes back to the settings list; Chapters opened from its own button just closes.
             tool == TvTool.Settings && page != SettingsPage.Main -> page = SettingsPage.Main
             tool != null -> tool = null
@@ -159,8 +165,8 @@ fun TvPlayerRoute(id: UUID) {
                     if (e.type == KeyEventType.KeyDown) touched++
                     return@onPreviewKeyEvent true
                 }
-                // "Still watching?" takes the remote: its two buttons and Back.
-                if (state.ask != null) return@onPreviewKeyEvent false
+                // "Still watching?" and the end of a movie take the remote: their buttons and Back.
+                if (state.ask != null || state.endShown) return@onPreviewKeyEvent false
                 if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 touched++
                 when (e.key) {
@@ -185,7 +191,7 @@ fun TvPlayerRoute(id: UUID) {
     ) {
         TvPlayerScreen(
             state = state,
-            controls = controls && tool == null && state.problem == null && state.ask == null,
+            controls = controls && tool == null && state.problem == null && state.ask == null && !state.endShown,
             seekBack = player.seekBackSeconds,
             seekForward = player.seekForwardSeconds,
             subtitleSize = subtitleSize,
@@ -204,7 +210,7 @@ fun TvPlayerRoute(id: UUID) {
                 },
                 onActivity = { touched++ },
             ),
-            video = { ContentFrame(player = player.exo, modifier = Modifier.fillMaxSize(), contentScale = picture.scale) },
+            video = { if (!state.endShown) videoFrame() },
             panel = {
                 when (tool) {
                     TvTool.Subtitles, TvTool.Audio -> TvTracksPanel(
@@ -241,9 +247,19 @@ fun TvPlayerRoute(id: UUID) {
             },
         )
         state.problem?.let { Problem(it, onBack = { nav.back() }) }
-        val ask = state.ask
         val item = state.item
-        val next = state.next
+        if (state.endShown && item != null) {
+            TvEndOfMovie(
+                item = item, picks = state.picks, positionMs = state.positionMs, durationMs = state.durationMs,
+                left = state.pickLeft, total = player.pickSeconds,
+                onWatchCredits = { if (state.ended) leave() else player.watchCredits() },
+                onBack = leave,
+                onPlay = player::playPick,
+                video = videoFrame,
+            )
+        }
+        val ask = state.ask
+        val next = state.asked ?: state.next
         if (ask != null && item != null && next != null) {
             // Nobody answers: the player closes when the countdown ends, freeing the server.
             val left by produceState((StillWatchingStopMs / 1000).toInt(), ask) {
@@ -254,13 +270,13 @@ fun TvPlayerRoute(id: UUID) {
                     if (ms <= 0) break
                     delay(1000 - ms % 1000)
                 }
-                nav.back()
+                leave()
             }
             TvStillWatching(
                 item = item, next = next, ask = ask, secondsLeft = left,
                 fraction = if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 1f,
                 onKeep = player::keepWatching,
-                onDone = { nav.back() },
+                onDone = leave,
             )
         }
         if (saver) state.item?.let { item ->

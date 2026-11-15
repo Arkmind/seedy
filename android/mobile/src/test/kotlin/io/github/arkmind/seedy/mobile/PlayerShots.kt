@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -125,6 +127,49 @@ class PlayerShots {
             }
         }
         compose.onRoot().captureRoboImage("src/test/screenshots/AndroidPlayerStillWatching.png")
+    }
+
+
+    /** The web board's end of Paper Lanterns: three minutes of credits left, Night Ferry playing in 12 s. */
+    private val endPicks = listOf(
+        Triple("Night Ferry", 2025, "Drama" to 123) to 7.8f,
+        Triple("Halcyon", 2026, "Romance" to 101) to null,
+        Triple("Riverlight", 2024, "Drama" to 112) to null,
+    ).map { (t, score) ->
+        org.jellyfin.sdk.model.api.BaseItemDto(
+            id = UUID.nameUUIDFromBytes(t.first.toByteArray()), type = org.jellyfin.sdk.model.api.BaseItemKind.MOVIE, name = t.first,
+            productionYear = t.second, genres = listOf(t.third.first), runTimeTicks = t.third.second * 60 * 10_000_000L, communityRating = score,
+        )
+    }
+
+    @Composable
+    private fun EndCredits() {
+        androidx.compose.foundation.layout.Column(
+            Modifier.fillMaxSize().background(Color.Black),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(3.dp, androidx.compose.ui.Alignment.CenterVertically),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+        ) {
+            for ((line, big) in listOf("Directed by" to false, "Ruth Calder" to true, "Music by" to false, "Lio Varga" to true)) {
+                io.github.arkmind.seedy.ui.theme.SText(line, size = (if (big) 7 else 5).sp, weight = if (big) 700 else 500, tracking = .12f, uppercase = true, color = Color(0xFFC8C8C8))
+            }
+        }
+    }
+
+    /** No board (the web's PlayerEndMovie, laid out for a phone): the credits in the tile, the picks on the right. */
+    @Test
+    fun endOfMovie() {
+        val runtime = 118 * 60_000L
+        compose.setContent {
+            SeedyTheme {
+                io.github.arkmind.seedy.mobile.player.EndOfMovieScreen(
+                    item = Samples.paperLanterns, picks = endPicks, positionMs = runtime - 3 * 60_000L + 20_000, durationMs = runtime,
+                    left = 12, total = 15, onWatchCredits = {}, onBack = {}, onPlay = {},
+                    video = { EndCredits() },
+                    pickArt = { BoardScene(Modifier.matchParentSize()) },
+                )
+            }
+        }
+        compose.onRoot().captureRoboImage("src/test/screenshots/AndroidPlayerEndMovie.png")
     }
 
     @Test
