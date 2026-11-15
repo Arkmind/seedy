@@ -158,12 +158,12 @@ export function Panel({ title, text, id, children, gap, class: cls }: { title?: 
   );
 }
 
-export function SettingRow({ name, help, htmlFor, children, last, stack }: {
-  name: ComponentChildren; help?: ComponentChildren; htmlFor?: string; children?: ComponentChildren; last?: boolean; stack?: boolean;
+export function SettingRow({ name, help, htmlFor, children, last, stack, class: cls }: {
+  name: ComponentChildren; help?: ComponentChildren; htmlFor?: string; children?: ComponentChildren; last?: boolean; stack?: boolean; class?: string;
 }) {
   const Label = htmlFor ? 'label' : 'span';
   return (
-    <div class={'setting' + (last ? ' is-last' : '') + (stack ? ' is-stack' : '')}>
+    <div class={'setting' + (last ? ' is-last' : '') + (stack ? ' is-stack' : '') + (cls ? ' ' + cls : '')}>
       <Label {...(htmlFor ? { for: htmlFor } : {})} class="setting-label">
         <span class="setting-name">{name}</span>
         {help && <span class="setting-help">{help}</span>}

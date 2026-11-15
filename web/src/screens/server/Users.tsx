@@ -4,6 +4,7 @@ import { plural } from '../../lib/format';
 import { formatNumber, t, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
+import { SelectField } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { MenuButton, MenuItem, Sheet, confirm, toast } from '../../ui/overlay';
 import { AdminLayout, LoadError } from '../admin/AdminLayout';
@@ -334,13 +335,15 @@ function AddUserSheet({ open, users, onClose }: { open: boolean; users: FullUser
         </label>
         <label class="srv-field">
           <span class="srv-field-label">{t('Copy settings from')}</span>
-          <span class="select-wrap">
-            <select class="select srv-full" value={copyFrom} onChange={(e) => setCopyFrom((e.currentTarget as HTMLSelectElement).value)}>
-              <option value="">{t('Nobody · start with the defaults')}</option>
-              {users.map((u) => <option key={u.Id} value={u.Id}>{u.Policy.IsAdministrator ? t('{name} (access only, not admin)', { name: u.Name }) : u.Name}</option>)}
-            </select>
-            <Icon name="chevronDown" size={16} />
-          </span>
+          <SelectField
+            selectClass="srv-full"
+            value={copyFrom}
+            options={[
+              { value: '', label: t('Nobody · start with the defaults') },
+              ...users.map((u) => ({ value: u.Id, label: u.Policy.IsAdministrator ? t('{name} (access only, not admin)', { name: u.Name }) : u.Name }))
+            ]}
+            onChange={setCopyFrom}
+          />
           <span class="srv-field-help">{t('Libraries, devices, playback limits and parental controls. Never admin access.')}</span>
         </label>
         {error && <span class="form-error"><Icon name="alert" size={16} />{error}</span>}

@@ -7,7 +7,7 @@ import { Icon } from '../../ui/icons';
 import { confirm, Popover, Sheet } from '../../ui/overlay';
 import { errText, type FsEntry, getDirectory, getDrives, getParentPath } from './api';
 import { avatarColour } from './format';
-import { SelectField } from '../../ui/controls';
+import { Switch } from '../../ui/controls';
 import './server.css';
 
 /* Pieces shared by the server dashboard pages: loading, drafts with an explicit save, setting rows and controls,
@@ -143,7 +143,7 @@ export function UnsavedBar({ changes, note, saving, onDiscard, onSave, saveLabel
 
 /* ── Rows and controls ── */
 
-export function SettingRow({ name, help, htmlFor, children, cls, labelCls }: {
+export function SrvRow({ name, help, htmlFor, children, cls, labelCls }: {
   name: ComponentChildren; help?: ComponentChildren; htmlFor?: string; children?: ComponentChildren; cls?: string; labelCls?: string;
 }) {
   const Label = htmlFor ? 'label' : 'span';
@@ -157,6 +157,11 @@ export function SettingRow({ name, help, htmlFor, children, cls, labelCls }: {
     </div>
   );
 }
+
+/* A row whose control is an on/off switch named like the row. */
+export const SrvSwitchRow = ({ name, help, on, set, labelCls }: { name: string; help: string; on: boolean; set: (v: boolean) => void; labelCls?: string }) => (
+  <SrvRow name={name} help={help} labelCls={labelCls}><Switch checked={on} onChange={set} label={name} /></SrvRow>
+);
 
 /* A number with its unit ("180 s", "2 streams"). `width` is the board's input width; the number keeps the
    browser's spinner gap on its right as drawn. */
@@ -192,10 +197,6 @@ export function NumBox({ value, onChange, min, max, unit, label, width = 52, ste
     </label>
   );
 }
-
-export const Select = <T extends string | number>({ mono, ...p }: {
-  value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label?: string; id?: string; minWidth?: number; mono?: boolean;
-}) => <SelectField {...p} class={mono ? 'srv-mono-select' : undefined} />;
 
 /* Select options whose labels are English keys: translated where they're rendered. */
 export const tOpts = <T,>(opts: { value: T; label: string }[]) => opts.map((o) => ({ ...o, label: t(o.label) }));

@@ -5,9 +5,10 @@ import { t, tn, tx } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { Icon } from '../../ui/icons';
 import { confirm, Sheet, toast } from '../../ui/overlay';
+import { SelectField } from '../../ui/controls';
 import { AdminLayout } from '../admin/AdminLayout';
 import { deleteDevices, type DeviceInfo, errText, type FullUser, getDevices, getSessions, getUsers, renameDevice, type Session } from './api';
-import { LoadFailed, Select, useLoad } from './parts';
+import { LoadFailed, useLoad } from './parts';
 import { avatarColour, lastActive, majorMinor } from './format';
 import { Glyph } from './glyphs';
 
@@ -152,7 +153,7 @@ export function ServerDevices() {
         </label>
         {userList.length > MAX_CHIPS ? (
           <div class="srv-selects">
-            <Select label={t('Filter devices by user')} minWidth={150} value={who}
+            <SelectField label={t('Filter devices by user')} minWidth={150} value={who}
               options={[{ value: 'all', label: t('Everyone') }, ...userList.map((u) => ({ value: u.Id, label: u.Name }))]}
               onChange={(v) => { setWho(v); setShown(PAGE); }} />
           </div>

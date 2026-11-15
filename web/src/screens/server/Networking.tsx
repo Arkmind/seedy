@@ -2,11 +2,11 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { t, tn } from '../../lib/i18n';
 import { useStore } from '../../lib/store';
-import { Segmented, Switch } from '../../ui/controls';
+import { Segmented } from '../../ui/controls';
 import { confirm, toast } from '../../ui/overlay';
 import { AdminLayout, PanelSkeletons } from '../admin/AdminLayout';
 import { errText, getNetwork, getSessions, type NetworkConfig, restartingStore, restartServer, saveNetwork } from './api';
-import { ChipList, LoadFailed, SettingRow, UnsavedBar, useDraft, useLoad, useUnsavedGuard, validAddress } from './parts';
+import { ChipList, LoadFailed, SrvRow, SrvSwitchRow, UnsavedBar, useDraft, useLoad, useUnsavedGuard, validAddress } from './parts';
 
 /* Jellyfin keeps "" for the root; the board shows it as "/". */
 const showBase = (b: string) => (b ? b : '/');
@@ -143,21 +143,21 @@ export function ServerNetworking() {
           </section>
 
           <Group title="HTTPS" help={t('Most setups put a reverse proxy in front instead and leave this off.')}>
-            <Sw name={t('Serve over HTTPS')} help={t('Needs a certificate on this server')} on={c.EnableHttps} set={(v) => set({ EnableHttps: v })} />
-            <Sw name={t('Require HTTPS')} help={t('Refuse plain HTTP, except from the local network')} on={c.RequireHttps} set={(v) => set({ RequireHttps: v })} />
-            <SettingRow name={t('Certificate file')} help={t('A .pfx file with its private key')} htmlFor="net-cert" labelCls="is-420">
+            <SrvSwitchRow labelCls="is-420" name={t('Serve over HTTPS')} help={t('Needs a certificate on this server')} on={c.EnableHttps} set={(v) => set({ EnableHttps: v })} />
+            <SrvSwitchRow labelCls="is-420" name={t('Require HTTPS')} help={t('Refuse plain HTTP, except from the local network')} on={c.RequireHttps} set={(v) => set({ RequireHttps: v })} />
+            <SrvRow name={t('Certificate file')} help={t('A .pfx file with its private key')} htmlFor="net-cert" labelCls="is-420">
               <input id="net-cert" type="text" class="field srv-mono-plain srv-text" value={c.CertificatePath ?? ''} placeholder="/config/ssl/server.pfx" spellcheck={false}
                 onChange={(e) => set({ CertificatePath: (e.currentTarget as HTMLInputElement).value.trim() })} />
-            </SettingRow>
-            <SettingRow name={t('Certificate password')} help={t('Leave empty if the file has none')} htmlFor="net-certpw" labelCls="is-420">
+            </SrvRow>
+            <SrvRow name={t('Certificate password')} help={t('Leave empty if the file has none')} htmlFor="net-certpw" labelCls="is-420">
               <input id="net-certpw" type="password" class="field srv-mono-plain srv-text" value={c.CertificatePassword ?? ''} placeholder={t('Password')} autocomplete="new-password"
                 onChange={(e) => set({ CertificatePassword: (e.currentTarget as HTMLInputElement).value })} />
-            </SettingRow>
+            </SrvRow>
           </Group>
 
           <Group title={t('Remote access')} help={t('Who can reach this server from outside your home network.')}>
-            <Sw name={t('Allow remote access')} help={t('Each user also needs remote access switched on')} on={c.EnableRemoteAccess} set={(v) => set({ EnableRemoteAccess: v })} />
-            <SettingRow
+            <SrvSwitchRow labelCls="is-420" name={t('Allow remote access')} help={t('Each user also needs remote access switched on')} on={c.EnableRemoteAccess} set={(v) => set({ EnableRemoteAccess: v })} />
+            <SrvRow
               name={c.IsRemoteIPFilterBlacklist ? t('Block these addresses') : t('Only allow these addresses')}
               help={c.IsRemoteIPFilterBlacklist ? t('Switch to an allow list in the menu') : t('Switch to a block list in the menu')}
               labelCls="is-420"
@@ -180,8 +180,8 @@ export function ServerNetworking() {
                   />
                 )}
               />
-            </SettingRow>
-            <SettingRow name={t('Published addresses')} help={t('What apps are told to connect to, per network')} labelCls="is-420">
+            </SrvRow>
+            <SrvRow name={t('Published addresses')} help={t('What apps are told to connect to, per network')} labelCls="is-420">
               <ChipList
                 label={t('Published addresses')}
                 items={c.PublishedServerUriBySubnet ?? []}
@@ -191,28 +191,28 @@ export function ServerNetworking() {
                 validate={validPublished}
                 onChange={(v) => set({ PublishedServerUriBySubnet: v })}
               />
-            </SettingRow>
+            </SrvRow>
           </Group>
 
           <Group title={t('Local network')} help={t('Devices here count as at home: no remote limits, no remote sign-in rules.')}>
-            <SettingRow name={t('Home network')} help={t('Address ranges that count as local')} labelCls="is-420">
+            <SrvRow name={t('Home network')} help={t('Address ranges that count as local')} labelCls="is-420">
               <ChipList label={t('Home network')} items={c.LocalNetworkSubnets ?? []} emptyText={t('Private address ranges')} placeholder="192.168.1.0/24"
                 help={t('A range like 192.168.1.0/24, or a single address.')} validate={(v) => validAddress(v, { cidr: true })}
                 onChange={(v) => set({ LocalNetworkSubnets: v })} />
-            </SettingRow>
-            <SettingRow name={t('Known proxies')} help={t('Reverse proxies whose forwarded addresses can be trusted')} labelCls="is-420">
+            </SrvRow>
+            <SrvRow name={t('Known proxies')} help={t('Reverse proxies whose forwarded addresses can be trusted')} labelCls="is-420">
               <ChipList label={t('Known proxies')} items={c.KnownProxies ?? []} emptyText={t('None')} placeholder="172.18.0.2"
                 help={t('The proxy’s address or host name, or a range.')} validate={(v) => validAddress(v, { cidr: true, host: true })}
                 onChange={(v) => set({ KnownProxies: v })} />
-            </SettingRow>
-            <SettingRow name={t('Listen on')} help={t('Network interfaces to use')} labelCls="is-420">
+            </SrvRow>
+            <SrvRow name={t('Listen on')} help={t('Network interfaces to use')} labelCls="is-420">
               <ChipList label={t('Listen on')} items={c.LocalNetworkAddresses ?? []} emptyText={t('All interfaces')} placeholder="192.168.1.20"
                 help={t('An address this server has on one of its interfaces.')} validate={(v) => validAddress(v)}
                 onChange={(v) => set({ LocalNetworkAddresses: v })} />
-            </SettingRow>
-            <Sw name={t('Find this server automatically')} help={t('Apps on the home network discover it without an address')} on={c.AutoDiscovery} set={(v) => set({ AutoDiscovery: v })} />
-            <Sw name="IPv6" help={t('Also listen on IPv6 addresses')} on={c.EnableIPv6} set={(v) => set({ EnableIPv6: v })} />
-            <Sw name={t('Ignore virtual interfaces')} help={t('Skips Docker and VPN interfaces such as veth')} on={c.IgnoreVirtualInterfaces} set={(v) => set({ IgnoreVirtualInterfaces: v })} />
+            </SrvRow>
+            <SrvSwitchRow labelCls="is-420" name={t('Find this server automatically')} help={t('Apps on the home network discover it without an address')} on={c.AutoDiscovery} set={(v) => set({ AutoDiscovery: v })} />
+            <SrvSwitchRow labelCls="is-420" name="IPv6" help={t('Also listen on IPv6 addresses')} on={c.EnableIPv6} set={(v) => set({ EnableIPv6: v })} />
+            <SrvSwitchRow labelCls="is-420" name={t('Ignore virtual interfaces')} help={t('Skips Docker and VPN interfaces such as veth')} on={c.IgnoreVirtualInterfaces} set={(v) => set({ IgnoreVirtualInterfaces: v })} />
           </Group>
         </>
       )}
@@ -239,7 +239,3 @@ function Group({ title, help, children }: { title: string; help: string; childre
     </section>
   );
 }
-
-const Sw = ({ name, help, on, set }: { name: string; help: string; on: boolean; set: (v: boolean) => void }) => (
-  <SettingRow name={name} help={help} labelCls="is-420"><Switch checked={on} onChange={set} label={name} /></SettingRow>
-);

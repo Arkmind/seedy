@@ -7,9 +7,10 @@ import { on, send } from '../../lib/remote';
 import { Link } from '../../lib/router';
 import { Icon } from '../../ui/icons';
 import { confirm, toast } from '../../ui/overlay';
+import { SelectField } from '../../ui/controls';
 import { AdminLayout } from '../admin/AdminLayout';
 import { type ActivityEntry, errText, type FullUser, getActivity, getNetwork, getServerConfig, getUser, getUsers, saveNetwork, saveUserPolicy } from './api';
-import { LoadFailed, Select, tOpts, useLoad } from './parts';
+import { LoadFailed, tOpts, useLoad } from './parts';
 import { saveBlob } from '../../lib/clipboard';
 
 /* ── Turning Jellyfin's log lines into the board's rows ──
@@ -483,9 +484,9 @@ export function ServerActivity() {
           ))}
         </nav>
         <div class="srv-selects">
-          <Select label={t('Person')} minWidth={150} value={personId}
+          <SelectField label={t('Person')} minWidth={150} value={personId}
             options={[{ value: 'all', label: t('Everyone') }, ...userList.map((u) => ({ value: u.Id, label: u.Name }))]} onChange={setPersonId} />
-          <Select label={t('Level')} minWidth={170} value={level} options={tOpts(LEVELS)} onChange={setLevel} />
+          <SelectField label={t('Level')} minWidth={170} value={level} options={tOpts(LEVELS)} onChange={setLevel} />
         </div>
       </div>
 

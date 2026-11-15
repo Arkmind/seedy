@@ -6,7 +6,7 @@ import { userStore } from '../../lib/app-state';
 import { formatNumber, t, tn, tx } from '../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
-import { SelectField, Switch } from '../../ui/controls';
+import { Panel, SelectField, SettingRow, Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { MenuButton, MenuItem, Sheet, confirm, toast } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from '../admin/AdminLayout';
@@ -305,10 +305,9 @@ function SwitchRow({ name, help, checked, onChange, disabled, title }: {
   name: string; help: ComponentChildren; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; title?: string;
 }) {
   return (
-    <div class="setting">
-      <span class="setting-label"><span class="setting-name">{name}</span><span class="setting-help">{help}</span></span>
+    <SettingRow name={name} help={help}>
       <Switch checked={checked} onChange={onChange} label={name} disabled={disabled} title={title} />
-    </div>
+    </SettingRow>
   );
 }
 
@@ -317,22 +316,9 @@ function SelectRow<T extends string | number>({ name, help, value, options, onCh
 }) {
   const opts = options.some((o) => o.value === value) ? options : [...options, { value, label: String(value) }];
   return (
-    <div class="setting">
-      <span class="setting-label"><span class="setting-name">{name}</span><span class="setting-help">{help}</span></span>
+    <SettingRow name={name} help={help}>
       <SelectField value={value} options={opts} onChange={onChange} minWidth={220} label={name} />
-    </div>
-  );
-}
-
-function Group({ title, text, children }: { title: string; text?: ComponentChildren; children: ComponentChildren }) {
-  return (
-    <section class="panel srv-ue-panel">
-      <div class={'panel-head' + (text ? '' : ' is-title-only')}>
-        <h2 class="panel-title">{title}</h2>
-        {text && <p class="panel-text">{text}</p>}
-      </div>
-      {children}
-    </section>
+    </SettingRow>
   );
 }
 
@@ -351,15 +337,15 @@ function AccountTab({ p, name, isMe, set }: { p: FullPolicy; name: string; isMe:
   const rates = BITRATES.map((b) => ({ value: b, label: b === 0 ? t('No limit') : `${formatNumber(b / 1_000_000)} Mbps` }));
   return (
     <>
-      <Group title={t('Account')}>
+      <Panel class="srv-ue-panel" title={t('Account')}>
         <SwitchRow name={t('Administrator')} help={t('Full access to this admin area and every library')} checked={p.IsAdministrator} onChange={(v) => set('IsAdministrator', v)} disabled={isMe} title={isMe ? t('You can’t remove your own admin access') : undefined} />
         <SwitchRow name={t('Allow remote access')} help={t('Sign in from outside the home network')} checked={p.EnableRemoteAccess} onChange={(v) => set('EnableRemoteAccess', v)} />
         <SwitchRow name={t('Hide from the sign-in screen')} help={t('{name} must type the name to sign in', { name })} checked={p.IsHidden} onChange={(v) => set('IsHidden', v)} />
         <SwitchRow name={t('Disable account')} help={t('Blocks sign-in without deleting anything')} checked={p.IsDisabled} onChange={(v) => set('IsDisabled', v)} disabled={isMe || (p.IsAdministrator && !p.IsDisabled)} title={isMe ? t('You can’t disable your own account') : p.IsAdministrator ? t('Administrators can’t be disabled') : undefined} />
         <SelectRow name={t('Lock after failed sign-ins')} help={t('Counts wrong passwords in a row')} value={p.LoginAttemptsBeforeLockout} options={lockOptions} onChange={(v) => set('LoginAttemptsBeforeLockout', v)} />
         <SelectRow name={t('Simultaneous streams')} help={t('Devices playing at the same time')} value={p.MaxActiveSessions} options={streams} onChange={(v) => set('MaxActiveSessions', v)} />
-      </Group>
-      <Group title={t('Playback')}>
+      </Panel>
+      <Panel class="srv-ue-panel" title={t('Playback')}>
         <SwitchRow name={t('Allow playback')} help={t('Turn off to allow browsing only')} checked={p.EnableMediaPlayback} onChange={(v) => set('EnableMediaPlayback', v)} />
         <SwitchRow name={t('Allow video transcoding')} help={t('Needed for devices that can’t play the original format')} checked={p.EnableVideoPlaybackTranscoding} onChange={(v) => set('EnableVideoPlaybackTranscoding', v)} />
         <SwitchRow name={t('Allow audio transcoding')} help={t('Converts audio a device can’t play')} checked={p.EnableAudioPlaybackTranscoding} onChange={(v) => set('EnableAudioPlaybackTranscoding', v)} />
@@ -373,8 +359,8 @@ function AccountTab({ p, name, isMe, set }: { p: FullPolicy; name: string; isMe:
           options={[{ value: 'CreateAndJoinGroups', label: t('Create and join groups') }, { value: 'JoinGroups', label: t('Join groups only') }, { value: 'None', label: t('Off') }]}
           onChange={(v) => set('SyncPlayAccess', v)}
         />
-      </Group>
-      <Group title={t('Content and control')}>
+      </Panel>
+      <Panel class="srv-ue-panel" title={t('Content and control')}>
         <SwitchRow name={t('Download media')} help={t('Save files for offline viewing')} checked={p.EnableContentDownloading} onChange={(v) => set('EnableContentDownloading', v)} />
         <SwitchRow name={t('Delete media')} help={t('Remove files from the server')} checked={p.EnableContentDeletion} onChange={(v) => set('EnableContentDeletion', v)} />
         <SwitchRow name={t('Manage collections')} help={t('Create and edit collections')} checked={p.EnableCollectionManagement} onChange={(v) => set('EnableCollectionManagement', v)} />
@@ -383,7 +369,7 @@ function AccountTab({ p, name, isMe, set }: { p: FullPolicy; name: string; isMe:
         <SwitchRow name={t('Manage Live TV recordings')} help={t('Schedule and delete recordings')} checked={p.EnableLiveTvManagement} onChange={(v) => set('EnableLiveTvManagement', v)} />
         <SwitchRow name={t('Control other users’ sessions')} help={t('Send commands to someone else’s playback')} checked={p.EnableRemoteControlOfOtherUsers} onChange={(v) => set('EnableRemoteControlOfOtherUsers', v)} />
         <SwitchRow name={t('Control shared devices')} help={t('Play to devices like smart TVs')} checked={p.EnableSharedDeviceControl} onChange={(v) => set('EnableSharedDeviceControl', v)} />
-      </Group>
+      </Panel>
     </>
   );
 }
@@ -409,7 +395,7 @@ function AccessTab({ p, user, data, set }: { p: FullPolicy; user: FullUser; data
   }, [data.devices, user.Id, p.EnabledDevices, allDevices]);
   return (
     <>
-      <Group title={t('Libraries')} text={t('What {name} can browse and play.', { name: user.Name })}>
+      <Panel class="srv-ue-panel" title={t('Libraries')} text={t('What {name} can browse and play.', { name: user.Name })}>
         <SwitchRow name={t('All libraries')} help={t('Including libraries you add later')} checked={p.EnableAllFolders} onChange={(v) => set('EnableAllFolders', v)} />
         {!p.EnableAllFolders && (
           data.folders.length ? (
@@ -423,8 +409,8 @@ function AccessTab({ p, user, data, set }: { p: FullPolicy; user: FullUser; data
             </div>
           ) : <p class="srv-note-row">{t('There are no libraries yet.')}</p>
         )}
-      </Group>
-      <Group title={t('Devices')} text={t('Where {name} can sign in.', { name: user.Name })}>
+      </Panel>
+      <Panel class="srv-ue-panel" title={t('Devices')} text={t('Where {name} can sign in.', { name: user.Name })}>
         <SwitchRow name={t('Any device')} help={t('New phones, TVs and browsers included')} checked={p.EnableAllDevices} onChange={(v) => set('EnableAllDevices', v)} />
         {!p.EnableAllDevices && (
           <>
@@ -445,7 +431,7 @@ function AccessTab({ p, user, data, set }: { p: FullPolicy; user: FullUser; data
             ) : null}
           </>
         )}
-      </Group>
+      </Panel>
     </>
   );
 }
@@ -491,9 +477,8 @@ function ParentalTab({ p, name, ratings, set }: { p: FullPolicy; name: string; r
 
   return (
     <>
-      <Group title={t('Ratings')} text={t('Titles above the limit are hidden from {name} everywhere, including search.', { name })}>
-        <div class="setting">
-          <span class="setting-label"><span class="setting-name">{t('Highest rating allowed')}</span><span class="setting-help">{ratings.length ? t('Ratings from the server’s country, lowest first') : t('Ratings from the metadata, lowest first')}</span></span>
+      <Panel class="srv-ue-panel" title={t('Ratings')} text={t('Titles above the limit are hidden from {name} everywhere, including search.', { name })}>
+        <SettingRow name={t('Highest rating allowed')} help={ratings.length ? t('Ratings from the server’s country, lowest first') : t('Ratings from the metadata, lowest first')}>
           <SelectField
             value={value}
             options={options}
@@ -506,9 +491,8 @@ function ParentalTab({ p, name, ratings, set }: { p: FullPolicy; name: string; r
               set('MaxParentalSubRating', sub === '' ? null : Number(sub));
             }}
           />
-        </div>
-        <div class="setting is-stack">
-          <span class="setting-label"><span class="setting-name">{t('Hide titles without a rating')}</span><span class="setting-help">{t('Turn on for each kind of title that should stay hidden when it has no rating')}</span></span>
+        </SettingRow>
+        <SettingRow name={t('Hide titles without a rating')} help={t('Turn on for each kind of title that should stay hidden when it has no rating')} stack>
           <div class="srv-grid2">
             {UNRATED.map((u) => (
               <div key={u.id} class="srv-sw">
@@ -521,15 +505,15 @@ function ParentalTab({ p, name, ratings, set }: { p: FullPolicy; name: string; r
               </div>
             ))}
           </div>
-        </div>
-      </Group>
+        </SettingRow>
+      </Panel>
 
-      <Group title={t('Tags')} text={t('Tags come from the metadata, or from what you add on a title’s page.')}>
+      <Panel class="srv-ue-panel" title={t('Tags')} text={t('Tags come from the metadata, or from what you add on a title’s page.')}>
         <TagRow name={t('Only show titles tagged')} help={t('Leave empty to allow everything')} tags={p.AllowedTags} onChange={(v) => set('AllowedTags', v)} />
         <TagRow name={t('Hide titles tagged')} help={t('Wins over the list above')} tags={p.BlockedTags} onChange={(v) => set('BlockedTags', v)} />
-      </Group>
+      </Panel>
 
-      <Group title={t('When {name} can watch', { name })} text={t('Outside these hours, sign-in and playback are blocked. No times means any time.')}>
+      <Panel class="srv-ue-panel" title={t('When {name} can watch', { name })} text={t('Outside these hours, sign-in and playback are blocked. No times means any time.')}>
         <div class="srv-sched">
           {p.AccessSchedules.map((s, i) => (
             <div key={i} class="srv-sched-row">
@@ -540,7 +524,7 @@ function ParentalTab({ p, name, ratings, set }: { p: FullPolicy; name: string; r
           ))}
           <button type="button" class="srv-dashed" onClick={() => setSchedOpen(true)}><Icon name="plus" size={13} />{t('Add a time')}</button>
         </div>
-      </Group>
+      </Panel>
       <ScheduleSheet open={schedOpen} onClose={() => setSchedOpen(false)} onAdd={(s) => { set('AccessSchedules', [...p.AccessSchedules, s]); setSchedOpen(false); }} />
     </>
   );
@@ -585,8 +569,7 @@ function TagRow({ name, help, tags, onChange, last }: { name: string; help: stri
     setAdding(false);
   };
   return (
-    <div class={'setting is-stack' + (last ? ' is-last' : '')}>
-      <span class="setting-label"><span class="setting-name">{name}</span><span class="setting-help">{help}</span></span>
+    <SettingRow name={name} help={help} stack last={last}>
       <div class="chips">
         {tags.map((tag) => (
           <span key={tag} class="chip">{tag}<button type="button" aria-label={t('Remove {tag}', { tag })} onClick={() => onChange(tags.filter((x) => x !== tag))}><Icon name="close" size={12} /></button></span>
@@ -608,7 +591,7 @@ function TagRow({ name, help, tags, onChange, last }: { name: string; help: stri
           <button type="button" class="chip-add" onClick={() => setAdding(true)}><Icon name="plus" size={12} />{t('Add tag')}</button>
         )}
       </div>
-    </div>
+    </SettingRow>
   );
 }
 
@@ -656,25 +639,22 @@ function PasswordTab({ user, isMe, onChanged }: { user: FullUser; isMe: boolean;
   };
 
   return (
-    <Group
+    <Panel class="srv-ue-panel"
       title={t('Password')}
       text={isMe ? t('Changing your password signs you out on your other devices.') : t('A new password signs {name} out on their other devices. Remove it to let {name} sign in without one.', { name: user.Name })}
     >
       <form class="srv-pw" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         {isMe && (
-          <div class="setting">
-            <label for="pw-cur" class="setting-label"><span class="setting-name">{t('Current password')}</span><span class="setting-help">{t('Needed to change your own password')}</span></label>
+          <SettingRow name={t('Current password')} help={t('Needed to change your own password')} htmlFor="pw-cur">
             <input id="pw-cur" class="field srv-w300" type="password" autocomplete="current-password" value={current} onInput={(e) => setCurrent((e.currentTarget as HTMLInputElement).value)} />
-          </div>
+          </SettingRow>
         )}
-        <div class="setting">
-          <label for="pw-new" class="setting-label"><span class="setting-name">{t('New password')}</span><span class="setting-help">{t('Any length; longer is safer')}</span></label>
+        <SettingRow name={t('New password')} help={t('Any length; longer is safer')} htmlFor="pw-new">
           <input id="pw-new" class="field srv-w300" type="password" autocomplete="new-password" value={next} onInput={(e) => setNext((e.currentTarget as HTMLInputElement).value)} />
-        </div>
-        <div class="setting">
-          <label for="pw-again" class="setting-label"><span class="setting-name">{t('Type it again')}</span><span class="setting-help">{t('To be sure there’s no typo')}</span></label>
+        </SettingRow>
+        <SettingRow name={t('Type it again')} help={t('To be sure there’s no typo')} htmlFor="pw-again">
           <input id="pw-again" class="field srv-w300" type="password" autocomplete="new-password" value={again} onInput={(e) => setAgain((e.currentTarget as HTMLInputElement).value)} />
-        </div>
+        </SettingRow>
         <div class="setting srv-pw-actions">
           <span class="srv-pw-msg">
             {mismatch && <span class="form-error"><Icon name="alert" size={16} />{t('The two passwords don’t match.')}</span>}
@@ -686,7 +666,7 @@ function PasswordTab({ user, isMe, onChanged }: { user: FullUser; isMe: boolean;
           </div>
         </div>
       </form>
-    </Group>
+    </Panel>
   );
 }
 
@@ -696,7 +676,7 @@ function SeedyTab({ flags, info, loading, name, set }: { flags: SeedyFlags; info
   if (loading) return <PanelSkeletons count={1} rows={3} />;
   const linked = !!info?.account?.seerrUserId;
   return (
-    <Group title="Seedy" text={t('What {name} gets in Seedy, on top of Jellyfin’s access.', { name })}>
+    <Panel class="srv-ue-panel" title="Seedy" text={t('What {name} gets in Seedy, on top of Jellyfin’s access.', { name })}>
       {info?.error && <p class="srv-note-row is-warn"><Icon name="alert" size={16} />{t('Seedy’s settings didn’t load, so these show their defaults.')}</p>}
       <SwitchRow
         name={t('Request titles')}
@@ -709,6 +689,6 @@ function SeedyTab({ flags, info, loading, name, set }: { flags: SeedyFlags; info
       />
       <SwitchRow name={t('Counts toward Top 10')} help={t('Their plays shape the Top 10 row everyone sees')} checked={flags.top10} onChange={(v) => set('top10', v)} />
       <SwitchRow name={t('Keep viewing history')} help={<>{tx('Their plays show up in Viewing history. Details under {playlog}', { playlog: <Link to="/admin/playlog" class="srv-inline-link">{t('Play log')}</Link> })}</>} checked={flags.history} onChange={(v) => set('history', v)} />
-    </Group>
+    </Panel>
   );
 }

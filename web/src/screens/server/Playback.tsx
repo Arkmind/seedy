@@ -5,8 +5,8 @@ import { href, setQuery, useLocation } from '../../lib/router';
 import { toast } from '../../ui/overlay';
 import { AdminLayout, PanelSkeletons } from '../admin/AdminLayout';
 import { type EncodingOptions, errText, ffmpegVersion, getEncoding, getServerConfig, getSessions, getSystemInfo, type GpuScan, type HwAccel, saveEncoding, saveServerConfig, scanGpus, type ServerConfig, type TrickplayOptions } from './api';
-import { ChipList, LoadFailed, NumBox, PathField, Select, SettingRow, tOpts, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
-import { Switch } from '../../ui/controls';
+import { ChipList, LoadFailed, NumBox, PathField, SrvRow, SrvSwitchRow, tOpts, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
+import { SelectField } from '../../ui/controls';
 
 type Tab = 'transcoding' | 'resume' | 'streaming' | 'previews';
 const TABS: { id: Tab; label: string }[] = [
@@ -235,10 +235,6 @@ function Group({ title, children }: { title: string; children: ComponentChildren
   );
 }
 
-const Sw = ({ name, help, on, set }: { name: string; help: string; on: boolean; set: (v: boolean) => void }) => (
-  <SettingRow name={name} help={help}><Switch checked={on} onChange={set} label={name} /></SettingRow>
-);
-
 /* ── Transcoding ── */
 
 function Transcoding({ o, set }: { o: EncodingOptions; set: (p: Partial<EncodingOptions>) => void }) {
@@ -322,7 +318,7 @@ function Transcoding({ o, set }: { o: EncodingOptions; set: (p: Partial<Encoding
               <span class="srv-name">{t('Device')}</span>
               <span class="srv-help">{t('The GPU {name} runs on', { name: shortName })}</span>
             </label>
-            <Select id="hw-dev" mono minWidth={260} value={deviceValue} options={deviceOptions}
+            <SelectField id="hw-dev" class="srv-mono-select" minWidth={260} value={deviceValue} options={deviceOptions}
               onChange={(v) => set({ [deviceKey]: v } as Partial<EncodingOptions>)} />
           </div>
         )}
@@ -345,48 +341,48 @@ function Transcoding({ o, set }: { o: EncodingOptions; set: (p: Partial<Encoding
       </section>
 
       <Group title={t('Encoding')}>
-        {hw !== 'none' && <Sw name={t('Encode on the GPU')} help={t('Turn off to decode on the GPU but encode on the CPU')} on={o.EnableHardwareEncoding} set={(v) => set({ EnableHardwareEncoding: v })} />}
-        <Sw name={t('Allow HEVC output')} help={t('Smaller streams for devices that can play HEVC')} on={o.AllowHevcEncoding} set={(v) => set({ AllowHevcEncoding: v })} />
-        <Sw name={t('Allow AV1 output')} help={t('Smallest streams; needs a recent GPU and device')} on={o.AllowAv1Encoding} set={(v) => set({ AllowAv1Encoding: v })} />
+        {hw !== 'none' && <SrvSwitchRow name={t('Encode on the GPU')} help={t('Turn off to decode on the GPU but encode on the CPU')} on={o.EnableHardwareEncoding} set={(v) => set({ EnableHardwareEncoding: v })} />}
+        <SrvSwitchRow name={t('Allow HEVC output')} help={t('Smaller streams for devices that can play HEVC')} on={o.AllowHevcEncoding} set={(v) => set({ AllowHevcEncoding: v })} />
+        <SrvSwitchRow name={t('Allow AV1 output')} help={t('Smallest streams; needs a recent GPU and device')} on={o.AllowAv1Encoding} set={(v) => set({ AllowAv1Encoding: v })} />
         {intel && (
-          <Sw name={t('Intel low-power encoders')} help={t('Faster on recent Intel GPUs')}
+          <SrvSwitchRow name={t('Intel low-power encoders')} help={t('Faster on recent Intel GPUs')}
             on={o.EnableIntelLowPowerH264HwEncoder && o.EnableIntelLowPowerHevcHwEncoder}
             set={(v) => set({ EnableIntelLowPowerH264HwEncoder: v, EnableIntelLowPowerHevcHwEncoder: v })} />
         )}
-        <SettingRow name={t('Encoder preset')} help={t('Trades speed for quality')}>
-          <Select label={t('Encoder preset')} value={o.EncoderPreset} options={tOpts(PRESETS)} onChange={(v) => set({ EncoderPreset: v })} />
-        </SettingRow>
-        <SettingRow name={t('H.264 quality (CRF)')} help={t('Lower is better quality and bigger files')}>
+        <SrvRow name={t('Encoder preset')} help={t('Trades speed for quality')}>
+          <SelectField label={t('Encoder preset')} value={o.EncoderPreset} options={tOpts(PRESETS)} onChange={(v) => set({ EncoderPreset: v })} />
+        </SrvRow>
+        <SrvRow name={t('H.264 quality (CRF)')} help={t('Lower is better quality and bigger files')}>
           <NumBox label={t('H.264 quality (CRF)')} value={o.H264Crf} min={0} max={51} onChange={(v) => set({ H264Crf: v })} />
-        </SettingRow>
-        <SettingRow name={t('HEVC quality (CRF)')} help={t('Lower is better quality and bigger files')}>
+        </SrvRow>
+        <SrvRow name={t('HEVC quality (CRF)')} help={t('Lower is better quality and bigger files')}>
           <NumBox label={t('HEVC quality (CRF)')} value={o.H265Crf} min={0} max={51} onChange={(v) => set({ H265Crf: v })} />
-        </SettingRow>
+        </SrvRow>
       </Group>
 
       <Group title={t('HDR to SDR')}>
-        <Sw name={t('Tone mapping')} help={t('Keeps HDR video from looking washed out on SDR screens')} on={o.EnableTonemapping} set={(v) => set({ EnableTonemapping: v })} />
-        <SettingRow name={t('Algorithm')} help={t('How bright highlights are compressed')}>
-          <Select label={t('Algorithm')} value={o.TonemappingAlgorithm} options={ALGORITHMS.map((a) => (WORD_ALGORITHMS.has(a.value) ? { ...a, label: t(a.label) } : a))} onChange={(v) => set({ TonemappingAlgorithm: v })} />
-        </SettingRow>
-        {intel && <Sw name={t('Intel VPP tone mapping')} help={t('Uses Intel’s built-in tone mapping instead')} on={o.EnableVppTonemapping} set={(v) => set({ EnableVppTonemapping: v })} />}
-        {hw === 'videotoolbox' && <Sw name={t('VideoToolbox tone mapping')} help={t('Uses Apple’s built-in tone mapping instead')} on={o.EnableVideoToolboxTonemapping} set={(v) => set({ EnableVideoToolboxTonemapping: v })} />}
+        <SrvSwitchRow name={t('Tone mapping')} help={t('Keeps HDR video from looking washed out on SDR screens')} on={o.EnableTonemapping} set={(v) => set({ EnableTonemapping: v })} />
+        <SrvRow name={t('Algorithm')} help={t('How bright highlights are compressed')}>
+          <SelectField label={t('Algorithm')} value={o.TonemappingAlgorithm} options={ALGORITHMS.map((a) => (WORD_ALGORITHMS.has(a.value) ? { ...a, label: t(a.label) } : a))} onChange={(v) => set({ TonemappingAlgorithm: v })} />
+        </SrvRow>
+        {intel && <SrvSwitchRow name={t('Intel VPP tone mapping')} help={t('Uses Intel’s built-in tone mapping instead')} on={o.EnableVppTonemapping} set={(v) => set({ EnableVppTonemapping: v })} />}
+        {hw === 'videotoolbox' && <SrvSwitchRow name={t('VideoToolbox tone mapping')} help={t('Uses Apple’s built-in tone mapping instead')} on={o.EnableVideoToolboxTonemapping} set={(v) => set({ EnableVideoToolboxTonemapping: v })} />}
       </Group>
 
       <Group title={t('Resources')}>
-        <SettingRow name={t('Encoding threads')} help={t('Leave on Auto unless the server runs other heavy work')}>
-          <Select label={t('Encoding threads')} value={o.EncodingThreadCount} options={threads.some((x) => x.value === o.EncodingThreadCount) ? threads : [...threads, { value: o.EncodingThreadCount, label: threadsLabel(o.EncodingThreadCount) }]}
+        <SrvRow name={t('Encoding threads')} help={t('Leave on Auto unless the server runs other heavy work')}>
+          <SelectField label={t('Encoding threads')} value={o.EncodingThreadCount} options={threads.some((x) => x.value === o.EncodingThreadCount) ? threads : [...threads, { value: o.EncodingThreadCount, label: threadsLabel(o.EncodingThreadCount) }]}
             onChange={(v) => set({ EncodingThreadCount: v })} />
-        </SettingRow>
-        <Sw name={t('Throttle transcodes')} help={t('Pauses converting when far enough ahead of the viewer')} on={o.EnableThrottling} set={(v) => set({ EnableThrottling: v })} />
-        <SettingRow name={t('Start throttling after')} help={t('Seconds converted ahead of playback')}>
+        </SrvRow>
+        <SrvSwitchRow name={t('Throttle transcodes')} help={t('Pauses converting when far enough ahead of the viewer')} on={o.EnableThrottling} set={(v) => set({ EnableThrottling: v })} />
+        <SrvRow name={t('Start throttling after')} help={t('Seconds converted ahead of playback')}>
           <NumBox label={t('Start throttling after, in seconds')} unit="s" value={o.ThrottleDelaySeconds} min={60} max={3600} onChange={(v) => set({ ThrottleDelaySeconds: v })} />
-        </SettingRow>
-        <Sw name={t('Delete old segments')} help={t('Frees disk space during long streams')} on={o.EnableSegmentDeletion} set={(v) => set({ EnableSegmentDeletion: v })} />
-        <SettingRow name={t('Keep segments for')} help={t('Seconds of already-watched video kept')}>
+        </SrvRow>
+        <SrvSwitchRow name={t('Delete old segments')} help={t('Frees disk space during long streams')} on={o.EnableSegmentDeletion} set={(v) => set({ EnableSegmentDeletion: v })} />
+        <SrvRow name={t('Keep segments for')} help={t('Seconds of already-watched video kept')}>
           <NumBox label={t('Keep segments for, in seconds')} unit="s" value={o.SegmentKeepSeconds} min={120} max={3600} onChange={(v) => set({ SegmentKeepSeconds: v })} />
-        </SettingRow>
-        <Sw name={t('Extract subtitles on the fly')} help={t('For subtitles burned in or converted while streaming')} on={o.EnableSubtitleExtraction} set={(v) => set({ EnableSubtitleExtraction: v })} />
+        </SrvRow>
+        <SrvSwitchRow name={t('Extract subtitles on the fly')} help={t('For subtitles burned in or converted while streaming')} on={o.EnableSubtitleExtraction} set={(v) => set({ EnableSubtitleExtraction: v })} />
       </Group>
     </>
   );
@@ -398,23 +394,23 @@ function Resume({ c, set }: { c: ServerConfig; set: (p: Partial<ServerConfig>) =
   return (
     <>
       <Group title={t('Video')}>
-        <SettingRow name={t('Counts as started after')} help={t('Stopping earlier keeps no resume point')}>
+        <SrvRow name={t('Counts as started after')} help={t('Stopping earlier keeps no resume point')}>
           <NumBox label={t('Counts as started after, in percent')} unit="%" value={c.MinResumePct} min={0} max={Math.max(0, c.MaxResumePct - 1)} onChange={(v) => set({ MinResumePct: v })} />
-        </SettingRow>
-        <SettingRow name={t('Counts as watched after')} help={t('Stopping later marks the video as watched')}>
+        </SrvRow>
+        <SrvRow name={t('Counts as watched after')} help={t('Stopping later marks the video as watched')}>
           <NumBox label={t('Counts as watched after, in percent')} unit="%" value={c.MaxResumePct} min={Math.min(100, c.MinResumePct + 1)} max={100} onChange={(v) => set({ MaxResumePct: v })} />
-        </SettingRow>
-        <SettingRow name={t('Shortest video with a resume point')} help={t('Shorter videos always start from the beginning')}>
+        </SrvRow>
+        <SrvRow name={t('Shortest video with a resume point')} help={t('Shorter videos always start from the beginning')}>
           <NumBox label={t('Shortest video with a resume point, in seconds')} unit="s" value={c.MinResumeDurationSeconds} min={0} max={86400} onChange={(v) => set({ MinResumeDurationSeconds: v })} />
-        </SettingRow>
+        </SrvRow>
       </Group>
       <Group title={t('Audiobooks')}>
-        <SettingRow name={t('Counts as started after')} help={t('Stopping in the first minutes starts the book over')}>
+        <SrvRow name={t('Counts as started after')} help={t('Stopping in the first minutes starts the book over')}>
           <NumBox label={t('Audiobook counts as started after, in minutes')} unit="min" value={c.MinAudiobookResume} min={0} max={600} onChange={(v) => set({ MinAudiobookResume: v })} />
-        </SettingRow>
-        <SettingRow name={t('Counts as finished')} help={t('Minutes before the end that count as finishing it')}>
+        </SrvRow>
+        <SrvRow name={t('Counts as finished')} help={t('Minutes before the end that count as finishing it')}>
           <NumBox label={t('Audiobook counts as finished, minutes before the end')} unit="min" value={c.MaxAudiobookResume} min={0} max={600} onChange={(v) => set({ MaxAudiobookResume: v })} />
-        </SettingRow>
+        </SrvRow>
       </Group>
     </>
   );
@@ -428,41 +424,41 @@ function Streaming({ c, setC, o, setO }: { c: ServerConfig; setC: (p: Partial<Se
   return (
     <>
       <Group title={t('Remote streaming')}>
-        <SettingRow name={t('Bitrate limit outside the home network')} help={t('0 means no limit. People can also have their own limit in Users')}>
+        <SrvRow name={t('Bitrate limit outside the home network')} help={t('0 means no limit. People can also have their own limit in Users')}>
           <NumBox label={t('Bitrate limit, in Mbps')} unit="Mbps" step={0.1} value={mbps} min={0} max={1000} onChange={(v) => setC({ RemoteClientBitrateLimit: Math.round(v * 1_000_000) })} />
-        </SettingRow>
+        </SrvRow>
       </Group>
       <Group title={t('Audio')}>
-        <SettingRow name={t('Downmix boost')} help={t('Makes stereo made from surround sound louder')}>
+        <SrvRow name={t('Downmix boost')} help={t('Makes stereo made from surround sound louder')}>
           <NumBox label={t('Downmix boost')} unit="×" step={0.5} value={o.DownMixAudioBoost} min={0.5} max={3} onChange={(v) => setO({ DownMixAudioBoost: v })} />
-        </SettingRow>
-        <SettingRow name={t('Stereo downmix')} help={t('How surround channels are mixed down to two')}>
-          <Select label={t('Stereo downmix')} value={o.DownMixStereoAlgorithm} options={DOWNMIX.some((d) => d.value === o.DownMixStereoAlgorithm) ? downmix : [...downmix, { value: o.DownMixStereoAlgorithm, label: o.DownMixStereoAlgorithm }]}
+        </SrvRow>
+        <SrvRow name={t('Stereo downmix')} help={t('How surround channels are mixed down to two')}>
+          <SelectField label={t('Stereo downmix')} value={o.DownMixStereoAlgorithm} options={DOWNMIX.some((d) => d.value === o.DownMixStereoAlgorithm) ? downmix : [...downmix, { value: o.DownMixStereoAlgorithm, label: o.DownMixStereoAlgorithm }]}
             onChange={(v) => setO({ DownMixStereoAlgorithm: v })} />
-        </SettingRow>
-        <Sw name={t('Variable bitrate audio')} help={t('Better sound for the same size; a few old devices can’t play it')} on={o.EnableAudioVbr} set={(v) => setO({ EnableAudioVbr: v })} />
+        </SrvRow>
+        <SrvSwitchRow name={t('Variable bitrate audio')} help={t('Better sound for the same size; a few old devices can’t play it')} on={o.EnableAudioVbr} set={(v) => setO({ EnableAudioVbr: v })} />
       </Group>
       <Group title={t('Video')}>
-        <SettingRow name={t('Deinterlacing')} help={t('For TV recordings and old DVDs')}>
-          <Select label={t('Deinterlacing')} value={o.DeinterlaceMethod} options={DEINTERLACE} onChange={(v) => setO({ DeinterlaceMethod: v })} />
-        </SettingRow>
-        <Sw name={t('Double the frame rate')} help={t('Smoother motion when deinterlacing, at twice the work')} on={o.DeinterlaceDoubleRate} set={(v) => setO({ DeinterlaceDoubleRate: v })} />
-        <SettingRow name={t('Muxing queue')} help={t('Raise it only if conversions fail with “Too many packets buffered”')}>
+        <SrvRow name={t('Deinterlacing')} help={t('For TV recordings and old DVDs')}>
+          <SelectField label={t('Deinterlacing')} value={o.DeinterlaceMethod} options={DEINTERLACE} onChange={(v) => setO({ DeinterlaceMethod: v })} />
+        </SrvRow>
+        <SrvSwitchRow name={t('Double the frame rate')} help={t('Smoother motion when deinterlacing, at twice the work')} on={o.DeinterlaceDoubleRate} set={(v) => setO({ DeinterlaceDoubleRate: v })} />
+        <SrvRow name={t('Muxing queue')} help={t('Raise it only if conversions fail with “Too many packets buffered”')}>
           <NumBox label={t('Muxing queue size, in packets')} unit={t('packets')} width={60} value={o.MaxMuxingQueueSize} min={128} max={65536} onChange={(v) => setO({ MaxMuxingQueueSize: v })} />
-        </SettingRow>
+        </SrvRow>
       </Group>
       <Group title={t('Subtitles')}>
-        <Sw name={t('Fallback fonts')} help={t('Fonts used for burned-in subtitles when a video doesn’t bring its own')} on={o.EnableFallbackFont} set={(v) => setO({ EnableFallbackFont: v })} />
+        <SrvSwitchRow name={t('Fallback fonts')} help={t('Fonts used for burned-in subtitles when a video doesn’t bring its own')} on={o.EnableFallbackFont} set={(v) => setO({ EnableFallbackFont: v })} />
         {o.EnableFallbackFont && (
-          <SettingRow name={t('Fallback fonts folder')} help={t('A folder of .ttf, .otf or .woff fonts on the server')}>
+          <SrvRow name={t('Fallback fonts folder')} help={t('A folder of .ttf, .otf or .woff fonts on the server')}>
             <PathField value={o.FallbackFontPath ?? ''} onChange={(v) => setO({ FallbackFontPath: v })} label={t('Fallback fonts folder')} />
-          </SettingRow>
+          </SrvRow>
         )}
       </Group>
       <Group title={t('Files')}>
-        <SettingRow name={t('Transcode folder')} help={t('Where streams are written while they play')}>
+        <SrvRow name={t('Transcode folder')} help={t('Where streams are written while they play')}>
           <PathField value={o.TranscodingTempPath ?? ''} onChange={(v) => setO({ TranscodingTempPath: v })} label={t('Transcode folder')} placeholder={t('Server cache folder')} />
-        </SettingRow>
+        </SrvRow>
       </Group>
     </>
   );
@@ -474,27 +470,27 @@ function Previews({ t: tp, set }: { t: TrickplayOptions; set: (p: Partial<Trickp
   return (
     <>
       <Group title={t('Making previews')}>
-        <Sw name={t('Decode on the GPU')} help={t('Uses the hardware acceleration set up under Transcoding')} on={tp.EnableHwAcceleration} set={(v) => set({ EnableHwAcceleration: v })} />
-        <Sw name={t('Encode on the GPU')} help={t('Faster still, but not every GPU can do it')} on={tp.EnableHwEncoding} set={(v) => set({ EnableHwEncoding: v })} />
-        <Sw name={t('Key frames only')} help={t('Much faster, but previews may be a few seconds off')} on={tp.EnableKeyFrameOnlyExtraction} set={(v) => set({ EnableKeyFrameOnlyExtraction: v })} />
-        <SettingRow name={t('During library scans')} help={t('Scans can wait for new previews or carry on without them')}>
-          <Select label={t('During library scans')} value={tp.ScanBehavior} minWidth={260}
+        <SrvSwitchRow name={t('Decode on the GPU')} help={t('Uses the hardware acceleration set up under Transcoding')} on={tp.EnableHwAcceleration} set={(v) => set({ EnableHwAcceleration: v })} />
+        <SrvSwitchRow name={t('Encode on the GPU')} help={t('Faster still, but not every GPU can do it')} on={tp.EnableHwEncoding} set={(v) => set({ EnableHwEncoding: v })} />
+        <SrvSwitchRow name={t('Key frames only')} help={t('Much faster, but previews may be a few seconds off')} on={tp.EnableKeyFrameOnlyExtraction} set={(v) => set({ EnableKeyFrameOnlyExtraction: v })} />
+        <SrvRow name={t('During library scans')} help={t('Scans can wait for new previews or carry on without them')}>
+          <SelectField label={t('During library scans')} value={tp.ScanBehavior} minWidth={260}
             options={[{ value: 'NonBlocking', label: t('Make them in the background') }, { value: 'Blocking', label: t('Wait for them') }]}
             onChange={(v) => set({ ScanBehavior: v })} />
-        </SettingRow>
-        <SettingRow name={t('Priority')} help={t('Lower keeps playback smooth while previews are made')}>
-          <Select label={t('Priority')} value={tp.ProcessPriority} options={PRIORITY.some((p) => p.value === tp.ProcessPriority) ? tOpts(PRIORITY) : [...tOpts(PRIORITY), { value: tp.ProcessPriority, label: tp.ProcessPriority }]}
+        </SrvRow>
+        <SrvRow name={t('Priority')} help={t('Lower keeps playback smooth while previews are made')}>
+          <SelectField label={t('Priority')} value={tp.ProcessPriority} options={PRIORITY.some((p) => p.value === tp.ProcessPriority) ? tOpts(PRIORITY) : [...tOpts(PRIORITY), { value: tp.ProcessPriority, label: tp.ProcessPriority }]}
             onChange={(v) => set({ ProcessPriority: v })} />
-        </SettingRow>
-        <SettingRow name={t('Threads')} help={t('0 lets FFmpeg decide')}>
+        </SrvRow>
+        <SrvRow name={t('Threads')} help={t('0 lets FFmpeg decide')}>
           <NumBox label={t('Threads')} value={tp.ProcessThreads} min={0} max={64} onChange={(v) => set({ ProcessThreads: v })} />
-        </SettingRow>
+        </SrvRow>
       </Group>
       <Group title={t('Images')}>
-        <SettingRow name={t('One preview every')} help={t('Shorter gaps look smoother and take more space')}>
+        <SrvRow name={t('One preview every')} help={t('Shorter gaps look smoother and take more space')}>
           <NumBox label={t('One preview every, in seconds')} unit="s" value={Math.round(tp.Interval / 100) / 10} step={0.5} min={1} max={600} onChange={(v) => set({ Interval: Math.round(v * 1000) })} />
-        </SettingRow>
-        <SettingRow name={t('Widths')} help={t('One set of previews per width, in pixels')}>
+        </SrvRow>
+        <SrvRow name={t('Widths')} help={t('One set of previews per width, in pixels')}>
           <ChipList
             label={t('Widths')}
             items={tp.WidthResolutions.map(String)}
@@ -503,19 +499,19 @@ function Previews({ t: tp, set }: { t: TrickplayOptions; set: (p: Partial<Trickp
             validate={(v) => (/^\d+$/.test(v) && +v >= 64 && +v <= 3840 ? null : t('Write a width in pixels, between 64 and 3840.'))}
             onChange={(list) => set({ WidthResolutions: list.map(Number).sort((a, b) => a - b) })}
           />
-        </SettingRow>
-        <SettingRow name={t('Previews per tile')} help={t('Previews are stored in grids of this size')}>
+        </SrvRow>
+        <SrvRow name={t('Previews per tile')} help={t('Previews are stored in grids of this size')}>
           <div class="srv-chiprow">
             <NumBox label={t('Previews across')} unit={t('across')} width={36} value={tp.TileWidth} min={1} max={100} onChange={(v) => set({ TileWidth: v })} />
             <NumBox label={t('Previews down')} unit={t('down')} width={36} value={tp.TileHeight} min={1} max={100} onChange={(v) => set({ TileHeight: v })} />
           </div>
-        </SettingRow>
-        <SettingRow name={t('JPEG quality')} help={t('Higher looks better and makes bigger files')}>
+        </SrvRow>
+        <SrvRow name={t('JPEG quality')} help={t('Higher looks better and makes bigger files')}>
           <NumBox label={t('JPEG quality, in percent')} unit="%" value={tp.JpegQuality} min={1} max={100} onChange={(v) => set({ JpegQuality: v })} />
-        </SettingRow>
-        <SettingRow name={t('Compression')} help={t('From 2 to 31. Lower is better quality and bigger files')}>
+        </SrvRow>
+        <SrvRow name={t('Compression')} help={t('From 2 to 31. Lower is better quality and bigger files')}>
           <NumBox label={t('Compression')} value={tp.Qscale} min={2} max={31} onChange={(v) => set({ Qscale: v })} />
-        </SettingRow>
+        </SrvRow>
       </Group>
     </>
   );
