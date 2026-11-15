@@ -143,15 +143,12 @@ class MusicApi(private val session: UserSession) {
     suspend fun count(parentId: UUID, kind: BaseItemKind): Int =
         query(parentId, listOf(kind), limit = 0, fields = emptyList(), images = emptyList()).totalRecordCount
 
-    suspend fun albumArtistsCount(parentId: UUID): Int = io {
-        api.artistApi.getAlbumArtists(userId = userId, parentId = parentId, limit = 0, enableTotalRecordCount = true, enableImages = false).content.totalRecordCount
-    }
-
     /* ── Tabs ── */
 
     suspend fun albums(parentId: UUID, sort: MusicSort, favorites: Boolean, start: Int, limit: Int, genreId: UUID? = null): BaseItemDtoQueryResult =
         query(parentId, listOf(BaseItemKind.MUSIC_ALBUM), sort.by, sort.descending, start, limit, favorites = favorites.takeIf { it }, genreIds = genreId?.let(::listOf))
 
+    @Suppress("DEPRECATION") // /Artists/AlbumArtists has no album-artist-only replacement; the web calls the same endpoint
     suspend fun albumArtists(parentId: UUID, sort: MusicSort, favorites: Boolean, start: Int, limit: Int): BaseItemDtoQueryResult = io {
         api.artistApi.getAlbumArtists(
             userId = userId, parentId = parentId, startIndex = start, limit = limit, sortBy = sort.by,
@@ -181,6 +178,7 @@ class MusicApi(private val session: UserSession) {
         query(parentId, listOf(BaseItemKind.MUSIC_ALBUM), listOf(ItemSortBy.DATE_CREATED), true, limit = 6, fields = emptyList(), genreIds = listOf(genreId), count = false)
             .items.let { list -> list.firstOrNull { it.id !in skip } ?: list.firstOrNull() }
 
+    @Suppress("DEPRECATION") // no replacement for a genre's instant mix; the web calls the same endpoint
     suspend fun genreMix(genreId: UUID, limit: Int = 120): List<BaseItemDto> = io {
         api.instantMixApi.getInstantMixFromMusicGenreById(
             id = genreId, userId = userId, limit = limit, fields = AudioApi.TrackFields, enableImageTypes = listOf(ImageType.PRIMARY), imageTypeLimit = 1, enableUserData = true,
@@ -231,6 +229,7 @@ class MusicApi(private val session: UserSession) {
         return items(ids, MusicFields).map { TopArtist(it, plays[it.id] ?: 0) }
     }
 
+    @Suppress("DEPRECATION") // /Artists/AlbumArtists has no album-artist-only replacement; the web calls the same endpoint
     suspend fun albumArtistsList(parentId: UUID, random: Boolean, limit: Int): List<BaseItemDto> = io {
         api.artistApi.getAlbumArtists(
             userId = userId, parentId = parentId, limit = limit, sortBy = listOf(if (random) ItemSortBy.RANDOM else ItemSortBy.SORT_NAME),

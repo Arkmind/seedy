@@ -346,7 +346,7 @@ fun playDetail(s: SessionInfoDto): String {
                 val to = codecName(ti.audioCodec) + (ti.audioChannels?.let { " " + channels(it) } ?: "")
                 parts += if (srcAudio.isNotEmpty()) t("Audio {from} to {to}", "from" to srcAudio, "to" to to) else t("Audio track to {to}", "to" to to)
             } else if (!ti?.container.isNullOrEmpty()) {
-                parts += t("Into {container}", "container" to ti!!.container!!.uppercase())
+                parts += t("Into {container}", "container" to ti.container!!.uppercase())
             }
             parts += if (ti != null && !ti.isAudioDirect) t("video copied") else t("video and audio copied")
             return parts.joinToString(" · ")

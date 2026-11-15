@@ -68,11 +68,7 @@ data class LocalizationOption(val name: String = "", val value: String = "")
 @Serializable
 data class FsEntry(val name: String = "", val path: String = "", val type: String = "Directory")
 
-/** GET /System/Logs. */
-@Serializable
-data class LogFile(val dateCreated: String = "", val dateModified: String = "", val size: Long = 0, val name: String = "")
-
-/* ── Settings kept as JSON ── */
+/* ── Wording ── */
 
 /** "42%" ("42 %" in French), from 0–100. */
 fun percentLabel(p: Double): String = NumberFormat.getPercentInstance(I18n.locale).format(floor(p) / 100)

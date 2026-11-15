@@ -171,7 +171,7 @@ interface LibrariesActions : FolderPickerActions {
     fun messageShown() {}
 }
 
-class LibrariesViewModel(
+class AdminLibrariesViewModel(
     private val session: UserSession,
     private val clock: Clock = Clock.systemDefaultZone(),
 ) : ViewModel(), LibrariesActions {
@@ -335,7 +335,7 @@ fun librariesView(list: List<VirtualFolder>, tasks: List<TaskInfo>?, counts: Map
     val running = scanTask?.state == "Running"
     val lastEnd = scanTask?.lastExecutionResult?.endTimeUtc
     val status = when {
-        running -> t("scanning now") + (scanTask?.currentProgressPercentage?.let { " · " + percentLabel(it) } ?: "")
+        running -> t("scanning now") + (scanTask.currentProgressPercentage?.let { " · " + percentLabel(it) } ?: "")
         realDate(lastEnd) != null -> t("last full scan {when}", "when" to atLabel(realDate(lastEnd)!!, clock))
         else -> t("not scanned yet")
     }
@@ -345,7 +345,7 @@ fun librariesView(list: List<VirtualFolder>, tasks: List<TaskInfo>?, counts: Map
         "status" to status,
     )
     val cards = list.map { f ->
-        val progress = f.refreshProgress ?: if (f.refreshStatus == "Active") 0.0 else if (running) scanTask?.currentProgressPercentage ?: 0.0 else null
+        val progress = f.refreshProgress ?: if (f.refreshStatus == "Active") 0.0 else if (running) scanTask.currentProgressPercentage ?: 0.0 else null
         LibraryCard(
             id = f.itemId,
             name = f.name,

@@ -228,13 +228,6 @@ class ImagesViewModel(session: UserSession, private val id: String) : ViewModel(
     }
 
     companion object {
-        fun providerName(name: String): String = when (name) {
-            "TheMovieDb" -> "TMDb"
-            "TheTVDB", "TheTvdb" -> "TVDb"
-            "FanArt", "Fanart" -> "Fanart"
-            else -> name
-        }
-
         /** "English", or "no text" when the image has no language. */
         fun language(code: String?): String =
             if (code.isNullOrBlank()) t("no text") else Locale.forLanguageTag(code).getDisplayLanguage(I18n.locale).replaceFirstChar { it.titlecase(I18n.locale) }.ifEmpty { code }

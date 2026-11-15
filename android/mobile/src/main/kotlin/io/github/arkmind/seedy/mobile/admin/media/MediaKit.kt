@@ -114,7 +114,7 @@ fun NumberSheet(n: NumberSetting, onSave: (Double) -> Unit, onDismiss: () -> Uni
     var text by remember(n.key) { mutableStateOf(numberText(n.number).replace(' ', ' ')) }
     val value = text.trim().replace(',', '.').replace(" ", "").toDoubleOrNull()
     val ok = value != null && value >= n.min && value <= n.max && (n.decimals || value % 1.0 == 0.0)
-    val submit = { if (ok) { onSave(value!!); onDismiss() } }
+    val submit = { if (ok) { onSave(value); onDismiss() } }
     FormSheet(n.name, n.text ?: n.help, onDismiss, scroll = true) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SeedyField(text, { text = it }, Modifier.weight(1f), keyboard = if (n.decimals) KeyboardType.Decimal else KeyboardType.Number, onDone = submit)

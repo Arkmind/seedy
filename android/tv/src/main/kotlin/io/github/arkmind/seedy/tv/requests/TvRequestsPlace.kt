@@ -101,7 +101,7 @@ fun TvRequestsPlace(onSearch: () -> Unit) {
             onSearch = onSearch,
             onTitle = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
             onRequest = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
-            onMessageShown = vm::clearMessage,
+            onMessageShown = vm::messageShown,
         ),
     )
 }

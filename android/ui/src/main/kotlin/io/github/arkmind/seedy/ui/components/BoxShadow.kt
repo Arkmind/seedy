@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.nativePaint
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -17,7 +18,7 @@ import androidx.compose.ui.unit.dp
  */
 fun Modifier.boxShadow(color: Color, blur: Dp, y: Dp = 0.dp, radius: Dp = 0.dp): Modifier = this.drawBehind {
     val sigma = blur.toPx() / 2f
-    val paint = Paint().asFrameworkPaint().apply {
+    val paint = Paint().nativePaint.apply {
         isAntiAlias = true
         this.color = color.toArgb()
         // Android turns a blur radius into sigma = radius × 0.57735 + 0.5.

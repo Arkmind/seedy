@@ -1,10 +1,10 @@
 package io.github.arkmind.seedy.core.admin.seedy
 
 import io.github.arkmind.seedy.core.admin.AdminHttp
+import io.github.arkmind.seedy.core.admin.media.FsEntry
 import io.github.arkmind.seedy.core.i18n.t
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
 import org.jellyfin.sdk.api.client.HttpMethod
 
@@ -33,10 +33,6 @@ suspend fun restartAndWait(http: AdminHttp) {
         delay(2_000)
     }
 }
-
-/** A folder or file on the server ([type] "Directory", "File", "NetworkShare"…). */
-@Serializable
-data class FsEntry(val name: String = "", val path: String = "", val type: String = "Directory")
 
 /** What a folder holds and the folder above it ("" for the list of drives, null at the drives). */
 data class FolderListing(val path: String, val entries: List<FsEntry>, val parent: String?, val error: String? = null)

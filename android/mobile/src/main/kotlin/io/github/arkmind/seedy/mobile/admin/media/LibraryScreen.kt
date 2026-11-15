@@ -37,7 +37,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.admin.media.LibraryActions
 import io.github.arkmind.seedy.core.admin.media.LibraryPages
 import io.github.arkmind.seedy.core.admin.media.LibraryState
-import io.github.arkmind.seedy.core.admin.media.LibraryViewModel
+import io.github.arkmind.seedy.core.admin.media.AdminLibraryViewModel
 import io.github.arkmind.seedy.core.admin.media.SourceRow
 import io.github.arkmind.seedy.core.admin.media.SwitchItem
 import io.github.arkmind.seedy.core.i18n.t
@@ -82,7 +82,7 @@ import kotlin.math.roundToInt
 fun LibraryRoute(id: String) {
     val session = currentSession()
     val nav = LocalMobileNav.current
-    val vm = viewModel(key = "library-$id") { LibraryViewModel(session, id) }
+    val vm = viewModel(key = "library-$id") { AdminLibraryViewModel(session, id) }
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(id) { vm.load() }
     LaunchedEffect(id) { vm.live() }

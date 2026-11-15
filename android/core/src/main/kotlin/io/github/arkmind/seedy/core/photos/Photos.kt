@@ -19,7 +19,6 @@ import org.jellyfin.sdk.api.client.extensions.yearApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemDtoQueryResult
 import org.jellyfin.sdk.model.api.BaseItemKind
-import org.jellyfin.sdk.model.api.CollectionType
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
@@ -44,8 +43,6 @@ import kotlin.math.roundToInt
  * photos directly in it) and plain folders. A photo carries what its EXIF says: date taken (premiere date, also the
  * date created), size, camera, exposure and GPS.
  */
-
-fun isPhotoLibrary(type: CollectionType?): Boolean = type == CollectionType.PHOTOS || type == CollectionType.HOMEVIDEOS
 
 val MediaTypes = listOf(BaseItemKind.PHOTO, BaseItemKind.VIDEO)
 val FolderTypes = listOf(BaseItemKind.PHOTO_ALBUM, BaseItemKind.FOLDER)

@@ -512,7 +512,7 @@ class ActivityViewModel(
                 emptyTitle = if (!empty) null else if (rows.isNotEmpty()) t("Nothing matches") else t("Nothing logged yet"),
                 emptyText = if (!empty) null else when {
                     rows.isEmpty() -> t("Sign-ins, playback and server events show up here as they happen.")
-                    list!!.size < total -> t("Nothing in the most recent activity matches these filters. Load earlier activity, or change the filters.")
+                    list.size < total -> t("Nothing in the most recent activity matches these filters. Load earlier activity, or change the filters.")
                     else -> t("Try another type, person or level.")
                 },
                 canLoadMore = list != null && list.size < total,

@@ -64,15 +64,6 @@ class AudioApi(private val session: UserSession) {
     private val api get() = session.api
     private val userId get() = session.userId
 
-    suspend fun tracks(ids: List<UUID>): List<BaseItemDto> = io {
-        ids.chunked(150).flatMap { chunk ->
-            val found = api.libraryApi.getItems(
-                userId = userId, ids = chunk, fields = TrackFields, enableImageTypes = listOf(ImageType.PRIMARY), recursive = true, enableUserData = true,
-            ).content.items.associateBy { it.id }
-            chunk.mapNotNull { found[it] }
-        }
-    }
-
     suspend fun albumTracks(albumId: UUID): List<BaseItemDto> = io {
         api.libraryApi.getItems(
             userId = userId, parentId = albumId, includeItemTypes = listOf(BaseItemKind.AUDIO), limit = 1000, fields = TrackFields, enableUserData = true,

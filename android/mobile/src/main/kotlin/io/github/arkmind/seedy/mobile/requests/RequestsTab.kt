@@ -124,7 +124,7 @@ private fun MoviesRequests(services: ServiceTabs?) {
             onApprove = vm::approve,
             onDecline = vm::decline,
             onRetry = vm::retry,
-            onMessageShown = vm::clearMessage,
+            onMessageShown = vm::messageShown,
             onMore = vm::loadMore,
         ),
         bottomPadding = tabBarHeight(),
@@ -166,7 +166,7 @@ private fun MediaRequestsTab(vm: MediaRequestsViewModel, music: Boolean, service
                 url?.takeIf { it.isNotBlank() }?.let { { context.openUrl(it) } }
             },
             cover = vm.api::bookCover,
-            onMessageShown = vm::clearMessage,
+            onMessageShown = vm::messageShown,
         ),
         bottomPadding = tabBarHeight(),
     )

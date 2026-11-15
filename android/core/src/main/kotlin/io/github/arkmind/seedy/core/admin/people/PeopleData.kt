@@ -20,7 +20,6 @@ import io.github.arkmind.seedy.core.data.int
 import io.github.arkmind.seedy.core.data.long
 import io.github.arkmind.seedy.core.data.str
 import io.github.arkmind.seedy.core.data.strings
-import io.github.arkmind.seedy.core.format.fullDate
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
@@ -75,14 +74,6 @@ data class ApiKeyInfo(
     val dateCreated: String? = null,
     val dateLastActivity: String? = null,
 )
-
-/** GET /Seedy/Admin/Seerr/Accounts (camelCase). */
-@Serializable
-data class SeerrAccount(val userId: String = "", val name: String = "", val seerrUserId: Int? = null, val seerrName: String? = null, val canRequest: Boolean = false)
-
-/** GET /Seedy/Admin/PlayLog/Profiles (camelCase). */
-@Serializable
-data class PlayLogProfile(val userId: String = "", val name: String = "", val plays: Int = 0, val top10: Boolean = true, val history: Boolean = true)
 
 /** GET /Localization/ParentalRatings: a rating's name and score (Jellyfin 12 nests the score as camelCase). */
 data class ParentalRating(val name: String, val score: Int?, val subScore: Int?)
@@ -225,13 +216,6 @@ fun lastActive(d: Instant?, clock: Clock): String {
         1L -> t("Yesterday, {time}", "time" to hhmm(d, clock))
         else -> shortDate(d, clock)
     }
-}
-
-/** A key's "Created": "Today", "Yesterday", "2 Mar 2026". */
-fun createdDay(d: Instant, clock: Clock): String = when (dayDiff(d, clock)) {
-    0L -> t("Today")
-    1L -> t("Yesterday")
-    else -> fullDate(d.atZone(clock.zone).toLocalDate())
 }
 
 /** "March 2024" ("mars 2024"). */

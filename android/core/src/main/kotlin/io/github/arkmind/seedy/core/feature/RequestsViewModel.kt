@@ -155,7 +155,7 @@ class RequestsViewModel(session: UserSession) : ViewModel() {
         }
     }
 
-    fun clearMessage() = _state.update { it.copy(message = null) }
+    fun messageShown() = _state.update { it.copy(message = null) }
 
     companion object {
         private const val PageSize = 30

@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.nativePaint
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -243,7 +244,7 @@ private object Art {
                 listOf(0f, .35f, 1f),
             )
             // Android turns a blur radius into sigma = radius × 0.57735 + 0.5; the filter follows the scale.
-            asFrameworkPaint().maskFilter = BlurMaskFilter((5f - .5f) / .57735f, BlurMaskFilter.Blur.NORMAL)
+            nativePaint.maskFilter = BlurMaskFilter((5f - .5f) / .57735f, BlurMaskFilter.Blur.NORMAL)
         }
     }
 }

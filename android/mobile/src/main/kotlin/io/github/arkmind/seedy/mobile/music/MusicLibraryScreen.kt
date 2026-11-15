@@ -199,7 +199,7 @@ private fun LazyListScope.home(state: MusicLibraryViewModel.State, playing: Play
     }
     val top = home.top
     val played = !top.isNullOrEmpty()
-    val artists = if (played) top!!.map { it.artist to playsLabel(it.plays) } else home.artists?.map { it to artistAlbums(it) }
+    val artists = if (played) top.map { it.artist to playsLabel(it.plays) } else home.artists?.map { it to artistAlbums(it) }
     if (top == null || artists == null || artists.isNotEmpty()) {
         item(key = "ar-h") {
             SectionHead(if (played || top == null) t("Artists you play most") else t("Artists"), link = t("See all"), onLink = { actions.onTab(MusicTab.Artists) })

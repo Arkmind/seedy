@@ -65,11 +65,6 @@ val BaseItemDto.episodeShort: String
         return if (s == 0) t("Special {n}", "n" to e) else "S$s · E$e"
     }
 
-/** "Season 3 · Episode 2". */
-val BaseItemDto.seasonEpisodeLong: String
-    get() = if (parentIndexNumber == 0) t("Special · Episode {e}", "e" to (indexNumber ?: ""))
-    else t("Season {s} · Episode {e}", "s" to (parentIndexNumber ?: ""), "e" to (indexNumber ?: ""))
-
 val BaseItemDto.year: Int? get() = productionYear ?: premiereDate?.year
 
 /** "2024–2026" for a running or finished series, the year for anything else. */

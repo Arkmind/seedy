@@ -46,6 +46,7 @@ import io.github.arkmind.seedy.core.manage.MetadataState
 import io.github.arkmind.seedy.core.manage.MetadataViewModel
 import io.github.arkmind.seedy.core.session.serverBase
 import io.github.arkmind.seedy.core.settings.Choice
+import io.github.arkmind.seedy.core.settings.Choices
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.AccentRow
 import io.github.arkmind.seedy.mobile.admin.BoardField
@@ -136,8 +137,8 @@ fun MetadataScreen(state: MetadataState, actions: MetadataActions, poster: Strin
                         }
                     }
                     MetaTab.Display -> FieldSection(null, foot = t("What the providers are asked for when this title refreshes.")) {
-                        MetaField(t("Metadata language")) { SelectField(state.languages.firstOrNull { it.value == state.language }?.label ?: state.language, t("Library default")) { sheet = "language" } }
-                        MetaField(t("Country")) { SelectField(state.countries.firstOrNull { it.value == state.country }?.label ?: state.country, t("Library default")) { sheet = "country" } }
+                        MetaField(t("Metadata language")) { SelectField(Choices.label(state.languages, state.language), t("Library default")) { sheet = "language" } }
+                        MetaField(t("Country")) { SelectField(Choices.label(state.countries, state.country), t("Library default")) { sheet = "country" } }
                         if (state.isSeries) {
                             MetaField(t("Episode order")) {
                                 SelectField(t(MetadataViewModel.displayOrders.firstOrNull { it.first == state.displayOrder }?.second ?: "Aired"), "") { sheet = "order" }

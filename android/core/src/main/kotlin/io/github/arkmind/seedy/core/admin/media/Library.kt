@@ -37,7 +37,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import java.time.Clock
 
 /*
  * One library (Server › Libraries › a library; web/src/screens/server/Libraries.tsx LibraryEditor): its folders,
@@ -235,10 +234,9 @@ interface LibraryActions : FolderPickerActions {
     fun messageShown() {}
 }
 
-class LibraryViewModel(
+class AdminLibraryViewModel(
     session: UserSession,
     private val id: String,
-    private val clock: Clock = Clock.systemDefaultZone(),
 ) : ViewModel(), LibraryActions {
     private val http = AdminHttp(session.api)
     private val _state = MutableStateFlow(LibraryState())
@@ -514,7 +512,7 @@ fun libraryState(
     val langOptions = listOf(Choice("", t("Server default"))) + cultures.filter { it.twoLetterISOLanguageName.isNotEmpty() }.map { Choice(it.twoLetterISOLanguageName, it.displayName) }
     val countryOptions = listOf(Choice("", t("Server default"))) + countries.map { Choice(it.twoLetterISORegionName, it.displayName) }
     val running = scanTask?.state == "Running"
-    val progress = f.refreshProgress ?: if (f.refreshStatus == "Active") 0.0 else if (running) scanTask?.currentProgressPercentage ?: 0.0 else null
+    val progress = f.refreshProgress ?: if (f.refreshStatus == "Active") 0.0 else if (running) scanTask.currentProgressPercentage ?: 0.0 else null
     val (simAll, simChosen) = if (a != null) similarState(opts, a) else emptyList<String>() to emptyList()
     val simOptions = if (simAll.isNotEmpty()) similarChoices(simAll, simChosen) else emptyList()
     val codes = opts.strings("SubtitleDownloadLanguages")

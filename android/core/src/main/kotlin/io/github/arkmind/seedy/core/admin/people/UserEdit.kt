@@ -11,6 +11,8 @@ import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.admin.normId
 import io.github.arkmind.seedy.core.admin.realDate
 import io.github.arkmind.seedy.core.admin.sameId
+import io.github.arkmind.seedy.core.admin.seedy.PlayLogProfile
+import io.github.arkmind.seedy.core.admin.seedy.SeerrAccount
 import io.github.arkmind.seedy.core.data.bool
 import io.github.arkmind.seedy.core.data.intOrNull
 import io.github.arkmind.seedy.core.data.json
@@ -176,8 +178,6 @@ fun syncPlayOptions(): List<Choice<String>> = listOf(
 /** [options] with [value] added when it isn't one of them (a value set elsewhere). */
 fun <T> withValue(options: List<Choice<T>>, value: T): List<Choice<T>> =
     if (options.any { it.value == value }) options else options + Choice(value, value.toString())
-
-fun <T> labelOf(options: List<Choice<T>>, value: T): String = options.firstOrNull { it.value == value }?.label ?: value.toString()
 
 /** The ratings as one choice per score (and sub-score), lowest first, with "No limit" on top; and the current one. */
 fun ratingOptions(ratings: List<ParentalRating>, policy: JsonObject): Pair<List<Choice<String>>, String> {

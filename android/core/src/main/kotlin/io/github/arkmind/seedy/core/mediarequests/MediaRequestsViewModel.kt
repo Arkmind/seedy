@@ -202,5 +202,5 @@ class MediaRequestsViewModel(session: UserSession) : ViewModel() {
 
     fun say(message: String?) = _state.update { it.copy(message = message) }
 
-    fun clearMessage() = _state.update { it.copy(message = null) }
+    fun messageShown() = _state.update { it.copy(message = null) }
 }

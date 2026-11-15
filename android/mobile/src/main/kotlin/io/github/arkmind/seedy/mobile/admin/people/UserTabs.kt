@@ -34,7 +34,6 @@ import io.github.arkmind.seedy.core.admin.people.UserEditState
 import io.github.arkmind.seedy.core.admin.people.allows
 import io.github.arkmind.seedy.core.admin.people.dayLabel
 import io.github.arkmind.seedy.core.admin.people.hourLabel
-import io.github.arkmind.seedy.core.admin.people.labelOf
 import io.github.arkmind.seedy.core.admin.people.ratingOptions
 import io.github.arkmind.seedy.core.admin.people.schedules
 import io.github.arkmind.seedy.core.admin.sameId
@@ -44,6 +43,7 @@ import io.github.arkmind.seedy.core.data.json
 import io.github.arkmind.seedy.core.data.strings
 import io.github.arkmind.seedy.core.i18n.formatNumber
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.settings.Choices
 import io.github.arkmind.seedy.mobile.admin.AccentRow
 import io.github.arkmind.seedy.mobile.admin.ChipFlow
 import io.github.arkmind.seedy.mobile.admin.FormError
@@ -146,7 +146,7 @@ internal fun ParentalTab(state: UserEditState, actions: UserEditActions, sheet: 
     Section(t("Ratings"), foot = t("Titles above the limit are hidden from {name} everywhere, including search.", "name" to name)) {
         row {
             val help = if (state.ratings.isNotEmpty()) t("Ratings from the server’s country, lowest first") else t("Ratings from the metadata, lowest first")
-            PickRow(t("Highest rating allowed"), helpFor(state, "MaxParentalRating", help) { labelOf(savedOptions, savedValue) }, labelOf(options, value)) {
+            PickRow(t("Highest rating allowed"), helpFor(state, "MaxParentalRating", help) { Choices.label(savedOptions, savedValue) }, Choices.label(options, value)) {
                 sheet.open(t("Highest rating allowed"), options, value, actions::setRating)
             }
         }

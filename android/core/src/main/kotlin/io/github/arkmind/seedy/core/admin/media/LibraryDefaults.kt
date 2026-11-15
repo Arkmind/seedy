@@ -13,6 +13,7 @@ import io.github.arkmind.seedy.core.data.with
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession
 import io.github.arkmind.seedy.core.settings.Choice
+import io.github.arkmind.seedy.core.settings.Choices
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -209,7 +210,7 @@ private class DefaultsView(val cultures: List<Culture>, val countries: List<Coun
                     sw(":EnableExternalContentInSuggestions", c, t("Suggest channel content"), t("Live TV and channel titles can appear in suggestions")),
                 ),
             ),
-            SettingsGroup(t("New titles"), listOf(ChoiceSetting("metadata:UseFileCreationTimeForDateAdded", t("Date added"), t("What “Recently added” sorts by"), labelOf(dateOptions, date), date, dateOptions))),
+            SettingsGroup(t("New titles"), listOf(ChoiceSetting("metadata:UseFileCreationTimeForDateAdded", t("Date added"), t("What “Recently added” sorts by"), Choices.label(dateOptions, date), date, dateOptions))),
         )
     }
 
@@ -229,21 +230,21 @@ private class DefaultsView(val cultures: List<Culture>, val countries: List<Coun
             SettingsGroup(
                 t("Language and country"),
                 listOf(
-                    ChoiceSetting(":PreferredMetadataLanguage", t("Preferred language"), t("For titles, descriptions and artwork"), labelOf(langOptions, lang).ifEmpty { t("Not set") }, lang, langOptions),
-                    ChoiceSetting(":MetadataCountryCode", t("Country"), t("For release dates and age ratings"), labelOf(countryOptions, country).ifEmpty { t("Not set") }, country, countryOptions),
+                    ChoiceSetting(":PreferredMetadataLanguage", t("Preferred language"), t("For titles, descriptions and artwork"), Choices.label(langOptions, lang).ifEmpty { t("Not set") }, lang, langOptions),
+                    ChoiceSetting(":MetadataCountryCode", t("Country"), t("For release dates and age ratings"), Choices.label(countryOptions, country).ifEmpty { t("Not set") }, country, countryOptions),
                 ),
             ),
             SettingsGroup(
                 t("Chapters"),
                 listOf(
-                    ChoiceSetting(":ChapterImageResolution", t("Chapter image size"), t("Pictures for the chapter list in the player"), labelOf(sizes, size), size, withCurrent(sizes, size)),
+                    ChoiceSetting(":ChapterImageResolution", t("Chapter image size"), t("Pictures for the chapter list in the player"), Choices.label(sizes, size), size, withCurrent(sizes, size)),
                     NumberSetting(":DummyChapterDuration", t("Add chapters every"), t("For files without chapters of their own. 0 adds none"), if (minutes == 0) t("Never") else "$minutes min", minutes.toDouble(), 0.0, 240.0, "min"),
                 ),
             ),
             SettingsGroup(
                 t("Saved files"),
                 listOf(
-                    ChoiceSetting(":ImageSavingConvention", t("Artwork file names"), t("How artwork saved next to the media is named"), labelOf(names, convention), convention, withCurrent(names, convention)),
+                    ChoiceSetting(":ImageSavingConvention", t("Artwork file names"), t("How artwork saved next to the media is named"), Choices.label(names, convention), convention, withCurrent(names, convention)),
                     sw(":SaveMetadataHidden", c, t("Hide saved files"), t("Marks artwork and NFO files Jellyfin writes as hidden")),
                 ),
             ),
@@ -257,7 +258,7 @@ private class DefaultsView(val cultures: List<Culture>, val countries: List<Coun
             SettingsGroup(
                 t("NFO files"),
                 listOf(
-                    ChoiceSetting("xbmcmetadata:UserId", t("Save watched state for"), t("Writes which titles this person has watched into the files"), labelOf(options, user), user, options),
+                    ChoiceSetting("xbmcmetadata:UserId", t("Save watched state for"), t("Writes which titles this person has watched into the files"), Choices.label(options, user), user, options),
                     TextSetting("xbmcmetadata:ReleaseDateFormat", t("Release date format"), t("As Kodi expects it, for example yyyy-MM-dd"), n.str("ReleaseDateFormat").orEmpty(), "yyyy-MM-dd", mono = true),
                     sw("xbmcmetadata:SaveImagePathsInNfo", n, t("Save artwork paths"), t("Lists the artwork files inside each NFO")),
                     sw("xbmcmetadata:EnablePathSubstitution", n, t("Use path substitution"), t("Rewrites those paths with the rules under Settings › Expert")),

@@ -52,8 +52,10 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import io.github.arkmind.seedy.core.feature.LiveTvViewModel
 import io.github.arkmind.seedy.core.format.join
@@ -70,6 +72,7 @@ import io.github.arkmind.seedy.tv.parts.TvPressable
 import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusRing
+import io.github.arkmind.seedy.tv.parts.maybeFocus
 import io.github.arkmind.seedy.tv.shell.RailInset
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.components.ChannelLogo
@@ -95,6 +98,7 @@ private const val SpanMinutes = 120
 
 
 /** The rail's Live TV: board "Android TV · Live TV guide". */
+@androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun TvLiveTvPlace() {
     val session = currentSession()
@@ -212,7 +216,7 @@ fun TvGuide(
                         if (nowMin in offset until offset + SpanMinutes) {
                             SText(
                                 LiveTv.clockOf(state.now),
-                                Modifier.offset(x = perMinute * (nowMin - offset).toFloat() - 32.bp, y = 10.bp).clip(RoundedCornerShape(8.bp)).background(accent).padding(horizontal = 10.bp, vertical = 4.bp),
+                                Modifier.offset { IntOffset((perMinute * (nowMin - offset).toFloat() - 32.bp).roundToPx(), 10.bp.roundToPx()) }.clip(RoundedCornerShape(8.bp)).background(accent).padding(horizontal = 10.bp, vertical = 4.bp),
                                 size = 18.bsp, weight = 800, color = SeedyColors.InkInverse,
                             )
                         }
@@ -235,7 +239,7 @@ fun TvGuide(
                             GuideRow(
                                 c = c, state = state, offset = offset, perMinute = perMinute, nowMin = nowMin,
                                 focusedId = focused?.second?.id,
-                                firstModifier = if (index == 0) Modifier.focusRequester(first) else Modifier,
+                                firstFocus = if (index == 0) first else null,
                                 onFocus = { p, start, end ->
                                     onFocus(c, p)
                                     // Keep the focused programme in view: past the right edge, start it at the left.
@@ -309,7 +313,7 @@ private fun GuideRow(
     perMinute: androidx.compose.ui.unit.Dp,
     nowMin: Long,
     focusedId: java.util.UUID?,
-    firstModifier: Modifier,
+    firstFocus: FocusRequester?,
     onFocus: (BaseItemDto?, Long, Long) -> Unit,
     onWatch: () -> Unit,
     onRecord: (BaseItemDto) -> Unit,
@@ -337,7 +341,7 @@ private fun GuideRow(
         ) {
             if (programs.isEmpty()) {
                 // No guide data for this channel: one cell across, so it can still be watched.
-                TvPressable(onWatch, Modifier.fillMaxSize().padding(start = 3.bp, end = 3.bp, top = 6.bp, bottom = 8.bp).then(firstModifier).onFocusChanged { if (it.isFocused) onFocus(null, offset, offset + SpanMinutes) }) { f ->
+                TvPressable(onWatch, Modifier.fillMaxSize().padding(start = 3.bp, end = 3.bp, top = 6.bp, bottom = 8.bp).maybeFocus(firstFocus).onFocusChanged { if (it.isFocused) onFocus(null, offset, offset + SpanMinutes) }) { f ->
                     Box(
                         Modifier.fillMaxSize().clip(RoundedCornerShape(12.bp)).background(if (f) SeedyColors.Inverse else SeedyColors.Row).padding(horizontal = 16.bp),
                         contentAlignment = Alignment.CenterStart,
@@ -357,7 +361,7 @@ private fun GuideRow(
                     // OK watches the channel, whichever programme is under the remote; holding OK records that one.
                     onClick = onWatch,
                     modifier = Modifier.offset(x = left).width(width).fillMaxHeight().padding(start = 3.bp, end = 3.bp, top = 6.bp, bottom = 8.bp)
-                        .then(if (i == 0) firstModifier else Modifier)
+                        .maybeFocus(if (i == 0) firstFocus else null)
                         .then(if (airing) Modifier.focusRequester(airingCell) else Modifier)
                         .onFocusChanged { if (it.isFocused) onFocus(p, a, end) }
                         .onPreviewKeyEvent { e ->

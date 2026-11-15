@@ -7,6 +7,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +39,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import io.github.arkmind.seedy.core.feature.SettingsViewModel
 import io.github.arkmind.seedy.core.i18n.t
@@ -55,6 +57,7 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import java.util.UUID
 
 /** Boards "Android · Player" and its panels: plays [id] full screen, sideways. */
+@OptIn(UnstableApi::class)
 @Composable
 fun PlayerRoute(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
     val session = currentSession()

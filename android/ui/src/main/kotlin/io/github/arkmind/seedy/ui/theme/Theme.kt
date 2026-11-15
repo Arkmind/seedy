@@ -93,7 +93,7 @@ fun SText(
     val boxed = tight && !wraps
     BasicText(
         text = if (uppercase) text.uppercase() else text,
-        modifier = if (boxed) modifier.cssLineBox(size, lineHeight!!) else modifier,
+        modifier = if (boxed) modifier.cssLineBox(size, lineHeight) else modifier,
         style = BaseText.copy(
             fontSize = size,
             fontWeight = FontWeight(weight),

@@ -149,7 +149,7 @@ class MusicController(
         val cur = s?.current
         val ids = if (cur != null) (listOf(cur) + s.upNext).map { it.track.id } else castFallback
         if (ids.isEmpty()) return
-        val start = if (cur != null) ((audio?.position() ?: 0.0) * 10_000_000).toLong() else 0L
+        val start = if (cur != null) (audio.position() * 10_000_000).toLong() else 0L
         scope.launch {
             runCatching { a.castTo(target.id, ids, start) }
                 .onSuccess {

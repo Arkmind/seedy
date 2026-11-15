@@ -169,7 +169,7 @@ internal fun versionLabel(v: PluginView, server: String, abi: String?): String {
 internal fun sourceLabel(v: PluginView): String {
     val repo = v.pkg?.versions?.firstOrNull { cmpVersion(it.version, v.plugin.version) == 0 } ?: v.pkg?.versions?.firstOrNull()
     return when {
-        v.self -> if (!repo?.repositoryName.isNullOrEmpty()) t("This interface · {repo}", "repo" to repo!!.repositoryName) else t("This interface")
+        v.self -> if (!repo?.repositoryName.isNullOrEmpty()) t("This interface · {repo}", "repo" to repo.repositoryName) else t("This interface")
         v.builtIn || isJellyfinRepo(repo?.repositoryUrl) -> "Jellyfin"
         else -> t("Third party")
     }

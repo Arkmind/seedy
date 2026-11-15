@@ -20,7 +20,6 @@ import io.github.arkmind.seedy.core.admin.people.UserEditActions
 import io.github.arkmind.seedy.core.admin.people.UserEditState
 import io.github.arkmind.seedy.core.admin.people.UserTab
 import io.github.arkmind.seedy.core.admin.people.bitrateOptions
-import io.github.arkmind.seedy.core.admin.people.labelOf
 import io.github.arkmind.seedy.core.admin.people.lockOptions
 import io.github.arkmind.seedy.core.admin.people.streamOptions
 import io.github.arkmind.seedy.core.admin.people.syncPlayOptions
@@ -32,6 +31,7 @@ import io.github.arkmind.seedy.core.data.str
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.settings.Choice
+import io.github.arkmind.seedy.core.settings.Choices
 import io.github.arkmind.seedy.mobile.admin.AdminAvatar
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.LeaveGuard
@@ -166,7 +166,7 @@ internal fun CardRows.switch(state: UserEditState, actions: UserEditActions, key
 internal fun <T> CardRows.pick(state: UserEditState, sheet: SheetState, key: String, name: String, help: String, options: List<Choice<T>>, value: T, was: T, onPick: (T) -> Unit) {
     row {
         val list = withValue(withValue(options, value), was)
-        PickRow(name, helpFor(state, key, help) { labelOf(list, was) }, labelOf(list, value)) { sheet.open(name, list, value, onPick) }
+        PickRow(name, helpFor(state, key, help) { Choices.label(list, was) }, Choices.label(list, value)) { sheet.open(name, list, value, onPick) }
     }
 }
 

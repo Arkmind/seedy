@@ -53,6 +53,7 @@ import io.github.arkmind.seedy.core.manage.ImagesActions
 import io.github.arkmind.seedy.core.manage.ImagesState
 import io.github.arkmind.seedy.core.manage.ImagesViewModel
 import io.github.arkmind.seedy.core.manage.OfferedImage
+import io.github.arkmind.seedy.core.manage.providerName
 import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.mobile.admin.ErrorCard
 import io.github.arkmind.seedy.mobile.admin.LoadingCards
@@ -104,7 +105,7 @@ fun ImagesScreen(state: ImagesState, actions: ImagesActions, onBack: () -> Unit,
             Toast(state.message?.takeIf { !state.failed }, actions::messageShown, Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp))
             when (sheet) {
                 "provider" -> SearchPickSheet(
-                    t("Image source"), null, listOf(Choice<String?>(null, t("All providers"))) + state.providers.map { Choice<String?>(it, ImagesViewModel.providerName(it)) },
+                    t("Image source"), null, listOf(Choice<String?>(null, t("All providers"))) + state.providers.map { Choice<String?>(it, providerName(it)) },
                     state.provider, actions::provider, { sheet = null },
                 )
                 "language" -> SearchPickSheet(
@@ -210,7 +211,7 @@ private fun Offers(state: ImagesState, actions: ImagesActions, onSheet: (String)
         Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 10.dp), size = 15.sp, weight = 800, color = SeedyColors.White,
     )
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        MenuPill(state.provider?.let(ImagesViewModel::providerName) ?: t("All providers"), { onSheet("provider") })
+        MenuPill(state.provider?.let(::providerName) ?: t("All providers"), { onSheet("provider") })
         MenuPill(if (state.allLanguages) t("Any language") else t("This title’s language"), { onSheet("language") })
         PillButton(if (state.busy == "upload") t("Uploading…") else t("Upload"), onUpload, enabled = state.busy == null, leading = { SIcon(ManageIcons.Upload, size = 15.dp, color = SeedyColors.White) })
     }

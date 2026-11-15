@@ -78,4 +78,3 @@ fun withUnit(v: Double, unit: String?): String = if (unit.isNullOrEmpty()) numbe
 fun withCurrent(options: List<Choice<String>>, value: String, label: String = value): List<Choice<String>> =
     if (options.any { it.value == value }) options else options + Choice(value, label.ifEmpty { t("Not set") })
 
-fun labelOf(options: List<Choice<String>>, value: String): String = options.firstOrNull { it.value == value }?.label ?: value

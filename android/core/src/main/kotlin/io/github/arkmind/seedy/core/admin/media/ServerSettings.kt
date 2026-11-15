@@ -16,6 +16,7 @@ import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.session.UserSession
 import io.github.arkmind.seedy.core.settings.Choice
+import io.github.arkmind.seedy.core.settings.Choices
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -406,7 +407,7 @@ fun serverSettingsState(
         ),
     )
     val groups = listOf(
-        SettingsGroup(null, listOf(ChoiceSetting("UICulture", t("Server language"), t("For notifications, logs and generated names"), labelOf(langOptions, culture), culture, langOptions))),
+        SettingsGroup(null, listOf(ChoiceSetting("UICulture", t("Server language"), t("For notifications, logs and generated names"), Choices.label(langOptions, culture), culture, langOptions))),
         SettingsGroup(
             t("Paths"),
             listOf(

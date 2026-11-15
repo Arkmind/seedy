@@ -119,7 +119,7 @@ fun SeerrTitleRoute(mediaType: String, tmdbId: Int) {
                 onTrailer = d?.trailerUrl?.let { url -> { context.openUrl(url) } },
                 onOpenSeerr = vm.seerrUrl?.let { url -> { context.openUrl(url) } },
                 onRetry = vm::load,
-                onMessageShown = vm::clearMessage,
+                onMessageShown = vm::messageShown,
             ),
         )
         if (seasons && d != null) {

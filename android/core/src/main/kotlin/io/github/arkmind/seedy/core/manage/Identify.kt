@@ -199,13 +199,6 @@ class IdentifyViewModel(session: UserSession, private val id: String) : ViewMode
             else -> null
         }
 
-        private fun providerName(name: String): String = when (name) {
-            "TheMovieDb" -> "TMDb"
-            "TheTVDB", "TheTvdb" -> "TVDb"
-            "The Open Movie Database" -> "OMDb"
-            else -> name
-        }
-
         /** Closest first: the same name, then the same year, then the order the providers gave. */
         fun rank(list: List<Match>, name: String, year: Int?): List<Match> {
             val n = name.trim().lowercase()

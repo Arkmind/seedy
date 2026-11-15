@@ -105,7 +105,7 @@ class SeerrTitleViewModel(private val session: UserSession, val mediaType: Strin
         }
     }
 
-    fun clearMessage() = _state.update { it.copy(message = null) }
+    fun messageShown() = _state.update { it.copy(message = null) }
 
     companion object {
         fun requestable(status: String?) = status == null || status == "none" || status == "declined"

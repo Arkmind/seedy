@@ -97,7 +97,7 @@ fun TvSeerrTitleRoute(mediaType: String, tmdbId: Int) {
             onLibrary = { local?.let { nav.go(TvRoute.Details(it)) } },
             onPlay = { local?.let { nav.go(TvRoute.Player(it)) } },
             onRetry = vm::load,
-            onMessageShown = vm::clearMessage,
+            onMessageShown = vm::messageShown,
         ),
         primaryFocus = primary,
     )

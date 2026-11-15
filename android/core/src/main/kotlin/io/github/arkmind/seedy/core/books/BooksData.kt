@@ -306,7 +306,7 @@ fun volumeLabel(item: BaseItemDto, reading: Reading?, now: Long): VolumeLabel {
     val label = n?.let { if (isComic(item)) t("No. {n}", "n" to it) else t("Book {n}", "n" to it) }
     val state = when {
         read -> t("read")
-        inProgress -> "${reading!!.percent.roundToInt()}%"
+        inProgress -> "${reading.percent.roundToInt()}%"
         fresh -> t("new")
         else -> null
     }

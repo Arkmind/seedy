@@ -41,6 +41,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
@@ -279,7 +280,7 @@ private fun Option(title: String, sub: String, onClick: () -> Unit, modifier: Mo
 private fun TvSwitch(on: Boolean) {
     val knob by animateDpAsState(if (on) 31.bp else 5.bp, label = "knob")
     Box(Modifier.size(60.bp, 34.bp).clip(CircleShape).background(if (on) LocalAccent.current else SeedyColors.Surface2)) {
-        Box(Modifier.align(Alignment.CenterStart).offset(x = knob).size(24.bp).background(if (on) SeedyColors.InkInverse else SeedyColors.Text3, CircleShape))
+        Box(Modifier.align(Alignment.CenterStart).offset { IntOffset(knob.roundToPx(), 0) }.size(24.bp).background(if (on) SeedyColors.InkInverse else SeedyColors.Text3, CircleShape))
     }
 }
 

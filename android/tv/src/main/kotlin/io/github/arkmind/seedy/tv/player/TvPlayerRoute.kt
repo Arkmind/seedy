@@ -3,6 +3,7 @@ package io.github.arkmind.seedy.tv.player
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.annotation.OptIn
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.produceState
 import android.text.format.DateFormat
+import androidx.media3.common.util.UnstableApi
 import io.github.arkmind.seedy.player.problemText
 import java.time.LocalDateTime
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,6 +60,7 @@ import java.util.UUID
  * jump back and forward; the remote's media keys work at any time; Back closes a panel, then the controls, then the
  * player.
  */
+@OptIn(UnstableApi::class)
 @Composable
 fun TvPlayerRoute(id: UUID) {
     val session = currentSession()

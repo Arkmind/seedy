@@ -168,9 +168,5 @@ class PlayLogAdminViewModel(private val session: UserSession) : ViewModel(), Pla
 
     override fun messageShown() = extra.update { it.copy(message = null) }
 
-    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
-    override fun onCleared() {
-        kotlinx.coroutines.GlobalScope.launch { runCatching { store.flush() } }
-        super.onCleared()
-    }
+    override fun onCleared() = store.flushDetached()
 }

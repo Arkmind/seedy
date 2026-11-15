@@ -810,12 +810,6 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
     /** Plays songs already fetched (a page's track list) from [start], replacing the queue. */
     fun playTracks(tracks: List<BaseItemDto>, start: Int = 0, opts: PlayOptions = PlayOptions()) = playList(tracks, start, opts)
 
-    /** Plays these songs (Audio item ids) from [startIndex], replacing the queue. */
-    fun playIds(ids: List<UUID>, startIndex: Int = 0, opts: PlayOptions = PlayOptions()) = launch {
-        val tracks = it.tracks(ids)
-        playList(tracks, tracks.indexOfFirst { t -> t.id == ids.getOrNull(startIndex) }.coerceAtLeast(0), opts)
-    }
-
     /** Plays an album, playlist, artist, genre or library by id: their songs in order (or shuffled). */
     fun playContainer(id: UUID, opts: PlayOptions = PlayOptions()) = launch { a ->
         val item = a.audioItem(id)
@@ -823,11 +817,6 @@ class AudioEngine private constructor(private val context: Context, core: SeedyC
         val tracks = a.containerTracks(item)
         val start = opts.startId?.let { sid -> tracks.indexOfFirst { it.id == sid }.coerceAtLeast(0) } ?: 0
         playList(tracks, start, opts.copy(source = opts.source ?: Source(kindOf(item), item.id.toString(), item.name.orEmpty())))
-    }
-
-    /** Jellyfin's instant mix of a song, album, artist, playlist or genre. */
-    fun playMix(item: BaseItemDto) = launch { a ->
-        playList(a.instantMix(item.id), 0, PlayOptions(source = Source(SourceKind.Mix, item.id.toString(), t("{name} radio", "name" to item.name.orEmpty()))))
     }
 
     /** "Play" on any audio item: a song plays with the rest of its album after it. */

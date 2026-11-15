@@ -250,8 +250,8 @@ class RequestSeasonsViewModel(session: UserSession) : ViewModel() {
                         else -> t("Announced for {year}", "year" to airs.year)
                     }
                     s.airedEpisodes != null && s.airedEpisodes < s.episodeCount ->
-                        join(t("{n} of {total} episodes aired", "n" to s.airedEpisodes, "total" to s.episodeCount), airs?.year)
-                    else -> join(s.episodeCount.takeIf { it > 0 }?.let { tn(it, "{n} episode", "{n} episodes") }, airs?.year)
+                        join(t("{n} of {total} episodes aired", "n" to s.airedEpisodes, "total" to s.episodeCount), airs.year)
+                    else -> join(s.episodeCount.takeIf { it > 0 }?.let { tn(it, "{n} episode", "{n} episodes") }, airs.year)
                 }
                 val thumb = tmdbImage(s.posterPath, "w185")
                 when {

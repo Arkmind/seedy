@@ -49,9 +49,9 @@ class AddServerViewModel(private val core: SeedyCore) : ViewModel() {
         viewModelScope.launch {
             runCatching {
                 core.servers.discover().collect { info ->
-                    val address = info.address ?: return@collect
+                    val address = info.address
                     if (_state.value.found.any { it.address == address }) return@collect
-                    _state.update { s -> s.copy(found = s.found + Found(info.name ?: address, address)) }
+                    _state.update { s -> s.copy(found = s.found + Found(info.name, address)) }
                     launch {
                         val (version, seedy) = runCatching { core.servers.describe(address) }.getOrNull() ?: return@launch
                         _state.update { s -> s.copy(found = s.found.map { if (it.address == address) it.copy(version = version, seedy = seedy) else it }) }

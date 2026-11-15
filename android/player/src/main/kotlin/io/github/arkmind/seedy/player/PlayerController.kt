@@ -310,7 +310,7 @@ class PlayerController(private val context: Context, private val session: UserSe
         val picture = sub != null && !sub.isTextSubtitleStream && s.method == PlayMethod.DIRECT_PLAY
         if (picture) {
             val textGroups = groups.filter { it.type == C.TRACK_TYPE_TEXT }
-            val pos = s.subtitleStreams.filter { !it.isExternal }.sortedBy { it.index }.indexOfFirst { it.index == sub!!.index }
+            val pos = s.subtitleStreams.filter { !it.isExternal }.sortedBy { it.index }.indexOfFirst { it.index == sub.index }
             params.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
             textGroups.getOrNull(pos)?.let { params.setOverrideForType(TrackSelectionOverride(it.mediaTrackGroup, 0)) }
         } else {
