@@ -77,7 +77,7 @@ export function intervalText(ticks?: number | null): string {
   if (m % 60 === 0) {
     const h = m / 60;
     if (h === 1) return t('Every hour');
-    if (h % 24 === 0 && h > 24 && h / 24 === 7) return t('Every week');
+    if (h === 168) return t('Every week');
     if (h % 24 === 0 && h > 24) return t('Every {n} days', { n: h / 24 });
     return t('Every {n} hours', { n: h });
   }

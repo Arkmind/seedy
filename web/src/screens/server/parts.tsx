@@ -2,7 +2,7 @@ import type { ComponentChildren, RefObject } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { userImageUrl } from '../../api/images';
 import { t, tn } from '../../lib/i18n';
-import { addNavigationGuard, getLocation, navigate } from '../../lib/router';
+import { addNavigationGuard, getLocation, Link, navigate } from '../../lib/router';
 import { Icon } from '../../ui/icons';
 import { confirm, Popover, Sheet } from '../../ui/overlay';
 import { errText, type FsEntry, getDirectory, getDrives, getParentPath } from './api';
@@ -405,12 +405,12 @@ export function UserAvatar({ user, index, size = 48, online, disabled, imgVersio
 }
 
 /* A notice above the page: "File Transformation won't load. …  Open plugins". */
-export function Notice({ tone, children, action, onAction, href }: {
+export function Notice({ tone, children, action, onAction, to }: {
   tone: 'warn' | 'accent';
   children: ComponentChildren;
   action: string;
   onAction?: () => void;
-  href?: string;
+  to?: string;
 }) {
   const body = (
     <>
@@ -420,13 +420,7 @@ export function Notice({ tone, children, action, onAction, href }: {
     </>
   );
   const cls = 'srv-notice' + (tone === 'warn' ? ' is-warn' : '');
-  if (href) {
-    return (
-      <a class={cls} href={href} onClick={(e) => { if (e.button !== 0 || e.metaKey || e.ctrlKey) return; e.preventDefault(); onAction?.(); }}>
-        {body}
-      </a>
-    );
-  }
+  if (to) return <Link to={to} class={cls}>{body}</Link>;
   return <button type="button" class={cls} onClick={onAction}>{body}</button>;
 }
 

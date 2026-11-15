@@ -19,8 +19,6 @@ import { saveBlob } from '../../lib/clipboard';
 type Level = 'info' | 'ok' | 'warn' | 'error';
 type Category = 'people' | 'playback' | 'signin' | 'system';
 const TAG: Record<Category, string> = { people: 'People', playback: 'Playback', signin: 'Sign-in', system: 'System' };
-/* Levels as the CSV export writes them. */
-const LEVEL_NAME: Record<Level, string> = { info: 'info', ok: 'ok', warn: 'warn', error: 'error' };
 
 interface Row {
   key: string;
@@ -429,7 +427,7 @@ export function ServerActivity() {
       for (const r of out) {
         const d = r.date;
         const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        lines.push([day, hhmm24(d), t(TAG[r.category]), t(LEVEL_NAME[r.level]), r.title, r.detail, r.userName ?? '', r.entry.Name].map((v) => esc(String(v ?? ''))).join(','));
+        lines.push([day, hhmm24(d), t(TAG[r.category]), t(r.level), r.title, r.detail, r.userName ?? '', r.entry.Name].map((v) => esc(String(v ?? ''))).join(','));
       }
       saveBlob(`activity-log-${new Date().toISOString().slice(0, 10)}.csv`, new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), 2000);
       toast(tn(out.length, 'Exported {n} entry', 'Exported {n} entries'));

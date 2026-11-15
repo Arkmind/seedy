@@ -8,7 +8,7 @@ import { confirm, Sheet, toast } from '../../ui/overlay';
 import { AdminLayout } from '../admin/AdminLayout';
 import { deleteDevices, type DeviceInfo, errText, type FullUser, getDevices, getSessions, getUsers, renameDevice, type Session } from './api';
 import { LoadFailed, Select, useLoad } from './parts';
-import { avatarColour, lastActive } from './format';
+import { avatarColour, lastActive, majorMinor } from './format';
 import { Glyph } from './glyphs';
 
 type Kind = 'tv' | 'phone' | 'computer';
@@ -28,11 +28,10 @@ function kindOf(d: DeviceInfo): Kind {
 }
 
 /* "0.1.0" → "0.1", "10.10.7" → "10.10", "1.6" → "1.6". */
-const shortVersion = (v?: string | null) => (v ? v.split('.').slice(0, 2).join('.') : '');
 const BROWSER = /\b(Chrome|Chromium|Firefox|Safari|Edge|Opera|Vivaldi|Brave)\b/i;
 
 function appLabel(d: DeviceInfo): string {
-  const app = [d.AppName, shortVersion(d.AppVersion)].filter(Boolean).join(' ');
+  const app = [d.AppName, majorMinor(d.AppVersion)].filter(Boolean).join(' ');
   const browser = BROWSER.exec(d.Name ?? '')?.[1];
   return browser && !(d.AppName ?? '').toLowerCase().includes(browser.toLowerCase()) ? `${app} · ${browser}` : app;
 }

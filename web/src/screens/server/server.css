@@ -14,12 +14,13 @@
 /* Title buttons with 16 px sides ("Scan all libraries"). */
 .btn-primary.is-sm.srv-btn-16 { padding: 0 16px; }
 
-/* Danger outline from the server boards: a grey hairline with red text; it fills red on hover. */
-.btn.srv-btn-danger {
+/* Danger outline from the server boards: a grey hairline with red text; it fills red on hover. Devices' button keeps its own
+   class, so the phone header rule for .srv-btn-danger doesn't stretch it. */
+.btn.srv-btn-danger, .srv-danger-btn {
   height: 44px; padding: 0 16px; border-radius: var(--r-card); background: transparent;
   box-shadow: inset 0 0 0 1px #3a3a3a; color: var(--seedy-danger); font-size: 14px; font-weight: 700;
 }
-.btn.srv-btn-danger:not(:disabled):hover { background: var(--seedy-danger); box-shadow: none; color: var(--seedy-ink-inverse); }
+.btn.srv-btn-danger:not(:disabled):hover, .srv-danger-btn:not(:disabled):hover { background: var(--seedy-danger); box-shadow: none; color: var(--seedy-ink-inverse); }
 
 /* Small 36 px buttons inside cards (Message, Stop). */
 .btn.srv-mini {
@@ -709,12 +710,6 @@ span.srv-now-art { display: block; aspect-ratio: 16 / 9; border-radius: 11px; }
 .srv-map-row .select { min-width: 240px; }
 
 /* ── Devices ── */
-
-.srv-danger-btn {
-  height: 44px; padding: 0 16px; border-radius: var(--r-card); background: transparent; box-shadow: inset 0 0 0 1px #3a3a3a;
-  color: var(--seedy-danger); font-size: 14px; font-weight: 700;
-}
-.srv-danger-btn:not(:disabled):hover { background: var(--seedy-danger); color: var(--seedy-ink-inverse); box-shadow: none; }
 
 .srv-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .srv-toolbar .search-field { width: 300px; max-width: 100%; }

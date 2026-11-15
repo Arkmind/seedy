@@ -10,7 +10,6 @@ import { getGuideInfo, type GuideInfo } from '../../api/livetv';
 import { LoadFailed, NumBox, PathField, Select, SettingRow, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
 import { Glyph } from './glyphs';
 import { capitalize } from '../../lib/format';
-;
 
 /* ── Settings saved with the unsaved bar (everything except tuners and guide sources, which save on their own) ── */
 

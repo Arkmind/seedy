@@ -7,7 +7,6 @@ import { AdminLayout, PanelSkeletons } from '../admin/AdminLayout';
 import { type EncodingOptions, errText, ffmpegVersion, getEncoding, getServerConfig, getSessions, getSystemInfo, type GpuScan, type HwAccel, saveEncoding, saveServerConfig, scanGpus, type ServerConfig, type TrickplayOptions } from './api';
 import { ChipList, LoadFailed, NumBox, PathField, Select, SettingRow, tOpts, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
 import { Switch } from '../../ui/controls';
-;
 
 type Tab = 'transcoding' | 'resume' | 'streaming' | 'previews';
 const TABS: { id: Tab; label: string }[] = [

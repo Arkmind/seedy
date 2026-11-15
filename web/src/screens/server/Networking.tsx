@@ -7,7 +7,6 @@ import { confirm, toast } from '../../ui/overlay';
 import { AdminLayout, PanelSkeletons } from '../admin/AdminLayout';
 import { errText, getNetwork, getSessions, type NetworkConfig, restartingStore, restartServer, saveNetwork } from './api';
 import { ChipList, LoadFailed, SettingRow, UnsavedBar, useDraft, useLoad, useUnsavedGuard, validAddress } from './parts';
-;
 
 /* Jellyfin keeps "" for the root; the board shows it as "/". */
 const showBase = (b: string) => (b ? b : '/');

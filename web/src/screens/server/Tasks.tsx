@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { Link, href, navigate } from '../../lib/router';
+import { Link } from '../../lib/router';
 import { clock } from '../../lib/format';
 import { useStore } from '../../lib/store';
 import { formatNumber, t } from '../../lib/i18n';
@@ -222,7 +222,7 @@ function TaskRow({ task, startedAt, busy, onRun, onStop, onSchedule }: {
           {last.failed && (
             <>
               {' · '}
-              <a href={href(logLink)} onClick={(e) => { if (e.button === 0 && !e.metaKey && !e.ctrlKey) { e.preventDefault(); navigate(logLink); } }}>{t('see logs')}</a>
+              <Link to={logLink}>{t('see logs')}</Link>
             </>
           )}
         </span>

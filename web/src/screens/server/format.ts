@@ -178,7 +178,7 @@ export function uptime(since: Date): string {
 
 /* "Linux x64": Jellyfin 12 no longer reports the OS, so read it from how the server's paths look. */
 export function platformLabel(info: SystemInfo, knownOs = ''): string {
-  const arch = (info.SystemArchitecture ?? '').toLowerCase().replace('x64', 'x64').replace('arm64', 'arm64');
+  const arch = (info.SystemArchitecture ?? '').toLowerCase();
   const p = info.ProgramDataPath ?? info.CachePath ?? '';
   let os = knownOs || info.OperatingSystemDisplayName || info.OperatingSystem || '';
   if (!os) {
