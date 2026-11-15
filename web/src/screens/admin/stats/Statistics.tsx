@@ -3,7 +3,7 @@ import { cardArt } from '../../../api/images';
 import type { BaseItem } from '../../../api/types';
 import { formatNumber, t, tn } from '../../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../../lib/router';
-import { toast } from '../../../ui/overlay';
+import { toastError } from '../../../ui/overlay';
 import { AdminLayout, LoadError } from '../AdminLayout';
 import { exportStats, getStats, type Range, type Stats, type StatsFilters } from './api';
 import {
@@ -66,7 +66,7 @@ export function AdminStatistics() {
     try {
       await exportStats(filters);
     } catch (e) {
-      toast(`${t('Couldn’t export the statistics.')} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t export the statistics.'), e);
     } finally {
       setExporting(false);
     }

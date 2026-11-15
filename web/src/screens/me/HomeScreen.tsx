@@ -32,7 +32,6 @@ const ROW_INFO: Partial<Record<RowKind, { name: string; help: string; count?: { 
 };
 
 /* The server's starting rows when the admin's own list isn't readable (non-admins). */
-
 const SERVER_DEFAULTS: HomeRowSetting[] = [
   { kind: 'nextup', enabled: true }, { kind: 'top10', enabled: true }, { kind: 'because', enabled: true, count: 6 },
   { kind: 'genres', enabled: true, count: 4 }, { kind: 'mymedia', enabled: true }, { kind: 'latest', enabled: true },

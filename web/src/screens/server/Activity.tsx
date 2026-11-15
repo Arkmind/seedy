@@ -7,10 +7,10 @@ import { on, send } from '../../lib/remote';
 import { Link } from '../../lib/router';
 import { Icon } from '../../ui/icons';
 import { confirm, toast } from '../../ui/overlay';
-import { SelectField } from '../../ui/controls';
+import { SelectField, tOpts } from '../../ui/controls';
 import { AdminLayout } from '../admin/AdminLayout';
 import { type ActivityEntry, errText, type FullUser, getActivity, getNetwork, getServerConfig, getUser, getUsers, saveNetwork, saveUserPolicy } from './api';
-import { LoadFailed, tOpts, useLoad } from './parts';
+import { LoadFailed, useLoad } from './parts';
 import { saveBlob } from '../../lib/clipboard';
 
 /* ── Turning Jellyfin's log lines into the board's rows ──

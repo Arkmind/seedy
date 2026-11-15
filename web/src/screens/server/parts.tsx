@@ -207,9 +207,6 @@ export function NumBox({ value, onChange, min, max, unit, label, width = 52, ste
   );
 }
 
-/* Select options whose labels are English keys: translated where they're rendered. */
-export const tOpts = <T,>(opts: { value: T; label: string }[]) => opts.map((o) => ({ ...o, label: t(o.label) }));
-
 /* ── Lists of addresses (Networking) ── */
 
 export function ChipList({ items, onChange, label, emptyText, placeholder, validate, help, menuTop }: {

@@ -5,7 +5,7 @@ import { fmtDayMonth, plural } from '../../lib/format';
 import { formatNumber, t, tn } from '../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync } from '../../lib/store';
-import { NumField, Panel, SavedNote, SelectField, SettingRow, Switch } from '../../ui/controls';
+import { NumField, Panel, SavedNote, type SaveState, SelectField, SettingRow, Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { MenuButton, Sheet, confirm, toast } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from '../admin/AdminLayout';
@@ -103,7 +103,7 @@ export function ServerLibraries() {
       </div>
 
       {tab === 'libraries' && (
-        !folders && foldersError ? <LoadError error={foldersError} onRetry={() => void loadFolders()} what={t('the libraries')} />
+        !folders && foldersError ? <LoadError error={foldersError} onRetry={() => void loadFolders()} what="the libraries" />
           : !folders ? <LibrariesSkeleton />
             : <LibrariesTab folders={folders} tasks={tasks} selectedId={loc.query.get('lib')} onReload={loadFolders} onAdd={() => setAdding(true)} />
       )}
@@ -305,7 +305,7 @@ const locales = () => (localesPromise ??= Promise.all([getCultures(), getCountri
 
 function LibraryEditor({ folder, onReload }: { folder: VirtualFolder; onReload: () => Promise<void> }) {
   const [opts, setOpts] = useState<LibraryOptions>(folder.LibraryOptions);
-  const [save, setSave] = useState<'saved' | 'saving' | 'error'>('saved');
+  const [save, setSave] = useState<SaveState>('saved');
   const [picker, setPicker] = useState(false);
   const avail = useAsync(() => availableFor(folder.CollectionType), [folder.CollectionType]);
   const loc = useAsync(() => locales(), []);
@@ -851,7 +851,7 @@ function AddLibrarySheet({ open, existing, onClose, onAdded }: { open: boolean; 
 function useAutosave<T extends object>(load: () => Promise<T>, saveFn: (patch: Partial<T>) => Promise<unknown>) {
   const loaded = useAsync(() => load(), []);
   const [local, setLocal] = useState<T | null>(null);
-  const [state, setState] = useState<'saved' | 'saving' | 'error'>('saved');
+  const [state, setState] = useState<SaveState>('saved');
   const pending = useRef<Partial<T>>({});
   const timer = useRef(0);
   useEffect(() => { if (loaded.data) setLocal(loaded.data); }, [loaded.data]);
@@ -880,8 +880,8 @@ function useAutosave<T extends object>(load: () => Promise<T>, saveFn: (patch: P
   return { data: local, error: loaded.error, reload: loaded.reload, set, state };
 }
 
-function TabBody({ error, reload, ready, children, state }: { error?: Error; reload: () => void; ready: boolean; children: ComponentChildren; state: 'saved' | 'saving' | 'error' }) {
-  if (!ready && error) return <LoadError error={error} onRetry={reload} what={t('these settings')} />;
+function TabBody({ error, reload, ready, children, state }: { error?: Error; reload: () => void; ready: boolean; children: ComponentChildren; state: SaveState }) {
+  if (!ready && error) return <LoadError error={error} onRetry={reload} what="these settings" />;
   if (!ready) return <PanelSkeletons count={2} rows={3} />;
   return (
     <>

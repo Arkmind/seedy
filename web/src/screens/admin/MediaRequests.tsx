@@ -10,7 +10,7 @@ import { t } from '../../lib/i18n';
 import { createStore, useStore } from '../../lib/store';
 import { SavedNote, SelectField, SettingRow, Switch } from '../../ui/controls';
 import { Icon, type IconName } from '../../ui/icons';
-import { MenuButton, MenuItem, Sheet, toast } from '../../ui/overlay';
+import { MenuButton, MenuItem, Sheet, toast, toastError } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
 import { editConfig, flushConfig, mergeServerConfig, useAdminConfig } from './config';
 import { ProfileAvatar } from './Requests';
@@ -188,7 +188,7 @@ function KeySheet({ service, open, onClose, replacing }: { service: MediaService
       void test(service);
       if (service === 'lidarr') loadInfo();
     } catch (err) {
-      toast(`${t('Couldn’t save the key.')} ${(err as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t save the key.'), err);
     } finally {
       setBusy(false);
     }
@@ -439,7 +439,7 @@ function LimitsPanel() {
       profilesStore.set({ data: await adminMediaProfile(p.userId, patch) });
     } catch (e) {
       profilesStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === p.userId ? p : x)) }));
-      toast(`${t('Couldn’t change {name}.', { name: p.name })} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t change {name}.', { name: p.name }), e);
     }
   };
   const role = (p: AdminMediaProfile) => (p.isAdmin ? t('Administrator') : p.maxParentalRating ? t('Maturity limit: {rating}', { rating: p.maxParentalRating }) : t('User'));

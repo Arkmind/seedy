@@ -173,7 +173,7 @@ export function ServerSettings() {
       wide
     >
       {!loaded.data && loaded.error ? (
-        <div class="srv-set-root"><LoadError error={loaded.error} onRetry={loaded.reload} what={t('the server settings')} /></div>
+        <div class="srv-set-root"><LoadError error={loaded.error} onRetry={loaded.reload} what="the server settings" /></div>
       ) : !d || !loaded.data ? (
         <div class="srv-set-root srv-stack"><PanelSkeletons count={4} rows={2} /></div>
       ) : (

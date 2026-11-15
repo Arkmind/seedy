@@ -56,6 +56,9 @@ export function Segmented<T extends string | number>({
   );
 }
 
+/* Select options whose labels are English keys: translated where they're rendered. */
+export const tOpts = <T,>(opts: { value: T; label: string }[]) => opts.map((o) => ({ ...o, label: t(o.label) }));
+
 export function SelectField<T extends string | number>({
   id, value, options, onChange, minWidth, label, disabled, class: cls, selectClass
 }: {
@@ -191,7 +194,9 @@ export function RadioCards<T extends string>({ name, value, options, onChange, l
   );
 }
 
-export function SavedNote({ state }: { state: 'saved' | 'saving' | 'error'; }) {
+export type SaveState = 'saved' | 'saving' | 'error';
+
+export function SavedNote({ state }: { state: SaveState }) {
   if (state === 'error') return <span class="saved-note is-error"><Icon name="alert" size={16} />{t("Couldn't save. Check the server log.")}</span>;
   if (state === 'saving') return <span class="saved-note"><span class="dot is-pending" />{t('Saving…')}</span>;
   return <span class="saved-note"><Icon name="check" size={16} stroke={2.6} color="var(--seedy-ok)" />{t('All changes saved')}</span>;

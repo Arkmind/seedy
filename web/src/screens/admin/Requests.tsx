@@ -8,7 +8,7 @@ import { useStore } from '../../lib/store';
 import { meStore, refreshMe } from '../../lib/app-state';
 import { Panel, RadioCards, SavedNote, SelectField, SettingRow, Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
-import { Sheet, toast } from '../../ui/overlay';
+import { Sheet, toast, toastError } from '../../ui/overlay';
 import { t } from '../../lib/i18n';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
 import {
@@ -200,7 +200,7 @@ function KeySheet({ open, onClose, replacing }: { open: boolean; onClose: () => 
       onClose();
       void testSeerr();
     } catch (err) {
-      toast(`${t('Couldn’t save the key.')} ${(err as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t save the key.'), err);
     } finally {
       setBusy(false);
     }
@@ -304,7 +304,7 @@ function AccountsPanel() {
       const n = list.filter((a) => a.seerrUserId !== undefined && a.seerrUserId !== null).length;
       toast(t('{n} of {total} profiles matched', { n, total: list.length }));
     } catch (e) {
-      toast(`${t('Couldn’t match accounts.')} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t match accounts.'), e);
     } finally {
       setMatching(false);
     }
@@ -318,7 +318,7 @@ function AccountsPanel() {
       accountsStore.set({ data: list, loading: false });
     } catch (e) {
       accountsStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === a.userId ? { ...x, canRequest: !on } : x)) }));
-      toast(`${t('Couldn’t change {name}.', { name: a.name })} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t change {name}.', { name: a.name }), e);
     }
   };
 
@@ -329,7 +329,7 @@ function AccountsPanel() {
       refreshMe();
       toast(t('{name} unlinked', { name: a.name }));
     } catch (e) {
-      toast(`${t('Couldn’t unlink {name}.', { name: a.name })} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t unlink {name}.', { name: a.name }), e);
     } finally {
       setBusy(null);
     }
@@ -444,7 +444,7 @@ function LinkSheet({ account, accounts, onClose }: { account: SeerrAccount | nul
       toast(t('{name} linked to {seerr}', { name: account.name, seerr: u.displayName }));
       onClose();
     } catch (e) {
-      toast(`${t('Couldn’t link the account.')} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t link the account.'), e);
     } finally {
       setBusy(false);
     }

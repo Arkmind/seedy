@@ -8,7 +8,7 @@ import { formatNumber, t, tn } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { createStore, createSummary, useAsync, useStore } from '../../lib/store';
 import { Icon } from '../../ui/icons';
-import { confirm, toast } from '../../ui/overlay';
+import { confirm, toastError } from '../../ui/overlay';
 import { actLine, requesterName } from './wording';
 import { useBusyRun } from './busy-run';
 import { pctOf as widthOf } from '../../lib/format';
@@ -404,7 +404,7 @@ export const DialogError = ({ message, onRetry }: { message: string; onRetry: ()
   </div>
 );
 
-export const sendFailed = (e: unknown) => toast(`${t('Couldn’t send the request.')} ${(e as Error).message || ''}`.trim(), 'error');
+export const sendFailed = (e: unknown) => toastError(t('Couldn’t send the request.'), e);
 
 /* What happens to the request (the dot's tone and a sentence), Cancel, and Request. */
 export function DialogFoot({ tone, note, busy, disabled, label, onSend, onClose }: {

@@ -2,9 +2,9 @@ import { useEffect, useState } from 'preact/hooks';
 import { request } from '../../api/client';
 import { adminClearPlayLog, adminPlayLogProfile, type AdminConfig, type PlayLogProfile } from '../../api/seedy';
 import { useStore } from '../../lib/store';
-import { Panel, SavedNote, SelectField, SettingRow, Switch } from '../../ui/controls';
+import { Panel, SavedNote, SelectField, SettingRow, Switch, tOpts } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
-import { confirm, toast } from '../../ui/overlay';
+import { confirm, toast, toastError } from '../../ui/overlay';
 import { formatNumber, t } from '../../lib/i18n';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
 import { ProfileAvatar } from './Requests';
@@ -56,7 +56,7 @@ export function AdminPlayLog() {
                 id="retention"
                 minWidth={180}
                 value={RETENTION.some((o) => o.value === config.playLog.retentionDays) ? config.playLog.retentionDays : 365}
-                options={RETENTION.map((o) => ({ ...o, label: t(o.label) }))}
+                options={tOpts(RETENTION)}
                 onChange={(v) => set({ retentionDays: v })}
               />
             </SettingRow>
@@ -97,7 +97,7 @@ function ProfilesPanel() {
       profilesStore.set({ data: await adminPlayLogProfile(p.userId, { [key]: on }), loading: false });
     } catch (e) {
       profilesStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === p.userId ? { ...x, [key]: !on } : x)) }));
-      toast(`${t('Couldn’t change {name}.', { name: p.name })} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t change {name}.', { name: p.name }), e);
     }
   };
 
@@ -106,7 +106,7 @@ function ProfilesPanel() {
     try {
       await exportPlays(p);
     } catch (e) {
-      toast(`${t('Couldn’t export {name}’s plays.', { name: p.name })} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t export {name}’s plays.', { name: p.name }), e);
     } finally {
       setBusy(null);
     }
@@ -126,7 +126,7 @@ function ProfilesPanel() {
       toast(t('{name}’s plays cleared', { name: p.name }));
       loadProfiles(true);
     } catch (e) {
-      toast(`${t('Couldn’t clear {name}’s plays.', { name: p.name })} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t clear {name}’s plays.', { name: p.name }), e);
     } finally {
       setBusy(null);
     }
@@ -204,7 +204,7 @@ function DangerZone() {
       loadProfiles(true);
       statusStore.set((s) => (s.data ? { ...s, data: { ...s.data, playLog: { ...s.data.playLog, plays: 0 } } } : s));
     } catch (e) {
-      toast(`${t('Couldn’t clear the play log.')} ${(e as Error).message || ''}`.trim(), 'error');
+      toastError(t('Couldn’t clear the play log.'), e);
     } finally {
       setBusy(false);
     }

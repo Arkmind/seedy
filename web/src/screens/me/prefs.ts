@@ -5,6 +5,7 @@ import { getMe as getSeedyMe, savePrefs, type PlaybackPrefs, type UserPrefs } fr
 import type { ItemsResult, User, UserConfiguration } from '../../api/types';
 import { applyBranding, DEFAULT_PLAYBACK, meStore, setPrefsBusyCheck, userStore, viewsStore } from '../../lib/app-state';
 import { createStore, safeLocal, saveLocal, useStore } from '../../lib/store';
+import type { SaveState } from '../../ui/controls';
 
 /* Personal settings (Settings · Profile, Home screen, Display, Controls).
 
@@ -13,7 +14,7 @@ import { createStore, safeLocal, saveLocal, useStore } from '../../lib/store';
    - Jellyfin's UserConfiguration — Jellyfin's own settings, so they apply in Jellyfin's other apps too.
    - This browser (localStorage `seedy.device.*`) — rows tagged "This device". */
 
-/* ── Keys in prefs.custom (owned by these pages; documented in the round report) ── */
+/* ── Keys in prefs.custom (owned by these pages) ── */
 export const CUSTOM = {
   accent: 'display.accent',
   /* Disco accent (party/disco.ts): unset until the Konami code unlocks it, then 'on' or 'off'. */
@@ -69,7 +70,6 @@ export function useCustom<K extends CustomKey>(key: K): CustomValue<K> {
 
 /* ── Saving: changes save as they're made; the note at the foot of each page shows the state ── */
 
-export type SaveState = 'saved' | 'saving' | 'error';
 export const saveState = createStore<SaveState>('saved');
 
 /* Every prefs write in Seedy goes through this one queue (Settings pages, Home's row menus, the player): one request
@@ -159,10 +159,10 @@ async function refreshProfile() {
   } catch { /* keep the last known profile */ }
 }
 
-/* Saves part of the profile's prefs; resolves false if the server refused it (it stays queued for "Try again").
-   `delay` batches typing in number fields. */
 setPrefsBusyCheck(() => inFlight || Object.keys(pending).length > 0);
 
+/* Saves part of the profile's prefs; resolves false if the server refused it (it stays queued for "Try again").
+   `delay` batches typing in number fields. */
 export function savePrefsPatch(patch: Partial<UserPrefs>, delay = 0): Promise<boolean> {
   localVersion++;
   applyLocal(patch);
@@ -210,7 +210,7 @@ let jfQueue: Promise<unknown> = Promise.resolve();
 const jfOutstanding: Partial<FullUserConfig>[] = [];
 
 /* Merge into a fresh copy of the full object (another page or app may have saved since) and post it. Saves run one
-   at a time; the m2 pages (Playback, Subtitles) use this same queue. */
+   at a time; Playback and Subtitles use this same queue. */
 export function saveUserConfig(patch: Partial<FullUserConfig>, opts: { refreshViews?: boolean } = {}): Promise<boolean> {
   const before = userStore.get();
   if (!before) return Promise.resolve(false);

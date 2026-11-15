@@ -133,7 +133,7 @@ export function ServerUsers() {
       </div>
 
       {!data && loaded.error ? (
-        <LoadError error={loaded.error} onRetry={loaded.reload} what={t('the users')} />
+        <LoadError error={loaded.error} onRetry={loaded.reload} what="the users" />
       ) : !data ? (
         <div class="srv-list" aria-busy="true">
           {[0, 1, 2, 3].map((i) => (

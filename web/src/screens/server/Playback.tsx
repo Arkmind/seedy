@@ -5,8 +5,8 @@ import { href, setQuery, useLocation } from '../../lib/router';
 import { toast } from '../../ui/overlay';
 import { AdminLayout, PanelSkeletons } from '../admin/AdminLayout';
 import { type EncodingOptions, errText, ffmpegVersion, getEncoding, getServerConfig, getSessions, getSystemInfo, type GpuScan, type HwAccel, saveEncoding, saveServerConfig, scanGpus, type ServerConfig, type TrickplayOptions } from './api';
-import { ChipList, LoadFailed, NumBox, PathField, pickChanged, SrvRow, SrvSwitchRow, tOpts, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
-import { SelectField } from '../../ui/controls';
+import { ChipList, LoadFailed, NumBox, PathField, pickChanged, SrvRow, SrvSwitchRow, UnsavedBar, useDraft, useLoad, useUnsavedGuard } from './parts';
+import { SelectField, tOpts } from '../../ui/controls';
 
 type Tab = 'transcoding' | 'resume' | 'streaming' | 'previews';
 const TABS: { id: Tab; label: string }[] = [

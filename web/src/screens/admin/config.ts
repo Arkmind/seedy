@@ -4,14 +4,13 @@ import * as seedy from '../../api/seedy';
 import type { AdminConfig, AdminStatus, HomeRowSetting, PlayLogProfile, RowKind, SeerrAccount, SeerrTestResult } from '../../api/seedy';
 import { applyBranding, DEFAULT_PLAYBACK, refreshMe } from '../../lib/app-state';
 import { createStore, useStore } from '../../lib/store';
+import type { SaveState } from '../../ui/controls';
 import { confirm } from '../../ui/overlay';
 import { t } from '../../lib/i18n';
 
-/* Admin state shared by the four admin pages: the whole AdminConfig is loaded once and kept here, so moving
+/* Admin state shared by the Seedy admin pages: the whole AdminConfig is loaded once and kept here, so moving
    between pages doesn't refetch. Autosave pages edit it in place and a debounced save sends the whole
    object back; the Home screen page keeps a draft and commits its section explicitly. */
-
-export type SaveState = 'saved' | 'saving' | 'error';
 
 const configStore = createStore<AdminConfig | null>(null);
 const loadErrorStore = createStore<Error | null>(null);

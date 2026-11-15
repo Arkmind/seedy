@@ -145,7 +145,7 @@ export function ServerUserEdit({ id }: { id: string }) {
     return (
       <AdminLayout page="users" title={loaded.error ? t('User') : <span class="skel skel-line" style={{ display: 'inline-block', width: '160px', height: '36px' }} />} wide overline={overline}>
         <div class="srv-ue-root">
-          {loaded.error ? <LoadError error={loaded.error} onRetry={loaded.reload} what={t('this user')} /> : <PanelSkeletons count={2} rows={4} />}
+          {loaded.error ? <LoadError error={loaded.error} onRetry={loaded.reload} what="this user" /> : <PanelSkeletons count={2} rows={4} />}
         </div>
       </AdminLayout>
     );
