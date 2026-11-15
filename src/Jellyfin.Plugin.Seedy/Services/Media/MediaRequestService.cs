@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.Seedy.Api;
 using Jellyfin.Plugin.Seedy.Data;
-using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Seedy.Services.Media;
@@ -105,7 +104,6 @@ public sealed class MediaRequestService
     private static readonly TimeSpan NothingFound = TimeSpan.FromDays(2);
 
     private readonly SeedyDatabase _db;
-    private readonly IUserManager _users;
     private readonly LidarrClient _lidarr;
     private readonly ShelfarrClient _shelfarr;
     private readonly LibrarrClient _librarr;
@@ -118,17 +116,15 @@ public sealed class MediaRequestService
     /// Initializes a new instance of the <see cref="MediaRequestService"/> class.
     /// </summary>
     /// <param name="db">Database.</param>
-    /// <param name="users">User manager.</param>
     /// <param name="lidarr">Lidarr.</param>
     /// <param name="shelfarr">Shelfarr.</param>
     /// <param name="librarr">Librarr.</param>
     /// <param name="readarr">Readarr-API app.</param>
     /// <param name="library">What's on the server.</param>
     /// <param name="logger">Logger.</param>
-    public MediaRequestService(SeedyDatabase db, IUserManager users, LidarrClient lidarr, ShelfarrClient shelfarr, LibrarrClient librarr, ReadarrClient readarr, MediaLibrary library, ILogger<MediaRequestService> logger)
+    public MediaRequestService(SeedyDatabase db, LidarrClient lidarr, ShelfarrClient shelfarr, LibrarrClient librarr, ReadarrClient readarr, MediaLibrary library, ILogger<MediaRequestService> logger)
     {
         _db = db;
-        _users = users;
         _lidarr = lidarr;
         _shelfarr = shelfarr;
         _librarr = librarr;
@@ -1391,22 +1387,4 @@ public sealed class MediaRequestService
         var close = name.LastIndexOf(')');
         return open >= 0 && close > open + 1 ? name[(open + 1)..close].Trim() : name;
     }
-
-    /// <summary>Seeds a request as it would be at some point of its life (for the dev stack's demo data).</summary>
-    /// <param name="q">The request, with its columns filled in.</param>
-    /// <param name="data">Its details.</param>
-    /// <param name="note">Its note.</param>
-    public void Import(MediaRequestRecord q, MediaRequestData data, MediaNoteDto? note)
-    {
-        var parts = q.Kind == "music"
-            ? [new MediaRequestPart { Format = "music", Service = "lidarr", Status = q.Status, Progress = q.Progress }]
-            : data.Formats.Select(f => new MediaRequestPart { Format = f, Service = q.Service, Status = q.Status, Progress = q.Progress }).ToList();
-        Store(q, data, parts, note);
-        _db.SaveMediaRequest(q);
-    }
-
-    /// <summary>The person a request belongs to, if they still exist.</summary>
-    /// <param name="q">Request.</param>
-    /// <returns>User or null.</returns>
-    public User? Owner(MediaRequestRecord q) => Guid.TryParse(q.UserId, out var id) ? _users.GetUserById(id) : null;
 }

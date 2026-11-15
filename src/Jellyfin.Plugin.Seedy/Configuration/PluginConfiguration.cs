@@ -209,9 +209,6 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Gets or sets how many automatic backups to keep.</summary>
     public int BackupKeep { get; set; } = 4;
 
-    /// <summary>Gets or sets whether automatic backups include the database.</summary>
-    public bool BackupDatabase { get; set; } = true;
-
     /// <summary>Gets or sets whether automatic backups include metadata.</summary>
     public bool BackupMetadata { get; set; } = true;
 

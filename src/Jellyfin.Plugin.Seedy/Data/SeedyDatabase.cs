@@ -311,19 +311,6 @@ public sealed partial class SeedyDatabase : IDisposable
         return r.Read() ? ReadPlay(r) : null;
     }
 
-    /// <summary>Gets a play by id.</summary>
-    /// <param name="id">Play id.</param>
-    /// <returns>The play, if any.</returns>
-    public PlayRecord? GetPlay(string id)
-    {
-        using var c = Open();
-        using var cmd = c.CreateCommand();
-        cmd.CommandText = $"SELECT {PlayColumns} FROM plays WHERE id = $id";
-        Bind(cmd, "$id", id);
-        using var r = cmd.ExecuteReader();
-        return r.Read() ? ReadPlay(r) : null;
-    }
-
     /// <summary>Lists a user's plays, newest first.</summary>
     /// <param name="userId">User id.</param>
     /// <param name="types">Item types to include (empty = all).</param>
