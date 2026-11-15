@@ -1,13 +1,11 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { JELLYFIN_WEB, get } from '../../api/client';
+import { deviceId, get } from '../../api/client';
 import type { BaseItem, SessionInfo } from '../../api/types';
-import { deviceId } from '../../api/client';
-import { meStore } from '../../lib/app-state';
 import { plural, ticksToSeconds, timeLeft } from '../../lib/format';
 import { t, tn } from '../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
-import { useAsync, useStore } from '../../lib/store';
+import { useAsync } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
@@ -158,7 +156,6 @@ const running = (data: BooksData, it: BaseItem) => { const s = seriesOf(it); ret
 
 export function BooksLibrary({ view }: { view: BaseItem }) {
   const loc = useLocation();
-  const me = useStore(meStore);
   const tabParam = loc.query.get('tab') as TabId | null;
   const tab: TabId = TABS.some((x) => x.id === tabParam) ? tabParam! : 'overview';
   const sortParam = loc.query.get('sort') as SortId | null;
@@ -210,7 +207,7 @@ export function BooksLibrary({ view }: { view: BaseItem }) {
                 {(close) => (
                   <>
                     <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); lib.reload(); }} />
-                    <LibraryMenuItems item={view} jellyfinHref={`${JELLYFIN_WEB}#/list?parentId=${view.Id}`} admin={me.isAdmin} close={close} />
+                    <LibraryMenuItems item={view} close={close} />
                   </>
                 )}
               </MenuButton>

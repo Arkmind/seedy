@@ -1,6 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { get, JELLYFIN_WEB } from '../../api/client';
+import { get } from '../../api/client';
 import { CARD_FIELDS, getGenres, getItem, getItems, getSimilar, type ItemsQuery } from '../../api/jellyfin';
 import { backdropUrl, cardArt } from '../../api/images';
 import type { BaseItem, ItemsResult } from '../../api/types';
@@ -302,7 +302,7 @@ function LibraryView({ view }: { view: BaseItem }) {
                   <>
                     {isGrid && <MenuItem icon="check" label={t('Select titles')} sub={t('Act on several at once')} onSelect={() => { close(); sel.start(); }} />}
                     <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); paged.reload(); libTotal.reload(); }} />
-                    <LibraryMenuItems item={view} jellyfinHref={jellyfinLibraryUrl(view)} admin={me.isAdmin} close={close} />
+                    <LibraryMenuItems item={view} close={close} />
                   </>
                 )}
               </MenuButton>
@@ -381,13 +381,6 @@ function LibraryView({ view }: { view: BaseItem }) {
       )}
     </div>
   );
-}
-
-function jellyfinLibraryUrl(view: BaseItem) {
-  const ct = view.CollectionType;
-  if (ct === 'movies') return `${JELLYFIN_WEB}#/movies.html?topParentId=${view.Id}&collectionType=movies`;
-  if (ct === 'tvshows') return `${JELLYFIN_WEB}#/tv.html?topParentId=${view.Id}&collectionType=tvshows`;
-  return `${JELLYFIN_WEB}#/list.html?parentId=${view.Id}`;
 }
 
 /* ───────── Sort ───────── */

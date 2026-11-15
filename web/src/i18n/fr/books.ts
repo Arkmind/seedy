@@ -23,7 +23,6 @@ const fr: Record<string, string> = {
   'Recently read': 'Lus récemment',
   'Scanning {name}': 'Analyse de {name}',
   "Couldn't start the scan": 'Impossible de lancer l’analyse',
-  "Couldn't copy the link": 'Impossible de copier le lien',
   '{name} is empty': '{name} est vide',
   'Once the server finds books in this library they will show up here.': 'Les livres apparaîtront ici dès que le serveur les aura trouvés dans cette bibliothèque.',
 

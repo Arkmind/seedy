@@ -1,9 +1,9 @@
 import { Fragment } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { JELLYFIN_WEB } from '../../api/client';
+
 import { getItems, setFavorite } from '../../api/jellyfin';
 import type { BaseItem } from '../../api/types';
-import { canDownload, isAdmin, meStore } from '../../lib/app-state';
+import { canDownload, meStore } from '../../lib/app-state';
 import { CUSTOM, readCustom } from '../me/prefs';
 import { t, tn } from '../../lib/i18n';
 import { capitalize, fmtMonthShort } from '../../lib/format';
@@ -320,7 +320,7 @@ function LibraryMenu({ view, onRefresh }: { view: BaseItem; onRefresh: () => voi
       {(close) => (
         <>
           <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); onRefresh(); }} />
-          <LibraryMenuItems item={view} jellyfinHref={`${JELLYFIN_WEB}#/list.html?parentId=${view.Id}`} admin={isAdmin()} close={close} />
+          <LibraryMenuItems item={view} close={close} />
         </>
       )}
     </MenuButton>

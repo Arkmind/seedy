@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { JELLYFIN_WEB } from '../../api/client';
+
 import type { BaseItem } from '../../api/types';
-import { canDownload, isAdmin, userStore } from '../../lib/app-state';
+import { canDownload, userStore } from '../../lib/app-state';
 import { t } from '../../lib/i18n';
 import { Link, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -230,7 +230,7 @@ function AlbumMenu({ item, onSelect, onRefresh }: { item: BaseItem; onSelect: ()
         <>
           <MenuItem icon="check" label={t('Select photos')} sub={t('Act on several at once')} onSelect={() => { close(); onSelect(); }} />
           <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); onRefresh(); }} />
-          <LibraryMenuItems item={item} jellyfinHref={`${JELLYFIN_WEB}#/list.html?parentId=${item.Id}`} admin={isAdmin()} close={close} scanLabel={t('Scan this folder')} scanSub={t('Look for new and changed photos')} />
+          <LibraryMenuItems item={item} close={close} scanLabel={t('Scan this folder')} scanSub={t('Look for new and changed photos')} />
         </>
       )}
     </MenuButton>

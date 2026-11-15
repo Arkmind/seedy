@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { JELLYFIN_WEB, get, currentUserId } from '../../api/client';
+import { currentUserId, get } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { meStore } from '../../lib/app-state';
@@ -95,7 +95,7 @@ export function MusicLibrary({ view }: { view: BaseItem }) {
                 {(close) => (
                   <>
                     <MenuItem icon="refresh" label={t('Refresh')} onSelect={() => { close(); setReload((n) => n + 1); }} />
-                    <LibraryMenuItems item={view} jellyfinHref={`${JELLYFIN_WEB}#/music.html?topParentId=${view.Id}&collectionType=music`} admin={me.isAdmin} close={close} />
+                    <LibraryMenuItems item={view} close={close} />
                   </>
                 )}
               </MenuButton>
