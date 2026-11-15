@@ -54,9 +54,15 @@ export function deviceId(): string {
   return id;
 }
 
+/* "Chrome", "Safari"…, or `fallback` for a browser it doesn't know. */
+export function browserName(fallback = 'Browser'): string {
+  const ua = navigator.userAgent;
+  return /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : fallback;
+}
+
 export function deviceName(): string {
   const ua = navigator.userAgent;
-  const browser = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+  const browser = browserName();
   const os = /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? (/iPhone|iPad/.test(ua) ? 'iOS' : 'macOS') : /Android/.test(ua) ? 'Android' : /Linux/.test(ua) ? 'Linux' : '';
   return os ? `${browser} on ${os}` : browser;
 }

@@ -4,7 +4,7 @@ import { getItems } from '../../api/jellyfin';
 import { adminGetConfig, getHome, type HomeRowPref, type HomeRowSetting, type RowKind } from '../../api/seedy';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { meStore, userStore, viewsStore } from '../../lib/app-state';
-import { joinNames } from '../../lib/format';
+import { joinNames, plural } from '../../lib/format';
 import { useAsync, useStore } from '../../lib/store';
 import { NumField, Segmented, Stepper, Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
@@ -55,6 +55,10 @@ export function MeHome() {
 
 interface RowView { kind: RowKind; enabled: boolean; count?: number; pinned: boolean; adminCount?: number }
 
+/* The rows as the profile keeps them: no count or pin unless set. */
+const toPrefs = (list: RowView[]): HomeRowPref[] =>
+  list.map((r) => ({ kind: r.kind, enabled: r.enabled, ...(r.count ? { count: r.count } : {}), ...(r.pinned ? { pinned: true } : {}) }));
+
 function useAdminRows() {
   const me = useStore(meStore);
   return useAsync(async (): Promise<HomeRowSetting[]> => {
@@ -94,9 +98,7 @@ function RowsSection() {
     });
   }, [admin.data, prefs.rows, mode, autoSnap]);
 
-  const save = (next: RowView[]) => savePrefsPatch({
-    rows: next.map((r): HomeRowPref => ({ kind: r.kind, enabled: r.enabled, ...(r.count ? { count: r.count } : {}), ...(r.pinned ? { pinned: true } : {}) }))
-  });
+  const save = (next: RowView[]) => savePrefsPatch({ rows: toPrefs(next) });
   const setRow = (kind: RowKind, patch: Partial<RowView>) => save(rows.map((r) => (r.kind === kind ? { ...r, ...patch } : r)));
 
   const sort = useSortable({
@@ -127,7 +129,7 @@ function RowsSection() {
           options={[{ value: 'auto', label: t('Order automatically') }, { value: 'mine', label: t('My order') }]}
           onChange={(v) => {
             // "My order" starts from what's on screen now, so switching never shuffles the list.
-            if (v === 'mine') savePrefsPatch({ rowOrder: v, rows: rows.map((r): HomeRowPref => ({ kind: r.kind, enabled: r.enabled, ...(r.count ? { count: r.count } : {}), ...(r.pinned ? { pinned: true } : {}) })) });
+            if (v === 'mine') savePrefsPatch({ rowOrder: v, rows: toPrefs(rows) });
             else savePrefsPatch({ rowOrder: v });
           }}
         />
@@ -282,7 +284,7 @@ const NOUNS: Record<string, [string, string]> = {
 
 function countLabel(n: number, ct?: string) {
   const [one, many] = NOUNS[ct ?? ''] ?? ['item', 'items'];
-  return tn(n, `{n} ${one}`, `{n} ${many}`);
+  return plural(n, one, many);
 }
 
 function LibrariesSection() {

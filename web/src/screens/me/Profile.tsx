@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { ApiError, deviceId, deviceName, getSession, get, request } from '../../api/client';
+import { ApiError, browserName, deviceId, deviceName, getSession, get, request } from '../../api/client';
 import { quickConnectEnabled } from '../../api/jellyfin';
 import { userImageUrl } from '../../api/images';
 import { myRequests, passwordState } from '../../api/seedy';
@@ -76,14 +76,9 @@ export function MeProfile() {
 
 /* ── Picture, name and where you're signed in ── */
 
-function browserName() {
-  const ua = navigator.userAgent;
-  return /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : t('a browser');
-}
-
 /* "Alex's MacBook · Chrome": the device's name as the server knows it (an admin may have renamed it), then the browser. */
 function sessionLine(s: SessionInfo | undefined): string {
-  const browser = browserName();
+  const browser = browserName(t('a browser'));
   const ours = deviceName();
   const name = s?.DeviceName && s.DeviceName !== ours ? s.DeviceName : ours.replace(/^\S+ on /, '') || ours;
   return name && name !== browser ? t('Signed in on {device} · {browser}', { device: name, browser }) : t('Signed in on {browser}', { browser });

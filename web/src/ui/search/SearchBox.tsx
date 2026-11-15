@@ -11,7 +11,7 @@ import { detailsPath, playPath } from '../cards';
 import { Icon } from '../icons';
 import { NbIcon } from '../navbar/icons';
 import { addRecent } from './recent';
-import { moveFocusFrom, tvActive } from '../../screens/me/effects';
+import { editable, moveFocusFrom, tvActive } from '../../screens/me/effects';
 import { bestMeta, bestPlay, pick, rowMeta, rowTitle, type BestPlay, type Hit } from './engine';
 import { Marked, moveChip, PersonLine, SEARCH_MIN, SEARCH_PAUSE, SearchIdle, Thumb, useSearchResults, useSeerrSearch } from './parts';
 import { PhoneSearch } from './PhoneSearch';
@@ -25,10 +25,6 @@ import { t, tn } from '../../lib/i18n';
    - On phones it's a button by the cast button that opens the full-screen search (as in the Android app); the
      Search page keeps its box under the bar. */
 
-
-const editable = (el: Element | null) =>
-  !!el && (el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement || (el as HTMLElement).isContentEditable
-    || (el instanceof HTMLInputElement && !['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color', 'file'].includes(el.type)));
 
 /* "/" (not while typing elsewhere) or Ctrl/Cmd K. Dialogs keep their keys. openSearch() does the same. */
 function useShortcut(run: () => void, input: { current: HTMLInputElement | null }) {
