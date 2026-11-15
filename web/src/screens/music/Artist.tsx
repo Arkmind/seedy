@@ -3,7 +3,7 @@ import { get, currentUserId } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import { backdropUrl, imageUrl } from '../../api/images';
 import type { BaseItem, ItemsResult } from '../../api/types';
-import { ticksToSeconds } from '../../lib/format';
+import { dot, ticksToSeconds } from '../../lib/format';
 import { t, tn } from '../../lib/i18n';
 import { useAsync, useStore } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
@@ -17,7 +17,7 @@ import { Cover, useNearestPalette } from '../../audio/cover';
 import { audioStore, playLoaded, playedStore, togglePlay } from '../../audio/engine';
 import { AIcon, EqIcon } from '../../audio/icons';
 import { clock } from '../../audio/parts';
-import { AlbumCard, ArtistCard, SectionHead, dot, playsLabel, releaseOf, songsLabel, yearOf, type Release } from './parts';
+import { AlbumCard, ArtistCard, SectionHead, playsLabel, releaseOf, songsLabel, yearOf, type Release } from './parts';
 import { CardSkel, artistAlbums } from './MusicLibrary';
 import './music.css';
 

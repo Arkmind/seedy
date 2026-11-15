@@ -4,7 +4,7 @@ import { getItem, getItems } from '../../api/jellyfin';
 import { imageUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { canDownload, userStore, viewsStore } from '../../lib/app-state';
-import { TICKS_PER_SECOND, dayOf, ticksToSeconds } from '../../lib/format';
+import { dayOf, dot, TICKS_PER_SECOND, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -21,7 +21,7 @@ import { addToQueue, audioStore, playLoaded, playedStore, togglePlay } from '../
 import { AIcon } from '../../audio/icons';
 import { sizeLabel } from '../../audio/NowPlaying';
 import {
-  AlbumCard, SectionHead, TrackTable, TracksSkeleton, dot, lengthLabel, longDate, playlistCovers, releaseLabel, releaseOf, songsLabel, yearOf
+  AlbumCard, SectionHead, TrackTable, TracksSkeleton, lengthLabel, longDate, playlistCovers, releaseLabel, releaseOf, songsLabel, yearOf
 } from './parts';
 import './music.css';
 

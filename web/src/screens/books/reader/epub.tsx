@@ -13,6 +13,7 @@ import sansLatinExt from '@fontsource-variable/noto-sans/files/noto-sans-latin-e
 import sansItalic from '@fontsource-variable/noto-sans/files/noto-sans-latin-wght-italic.woff2?url';
 import sansItalicExt from '@fontsource-variable/noto-sans/files/noto-sans-latin-ext-wght-italic.woff2?url';
 import type { BaseItem } from '../../../api/types';
+import { dot } from '../../../lib/format';
 import { t, tn } from '../../../lib/i18n';
 import { back, setQuery, useLocation } from '../../../lib/router';
 import { getBookFile, authorLine, type BookInfo, type Reading, type ReadingPatch } from '../api';
@@ -407,7 +408,7 @@ export function EpubReader({ item, info, reading }: { item: BaseItem; info?: Boo
 
   /* ── Labels ── */
   const chapterName = (c: Chapter, i: number) => (/^(chapter|chapitre|part|partie|book|livre|prologue|epilogue|épilogue)\b|^\d/i.test(c.title) ? c.title : t('Chapter {n}, {title}', { n: i + 1, title: c.title }));
-  const sub = [author, chapter ? chapterName(chapter, chapterIdx) : ''].filter(Boolean).join(' · ');
+  const sub = dot(author, chapter ? chapterName(chapter, chapterIdx) : '');
   const leftInChapter = Math.max(1, nextChapterPage - page);
   const status: [string, string, string] = page && total ? [
     chapter ? (leftInChapter <= 1 ? t('Chapter {n} · last page in chapter', { n: chapterIdx + 1 }) : t('Chapter {n} · {count}', { n: chapterIdx + 1, count: tn(leftInChapter, '{n} page left in chapter', '{n} pages left in chapter') })) : '',

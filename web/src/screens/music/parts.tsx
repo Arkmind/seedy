@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { get, currentUserId } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
-import { itemYear, ticksToSeconds } from '../../lib/format';
+import { dot, itemYear, ticksToSeconds } from '../../lib/format';
 import { t, tc, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
@@ -49,7 +49,6 @@ export const albumArtist = (a: Pick<Track, 'AlbumArtist' | 'AlbumArtists' | 'Art
 export const yearOf = (a: Pick<BaseItem, 'ProductionYear' | 'PremiereDate'>) => String(itemYear(a) ?? '');
 export { longDate } from '../../lib/format';
 
-export const dot = (...parts: (string | number | undefined | null | false)[]) => parts.filter((p) => p !== undefined && p !== null && p !== false && p !== '').join(' · ');
 
 /* ───────── Section heads ───────── */
 

@@ -168,6 +168,9 @@ export function yearRange(item: BaseItem): string {
 
 /* "248 movies": the English forms are the translation keys ("{n} movie" / "{n} movies"), so every count Seedy shows
    through plural() translates once the dictionary has them. */
+/* "Album · 2019 · 12 songs": the parts that have a value, joined with middle dots. */
+export const dot = (...parts: (string | number | undefined | null | false)[]) => parts.filter((p) => p !== undefined && p !== null && p !== false && p !== '').join(' · ');
+
 /* "Movies, Shows and Music". */
 export function joinNames(names: string[]): string {
   if (names.length <= 1) return names[0] ?? '';

@@ -3,6 +3,7 @@ import { currentUserId, get } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { meStore } from '../../lib/app-state';
+import { dot } from '../../lib/format';
 import { t, tn } from '../../lib/i18n';
 import { Link, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -17,7 +18,7 @@ import { audioStore, playContainer, playLoaded, playedStore, recentSources } fro
 import { AIcon } from '../../audio/icons';
 import {
   AlbumCard, ArtistCard, GenreTile, JumpCard, MUSIC_FIELDS, MixCard, NewPlaylistTile, PlaylistCard, SectionHead, albumArtist, albumArtistsCount,
-  albumsLabel, countOf, dot, playlistCovers, playlistSub, playsLabel, songsOf, songsLabel, yearOf, type Mix
+  albumsLabel, countOf, playlistCovers, playlistSub, playsLabel, songsOf, songsLabel, yearOf, type Mix
 } from './parts';
 import { AlbumsTab, ArtistsTab, FoldersTab, GenresTab, PlaylistsTab, SongsTab } from './tabs';
 import { LibraryMenuItems } from '../../ui/library-menu';

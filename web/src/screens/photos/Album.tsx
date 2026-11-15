@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 
 import type { BaseItem } from '../../api/types';
 import { canDownload, userStore } from '../../lib/app-state';
+import { dot } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -121,7 +122,7 @@ export function PhotoAlbumPage({ item }: { item: BaseItem }) {
           <div class="ph-hero-info">
             <span class="ph-eyebrow"><PIcon name="folder" size={16} />{t('Folder')}</span>
             <h1 id="ph-alb-h">{item.Name}</h1>
-            <span class="ph-hero-counts">{[counts, range].filter(Boolean).join(' · ') || ' '}</span>
+            <span class="ph-hero-counts">{dot(counts, range) || ' '}</span>
             {path && <span class="ph-hero-path">{path}</span>}
             <div class="ph-hero-actions">
               <button type="button" class="ph-btn is-primary" onClick={() => void slideshow(false)}><PIcon name="slideshow" size={18} />{t('Slideshow')}</button>

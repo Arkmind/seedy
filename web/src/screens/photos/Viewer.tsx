@@ -2,7 +2,7 @@ import { createPortal } from 'preact/compat';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { getItem, setFavorite } from '../../api/jellyfin';
 import { canDownload, userStore } from '../../lib/app-state';
-import { clock, duration, ticksToSeconds } from '../../lib/format';
+import { clock, dot, duration, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, back, navigate, setQuery, useLocation } from '../../lib/router';
 import { safeLocal, saveLocal, useStore } from '../../lib/store';
@@ -174,7 +174,7 @@ export function PhotoViewer({ list, total, more, done, onItem }: Props) {
 
   const taken = item ? takenAt(item) : undefined;
   const count = total ?? list.length;
-  const sub = [taken ? longDay(taken) : '', taken ? clock(taken) : '', index >= 0 ? t('{n} of {total}', { n: index + 1, total: count }) : ''].filter(Boolean).join(' · ');
+  const sub = dot(taken ? longDay(taken) : '', taken ? clock(taken) : '', index >= 0 ? t('{n} of {total}', { n: index + 1, total: count }) : '');
 
   return createPortal(
     <div class={'ph-viewer' + (info ? ' has-info' : '') + (idle ? ' is-idle' : '') + (playing ? ' is-playing' : '')} role="dialog" aria-modal="true" aria-label={item ? fileName(item) : t('Photo')}>
@@ -427,8 +427,8 @@ function Details({ item }: { item: PhotoItem }) {
   const folderPath = item.Path ? item.Path : '';
   const folderName = item.Album || (item.Path ? item.Path.split(/[\\/]/).slice(-2, -1)[0] : '');
   const geo = item.Latitude !== undefined && item.Longitude !== undefined && item.Latitude !== null && item.Longitude !== null && !(item.Latitude === 0 && item.Longitude === 0);
-  const sizeLine = [w && h ? `${w} × ${h}` : '', video ? duration(ticksToSeconds(item.RunTimeTicks)) : mp ? `${mp} MP` : ''].filter(Boolean).join(' · ');
-  const fileLine = [formatName(item, file.type), bytesLabel(file.size)].filter(Boolean).join(' · ');
+  const sizeLine = dot(w && h ? `${w} × ${h}` : '', video ? duration(ticksToSeconds(item.RunTimeTicks)) : mp ? `${mp} MP` : '');
+  const fileLine = dot(formatName(item, file.type), bytesLabel(file.size));
   // The folder's first photo, or this one when that has no picture.
   const cover = folderCover?.ImageTags?.Primary ? folderCover : item;
   return (

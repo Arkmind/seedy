@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import type { BaseItem } from '../../api/types';
-import { duration, ticksToSeconds } from '../../lib/format';
+import { dot, duration, ticksToSeconds } from '../../lib/format';
 import { t, tn } from '../../lib/i18n';
 import { Link, setQuery } from '../../lib/router';
 import { safeLocal, saveLocal } from '../../lib/store';
@@ -196,7 +196,7 @@ export function FolderCard({ item, to }: { item: BaseItem; to: string }) {
       </span>
       <span class="ph-folder-name">{item.Name}</span>
       <span class="ph-folder-sub">
-        {info ? [countsLabel(info.photos, info.videos), info.to ? fmtMonthYear(info.to) : ''].filter(Boolean).join(' · ') : ' '}
+        {info ? dot(countsLabel(info.photos, info.videos), info.to ? fmtMonthYear(info.to) : '') : ' '}
       </span>
     </Link></div>
   );
@@ -208,7 +208,7 @@ export function FolderGrid({ children }: { children: ComponentChildren }) {
 
 /* "212 photos · 14 videos". */
 export function countsLine(photos: number, videos: number): string {
-  return [photos || !videos ? tn(photos, '{n} photo', '{n} photos') : '', videos ? tn(videos, '{n} video', '{n} videos') : ''].filter(Boolean).join(' · ');
+  return dot(photos || !videos ? tn(photos, '{n} photo', '{n} photos') : '', videos ? tn(videos, '{n} video', '{n} videos') : '');
 }
 
 /* A row's height for a tile size; phones take smaller rows so two or three photos share one. */

@@ -5,7 +5,7 @@ import type { BaseItem } from '../../api/types';
 import { partsOf } from '../../audio/api';
 import { playAudiobook } from '../../audio/engine';
 import { canDownload, userStore } from '../../lib/app-state';
-import { capitalize, dayOf, displayLanguage, duration, itemYear, longDate, pct, ticksToSeconds, timeLeft } from '../../lib/format';
+import { capitalize, dayOf, displayLanguage, dot, duration, itemYear, longDate, pct, ticksToSeconds, timeLeft } from '../../lib/format';
 import { formatNumber, locale, t, tc, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -91,7 +91,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
       chapters.forEach((c, i) => { if (c.StartPositionTicks <= pos) ci = i; });
       progress = {
         fraction: pos / total,
-        text: [`${Math.round((pos / total) * 100)}%`, ci >= 0 && chapters.length > 1 ? t('Chapter {n} of {total}', { n: ci + 1, total: chapters.length }) : '', timeLeft(ticksToSeconds(total - pos))].filter(Boolean).join(' · ')
+        text: dot(`${Math.round((pos / total) * 100)}%`, ci >= 0 && chapters.length > 1 ? t('Chapter {n} of {total}', { n: ci + 1, total: chapters.length }) : '', timeLeft(ticksToSeconds(total - pos)))
       };
     }
   } else if (r && !r.Finished && r.Percent > 0) {
@@ -101,12 +101,12 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
     const pages = info.data?.Pages ?? 0;
     progress = {
       fraction,
-      text: [
+      text: dot(
         `${Math.round(r.Percent)}%`,
         comic && pages ? t('Page {n} of {total}', { n: Math.min(pages, (Number(r.Locator) || 0) + 1), total: pages })
           : r.ChapterIndex && r.ChapterCount ? t('Chapter {n} of {total}', { n: r.ChapterIndex, total: r.ChapterCount }) : '',
         minutes ? t('about {time} left', { time: roughTime(minutes) }) : comic && pages ? tn(pages - (Number(r.Locator) || 0) - 1, '{n} page left', '{n} pages left') : ''
-      ].filter(Boolean).join(' · ')
+      )
     };
   }
 
@@ -285,7 +285,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
             </div>
             <div class="bk-grid">
               {more.slice(0, 16).map((o) => (
-                <div key={o.Id} class="bk-slot"><BookCard item={o} sub={[o.Genres?.[0], itemYear(o)].filter(Boolean).join(' · ')} /></div>
+                <div key={o.Id} class="bk-slot"><BookCard item={o} sub={dot(o.Genres?.[0], itemYear(o))} /></div>
               ))}
             </div>
           </section>
@@ -323,7 +323,7 @@ function FormatCard({ item, current, canDownload }: { item: BaseItem; current: b
     : f === 'epub' || f === 'cbz' ? t('reads in Seedy')
     : f === 'pdf' ? t('print edition')
     : f === 'cbr' ? t('download to read') : '';
-  const sub = [audio ? container || 'M4B' : size, parts ? tn(parts.length, '{n} file', '{n} files') : '', note].filter(Boolean).join(' · ');
+  const sub = dot(audio ? container || 'M4B' : size, parts ? tn(parts.length, '{n} file', '{n} files') : '', note);
   const body = (
     <>
       <span aria-hidden="true" class={'bkd-format-icon' + (audio ? ' is-accent' : '')}>

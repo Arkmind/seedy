@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useLayoutEffect, useState } from 'preact/hooks';
 import type { BaseItem } from '../../api/types';
-import { duration, itemYear, pct, ticksToSeconds } from '../../lib/format';
+import { dot, duration, itemYear, pct, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { playAudiobook } from '../../audio/engine';
@@ -35,7 +35,7 @@ export function bookSub(item: BaseItem): string {
   if (series) return `${series}, ${item.IndexNumber}`;
   const author = authorLine(item);
   const year = itemYear(item);
-  return [author, year ? String(year) : item.Genres?.[0]?.toLowerCase()].filter(Boolean).join(' · ');
+  return dot(author, year ? String(year) : item.Genres?.[0]?.toLowerCase());
 }
 
 /* Comics: "Kestrel · new", "Kestrel · reading" in a running series, else "Author · 2025" (or "One-shot"). */
@@ -45,7 +45,7 @@ export function comicSub(item: BaseItem, reading: Reading | undefined, running: 
   if (series && running) return `${series} · ${state}`;
   const author = authorLine(item);
   const year = itemYear(item);
-  return [author, year ? String(year) : ''].filter(Boolean).join(' · ') || t('One-shot');
+  return dot(author, year ? String(year) : '') || t('One-shot');
 }
 
 export const audioLength = (item: BaseItem) => (item.RunTimeTicks ? duration(ticksToSeconds(item.RunTimeTicks)) : '');
@@ -154,7 +154,7 @@ export function seriesFan(volumes: BaseItem[]): BaseItem[] {
 export function SeriesCard({ group, to }: { group: SeriesGroup; to: string }) {
   const fan = seriesFan(group.volumes);
   const pos = ['is-a', 'is-b', 'is-c'];
-  const sub = [group.author, t('{read} of {total} read', { read: group.read, total: group.volumes.length })].filter(Boolean).join(' · ');
+  const sub = dot(group.author, t('{read} of {total} read', { read: group.read, total: group.volumes.length }));
   return (
     <Link to={to} class="bk-series" aria-label={group.name}>
       <span class="bk-fan" aria-hidden="true">

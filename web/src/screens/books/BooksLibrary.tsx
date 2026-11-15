@@ -2,7 +2,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { deviceId, get } from '../../api/client';
 import type { BaseItem, SessionInfo } from '../../api/types';
-import { plural, ticksToSeconds, timeLeft } from '../../lib/format';
+import { dot, plural, ticksToSeconds, timeLeft } from '../../lib/format';
 import { t, tc, tn } from '../../lib/i18n';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync } from '../../lib/store';
@@ -491,7 +491,7 @@ function Authors({ data, sort, focus, tabTo }: { data: BooksData; sort: SortId; 
     if (sort === 'released') return list.sort((a, b) => (b.released - a.released) || byName(a, b));
     return list.sort(byName);
   }, [data, sort]);
-  const counts = (g: AuthorGroup) => [g.books.length ? plural(g.books.length, 'book') : '', g.audio.length ? plural(g.audio.length, 'audiobook') : ''].filter(Boolean).join(' · ');
+  const counts = (g: AuthorGroup) => dot(g.books.length ? plural(g.books.length, 'book') : '', g.audio.length ? plural(g.audio.length, 'audiobook') : '');
   const one = focus ? groups.find((g) => g.key === (normalize(focus) || '~')) : undefined;
   if (one) {
     return (
@@ -557,7 +557,7 @@ function SeriesView({ data, sort, open, tabTo }: { data: BooksData; sort: SortId
       <div class="bk-sections">
         <section class="bk-sec" aria-labelledby="bk-one">
           <div class="bk-sec-head">
-            <h2 id="bk-one" class="bk-sec-title">{current.name}<span class="bk-sec-count">{[current.author, t('{read} of {total} read', { read: current.read, total: current.volumes.length })].filter(Boolean).join(' · ')}</span></h2>
+            <h2 id="bk-one" class="bk-sec-title">{current.name}<span class="bk-sec-count">{dot(current.author, t('{read} of {total} read', { read: current.read, total: current.volumes.length }))}</span></h2>
             <Link to={tabTo('series')} replace class="bk-sec-link">{t('All series')}</Link>
           </div>
           <div class="bk-grid">
@@ -585,7 +585,7 @@ export function VolumeCard({ item, reading, current }: { item: BaseItem; reading
   const fresh = !read && !reading && !!item.DateCreated && Date.now() - time(item.DateCreated) < 30 * 86_400_000;
   const label = n !== undefined && n !== null ? (isComic(item) ? t('No. {n}', { n }) : t('Book {n}', { n })) : '';
   const state = read ? t('read') : inProgress ? `${Math.round(reading!.Percent)}%` : fresh ? t('new') : '';
-  const sub = [label, state].filter(Boolean).join(' · ');
+  const sub = dot(label, state);
   return (
     <BookCard
       item={item}

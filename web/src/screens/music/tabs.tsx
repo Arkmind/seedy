@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'preact/hooks';
 import { get, currentUserId } from '../../api/client';
 import { getItem, getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
+import { dot } from '../../lib/format';
 import { t, tn } from '../../lib/i18n';
 import { Link, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -14,7 +15,7 @@ import { playContainer, playLoaded } from '../../audio/engine';
 import { AIcon } from '../../audio/icons';
 import { Cover } from '../../audio/cover';
 import {
-  AlbumCard, ArtistCard, GenreTile, MUSIC_FIELDS, NewPlaylistTile, PlaylistCard, TrackTable, TracksSkeleton, albumArtist, dot, songsLabel, yearOf
+  AlbumCard, ArtistCard, GenreTile, MUSIC_FIELDS, NewPlaylistTile, PlaylistCard, TrackTable, TracksSkeleton, albumArtist, songsLabel, yearOf
 } from './parts';
 import { CardSkel, artistAlbums, audioPlaylists, playlistPreview, type PlaylistPreview } from './MusicLibrary';
 
