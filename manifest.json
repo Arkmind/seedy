@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.4.3.0",
+        "changelog": "## What's Changed\n* Chore/cleanup by @Arkmind in https://github.com/Arkmind/seedy/pull/82\n* Fix/soft player hidden by @Arkmind in https://github.com/Arkmind/seedy/pull/83\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.4.2...v0.4.3",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.4.3/seedy_0.4.3.0.zip",
+        "checksum": "ba2d1a1384820a94673f401b3077eef4",
+        "timestamp": "2026-11-15T14:36:59Z"
+      },
+      {
         "version": "0.4.2.0",
         "changelog": "## What's Changed\n\n🤫 \n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.4.1...v0.4.2",
         "targetAbi": "12.0.0.0",
