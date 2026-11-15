@@ -4,7 +4,7 @@ import { get, post, JELLYFIN_WEB } from '../../api/client';
 import { CARD_FIELDS, getGenres, getItem, getItems, getSimilar, type ItemsQuery } from '../../api/jellyfin';
 import { backdropUrl, cardArt } from '../../api/images';
 import type { BaseItem, ItemsResult } from '../../api/types';
-import { isAdmin, meStore, viewsStore } from '../../lib/app-state';
+import { currentUserId, isAdmin, meStore, viewsStore } from '../../lib/app-state';
 import { pct, plural } from '../../lib/format';
 import { Link, navigate, setQuery, useLocation } from '../../lib/router';
 import { safeLocal, saveLocal, useAsync, useStore } from '../../lib/store';
@@ -16,7 +16,7 @@ import { getVirtualFolders } from '../server/api';
 import { MenuButton, MenuItem, Sheet, toast } from '../../ui/overlay';
 import { Row } from '../../ui/Row';
 import {
-  CardGrid, EmptyState, ErrorState, GridSkeleton, ListRows, PageHead, RowSkeleton, Sentinel, join, playRandom, uid,
+  CardGrid, EmptyState, ErrorState, GridSkeleton, ListRows, PageHead, RowSkeleton, Sentinel, join, playRandom,
   useInView, usePaged, yearOf, type GridSelect
 } from './parts';
 import { CUSTOM, readCustom } from '../me/prefs';
@@ -152,7 +152,7 @@ function baseQuery(view: BaseItem, tab: TabId): ItemsQuery {
 /* Album artists aren't children of the music library, so they have their own endpoint. */
 function fetchArtists(view: BaseItem, q: ItemsQuery, signal?: AbortSignal) {
   return get<ItemsResult>('/Artists/AlbumArtists', {
-    userId: uid(), parentId: view.Id, startIndex: q.startIndex, limit: q.limit, sortBy: q.sortBy?.join(','), sortOrder: q.sortOrder,
+    userId: currentUserId(), parentId: view.Id, startIndex: q.startIndex, limit: q.limit, sortBy: q.sortBy?.join(','), sortOrder: q.sortOrder,
     fields: LIST_FIELDS.join(','), enableImageTypes: 'Primary,Backdrop,Thumb', imageTypeLimit: 1, enableTotalRecordCount: true,
     isFavorite: q.isFavorite, genres: q.genres?.join('|'), filters: q.filters?.join(','), nameLessThan: q.nameLessThan
   }, signal);
@@ -610,7 +610,7 @@ interface FilterOptions { Genres?: string[]; OfficialRatings?: string[]; Years?:
 function FilterSheet({ view, base, initial, onClose, onApply }: { view: BaseItem; base: ItemsQuery; initial: Filters; onClose: () => void; onApply: (f: Filters) => void }) {
   const [draft, setDraft] = useState<Filters>(initial);
   const opts = useAsync(
-    () => get<FilterOptions>('/Items/Filters', { userId: uid(), parentId: base.parentId ?? view.Id, includeItemTypes: base.includeItemTypes?.join(',') }),
+    () => get<FilterOptions>('/Items/Filters', { userId: currentUserId(), parentId: base.parentId ?? view.Id, includeItemTypes: base.includeItemTypes?.join(',') }),
     [view.Id]
   );
   const [count, setCount] = useState<number | null>(null);

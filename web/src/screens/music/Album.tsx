@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'preact/hooks';
-import { SERVER_URL, del, getSession } from '../../api/client';
+import { del, downloadUrl } from '../../api/client';
 import { getItem, getItems } from '../../api/jellyfin';
 import { imageUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { userStore, viewsStore } from '../../lib/app-state';
-import { dayOf } from '../../lib/format';
+import { TICKS_PER_SECOND, dayOf, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -40,11 +40,10 @@ function usePlaysVersion(ids: string[] | undefined): number {
 
 /* Every song of the album, one file after the other (the browser asks once). */
 function downloadAll(tracks: Track[]) {
-  const token = getSession()?.token ?? '';
   tracks.forEach((tk, i) => {
     window.setTimeout(() => {
       const a = document.createElement('a');
-      a.href = `${SERVER_URL}/Items/${tk.Id}/Download?ApiKey=${encodeURIComponent(token)}`;
+      a.href = downloadUrl(tk.Id);
       a.download = '';
       a.rel = 'noreferrer';
       document.body.appendChild(a);
@@ -75,7 +74,7 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
   const tint = useCoverTint(playlist ? list[0] : item);
   const artist = (item as Track).AlbumArtists?.[0] ?? item.ArtistItems?.[0];
   const artistName = artist?.Name ?? item.AlbumArtist;
-  const total = list.reduce((sum, x) => sum + (x.RunTimeTicks ?? 0), 0) / 10_000_000;
+  const total = ticksToSeconds(list.reduce((sum, x) => sum + (x.RunTimeTicks ?? 0), 0));
   const quality = qualityLabel(audioStreamOf(list.find((x) => audioStreamOf(x))));
   const bytes = list.reduce((sum, x) => sum + (x.MediaSources?.[0]?.Size ?? 0), 0);
   const source = { kind: playlist ? 'playlist' as const : 'album' as const, id: item.Id, name: item.Name };
@@ -128,7 +127,7 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
             <span class="mu-al-cover mu-pl-grid">{[0, 1, 2, 3].map((i) => <Cover key={i} item={covers[i % covers.length]} width={300} class="mu-pl-cell" />)}</span>
           ) : <Cover item={playlist && !item.ImageTags?.Primary ? covers[0] ?? item : item} width={600} title={item.Name} class="mu-al-cover" />}
           <div class="mu-al-text">
-            <span class="mu-over">{playlist ? t('Playlist') : releaseLabel(releaseOf({ ...item, ChildCount: list.length || item.ChildCount, RunTimeTicks: total ? total * 10_000_000 : item.RunTimeTicks }))}</span>
+            <span class="mu-over">{playlist ? t('Playlist') : releaseLabel(releaseOf({ ...item, ChildCount: list.length || item.ChildCount, RunTimeTicks: total ? total * TICKS_PER_SECOND : item.RunTimeTicks }))}</span>
             <h1 id="mu-al-h" class={'mu-al-title' + titleSize(item.Name)}>{item.Name}</h1>
             <span class="mu-al-meta">
               {!playlist && artist && (

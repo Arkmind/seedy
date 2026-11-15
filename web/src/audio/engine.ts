@@ -6,18 +6,19 @@
    speed and a sleep timer. Playback is reported to Jellyfin (play counts, last played, audiobook resume points),
    shows in the system's media controls, and the queue survives a reload. */
 
-import { setFavorite } from '../api/jellyfin';
+import { reportPlaybackProgress, reportPlaybackStart, reportPlaybackStopped, setFavorite, type PlaybackReport } from '../api/jellyfin';
 import { imageUrl } from '../api/images';
 import { bootState, currentUserId } from '../lib/app-state';
+import { secondsToTicks, ticksToSeconds } from '../lib/format';
 import { t } from '../lib/i18n';
 import { on as onRemote } from '../lib/remote';
 import { getLocation } from '../lib/router';
-import { createStore } from '../lib/store';
+import { createStore, removeLocal, safeLocal, saveLocal } from '../lib/store';
 import { toast } from '../ui/overlay';
 import {
-  audioStreamOf, containerTracks, getAudiobook, getAudioItem, getTracksByIds, narratorOf, openStream, qualityLabel, reportProgress, reportStart, reportStopped,
+  audioStreamOf, containerTracks, getAudiobook, getAudioItem, getTracksByIds, narratorOf, openStream, qualityLabel,
   savePlace, withPlace,
-  type AudiobookParts, type Report, type Stream, type Track
+  type AudiobookParts, type Stream, type Track
 } from './api';
 
 export type SourceKind = 'album' | 'playlist' | 'artist' | 'mix' | 'library' | 'genre' | 'songs' | 'folder' | 'audiobook';
@@ -77,28 +78,13 @@ const SPEED_KEY = 'seedy.audio.speed';
 const QUEUE_KEY = 'seedy.audio.queue';
 const RECENT_KEY = 'seedy.music.recent';
 
-function readLocal<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw === null ? fallback : (JSON.parse(raw) as T);
-  } catch {
-    return fallback;
-  }
-}
-function writeLocal(key: string, value: unknown) {
-  try {
-    if (value === null) localStorage.removeItem(key);
-    else localStorage.setItem(key, JSON.stringify(value));
-  } catch { /* storage unavailable: the queue lasts for this tab */ }
-}
-
 const initial = (): AudioState => {
-  const vol = readLocal<{ volume?: number; muted?: boolean }>(VOLUME_KEY, {});
+  const vol = safeLocal<{ volume?: number; muted?: boolean }>(VOLUME_KEY, {});
   return {
     mode: null, current: null, fromAdded: false, context: [], original: null, pos: 0, added: [], source: null,
     shuffle: false, repeat: 'off', playing: false, loading: false,
     volume: typeof vol.volume === 'number' ? Math.max(0, Math.min(1, vol.volume)) : 1, muted: !!vol.muted,
-    speed: readLocal<number>(SPEED_KEY, 1) || 1, sleep: null, book: null, stream: null, open: false, panel: 'lyrics'
+    speed: safeLocal<number>(SPEED_KEY, 1) || 1, sleep: null, book: null, stream: null, open: false, panel: 'lyrics'
   };
 };
 
@@ -115,8 +101,6 @@ const set = (patch: Partial<AudioState>) => audioStore.set((s) => ({ ...s, ...pa
 
 let keySeq = 0;
 const mk = (track: Track): Entry => ({ key: `${Date.now().toString(36)}-${(++keySeq).toString(36)}`, track });
-const seconds = (ticks?: number | null) => (ticks ?? 0) / 10_000_000;
-const ticks = (s: number) => Math.round(s * 10_000_000);
 
 function shuffled<T>(list: T[]): T[] {
   const a = list.slice();
@@ -199,7 +183,7 @@ function partAt(book: BookInfo | null, at: number): number {
 function durationOf(entry: Entry | null): number {
   const s = state();
   if (s.mode === 'audiobook' && s.book) return s.book.duration;
-  const d = seconds(entry?.track.RunTimeTicks);
+  const d = ticksToSeconds(entry?.track.RunTimeTicks);
   if (d) return d;
   return el && Number.isFinite(el.duration) ? el.duration + (stream?.offset ?? 0) : 0;
 }
@@ -314,12 +298,12 @@ async function onEnded() {
 
 /* ───────── Reports ───────── */
 
-function body(event?: string): Report | null {
+function body(event?: string): PlaybackReport | null {
   const s = state();
   if (!s.current || !stream) return null;
   const queue = s.mode === 'music' ? [s.current, ...upNext(s)].slice(0, 60).map((e) => ({ Id: e.track.Id, PlaylistItemId: e.key })) : undefined;
   return {
-    ItemId: s.current.track.Id, MediaSourceId: stream.source.Id, PlaySessionId: stream.playSessionId, PositionTicks: ticks(position() - partStart()),
+    ItemId: s.current.track.Id, MediaSourceId: stream.source.Id, PlaySessionId: stream.playSessionId, PositionTicks: secondsToTicks(position() - partStart()),
     IsPaused: el ? el.paused : true, IsMuted: s.muted, VolumeLevel: Math.round(s.volume * 100), PlayMethod: stream.method, CanSeek: true,
     PlaybackRate: el?.playbackRate ?? 1, RepeatMode: s.repeat === 'all' ? 'RepeatAll' : s.repeat === 'one' ? 'RepeatOne' : 'RepeatNone',
     PlaybackOrder: s.shuffle ? 'Shuffle' : 'Default', EventName: event, NowPlayingQueue: queue
@@ -330,7 +314,7 @@ function begin() {
   const b = body();
   if (!b) return;
   started = true;
-  reportStart(b).catch(() => undefined);
+  reportPlaybackStart(b).catch(() => undefined);
   window.clearInterval(progressTimer);
   progressTimer = window.setInterval(() => { if (el && !el.paused) report('timeupdate'); }, 10_000);
 }
@@ -338,7 +322,7 @@ function begin() {
 function report(event: string) {
   if (!started) return;
   const b = body(event);
-  if (b) reportProgress(b).catch(() => undefined);
+  if (b) reportPlaybackProgress(b).catch(() => undefined);
 }
 
 /* Ends the current stream: tells the server where it stopped (at the end when [finished]); [clear] unloads the
@@ -350,7 +334,7 @@ function end(finished = false, clear = true) {
     const s = state();
     if (b) {
       if (finished && s.current) b.PositionTicks = s.current.track.RunTimeTicks ?? b.PositionTicks;
-      void reportStopped(b);
+      void reportPlaybackStopped(b);
       const id = b.ItemId;
       // Give the server a moment to count it before pages ask again.
       window.setTimeout(() => playedStore.set((p) => ({ n: p.n + 1, id })), 600);
@@ -541,7 +525,7 @@ export function setVolume(v: number) {
   const volume = Math.max(0, Math.min(1, v));
   set({ volume, muted: volume === 0 ? state().muted : false });
   if (el) { el.volume = volume; el.muted = state().muted; }
-  writeLocal(VOLUME_KEY, { volume, muted: state().muted });
+  saveLocal(VOLUME_KEY, { volume, muted: state().muted });
   report('volumechange');
 }
 
@@ -549,13 +533,13 @@ export function toggleMute() {
   const muted = !state().muted;
   set({ muted });
   if (el) el.muted = muted;
-  writeLocal(VOLUME_KEY, { volume: state().volume, muted });
+  saveLocal(VOLUME_KEY, { volume: state().volume, muted });
   report('volumechange');
 }
 
 export function setSpeed(v: number) {
   set({ speed: v });
-  writeLocal(SPEED_KEY, v);
+  saveLocal(SPEED_KEY, v);
   if (el && state().mode === 'audiobook') { el.defaultPlaybackRate = v; el.playbackRate = v; }
   report('ratechange');
 }
@@ -573,7 +557,7 @@ export function stop() {
   const s = initial();
   audioStore.set({ ...s, volume: state().volume, muted: state().muted });
   timeStore.set({ position: 0, duration: 0 });
-  writeLocal(QUEUE_KEY, null);
+  removeLocal(QUEUE_KEY);
   syncSession();
 }
 
@@ -664,14 +648,14 @@ function checkSleep(pos: number) {
 const people = (item: Track, ...types: string[]) => (item.People ?? []).filter((p) => types.includes(p.Type ?? '')).map((p) => p.Name);
 
 function bookInfo(item: Track, multi?: AudiobookParts): BookInfo {
-  const duration = seconds(item.RunTimeTicks);
+  const duration = ticksToSeconds(item.RunTimeTicks);
   const list = (item.Chapters ?? []).slice().sort((a, b) => a.StartPositionTicks - b.StartPositionTicks);
   const chapters: BookChapter[] = list.length
-    ? list.map((c, i) => ({ index: i, name: c.Name || t('Chapter {n}', { n: i + 1 }), start: seconds(c.StartPositionTicks), end: i + 1 < list.length ? seconds(list[i + 1].StartPositionTicks) : duration }))
+    ? list.map((c, i) => ({ index: i, name: c.Name || t('Chapter {n}', { n: i + 1 }), start: ticksToSeconds(c.StartPositionTicks), end: i + 1 < list.length ? ticksToSeconds(list[i + 1].StartPositionTicks) : duration }))
     : [{ index: 0, name: item.Name, start: 0, end: duration }];
   const author = people(item, 'Author', 'Writer')[0] ?? item.AlbumArtist ?? item.Artists?.[0];
   const narrator = narratorOf(item);
-  const parts = multi?.Parts.map((p) => ({ id: p.Id, start: seconds(p.Start), duration: seconds(p.RunTimeTicks) }));
+  const parts = multi?.Parts.map((p) => ({ id: p.Id, start: ticksToSeconds(p.Start), duration: ticksToSeconds(p.RunTimeTicks) }));
   const name = multi || !item.Album || item.Album === item.Name ? item.Name : item.Album;
   return { id: item.Id, name, author, narrator: narrator !== author ? narrator : undefined, duration, chapters, parts };
 }
@@ -698,7 +682,7 @@ async function playList(tracks: Track[], start: number, opts: PlayOptions) {
     added: s.mode === 'music' ? s.added : [], book: null, sleep: null, open: opts.open ?? s.open
   });
   if (opts.source && opts.source.kind !== 'songs') remember(opts.source);
-  await load(entries[pos], seconds(opts.startTicks), true);
+  await load(entries[pos], ticksToSeconds(opts.startTicks), true);
 }
 
 /* Plays these tracks (Audio item ids) from startIndex, replacing the queue. */
@@ -747,7 +731,7 @@ export async function playAudiobook(id: string, opts: PlayOptions = {}): Promise
     const multi = await getAudiobook(id).catch(() => undefined);
     const item = multi?.Item ?? await withPlace(await getAudioItem(id));
     const book = bookInfo(item, multi);
-    let start = opts.startTicks !== undefined ? seconds(opts.startTicks) : seconds(item.UserData?.PlaybackPositionTicks);
+    let start = opts.startTicks !== undefined ? ticksToSeconds(opts.startTicks) : ticksToSeconds(item.UserData?.PlaybackPositionTicks);
     if (start >= book.duration - 5) start = 0;
     const context = multi ? multi.Parts.map((p) => mk(partTrack(multi.Item, p))) : [mk(item)];
     const pos = Math.max(0, partAt(book, start));
@@ -781,15 +765,15 @@ export interface RecentSource { kind: SourceKind; id: string; name: string; at: 
 function remember(src: Source) {
   if (!src.id) return;
   const user = currentUserId();
-  const all = readLocal<Record<string, RecentSource[]>>(RECENT_KEY, {});
+  const all = safeLocal<Record<string, RecentSource[]>>(RECENT_KEY, {});
   const list = (all[user] ?? []).filter((r) => r.id !== src.id);
   list.unshift({ kind: src.kind, id: src.id, name: src.name, at: Date.now() });
   all[user] = list.slice(0, 24);
-  writeLocal(RECENT_KEY, all);
+  saveLocal(RECENT_KEY, all);
 }
 
 export function recentSources(): RecentSource[] {
-  return readLocal<Record<string, RecentSource[]>>(RECENT_KEY, {})[currentUserId()] ?? [];
+  return safeLocal<Record<string, RecentSource[]>>(RECENT_KEY, {})[currentUserId()] ?? [];
 }
 
 /* ───────── Saving the queue ───────── */
@@ -819,7 +803,7 @@ function save(now = false) {
   if (!now && Date.now() - lastSave < 5000) return;
   lastSave = Date.now();
   const s = state();
-  if (!s.current) { writeLocal(QUEUE_KEY, null); return; }
+  if (!s.current) { removeLocal(QUEUE_KEY); return; }
   // Long contexts (a shuffled library) keep the part around the current song.
   const from = Math.max(0, s.pos - 50);
   const saved: Saved = {
@@ -828,12 +812,12 @@ function save(now = false) {
     pos: s.pos - from, added: s.added.slice(0, 200).map(slim), source: s.source, shuffle: s.shuffle, repeat: s.repeat, book: s.book,
     position: position()
   };
-  writeLocal(QUEUE_KEY, saved);
+  saveLocal(QUEUE_KEY, saved);
 }
 
 function restore() {
   if (state().current) return;
-  const saved = readLocal<Saved | null>(QUEUE_KEY, null);
+  const saved = safeLocal<Saved | null>(QUEUE_KEY, null);
   if (!saved || saved.v !== 1 || saved.user !== currentUserId() || !saved.current) return;
   // Keys must stay unique after a reload.
   keySeq = Math.max(keySeq, 1000);
@@ -950,7 +934,7 @@ function init() {
       case 'Stop': pause(); break;
       case 'NextTrack': state().mode === 'audiobook' ? nextChapter() : next(); break;
       case 'PreviousTrack': state().mode === 'audiobook' ? previousChapter() : previous(); break;
-      case 'Seek': if (typeof d.SeekPositionTicks === 'number') seek(seconds(d.SeekPositionTicks)); break;
+      case 'Seek': if (typeof d.SeekPositionTicks === 'number') seek(ticksToSeconds(d.SeekPositionTicks)); break;
       case 'Rewind': skip(-10); break;
       case 'FastForward': skip(30); break;
     }

@@ -1,6 +1,5 @@
-import { SERVER_URL, deviceId } from '../api/client';
+import { SERVER_URL, deviceId, sessionToken } from '../api/client';
 import type { BaseItem, MediaSource } from '../api/types';
-import { token } from './playback';
 import { t } from '../lib/i18n';
 
 /* "Offer an external player": hand the stream to another app through its URL scheme. */
@@ -46,7 +45,7 @@ export function externalApps(): ExternalApp[] {
 export function externalStreamUrl(item: BaseItem, source?: MediaSource): string {
   const ms = source ?? item.MediaSources?.[0];
   const container = (ms?.Container ?? 'mkv').split(',')[0];
-  const q = new URLSearchParams({ static: 'true', deviceId: deviceId(), ApiKey: token() });
+  const q = new URLSearchParams({ static: 'true', deviceId: deviceId(), ApiKey: sessionToken() });
   if (ms?.Id) q.set('mediaSourceId', ms.Id);
   return `${SERVER_URL}/Videos/${item.Id}/stream.${container}?${q.toString()}`;
 }

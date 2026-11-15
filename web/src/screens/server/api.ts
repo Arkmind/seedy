@@ -1,4 +1,4 @@
-import { ApiError, authHeader, del, deviceId, get, getSession, JELLYFIN_WEB, post, request, url } from '../../api/client';
+import { ApiError, authHeader, del, deviceId, get, getSession, JELLYFIN_WEB, post, request, sessionToken, url } from '../../api/client';
 import type { BaseItem, ItemsResult, User, UserConfiguration } from '../../api/types';
 import { t } from '../../lib/i18n';
 import { createStore } from '../../lib/store';
@@ -869,7 +869,7 @@ export const seedyBackupSchedule = () => get<BackupSchedule>('/Seedy/Admin/Backu
 export const saveSeedyBackupSchedule = (s: BackupSchedule) => post<BackupSchedule>('/Seedy/Admin/BackupSchedule', s);
 export const deleteSeedyBackup = (fileName: string) => del<void>(`/Seedy/Admin/BackupFiles/${encodeURIComponent(fileName)}`);
 export const seedyBackupDownloadUrl = (fileName: string) =>
-  url(`/Seedy/Admin/BackupFiles/${encodeURIComponent(fileName)}/File`, { ApiKey: getSession()?.token ?? '' });
+  url(`/Seedy/Admin/BackupFiles/${encodeURIComponent(fileName)}/File`, { ApiKey: sessionToken() });
 
 /* ── Logs ── */
 

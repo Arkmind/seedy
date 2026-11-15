@@ -1,6 +1,6 @@
 import type { RefObject } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { SERVER_URL, getSession } from '../../api/client';
+import { SERVER_URL, sessionToken } from '../../api/client';
 import { getTrailer, type TrailerInfo } from '../../api/seedy';
 import { createStore, useStore } from '../../lib/store';
 import { saverOpen } from '../me/effects';
@@ -519,7 +519,7 @@ function LocalTrailer({ itemId, sound, paused, box, onEvent }: InnerProps & { it
 
   const src = useMemo(() => {
     const q = new URLSearchParams({ static: 'true' });
-    const token = getSession()?.token;
+    const token = sessionToken();
     if (token) q.set('ApiKey', token);
     return `${SERVER_URL}/Videos/${itemId}/stream?${q.toString()}`;
   }, [itemId]);

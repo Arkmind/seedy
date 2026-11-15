@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { getSession } from '../../api/client';
+import { currentUserId } from '../../api/client';
 import { t, tn } from '../../lib/i18n';
 import { Segmented } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
@@ -77,7 +77,7 @@ export function ServerLiveTV() {
 
   /* Statuses: discovery marks HDHomeRuns online, the guide task says when listings were last fetched. */
   const refreshStatus = () => {
-    const uid = getSession()?.userId;
+    const uid = currentUserId();
     if (uid) getChannelCount(uid).then((r) => setChannels(r.TotalRecordCount), () => setChannels(null));
     getTasks().then((list) => setTask(list.find((t) => t.Key === 'RefreshGuide') ?? null), () => undefined);
     getGuideInfo().then(setGuide, () => undefined);

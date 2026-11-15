@@ -1,10 +1,9 @@
-import { del, get, getSession, post, request } from '../../../api/client';
+import { del, get, post, request, currentUserId } from '../../../api/client';
 import type { BaseItem, ItemKind } from '../../../api/types';
 import { locale, t } from '../../../lib/i18n';
 
 /* Jellyfin calls behind the item dialogs (Edit metadata, Identify, Edit images). All of them need an administrator. */
 
-const uid = () => getSession()?.userId ?? '';
 
 /* The whole item as the metadata editor sees it. Saving sends this object back, edited: whatever is left out is
    cleared on the server. */
@@ -21,7 +20,7 @@ export type ItemDto = BaseItem & Record<string, unknown> & {
   Path?: string;
 };
 
-export const getFullItem = (id: string, signal?: AbortSignal) => get<ItemDto>(`/Users/${uid()}/Items/${id}`, undefined, signal);
+export const getFullItem = (id: string, signal?: AbortSignal) => get<ItemDto>(`/Users/${currentUserId()}/Items/${id}`, undefined, signal);
 export const updateItem = (dto: ItemDto) => post<void>(`/Items/${dto.Id}`, dto);
 
 export interface ExternalIdInfo { Name: string; Key: string; Type?: string | null; UrlFormatString?: string | null }

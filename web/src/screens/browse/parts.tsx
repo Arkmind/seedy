@@ -1,6 +1,6 @@
 import { Fragment, type ComponentChildren, type RefObject } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
-import { get, getSession, type Query } from '../../api/client';
+import { get, currentUserId, type Query } from '../../api/client';
 import {
   CARD_FIELDS, clearResume, getEpisodes, getItems, getNextUp, getResume, setFavorite, setPlayed, type ItemsQuery
 } from '../../api/jellyfin';
@@ -26,7 +26,6 @@ import { RequestSeasonsDialog } from './request-seasons';
 
 /* ───────── Item helpers ───────── */
 
-export const uid = () => getSession()?.userId ?? '';
 
 export function patchUserData(item: BaseItem, patch: Partial<UserItemData>): BaseItem {
   return { ...item, UserData: { ...item.UserData, ...patch } };
@@ -151,7 +150,7 @@ export async function playRandom(q: ItemsQuery): Promise<BaseItem | undefined> {
 /* The user view an item lives in (CollectionFolder ids are the view ids). */
 export async function findView(itemId: string, views: BaseItem[]): Promise<BaseItem | undefined> {
   try {
-    const anc = await get<BaseItem[]>(`/Items/${itemId}/Ancestors`, { userId: uid() });
+    const anc = await get<BaseItem[]>(`/Items/${itemId}/Ancestors`, { userId: currentUserId() });
     for (const a of anc) {
       const v = views.find((x) => x.Id === a.Id);
       if (v) return v;
@@ -160,7 +159,7 @@ export async function findView(itemId: string, views: BaseItem[]): Promise<BaseI
   return undefined;
 }
 
-export const getPersonsList = (q: Query) => get<ItemsResult>('/Persons', { userId: uid(), enableImageTypes: 'Primary', imageTypeLimit: 1, ...q });
+export const getPersonsList = (q: Query) => get<ItemsResult>('/Persons', { userId: currentUserId(), enableImageTypes: 'Primary', imageTypeLimit: 1, ...q });
 
 /* Library tiles use a backdrop from inside the library (Jellyfin's generated view art already carries the name).
    Music and books rarely have backdrops, so their tiles fan out a few covers instead. */

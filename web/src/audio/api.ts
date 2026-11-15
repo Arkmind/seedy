@@ -1,7 +1,9 @@
-import { SERVER_URL, authHeader, deviceId, get, getSession, post } from '../api/client';
+import { SERVER_URL, currentUserId, deviceId, get, getSession, sessionToken, withApiKey } from '../api/client';
 import { getItem, getItems, getPlaybackInfo, type ItemsQuery } from '../api/jellyfin';
+import { getReading, saveReading, saveReadingOnExit } from '../api/seedy';
 import type { BaseItem, ItemsResult, MediaSource, MediaStream, NameId, PlaybackInfoResponse } from '../api/types';
 import { buildDeviceProfile } from '../player/device-profile';
+import { secondsToTicks } from '../lib/format';
 
 /* Jellyfin calls behind the audio engine and the music screens: tracks of an album, playlist, artist or genre,
    instant mixes, lyrics, stream decisions and playback reports. */
@@ -16,7 +18,6 @@ export type Track = BaseItem & {
 
 export type AudioStream = MediaStream & { BitDepth?: number; SampleRate?: number };
 
-const uid = () => getSession()?.userId ?? '';
 
 /* What a track row, the queue and the players need. */
 export const TRACK_FIELDS = ['ParentId', 'Genres', 'DateCreated', 'ProductionYear', 'PrimaryImageAspectRatio', 'MediaSources'];
@@ -52,7 +53,7 @@ export const albumTracks = (albumId: string) =>
     .then((r) => r.Items as Track[]);
 
 export const playlistTracks = (playlistId: string) =>
-  get<ItemsResult>(`/Playlists/${playlistId}/Items`, { userId: uid(), fields: TRACK_FIELDS.join(','), enableImageTypes: 'Primary', imageTypeLimit: 1, enableUserData: true })
+  get<ItemsResult>(`/Playlists/${playlistId}/Items`, { userId: currentUserId(), fields: TRACK_FIELDS.join(','), enableImageTypes: 'Primary', imageTypeLimit: 1, enableUserData: true })
     .then((r) => r.Items as Track[]);
 
 /* An artist's songs: their albums newest first, each in disc and track order; songs where they only feature last. */
@@ -86,11 +87,11 @@ export const folderTracks = (folderId: string) =>
 
 /* Jellyfin's instant mix for any song, album, artist, playlist or genre. */
 export const instantMix = (id: string, limit = 120) =>
-  get<ItemsResult>(`/Items/${id}/InstantMix`, { userId: uid(), limit, fields: TRACK_FIELDS.join(','), enableImageTypes: 'Primary', imageTypeLimit: 1, enableUserData: true })
+  get<ItemsResult>(`/Items/${id}/InstantMix`, { userId: currentUserId(), limit, fields: TRACK_FIELDS.join(','), enableImageTypes: 'Primary', imageTypeLimit: 1, enableUserData: true })
     .then((r) => r.Items as Track[]);
 
 export const genreMix = (genreId: string, limit = 120) =>
-  get<ItemsResult>('/MusicGenres/InstantMix', { id: genreId, userId: uid(), limit, fields: TRACK_FIELDS.join(','), enableImageTypes: 'Primary', imageTypeLimit: 1, enableUserData: true })
+  get<ItemsResult>('/MusicGenres/InstantMix', { id: genreId, userId: currentUserId(), limit, fields: TRACK_FIELDS.join(','), enableImageTypes: 'Primary', imageTypeLimit: 1, enableUserData: true })
     .then((r) => r.Items as Track[]);
 
 /* What playing an album, playlist, artist, genre, folder or library means, as a list of songs. */
@@ -129,14 +130,9 @@ export const listAudiobooks = (parentId: string, signal?: AbortSignal) => get<Au
 export interface Place { Locator: string; Percent: number; Chapter?: string; ChapterIndex?: number; ChapterCount?: number; Finished: boolean }
 
 export function savePlace(bookId: string, place: Place, onExit = false) {
-  const session = getSession();
-  if (!session) return;
-  if (!onExit) { post(`/Seedy/Reading/${bookId}`, place).catch(() => undefined); return; }
-  try {
-    void fetch(`${SERVER_URL}/Seedy/Reading/${bookId}?ApiKey=${encodeURIComponent(session.token)}`, {
-      method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(place)
-    });
-  } catch { /* the last regular save stands */ }
+  if (!getSession()) return;
+  if (onExit) saveReadingOnExit(bookId, place);
+  else saveReading(bookId, place).catch(() => undefined);
 }
 
 /* Seedy's saved place, as /Seedy/Reading returns it. It wins over Jellyfin's resume point unless another app played
@@ -148,7 +144,7 @@ export function mergePlace<T extends BaseItem>(item: T, place?: SavedPlace | nul
   if (!place || (!place.Finished && !(place.Locator && secs >= 0))) return item;
   const ud = item.UserData;
   if ((Date.parse(ud?.LastPlayedDate ?? '') || 0) > (Date.parse(place.UpdatedAt ?? '') || 0) + 60_000) return item;
-  const pos = place.Finished ? 0 : Math.round(secs * 10_000_000);
+  const pos = place.Finished ? 0 : secondsToTicks(secs);
   const total = item.RunTimeTicks ?? 0;
   return {
     ...item,
@@ -156,12 +152,10 @@ export function mergePlace<T extends BaseItem>(item: T, place?: SavedPlace | nul
   };
 }
 
-const getPlace = (id: string) => get<SavedPlace | undefined>(`/Seedy/Reading/${id}`).then((r) => (r && typeof r === 'object' ? r : undefined));
-
 /* An audiobook in one file with Seedy's place in it (a book in several files has it from the server already). */
 export async function withPlace<T extends BaseItem>(item: T): Promise<T> {
   if (item.Type !== 'AudioBook' || partsOf(item)) return item;
-  return mergePlace(item, await getPlace(item.Id).catch(() => undefined));
+  return mergePlace(item, await getReading(item.Id).catch(() => undefined));
 }
 
 /* Who reads an audiobook: a Narrator (Jellyfin 12 makes one from the composer tag), else a composer, else an artist
@@ -200,19 +194,11 @@ export interface Stream {
   offset: number;
 }
 
-const fixPath = (p: string) => p.replace(/^\/audio\//, '/Audio/');
-export const withKey = (path: string) => {
-  const u = fixPath(path);
-  const token = getSession()?.token ?? '';
-  if (/[?&](ApiKey|api_key)=/i.test(u)) return SERVER_URL + u;
-  return SERVER_URL + u + (u.includes('?') ? '&' : '?') + 'ApiKey=' + encodeURIComponent(token);
-};
-
 /* Asks the server how to play [id] here: the file as it is when the browser can, otherwise a conversion. */
 export async function openStream(id: string, startSeconds: number, convert = false): Promise<Stream> {
   const maxBitrate = 140_000_000;
   const profile = buildDeviceProfile(maxBitrate);
-  const startTicks = Math.round(startSeconds * 10_000_000);
+  const startTicks = secondsToTicks(startSeconds);
   const res: PlaybackInfoResponse = await getPlaybackInfo(id, {
     DeviceProfile: profile, MaxStreamingBitrate: maxBitrate, StartTimeTicks: startTicks,
     EnableDirectPlay: !convert, EnableDirectStream: !convert, EnableTranscoding: true, AllowAudioStreamCopy: !convert
@@ -220,49 +206,14 @@ export async function openStream(id: string, startSeconds: number, convert = fal
   const source = res.MediaSources?.[0];
   if (!source) throw new Error(res.ErrorCode || 'No media source');
   if (!convert && source.SupportsDirectPlay) {
-    const q = new URLSearchParams({ static: 'true', mediaSourceId: source.Id, deviceId: deviceId(), PlaySessionId: res.PlaySessionId, ApiKey: getSession()?.token ?? '' });
+    const q = new URLSearchParams({ static: 'true', mediaSourceId: source.Id, deviceId: deviceId(), PlaySessionId: res.PlaySessionId, ApiKey: sessionToken() });
     return { url: `${SERVER_URL}/Audio/${id}/stream?${q}`, method: 'DirectPlay', source, playSessionId: res.PlaySessionId, offset: 0 };
   }
   if (!source.TranscodingUrl) throw new Error(res.ErrorCode || 'Not playable');
-  let url = withKey(source.TranscodingUrl);
+  let url = withApiKey(source.TranscodingUrl);
   if (startTicks > 0 && !/StartTimeTicks=/i.test(url)) url += `&StartTimeTicks=${startTicks}`;
   const copy = /AudioCodec=copy|static=true/i.test(url) || source.SupportsDirectStream;
   return { url, method: copy && !convert ? 'DirectStream' : 'Transcode', source, playSessionId: res.PlaySessionId, offset: startTicks > 0 ? startSeconds : 0 };
-}
-
-/* ── Reports ── */
-
-export interface Report {
-  ItemId: string;
-  MediaSourceId?: string;
-  PlaySessionId?: string;
-  PositionTicks?: number;
-  IsPaused?: boolean;
-  IsMuted?: boolean;
-  VolumeLevel?: number;
-  PlayMethod?: 'DirectPlay' | 'DirectStream' | 'Transcode';
-  CanSeek?: boolean;
-  PlaybackRate?: number;
-  RepeatMode?: 'RepeatNone' | 'RepeatAll' | 'RepeatOne';
-  PlaybackOrder?: 'Default' | 'Shuffle';
-  EventName?: string;
-  NowPlayingQueue?: { Id: string; PlaylistItemId: string }[];
-}
-
-export const reportStart = (r: Report) => post<void>('/Sessions/Playing', r);
-export const reportProgress = (r: Report) => post<void>('/Sessions/Playing/Progress', r);
-
-/* Stopped must reach the server even while the tab closes. */
-export function reportStopped(r: Report) {
-  try {
-    return fetch(SERVER_URL + '/Sessions/Playing/Stopped', {
-      method: 'POST', keepalive: true,
-      headers: { Authorization: authHeader(), 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(r)
-    }).catch(() => undefined);
-  } catch {
-    return Promise.resolve(undefined);
-  }
 }
 
 /* ── Labels from the media streams ── */

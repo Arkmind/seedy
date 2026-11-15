@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'preact/hooks';
-import { get, getSession } from '../../api/client';
+import { get, currentUserId } from '../../api/client';
 import { getItem, getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { t, tn } from '../../lib/i18n';
@@ -21,7 +21,6 @@ import { CardSkel, artistAlbums, audioPlaylists, playlistPreview, type PlaylistP
 /* The music library's tabs (built in the MusicHome board's language): albums, artists and songs with sorting and a
    favourites filter, playlists, genres (each opening its albums) and the library's folders. */
 
-const uid = () => getSession()?.userId ?? '';
 
 interface SortOpt { id: string; label: string; by: string[]; order: 'Ascending' | 'Descending' }
 
@@ -123,7 +122,7 @@ export function ArtistsTab({ view }: { view: BaseItem }) {
   const sort = useSort(ARTIST_SORTS, 'SortName');
   const fav = loc.query.get('fav') === '1';
   const paged = usePaged((start, limit, signal) => get<ItemsResult>('/Artists/AlbumArtists', {
-    userId: uid(), parentId: view.Id, startIndex: start, limit, sortBy: sort.by.join(','), sortOrder: sort.order, isFavorite: fav || undefined,
+    userId: currentUserId(), parentId: view.Id, startIndex: start, limit, sortBy: sort.by.join(','), sortOrder: sort.order, isFavorite: fav || undefined,
     fields: 'ItemCounts,ChildCount,PrimaryImageAspectRatio', enableImageTypes: 'Primary,Backdrop', imageTypeLimit: 1, enableTotalRecordCount: true
   }, signal), [view.Id, sort.id, fav], 70);
   return (
@@ -203,7 +202,7 @@ export function GenresTab({ view }: { view: BaseItem }) {
 
 function GenreGrid({ view }: { view: BaseItem }) {
   const data = useAsync(() =>
-    get<ItemsResult>('/MusicGenres', { userId: uid(), parentId: view.Id, fields: 'ItemCounts', enableImages: false, sortBy: 'SortName' }).then((r) => r.Items),
+    get<ItemsResult>('/MusicGenres', { userId: currentUserId(), parentId: view.Id, fields: 'ItemCounts', enableImages: false, sortBy: 'SortName' }).then((r) => r.Items),
   [view.Id]);
   return (
     <section class="mu-sec" aria-label={t('Genres')}>

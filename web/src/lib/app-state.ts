@@ -1,5 +1,5 @@
 import {
-  ApiError, allowAdoption, blockAdoption, candidateSessions, getSession, sessionFromAuth, setSession, setUnauthorizedHandler, storedSession, type Session
+  ApiError, allowAdoption, blockAdoption, candidateSessions, currentUserId, sessionFromAuth, setSession, setUnauthorizedHandler, storedSession, type Session
 } from '../api/client';
 import { castTarget } from './cast';
 import * as jf from '../api/jellyfin';
@@ -168,4 +168,4 @@ export async function signOut() {
 }
 
 export const isAdmin = () => !!userStore.get()?.Policy?.IsAdministrator;
-export const currentUserId = () => getSession()?.userId ?? '';
+export { currentUserId };

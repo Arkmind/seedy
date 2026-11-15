@@ -1,13 +1,13 @@
 import Hls, { type ErrorData, type Fragment } from 'hls.js';
-import { SERVER_URL, authHeader, deviceId, getSession } from '../api/client';
+import { SERVER_URL, deviceId, sessionToken, withApiKey } from '../api/client';
 import {
-  getPlaybackInfo, pingPlayback, reportPlaybackProgress, reportPlaybackStart, type PlaybackInfoRequest, type PlaybackReport
+  getPlaybackInfo, pingPlayback, reportPlaybackProgress, reportPlaybackStart, reportPlaybackStopped, type PlaybackInfoRequest, type PlaybackReport
 } from '../api/jellyfin';
 import type { BaseItem, MediaSource, MediaStream } from '../api/types';
 import { secondsToTicks, ticksToSeconds } from '../lib/format';
 import { t } from '../lib/i18n';
 import { PROFILE_DEFAULTS, browserSupport, buildDeviceProfile, convertingProfile, type ProfileOptions } from './device-profile';
-import { liveDeviceProfile, trackClose } from './live-profile';
+import { closeLiveStream, liveDeviceProfile, stopEncoding, trackClose } from './live-profile';
 import { MediaBridge } from './media';
 import type { SoftMedia } from './soft-media';
 import {
@@ -144,17 +144,6 @@ export function nextAttempt(opts: StreamOptions, method: PlayMethod, part?: Fail
   return null;
 }
 
-/* Jellyfin writes transcoding paths in lower case; the dev proxy (and nothing else) cares. */
-const fixPath = (p: string) => p.replace(/^\/videos\//, '/Videos/').replace(/^\/audio\//, '/Audio/');
-
-export const token = () => getSession()?.token ?? '';
-
-export function withApiKey(path: string): string {
-  const u = fixPath(path);
-  if (/[?&](ApiKey|api_key)=/i.test(u)) return SERVER_URL + u;
-  return SERVER_URL + u + (u.includes('?') ? '&' : '?') + 'ApiKey=' + encodeURIComponent(token());
-}
-
 export const audioStreams = (s?: MediaSource) => (s?.MediaStreams ?? []).filter((m) => m.Type === 'Audio');
 export const subtitleStreams = (s?: MediaSource) => (s?.MediaStreams ?? []).filter((m) => m.Type === 'Subtitle');
 export const videoStream = (s?: MediaSource) => (s?.MediaStreams ?? []).find((m) => m.Type === 'Video');
@@ -255,7 +244,7 @@ function staticUrl(item: BaseItem, source: MediaSource, playSessionId: string): 
   const isAudio = item.MediaType === 'Audio';
   const container = (source.Container ?? (isAudio ? 'mp3' : 'mp4')).split(',')[0];
   const q = new URLSearchParams({
-    static: 'true', mediaSourceId: source.Id, deviceId: deviceId(), PlaySessionId: playSessionId, ApiKey: token()
+    static: 'true', mediaSourceId: source.Id, deviceId: deviceId(), PlaySessionId: playSessionId, ApiKey: sessionToken()
   });
   if (source.ETag) q.set('Tag', source.ETag);
   return `${SERVER_URL}/${isAudio ? 'Audio' : 'Videos'}/${item.Id}/stream.${container}?${q.toString()}`;
@@ -327,20 +316,6 @@ const STALL_SECONDS = 20;
 
 function bufferedEnd(r: TimeRanges): number {
   try { return r.length ? r.end(r.length - 1) : 0; } catch { return 0; }
-}
-
-/* Sessions/Playing/Stopped and the encoder cleanup must survive the tab closing. */
-function keepalive(method: 'POST' | 'DELETE', path: string, body?: unknown) {
-  try {
-    return fetch(SERVER_URL + path, {
-      method,
-      keepalive: true,
-      headers: { Authorization: authHeader(), 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body)
-    }).catch(() => undefined);
-  } catch {
-    return Promise.resolve(undefined);
-  }
 }
 
 export interface SessionEvents {
@@ -428,8 +403,8 @@ export class PlaybackSession {
     const next = { ...this.opts, ...opts };
     const stream = await requestStream(this.item, next);
     const drop = () => {
-      if (stream.method !== 'DirectPlay') this.stopEncoding(stream.playSessionId);
-      if (stream.source.LiveStreamId) trackClose(keepalive('POST', `/LiveStreams/Close?liveStreamId=${encodeURIComponent(stream.source.LiveStreamId)}`));
+      if (stream.method !== 'DirectPlay') void stopEncoding(stream.playSessionId);
+      if (stream.source.LiveStreamId) trackClose(closeLiveStream(stream.source.LiveStreamId));
     };
     if (my !== this.seq || this.stopped) {
       drop();
@@ -445,7 +420,7 @@ export class PlaybackSession {
     if (stream.burnIn) this.subtitleIndex = stream.subtitleIndex;
     await this.attach(stream, next.startSeconds);
     if (my !== this.seq || this.stopped) return null;
-    if (old && old.method !== 'DirectPlay' && old.playSessionId !== stream.playSessionId) this.stopEncoding(old.playSessionId);
+    if (old && old.method !== 'DirectPlay' && old.playSessionId !== stream.playSessionId) void stopEncoding(old.playSessionId);
     this.events.onStream(stream);
     this.schedule();
     return stream;
@@ -682,10 +657,6 @@ export class PlaybackSession {
     });
   }
 
-  private stopEncoding(playSessionId: string) {
-    void keepalive('DELETE', `/Videos/ActiveEncodings?deviceId=${encodeURIComponent(deviceId())}&playSessionId=${encodeURIComponent(playSessionId)}`);
-  }
-
   private destroyHls() {
     if (this.hls) {
       try { this.hls.destroy(); } catch { /* already gone */ }
@@ -709,10 +680,10 @@ export class PlaybackSession {
     if (s && body) {
       if (opts.ended && this.runtime) body.PositionTicks = secondsToTicks(this.runtime);
       if (opts.failed) body.Failed = true;
-      const reported = this.started ? keepalive('POST', '/Sessions/Playing/Stopped', body) : undefined;
-      if (s.method !== 'DirectPlay') this.stopEncoding(s.playSessionId);
+      const reported = this.started ? reportPlaybackStopped(body) : undefined;
+      if (s.method !== 'DirectPlay') void stopEncoding(s.playSessionId);
       /* A live stream closes with the stop report once playback has started, else on its own. */
-      if (s.source.LiveStreamId) trackClose(reported ?? keepalive('POST', `/LiveStreams/Close?liveStreamId=${encodeURIComponent(s.source.LiveStreamId)}`));
+      if (s.source.LiveStreamId) trackClose(reported ?? closeLiveStream(s.source.LiveStreamId));
     }
     this.destroyHls();
     // The experimental player stays on its last frame (the end-of-movie tile shows it) until released.

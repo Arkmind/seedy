@@ -1,10 +1,9 @@
-import { del, get, getSession, post, request, type Query } from './client';
+import { del, get, post, request, currentUserId, type Query } from './client';
 import type { BaseItem, ItemsResult } from './types';
 
 /* Jellyfin's Live TV API (Jellyfin.Api/Controllers/LiveTvController.cs): channels, guide programmes, timers,
    series timers and recordings. JSON is PascalCase. */
 
-const uid = () => getSession()?.userId ?? '';
 
 /* A guide programme, as /LiveTv/Programs and a channel's CurrentProgram give it. */
 export interface Program extends BaseItem {
@@ -90,7 +89,7 @@ const CHANNEL_FIELDS = ['PrimaryImageAspectRatio', 'ChannelInfo', 'Overview'];
 
 export const getChannels = (q: Query = {}, signal?: AbortSignal) =>
   get<ItemsResult<Channel>>('/LiveTv/Channels', {
-    userId: uid(), addCurrentProgram: true, enableUserData: true, enableImages: true, imageTypeLimit: 1,
+    userId: currentUserId(), addCurrentProgram: true, enableUserData: true, enableImages: true, imageTypeLimit: 1,
     enableImageTypes: ['Primary', 'Thumb', 'Backdrop'], fields: CHANNEL_FIELDS, ...q
   }, signal);
 
@@ -120,7 +119,7 @@ export const getPrograms = (q: ProgramsQuery, signal?: AbortSignal) =>
   request<ItemsResult<Program>>('POST', '/LiveTv/Programs', {
     signal,
     body: {
-      UserId: uid(), EnableImages: true, ImageTypeLimit: 1, EnableImageTypes: ['Primary', 'Thumb', 'Backdrop'],
+      UserId: currentUserId(), EnableImages: true, ImageTypeLimit: 1, EnableImageTypes: ['Primary', 'Thumb', 'Backdrop'],
       EnableUserData: false, Fields: ['Overview', 'Genres', 'ChannelInfo', 'PrimaryImageAspectRatio'], EnableTotalRecordCount: false,
       SortBy: ['StartDate'], ...q
     }
@@ -141,7 +140,7 @@ export const cancelSeriesTimer = (id: string) => del<void>(`/LiveTv/SeriesTimers
 
 export const getRecordings = (q: Query = {}) =>
   get<ItemsResult<Program>>('/LiveTv/Recordings', {
-    userId: uid(), enableImages: true, imageTypeLimit: 1, enableImageTypes: ['Primary', 'Thumb', 'Backdrop'], enableUserData: true,
+    userId: currentUserId(), enableImages: true, imageTypeLimit: 1, enableImageTypes: ['Primary', 'Thumb', 'Backdrop'], enableUserData: true,
     fields: ['Overview', 'Genres', 'ChannelInfo', 'DateCreated', 'PrimaryImageAspectRatio', 'CanDelete'], ...q
   });
 /* Through the library: /LiveTv/Recordings/{id} only forgets the item and leaves the file (which the next scan brings back). */

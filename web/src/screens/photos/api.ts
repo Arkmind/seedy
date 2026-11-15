@@ -1,4 +1,4 @@
-import { SERVER_URL, get, getSession } from '../../api/client';
+import { SERVER_URL, currentUserId, get, withApiKey } from '../../api/client';
 import { getItems, type ItemsQuery } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { formatNumber, getLang, locale, t, tn } from '../../lib/i18n';
@@ -31,8 +31,6 @@ export type PhotoItem = BaseItem & {
 
 export const PHOTO_FIELDS = ['DateCreated', 'PrimaryImageAspectRatio', 'Path', 'ParentId', 'MediaSources', 'Width', 'Height'];
 
-const uid = () => getSession()?.userId ?? '';
-const token = () => getSession()?.token ?? '';
 
 export const isVideo = (it: BaseItem) => it.Type === 'Video' || it.MediaType === 'Video' || it.Type === 'Movie' || it.Type === 'MusicVideo';
 export const isFolder = (it: BaseItem) => it.Type === 'PhotoAlbum' || it.Type === 'Folder';
@@ -88,14 +86,14 @@ export function screenUrl(it: BaseItem, full = false): string | undefined {
 }
 
 /* The original file, as stored (needs the profile's download permission). */
-export const downloadUrl = (id: string) => `${SERVER_URL}/Items/${id}/Download?ApiKey=${encodeURIComponent(token())}`;
+export { downloadUrl } from '../../api/client';
 
 /* The file's size and type, from one byte of it. */
 const fileInfoCache = new Map<string, Promise<{ size?: number; type?: string }>>();
 export function fileInfo(id: string): Promise<{ size?: number; type?: string }> {
   let hit = fileInfoCache.get(id);
   if (!hit) {
-    hit = fetch(`${SERVER_URL}/Items/${id}/File?ApiKey=${encodeURIComponent(token())}`, { headers: { Range: 'bytes=0-0' } }).then((r) => {
+    hit = fetch(withApiKey(`/Items/${id}/File`), { headers: { Range: 'bytes=0-0' } }).then((r) => {
       const total = /\/(\d+)$/.exec(r.headers.get('Content-Range') ?? '')?.[1] ?? (r.status === 200 ? r.headers.get('Content-Length') : null);
       r.body?.cancel().catch(() => undefined);
       return { size: total ? Number(total) : undefined, type: r.headers.get('Content-Type') ?? undefined };
@@ -224,7 +222,7 @@ export function allMedia(parentId: string): Promise<PhotoItem[]> {
 
 /* The years with photos, newest first. */
 export async function yearsOf(parentId: string): Promise<number[]> {
-  const r = await get<ItemsResult>('/Years', { userId: uid(), parentId, recursive: true, includeItemTypes: MEDIA_TYPES.join(','), sortBy: 'SortName', sortOrder: 'Descending', enableImages: false });
+  const r = await get<ItemsResult>('/Years', { userId: currentUserId(), parentId, recursive: true, includeItemTypes: MEDIA_TYPES.join(','), sortBy: 'SortName', sortOrder: 'Descending', enableImages: false });
   return r.Items.map((y) => Number(y.Name)).filter((y) => y > 1800).sort((a, b) => b - a);
 }
 
@@ -347,7 +345,7 @@ export function subfolders(parentId: string, signal?: AbortSignal) {
 
 /* The folders up from an item to its library: [library, …, parent]. */
 export async function ancestorsOf(id: string): Promise<BaseItem[]> {
-  const list = await get<BaseItem[]>(`/Items/${id}/Ancestors`, { userId: uid() });
+  const list = await get<BaseItem[]>(`/Items/${id}/Ancestors`, { userId: currentUserId() });
   const top = list.findIndex((a) => a.Type === 'CollectionFolder' || a.Type === 'UserView');
   return (top >= 0 ? list.slice(0, top + 1) : list).reverse();
 }

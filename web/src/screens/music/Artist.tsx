@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'preact/hooks';
-import { get, getSession } from '../../api/client';
+import { get, currentUserId } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import { backdropUrl, imageUrl } from '../../api/images';
 import type { BaseItem, ItemsResult } from '../../api/types';
+import { ticksToSeconds } from '../../lib/format';
 import { t, tn } from '../../lib/i18n';
 import { useAsync, useStore } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
@@ -24,7 +25,6 @@ import './music.css';
    here and About; the discography in albums, singles and EPs, albums they appear on and music videos; similar
    artists on the server. */
 
-const uid = () => getSession()?.userId ?? '';
 const nameSize = (name: string) => (name.length > 22 ? ' is-xlong' : name.length > 13 ? ' is-long' : '');
 
 type DiscTab = 'albums' | 'singles' | 'appears' | 'videos';
@@ -149,7 +149,7 @@ export function MusicArtistPage({ item: initial }: { item: BaseItem }) {
                       <span class="mu-tr-artists">{tk.Album}</span>
                     </span>
                     <span class="mu-pop-plays">{playsLabel(tk.UserData?.PlayCount)}</span>
-                    <span class="mu-pop-time">{tk.RunTimeTicks ? clock(tk.RunTimeTicks / 10_000_000) : ''}</span>
+                    <span class="mu-pop-time">{tk.RunTimeTicks ? clock(ticksToSeconds(tk.RunTimeTicks)) : ''}</span>
                   </div>
                 );
               })}
@@ -233,7 +233,7 @@ function About({ artist, albums }: { artist: BaseItem; albums: BaseItem[] }) {
 
 function Similar({ artist }: { artist: BaseItem }) {
   const data = useAsync(() =>
-    get<ItemsResult>(`/Artists/${artist.Id}/Similar`, { userId: uid(), limit: 7, fields: 'ItemCounts,ChildCount,PrimaryImageAspectRatio' })
+    get<ItemsResult>(`/Artists/${artist.Id}/Similar`, { userId: currentUserId(), limit: 7, fields: 'ItemCounts,ChildCount,PrimaryImageAspectRatio' })
       .then((r) => r.Items, () => [] as BaseItem[]),
   [artist.Id]);
   if (!data.data?.length) return null;

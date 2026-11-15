@@ -63,3 +63,7 @@ export function safeLocal<T>(key: string, fallback: T): T {
 export function saveLocal(key: string, value: unknown) {
   try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ }
 }
+
+export function removeLocal(key: string) {
+  try { window.localStorage.removeItem(key); } catch { /* storage unavailable */ }
+}

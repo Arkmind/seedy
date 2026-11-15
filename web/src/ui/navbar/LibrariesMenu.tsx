@@ -1,7 +1,7 @@
 import type { ComponentChildren, RefObject } from 'preact';
 import { createPortal } from 'preact/compat';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { JELLYFIN_WEB, get, getSession } from '../../api/client';
+import { JELLYFIN_WEB, currentUserId, get, getSession } from '../../api/client';
 import { getItems, type ItemsQuery } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { meStore, viewsStore } from '../../lib/app-state';
@@ -65,7 +65,7 @@ async function countLine(v: BaseItem): Promise<string> {
     }
     case 'photos': return count(await total({ parentId, includeItemTypes: ['Photo'] }), 'photo');
     case 'livetv': {
-      const r = await get<ItemsResult>('/LiveTv/Channels', { userId: getSession()?.userId, limit: 1, enableTotalRecordCount: true, enableImages: false });
+      const r = await get<ItemsResult>('/LiveTv/Channels', { userId: currentUserId(), limit: 1, enableTotalRecordCount: true, enableImages: false });
       return count(r.TotalRecordCount, 'channel');
     }
     case 'playlists': return count(await total({ parentId, includeItemTypes: ['Playlist'] }), 'playlist');
@@ -78,7 +78,7 @@ async function countLine(v: BaseItem): Promise<string> {
 
 /* Counts load the first time the menu opens and refresh at most every five minutes. */
 function loadCounts(views: BaseItem[]) {
-  const who = (getSession()?.userId ?? '') + views.map((v) => v.Id).join(',');
+  const who = currentUserId() + views.map((v) => v.Id).join(',');
   if (who === countsFor && Date.now() - countsAt < 5 * 60_000) return;
   // Someone else signed in: their libraries hold other titles, so the old counts go.
   if (countsFor.slice(0, 32) !== who.slice(0, 32)) countsStore.set({});

@@ -1,4 +1,4 @@
-import { SERVER_URL, getSession } from '../../api/client';
+import { downloadUrl } from '../../api/client';
 import type { BaseItem } from '../../api/types';
 import { t } from '../../lib/i18n';
 import { toast } from '../../ui/overlay';
@@ -31,7 +31,6 @@ function dosTime(d: Date): [number, number] {
 const LIMIT = 0xffffffff - 1_000_000;
 
 export async function downloadZip(name: string, items: BaseItem[]): Promise<void> {
-  const token = getSession()?.token ?? '';
   const enc = new TextEncoder();
   const parts: BlobPart[] = [];
   const central: Uint8Array<ArrayBuffer>[] = [];
@@ -45,7 +44,7 @@ export async function downloadZip(name: string, items: BaseItem[]): Promise<void
     let data: Uint8Array<ArrayBuffer>;
     let file = it.Name;
     try {
-      const r = await fetch(`${SERVER_URL}/Items/${it.Id}/Download?ApiKey=${encodeURIComponent(token)}`);
+      const r = await fetch(downloadUrl(it.Id));
       if (!r.ok) throw new Error(String(r.status));
       const cd = r.headers.get('Content-Disposition') ?? '';
       const m = /filename\*=UTF-8''([^;]+)/i.exec(cd) ?? /filename="?([^";]+)"?/i.exec(cd);

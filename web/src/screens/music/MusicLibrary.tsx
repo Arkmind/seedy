@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { JELLYFIN_WEB, get, post, getSession } from '../../api/client';
+import { JELLYFIN_WEB, get, post, currentUserId } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { meStore } from '../../lib/app-state';
@@ -32,7 +32,6 @@ const TABS: { id: MusicTab; label: string }[] = [
   { id: 'playlists', label: 'Playlists' }, { id: 'genres', label: 'Genres' }, { id: 'folders', label: 'Folders' }
 ];
 
-const uid = () => getSession()?.userId ?? '';
 
 export function MusicLibrary({ view }: { view: BaseItem }) {
   const loc = useLocation();
@@ -243,7 +242,7 @@ async function genreMixOf(g: BaseItem): Promise<Mix> {
 }
 
 const getGenres = (viewId: string) =>
-  get<ItemsResult>('/MusicGenres', { userId: uid(), parentId: viewId, fields: 'ItemCounts', enableImages: false, sortBy: 'SortName' })
+  get<ItemsResult>('/MusicGenres', { userId: currentUserId(), parentId: viewId, fields: 'ItemCounts', enableImages: false, sortBy: 'SortName' })
     .then((r) => r.Items.slice().sort((a, b) => ((b as { AlbumCount?: number }).AlbumCount ?? b.ChildCount ?? 0) - ((a as { AlbumCount?: number }).AlbumCount ?? a.ChildCount ?? 0)));
 
 function Mixes({ view, top }: { view: BaseItem; top?: TopArtist[] }) {
@@ -251,7 +250,7 @@ function Mixes({ view, top }: { view: BaseItem; top?: TopArtist[] }) {
   const mixes = useAsync(async () => {
     if (!top) return null;
     const out: Mix[] = [];
-    const lead = top[0]?.artist ?? (await get<ItemsResult>('/Artists/AlbumArtists', { userId: uid(), parentId: view.Id, sortBy: 'Random', limit: 1 })).Items[0];
+    const lead = top[0]?.artist ?? (await get<ItemsResult>('/Artists/AlbumArtists', { userId: currentUserId(), parentId: view.Id, sortBy: 'Random', limit: 1 })).Items[0];
     if (lead) out.push(await artistMix(lead));
     const favs = await songsOf({ parentId: view.Id, isFavorite: true, sortBy: ['Random'], limit: 40 });
     if (favs.length) {
@@ -353,7 +352,7 @@ function YourPlaylists({ view }: { view: BaseItem }) {
 function TopArtists({ view, top, loading }: { view: BaseItem; top?: TopArtist[]; loading: boolean }) {
   const fallback = useAsync(
     () => (top && !top.length
-      ? get<ItemsResult>('/Artists/AlbumArtists', { userId: uid(), parentId: view.Id, sortBy: 'SortName', limit: 7, fields: 'ItemCounts,ChildCount', enableImageTypes: 'Primary', imageTypeLimit: 1 }).then((r) => r.Items)
+      ? get<ItemsResult>('/Artists/AlbumArtists', { userId: currentUserId(), parentId: view.Id, sortBy: 'SortName', limit: 7, fields: 'ItemCounts,ChildCount', enableImageTypes: 'Primary', imageTypeLimit: 1 }).then((r) => r.Items)
       : Promise.resolve(null)),
     [view.Id, !!top && !top.length]
   );

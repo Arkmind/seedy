@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { get, getSession } from '../../api/client';
+import { get, currentUserId } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import { adminGetConfig, getHome, type HomeRowPref, type HomeRowSetting, type RowKind } from '../../api/seedy';
 import type { BaseItem, ItemsResult } from '../../api/types';
@@ -31,7 +31,6 @@ const ROW_INFO: Partial<Record<RowKind, { name: string; help: string; count?: { 
 };
 
 /* The server's starting rows when the admin's own list isn't readable (non-admins). */
-const uid = () => getSession()?.userId ?? '';
 
 const SERVER_DEFAULTS: HomeRowSetting[] = [
   { kind: 'nextup', enabled: true }, { kind: 'top10', enabled: true }, { kind: 'because', enabled: true, count: 6 },
@@ -292,7 +291,7 @@ function LibrariesSection() {
   const listRef = useRef<HTMLDivElement>(null);
   const [tick, setTick] = useState(0);
   const libs = useAsync(
-    () => get<ItemsResult>('/UserViews', { userId: uid(), includeHidden: true, includeExternalContent: false }).then((r) => r.Items),
+    () => get<ItemsResult>('/UserViews', { userId: currentUserId(), includeHidden: true, includeExternalContent: false }).then((r) => r.Items),
     [tick]
   );
   const counts = useAsync(
@@ -431,7 +430,7 @@ function LatestSection() {
   const user = useStore(userStore);
   const cfg = userConfig(user);
   const [open, setOpen] = useState(false);
-  const options = useAsync(() => get<{ Id: string; Name: string }[]>('/UserViews/GroupingOptions', { userId: uid() }), []);
+  const options = useAsync(() => get<{ Id: string; Name: string }[]>('/UserViews/GroupingOptions', { userId: currentUserId() }), []);
   const grouped = (cfg.GroupedFolders ?? []).filter((id) => options.data?.some((o) => o.Id === id));
   const total = options.data?.length ?? 0;
   return (

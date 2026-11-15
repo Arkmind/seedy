@@ -4,8 +4,6 @@ import { currentUserId, isAdmin, userStore } from '../../../lib/app-state';
 
 /* Jellyfin and Seedy calls behind the item actions: playlists, collections, refresh, watched, delete. */
 
-const uid = () => currentUserId();
-
 /* Who may do what. Jellyfin asks for an admin to edit, identify, change images or refresh; collections take the
    collection permission; deleting is per item (CanDelete). */
 export const canManage = () => isAdmin();
@@ -17,13 +15,13 @@ export const canDelete = (item: BaseItem) => !!item.CanDelete;
 export interface PlaylistInfo { OpenAccess?: boolean; Shares?: { UserId: string; CanEdit: boolean }[]; ItemIds?: string[] }
 
 export const getPlaylists = () =>
-  get<ItemsResult>(`/Users/${uid()}/Items`, { IncludeItemTypes: 'Playlist', Recursive: true, SortBy: 'DateLastContentAdded,SortName', SortOrder: 'Descending', Fields: 'ChildCount,RecursiveItemCount', enableImages: false });
+  get<ItemsResult>(`/Users/${currentUserId()}/Items`, { IncludeItemTypes: 'Playlist', Recursive: true, SortBy: 'DateLastContentAdded,SortName', SortOrder: 'Descending', Fields: 'ChildCount,RecursiveItemCount', enableImages: false });
 export const getPlaylist = (id: string) => get<PlaylistInfo>(`/Playlists/${id}`);
 export const getPlaylistItems = (id: string) =>
-  get<ItemsResult>(`/Playlists/${id}/Items`, { userId: uid(), Fields: 'ParentId', enableImages: false, enableUserData: false });
-export const addToPlaylist = (id: string, ids: string[]) => post<void>(`/Playlists/${id}/Items`, undefined, { ids: ids.join(','), userId: uid() });
+  get<ItemsResult>(`/Playlists/${id}/Items`, { userId: currentUserId(), Fields: 'ParentId', enableImages: false, enableUserData: false });
+export const addToPlaylist = (id: string, ids: string[]) => post<void>(`/Playlists/${id}/Items`, undefined, { ids: ids.join(','), userId: currentUserId() });
 export const createPlaylist = (body: { Name: string; Ids: string[]; Users: { UserId: string; CanEdit: boolean }[]; IsPublic: boolean; MediaType?: 'Audio' | 'Video' }) =>
-  post<{ Id: string }>('/Playlists', { ...body, UserId: uid() });
+  post<{ Id: string }>('/Playlists', { ...body, UserId: currentUserId() });
 
 /* The people a playlist can be shared with (Seedy; null without the plugin). */
 export interface SharePerson { id: string; name: string; hasImage: boolean }
@@ -32,9 +30,9 @@ export const getShareWith = () => get<SharePerson[]>('/Seedy/Items/ShareWith').c
 // ── Collections ──
 
 export const getCollections = () =>
-  get<ItemsResult>(`/Users/${uid()}/Items`, { IncludeItemTypes: 'BoxSet', Recursive: true, SortBy: 'SortName', Fields: 'ChildCount', enableImages: false });
+  get<ItemsResult>(`/Users/${currentUserId()}/Items`, { IncludeItemTypes: 'BoxSet', Recursive: true, SortBy: 'SortName', Fields: 'ChildCount', enableImages: false });
 export const getChildren = (parentId: string) =>
-  get<ItemsResult>(`/Users/${uid()}/Items`, { ParentId: parentId, Fields: 'ParentId', enableImages: false, enableUserData: false });
+  get<ItemsResult>(`/Users/${currentUserId()}/Items`, { ParentId: parentId, Fields: 'ParentId', enableImages: false, enableUserData: false });
 export const addToCollection = (id: string, ids: string[]) => post<void>(`/Collections/${id}/Items`, undefined, { ids: ids.join(',') });
 export const createCollection = (name: string, ids: string[]) => post<{ Id: string }>('/Collections', undefined, { name, ids: ids.join(','), isLocked: false });
 
@@ -42,7 +40,7 @@ export const createCollection = (name: string, ids: string[]) => post<{ Id: stri
 
 export const refreshItem = (id: string) =>
   post<void>(`/Items/${id}/Refresh`, undefined, { metadataRefreshMode: 'FullRefresh', imageRefreshMode: 'FullRefresh', replaceAllMetadata: false, replaceAllImages: false });
-export const markPlayed = (id: string, on = true) => (on ? post<void>(`/UserPlayedItems/${id}`, undefined, { userId: uid() }) : del<void>(`/UserPlayedItems/${id}`, { userId: uid() }));
+export const markPlayed = (id: string, on = true) => (on ? post<void>(`/UserPlayedItems/${id}`, undefined, { userId: currentUserId() }) : del<void>(`/UserPlayedItems/${id}`, { userId: currentUserId() }));
 
 // ── Delete ──
 

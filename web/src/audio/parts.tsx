@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { sendPlayCommand } from '../api/jellyfin';
 import type { SessionInfo } from '../api/types';
 import { listCastTargets } from '../lib/cast';
+import { secondsToTicks } from '../lib/format';
 import { t } from '../lib/i18n';
 import { useStore } from '../lib/store';
 import { MenuButton, MenuItem, toast } from '../ui/overlay';
@@ -89,7 +90,7 @@ export function CastMenu({ class: cls, size = 18, button }: { class: string; siz
     if (!cur) return;
     const ids = [cur.track.Id, ...upNext().map((e) => e.track.Id)].slice(0, 100);
     try {
-      await sendPlayCommand(target.Id, ids, Math.round(position() * 10_000_000));
+      await sendPlayCommand(target.Id, ids, secondsToTicks(position()));
       pause();
       const name = target.DeviceName || target.Client || '';
       toast(name ? t('Playing on {device}', { device: name }) : t('Playing on the other device'));

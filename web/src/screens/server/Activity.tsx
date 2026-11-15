@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { get, getSession } from '../../api/client';
+import { currentUserId, get } from '../../api/client';
 import type { BaseItem } from '../../api/types';
 import { episodeTag } from '../../lib/format';
 import { getLang, t, tn, tx } from '../../lib/i18n';
@@ -258,7 +258,7 @@ export function ServerActivity() {
   const fetchItems = (list: ActivityEntry[]) => {
     const ids = [...new Set(list.filter((e) => e.ItemId && PLAY_TYPES.has(e.Type)).map((e) => e.ItemId!))].filter((id) => !items.has(id));
     if (!ids.length) return;
-    const uid = getSession()?.userId;
+    const uid = currentUserId();
     for (let i = 0; i < ids.length; i += 60) {
       get<{ Items: BaseItem[] }>('/Items', { ids: ids.slice(i, i + 60), userId: uid, enableImages: false, enableUserData: false, fields: ['SeriesName'] }).then(
         (r) => setItems((m) => { const n = new Map(m); for (const it of r.Items) n.set(it.Id, it); return n; }),

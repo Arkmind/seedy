@@ -1,4 +1,4 @@
-import { authHeader, get, getSession, post, request, url } from '../../api/client';
+import { authHeader, currentUserId, get, post, request, url } from '../../api/client';
 import { CARD_FIELDS, getMe, getUserViews } from '../../api/jellyfin';
 import { getMe as getSeedyMe, savePrefs, type PlaybackPrefs, type UserPrefs } from '../../api/seedy';
 import type { ItemsResult, User, UserConfiguration } from '../../api/types';
@@ -320,7 +320,7 @@ export function getNextUpForMe(limit = 16, opts: { seriesId?: string; parentId?:
   const days = readCustom(CUSTOM.nextUpDays);
   const cutoff = days > 0 ? new Date(Date.now() - days * 86_400_000).toISOString() : undefined;
   return get<ItemsResult>('/Shows/NextUp', {
-    userId: getSession()?.userId ?? '', limit, seriesId: opts.seriesId, parentId: opts.parentId, enableUserData: true, imageTypeLimit: 1,
+    userId: currentUserId(), limit, seriesId: opts.seriesId, parentId: opts.parentId, enableUserData: true, imageTypeLimit: 1,
     enableResumable: false, enableRewatching: readCustom(CUSTOM.rewatching), disableFirstEpisode: false, nextUpDateCutoff: cutoff,
     enableImageTypes: 'Primary,Backdrop,Thumb,Logo', fields: [...CARD_FIELDS, 'DateLastMediaAdded'].join(','), enableTotalRecordCount: false
   });

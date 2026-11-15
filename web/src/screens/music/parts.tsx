@@ -1,8 +1,9 @@
 import type { ComponentChildren, JSX, RefObject } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { get } from '../../api/client';
+import { get, currentUserId } from '../../api/client';
 import { getItems } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
+import { ticksToSeconds } from '../../lib/format';
 import { locale, t, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
@@ -17,11 +18,9 @@ import { artistsOf, clock } from '../../audio/parts';
 import { PlaylistPicker } from '../browse/manage/menu';
 import { addToPlaylist } from '../browse/manage/actions';
 import { openManage } from '../browse/manage/host';
-import { getSession } from '../../api/client';
 
 /* Pieces shared by the music library, album and artist pages (Music boards). */
 
-const uid = () => getSession()?.userId ?? '';
 
 export const MUSIC_FIELDS = ['PrimaryImageAspectRatio', 'ProductionYear', 'PremiereDate', 'Genres', 'ChildCount', 'DateCreated', 'SortName', 'AlbumArtist'];
 
@@ -215,7 +214,7 @@ export function NewPlaylistTile({ hint = true }: { hint?: boolean }) {
 /* "48 songs · 3 h 12 min" */
 export function playlistSub(pl: BaseItem & { CumulativeRunTimeTicks?: number }, count?: number): string {
   const n = count ?? pl.ChildCount ?? 0;
-  const secs = (pl.CumulativeRunTimeTicks ?? pl.RunTimeTicks ?? 0) / 10_000_000;
+  const secs = ticksToSeconds(pl.CumulativeRunTimeTicks ?? pl.RunTimeTicks);
   return dot(songsLabel(n), secs ? lengthLabel(secs) : '');
 }
 
@@ -394,7 +393,7 @@ export function TrackTable({ tracks, cols = 'album', source, numbers, extra, lab
     const current = tk.Id === curId;
     const fav = isFav(tk);
     const n = numbers === 'position' || cols === 'list' ? i + 1 : tk.IndexNumber ?? i + 1;
-    const time = tk.RunTimeTicks ? clock(tk.RunTimeTicks / 10_000_000) : '';
+    const time = tk.RunTimeTicks ? clock(ticksToSeconds(tk.RunTimeTicks)) : '';
     rows.push(
       <div key={tk.Id + ':' + i} role="row" class={'mu-tr is-' + cols + (current ? ' is-current' : '')} draggable
         onDragStart={(e) => dragItems(e as DragEvent, [tk])}
@@ -456,7 +455,7 @@ export function TracksSkeleton({ rows = 8 }: { rows?: number }) {
 /* ───────── Data ───────── */
 
 export const albumArtistsCount = (parentId: string) =>
-  get<ItemsResult>('/Artists/AlbumArtists', { userId: uid(), parentId, limit: 0, enableTotalRecordCount: true, enableImages: false }).then((r) => r.TotalRecordCount);
+  get<ItemsResult>('/Artists/AlbumArtists', { userId: currentUserId(), parentId, limit: 0, enableTotalRecordCount: true, enableImages: false }).then((r) => r.TotalRecordCount);
 
 export async function countOf(parentId: string, type: string): Promise<number> {
   const r = await getItems({ parentId, includeItemTypes: [type], recursive: true, limit: 0, enableImageTypes: [], fields: [] });

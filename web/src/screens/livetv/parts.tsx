@@ -5,6 +5,7 @@ import { cardArt } from '../../api/images';
 import type { Channel, Program } from '../../api/livetv';
 import { t } from '../../lib/i18n';
 import { navigate } from '../../lib/router';
+import { safeLocal, saveLocal } from '../../lib/store';
 import { Icon } from '../../ui/icons';
 import { toast } from '../../ui/overlay';
 import { channelColor, initials, type LiveChannel } from './data';
@@ -18,9 +19,7 @@ import type { PreviewState } from './preview';
 
 type Tone = 'light' | 'dark';
 const TONES_KEY = 'seedy.device.logoTones';
-let tones: Record<string, Tone> = (() => {
-  try { return JSON.parse(localStorage.getItem(TONES_KEY) ?? '{}') as Record<string, Tone>; } catch { return {}; }
-})();
+let tones = safeLocal<Record<string, Tone>>(TONES_KEY, {});
 const waiting = new Map<string, Promise<Tone>>();
 
 function measure(src: string): Promise<Tone> {
@@ -50,7 +49,7 @@ function measure(src: string): Promise<Tone> {
       tones = { ...tones, [src]: tone };
       const keys = Object.keys(tones);
       if (keys.length > 400) tones = Object.fromEntries(keys.slice(-300).map((k) => [k, tones[k]]));
-      try { localStorage.setItem(TONES_KEY, JSON.stringify(tones)); } catch { /* storage full */ }
+      saveLocal(TONES_KEY, tones);
       resolve(tone);
     };
     img.onerror = () => resolve('dark');

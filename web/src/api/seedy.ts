@@ -1,4 +1,4 @@
-import { SERVER_URL, get, post, del, request, url, type Query } from './client';
+import { SERVER_URL, get, getSession, post, del, request, url, type Query } from './client';
 import type { BaseItem } from './types';
 import type { AdminMedia, MediaFeatures } from './media';
 
@@ -375,3 +375,46 @@ export const adminPlayLogProfiles = () => get<PlayLogProfile[]>('/Seedy/Admin/Pl
 export const adminPlayLogProfile = (userId: string, body: { top10?: boolean; history?: boolean }) =>
   post<PlayLogProfile[]>(`/Seedy/Admin/PlayLog/Profiles/${userId}`, body);
 export const adminClearPlayLog = (userId?: string) => del<void>('/Seedy/Admin/PlayLog', userId ? { userId } : undefined);
+
+/* ── Reading: the place in each book (Seedy keeps it under the book's id; audiobooks use it too) ── */
+
+/* Reader settings saved with the place in each book (any JSON the reader likes; see reader/settings.ts). */
+export type ReadingSettings = Record<string, unknown>;
+
+export interface Reading {
+  ItemId: string;
+  /* An EPUB CFI, or a page index (from 0) for comics. */
+  Locator?: string;
+  Percent: number;
+  Chapter?: string;
+  ChapterIndex?: number;
+  ChapterCount?: number;
+  Finished: boolean;
+  Settings?: ReadingSettings | null;
+  UpdatedAt?: string;
+}
+
+export type ReadingPatch = Omit<Reading, 'ItemId' | 'UpdatedAt'>;
+
+export const listReading = (finished = false, limit = 40) => get<Reading[]>('/Seedy/Reading', { finished, limit });
+
+/* 204 (never opened) comes back as undefined. */
+export const getReading = (id: string) => get<Reading | undefined>(`/Seedy/Reading/${id}`).then((r) => (r && typeof r === 'object' ? r : undefined));
+
+export const saveReading = (id: string, patch: ReadingPatch) => post<Reading>(`/Seedy/Reading/${id}`, patch);
+
+/* Fire-and-forget save that survives the page closing. */
+export function saveReadingOnExit(id: string, patch: ReadingPatch) {
+  const session = getSession();
+  if (!session) return;
+  try {
+    void fetch(`${SERVER_URL}/Seedy/Reading/${id}?ApiKey=${encodeURIComponent(session.token)}`, {
+      method: 'POST',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(patch)
+    });
+  } catch { /* the debounced save already ran */ }
+}
+
+export const deleteReading = (id: string) => del<void>(`/Seedy/Reading/${id}`);

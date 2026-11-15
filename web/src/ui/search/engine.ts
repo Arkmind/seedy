@@ -1,4 +1,4 @@
-import { get, getSession } from '../../api/client';
+import { get, currentUserId } from '../../api/client';
 import { getItems, getNextUp, getResume, type ItemsQuery } from '../../api/jellyfin';
 import type { BaseItem, ItemsResult } from '../../api/types';
 import { duration, episodeTag, plural, remainingSeconds, ticksToSeconds, timeLeft, yearRange } from '../../lib/format';
@@ -23,7 +23,6 @@ const LIMITS: Record<Size, { titles: number; episodes: number; people: number }>
 const FIELDS = ['PrimaryImageAspectRatio', 'ProductionYear', 'Genres', 'ChildCount', 'RecursiveItemCount', 'OriginalTitle', 'DateCreated', 'People'];
 /* Music too: artists, albums and songs; and books and audiobooks (the music and books libraries' boxes say so). */
 const TITLE_TYPES = ['Movie', 'Series', 'BoxSet', 'MusicArtist', 'MusicAlbum', 'Audio', 'Book', 'AudioBook'];
-const uid = () => getSession()?.userId ?? '';
 
 /* ── Text ── */
 
@@ -123,10 +122,10 @@ let genresP: Promise<GenreInfo[]> | null = null;
 let genresUser = '';
 
 export function loadGenres(): Promise<GenreInfo[]> {
-  if (!genresP || genresUser !== uid()) {
-    genresUser = uid();
+  if (!genresP || genresUser !== currentUserId()) {
+    genresUser = currentUserId();
     genresP = get<ItemsResult<BaseItem & { MovieCount?: number; SeriesCount?: number }>>('/Genres', {
-      userId: uid(), includeItemTypes: 'Movie,Series', sortBy: 'SortName', fields: 'ItemCounts', enableImages: false
+      userId: currentUserId(), includeItemTypes: 'Movie,Series', sortBy: 'SortName', fields: 'ItemCounts', enableImages: false
     })
       .then((r) => r.Items.map((g) => ({ name: g.Name, count: (g.MovieCount ?? 0) + (g.SeriesCount ?? 0) })))
       .catch(() => { genresP = null; return []; });
@@ -309,7 +308,7 @@ const items = (q: ItemsQuery, signal: AbortSignal) =>
     .catch((e: Error) => { if (e?.name === 'AbortError') throw e; return { Items: [], TotalRecordCount: 0 } as ItemsResult; });
 
 const persons = (searchTerm: string, limit: number, signal: AbortSignal) =>
-  get<ItemsResult>('/Persons', { userId: uid(), searchTerm, limit, enableImageTypes: 'Primary', imageTypeLimit: 1 }, signal)
+  get<ItemsResult>('/Persons', { userId: currentUserId(), searchTerm, limit, enableImageTypes: 'Primary', imageTypeLimit: 1 }, signal)
     .catch((e: Error) => { if (e?.name === 'AbortError') throw e; return { Items: [], TotalRecordCount: 0 } as ItemsResult; });
 
 const EMPTY: ItemsResult = { Items: [], TotalRecordCount: 0 };
@@ -323,7 +322,7 @@ const cache = new Map<string, { at: number; r: Results }>();
 const TTL = 60_000;
 
 export function cached(q: string, size: Size): Results | undefined {
-  const key = size + '|' + uid() + '|' + q.trim().replace(/\s+/g, ' ').toLowerCase();
+  const key = size + '|' + currentUserId() + '|' + q.trim().replace(/\s+/g, ' ').toLowerCase();
   const c = cache.get(key);
   if (c && Date.now() - c.at < TTL) return c.r;
   if (c) cache.delete(key);
@@ -332,7 +331,7 @@ export function cached(q: string, size: Size): Results | undefined {
 
 export async function search(raw: string, size: Size, signal: AbortSignal): Promise<Results> {
   const text = raw.trim().replace(/\s+/g, ' ');
-  const key = size + '|' + uid() + '|' + text.toLowerCase();
+  const key = size + '|' + currentUserId() + '|' + text.toLowerCase();
   const hitCache = cached(text, size);
   if (hitCache) return hitCache;
 
