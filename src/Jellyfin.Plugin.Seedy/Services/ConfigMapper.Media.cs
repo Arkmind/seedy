@@ -10,8 +10,8 @@ namespace Jellyfin.Plugin.Seedy.Services;
 /// <summary>Music and book request settings.</summary>
 public static partial class ConfigMapper
 {
-    /// <summary>The apps Seedy can send book requests to.</summary>
-    public static readonly string[] BookServices = ["shelfarr", "librarr", "readarr"];
+    /// <summary>The book formats, in the order the request window and settings list them.</summary>
+    internal static readonly string[] BookFormatOrder = ["ebook", "audiobook", "comic"];
 
     private static string Hint(string key) => string.IsNullOrEmpty(key) ? null! : key[^Math.Min(4, key.Length)..];
 
@@ -113,7 +113,7 @@ public static partial class ConfigMapper
     /// <summary>The book formats people can request now.</summary>
     /// <param name="c">Configuration.</param>
     /// <returns>Formats.</returns>
-    public static List<string> BookFormats(PluginConfiguration c) => new[] { "ebook", "audiobook", "comic" }.Where(f => BookRoute(c, f) is not null).ToList();
+    public static List<string> BookFormats(PluginConfiguration c) => BookFormatOrder.Where(f => BookRoute(c, f) is not null).ToList();
 
     /// <summary>Gets a profile's music and book limits, with defaults by role when the admin never set them.</summary>
     /// <param name="c">Configuration.</param>

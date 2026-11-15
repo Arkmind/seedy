@@ -863,7 +863,7 @@ public sealed class MediaRequestService
         }
     }
 
-    private static string Aggregate(IReadOnlyCollection<MediaRequestPart> parts)
+    private static string Aggregate(List<MediaRequestPart> parts)
     {
         if (parts.Count == 0)
         {

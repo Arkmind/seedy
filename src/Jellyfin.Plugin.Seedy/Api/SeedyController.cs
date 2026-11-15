@@ -377,7 +377,7 @@ public class SeedyController : ControllerBase
         return NoContent();
     }
 
-    private bool HistoryAllowed(string uid)
+    private static bool HistoryAllowed(string uid)
     {
         var c = ConfigMapper.Current;
         return c.PlayLogEnabled && c.UseForHistory && ConfigMapper.PlayLogProfile(c, uid).History;

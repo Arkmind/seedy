@@ -66,7 +66,7 @@ public sealed class OpenLibraryClient
         }
 
         // Descriptions often end with source notes and links; keep the first paragraph.
-        var cut = text.IndexOf("\n", StringComparison.Ordinal);
+        var cut = text.IndexOf('\n');
         text = (cut > 40 ? text[..cut] : text).Trim();
         if (text.Length <= 420)
         {

@@ -78,7 +78,7 @@ public class AdminMediaController : ControllerBase
             }
         }
 
-        foreach (var f in new[] { "ebook", "audiobook", "comic" })
+        foreach (var f in ConfigMapper.BookFormatOrder)
         {
             var lib = _library.LibraryForFormat(f);
             dto.Landing.Add(new LandingDto { Format = f, Library = lib?.Name, Path = lib?.Location });

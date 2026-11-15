@@ -1503,7 +1503,7 @@ public sealed class SeerrService
 
     // ── Mapping ──
 
-    private SeerrItemDto? MapResult(JsonNode? r, int? me, string? forcedType = null)
+    private static SeerrItemDto? MapResult(JsonNode? r, int? me, string? forcedType = null)
     {
         if (r is null)
         {

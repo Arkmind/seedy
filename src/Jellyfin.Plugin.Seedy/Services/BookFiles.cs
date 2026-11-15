@@ -207,7 +207,7 @@ public sealed partial class BookFiles
             var text = PlainText(ReadEntry(zip, opfDir + href) ?? string.Empty);
             firstPage[href] = pages + 1;
             pages += Math.Max(1, (int)Math.Ceiling(text.Length / (double)CharsPerPage));
-            words += WordRegex().Matches(text).Count;
+            words += WordRegex().Count(text);
         }
 
         info.Pages = pages;
@@ -331,7 +331,7 @@ public sealed partial class BookFiles
     private static int PdfPages(string path)
     {
         var text = Encoding.Latin1.GetString(File.ReadAllBytes(path));
-        return PdfPageRegex().Matches(text).Count;
+        return PdfPageRegex().Count(text);
     }
 
     [GeneratedRegex(@"<body[^>]*>(.*)</body>", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
