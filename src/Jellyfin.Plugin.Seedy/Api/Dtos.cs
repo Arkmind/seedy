@@ -179,6 +179,23 @@ public sealed class OriginBody
     [JsonPropertyName("row")] public string Row { get; set; } = string.Empty;
 }
 
+public sealed class TokenDto
+{
+    [JsonPropertyName("accessToken")] public string AccessToken { get; set; } = string.Empty;
+}
+
+public sealed class DecoderBody
+{
+    [JsonPropertyName("itemId")] public string ItemId { get; set; } = string.Empty;
+    [JsonPropertyName("onClient")] public bool OnClient { get; set; }
+}
+
+public sealed class DecoderDto
+{
+    [JsonPropertyName("deviceId")] public string DeviceId { get; set; } = string.Empty;
+    [JsonPropertyName("itemId")] public string ItemId { get; set; } = string.Empty;
+}
+
 public sealed class HistoryEntryDto
 {
     [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;

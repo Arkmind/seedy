@@ -8,6 +8,7 @@ import { secondsToTicks, ticksToSeconds } from '../lib/format';
 import { t } from '../lib/i18n';
 import { browserSupport, buildDeviceProfile, convertingProfile, mediaSourceApi, PROFILE_DEFAULTS, type ProfileOptions } from './device-profile';
 import { closeLiveStream, liveDeviceProfile, stopEncoding, trackClose } from './live-profile';
+import { recordDecoder } from '../api/seedy';
 import { MediaBridge } from './media';
 import type { SoftMedia } from './soft-media';
 import { softAvailable, softDecodes, softDeviceProfile, softExt, softFits, softFixes, transcodeReasons, type SoftMode } from './soft-profile';
@@ -437,6 +438,7 @@ export class PlaybackSession {
     if (my !== this.seq || this.stopped) return null;
     if (old && old.method !== 'DirectPlay' && old.playSessionId !== stream.playSessionId) void stopEncoding(old.playSessionId);
     this.events.onStream(stream);
+    if (!this.silent && this.item.MediaType === 'Video') recordDecoder(this.item.Id, stream.engine === 'soft').catch(() => undefined);
     this.schedule();
     return stream;
   }

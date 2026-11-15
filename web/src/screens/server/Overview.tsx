@@ -12,7 +12,7 @@ import { Medu } from '../../ui/medu';
 import { meduToast } from '../../ui/medu-toast';
 import { Sheet, confirm, toast } from '../../ui/overlay';
 import { AdminLayout } from '../admin/AdminLayout';
-import { type ActivityEntry, errText, type FullUser, getActivity, getItemCounts, getPackages, getPlugins, getSessions, getStorage, getSystemInfo, getTasks, getUsers, type ItemCounts, type PackageInfo, type PluginInfo, restartingStore, restartServer, sameId, scanAllLibraries, seedyBackups, sendSessionMessage, type Session, shutdownServer, stopSession, type SystemInfo, type TaskInfo } from './api';
+import { type ActivityEntry, errText, type FullUser, getActivity, getItemCounts, getPackages, getPlaying, getPlugins, getStorage, getSystemInfo, getTasks, getUsers, type ItemCounts, type PackageInfo, type PluginInfo, restartingStore, type PlayingSession, restartServer, sameId, scanAllLibraries, seedyBackups, sendSessionMessage, type Session, shutdownServer, stopSession, type SystemInfo, type TaskInfo } from './api';
 import { Glyph } from './glyphs';
 import { InlineError, Notice, usePoll, UserAvatar } from './parts';
 import { activityWhen, dayDiff, fmtSize, hhmm, majorMinor, percent, platformLabel, playDetail, playMethod, shortDate, uptime } from './format';
@@ -36,7 +36,7 @@ function useLive<T>(load: (signal?: AbortSignal) => Promise<T>, every: number): 
 
 export function ServerOverview() {
   const info = useLive(getSystemInfo, 15_000);
-  const sessions = useLive(getSessions, 5_000);
+  const sessions = useLive(getPlaying, 5_000);
   const tasks = useLive(getTasks, 5_000);
   const activity = useLive(() => getActivity({ limit: 40, startIndex: 0 }), 10_000);
   const counts = useLive(getItemCounts, 60_000);
@@ -109,7 +109,8 @@ export function ServerOverview() {
     ? [info.data.ServerName, `Jellyfin ${majorMinor(info.data.Version)}`, platformLabel(info.data, os), since ? uptime(since) : ''].filter(Boolean).join(' · ')
     : info.error ? t('Server details unavailable') : <span class="skel skel-line srv-lede-skel" />;
 
-  const playing = (sessions.data ?? []).filter((s) => s.NowPlayingItem);
+  // Jellyfin lists sessions by latest activity, which reshuffles the cards on every progress report: keep them by person.
+  const playing = (sessions.data ?? []).filter((s) => s.NowPlayingItem).sort(byPerson);
 
   return (
     <AdminLayout
@@ -218,6 +219,7 @@ function Notices({ info, plugins, packages, disks: diskList, restarting, onResta
 /* ── Playing now ── */
 
 const METHOD = {
+  client: { label: 'Decoded on client', dot: 'var(--seedy-accent)' },
   direct: { label: 'Direct play', dot: 'var(--seedy-ok)' },
   stream: { label: 'Direct stream', dot: '#9fd3ff' },
   transcode: { label: 'Transcoding', dot: 'var(--seedy-pending)' }
@@ -229,9 +231,15 @@ function sessionTitle(item: BaseItem): string {
   return item.Name;
 }
 
-function NowCard({ s, users, onChanged }: { s: Session; users?: FullUser[]; onChanged: () => void }) {
+const byPerson = (a: Session, b: Session) =>
+  (a.UserName ?? '').localeCompare(b.UserName ?? '', undefined, { sensitivity: 'base' })
+  || (a.DeviceName ?? '').localeCompare(b.DeviceName ?? '', undefined, { sensitivity: 'base' })
+  || a.Id.localeCompare(b.Id);
+
+function NowCard({ s, users, onChanged }: { s: PlayingSession; users?: FullUser[]; onChanged: () => void }) {
   const item = s.NowPlayingItem!;
-  const method = METHOD[playMethod(s)];
+  const method = METHOD[s.decodedOnClient ? 'client' : playMethod(s)];
+  const paused = !!s.PlayState?.IsPaused;
   const total = item.RunTimeTicks ?? 0;
   const frac = total > 0 ? Math.min(1, (s.PlayState?.PositionTicks ?? 0) / total) : 0;
   const index = Math.max(0, users?.findIndex((u) => sameId(u.Id, s.UserId)) ?? 0);
@@ -240,7 +248,7 @@ function NowCard({ s, users, onChanged }: { s: Session; users?: FullUser[]; onCh
   const [msgOpen, setMsgOpen] = useState(false);
   const canMessage = !!s.SupportedCommands?.includes('DisplayMessage');
   const canStop = !!s.SupportsMediaControl;
-  const detail = (s.PlayState?.IsPaused ? `${t('Paused')} · ` : '') + playDetail(s);
+  const detail = playDetail(s, s.decodedOnClient);
 
   const stop = async () => {
     const ok = await confirm({
@@ -263,7 +271,10 @@ function NowCard({ s, users, onChanged }: { s: Session; users?: FullUser[]; onCh
     <article class="srv-now-card">
       <div class="srv-now-art card-media">
         <Art art={cardArt(item, 640)} title={item.SeriesName ?? item.Name} />
-        <span class="pill is-scrim srv-now-pill"><span class="pip" style={{ background: method.dot }} />{t(method.label)}</span>
+        <div class="srv-now-pills">
+          <span class="pill is-scrim"><span class="pip" style={{ background: method.dot }} />{t(method.label)}</span>
+          {paused && <span class="pill is-scrim srv-now-paused"><Icon name="pause" size={10} />{t('Paused')}</span>}
+        </div>
         <div class="srv-now-bar" role="progressbar" aria-label={t('Progress')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(frac * 100)}><i style={{ width: pct(frac) }} /></div>
       </div>
       <div class="srv-now-who">
