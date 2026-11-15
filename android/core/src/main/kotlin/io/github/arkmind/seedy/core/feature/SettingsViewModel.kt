@@ -125,8 +125,10 @@ class SettingsViewModel(
         }
         if ("profile" in all) {
             session.seedyApi?.let { api -> io { api.passwordState().changedAt?.let { d -> extras.update { it.copy(passwordChanged = changedLabel(d)) } } } }
-            // Jellyfin lets only admins list and remove devices; for everyone else the Devices row stays hidden.
-            if (session.seedy?.isAdmin ?: (session.user.policy?.isAdministrator == true)) io {
+            // Seedy lists anyone's own devices; plain Jellyfin lets only admins list them, so the row hides for others.
+            val seedy = session.seedyApi
+            if (seedy != null) io { seedy.myDevices().size.let { n -> extras.update { it.copy(devices = n) } } }
+            else if (session.user.policy?.isAdministrator == true) io {
                 val n = io.github.arkmind.seedy.core.settings.myDevices(io.github.arkmind.seedy.core.admin.AdminHttp(session.api), session.userId.toString()).size
                 extras.update { it.copy(devices = n) }
             }

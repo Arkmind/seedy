@@ -142,5 +142,13 @@
  "{name} signed out": "{name} déconnecté",
  "{n} device is signed out. This phone stays signed in.": "{n} appareil est déconnecté. Ce téléphone reste connecté.",
  "{n} devices are signed out. This phone stays signed in.": "{n} appareils sont déconnectés. Ce téléphone reste connecté.",
- "Turned-off libraries also leave Libraries.": "Les bibliothèques désactivées quittent aussi l’onglet Bibliothèques."
+ "Turned-off libraries also leave Libraries.": "Les bibliothèques désactivées quittent aussi l’onglet Bibliothèques.",
+ "Everywhere you’re signed in. A device you sign out stops right away and needs your password or a Quick Connect code to come back.": "Partout où vous êtes connecté. Un appareil que vous déconnectez s’arrête tout de suite et il lui faudra votre mot de passe ou un code de connexion rapide pour revenir.",
+ "Other devices · {n}": "Autres appareils · {n}",
+ "Signs out your other device. You stay signed in on this phone.": "Déconnecte votre autre appareil. Vous restez connecté sur ce téléphone.",
+ "Signs out all {n} other devices. You stay signed in on this phone.": "Déconnecte vos {n} autres appareils. Vous restez connecté sur ce téléphone.",
+ "Signs out your other device, {device} playing {title}. You stay signed in on this phone.": "Déconnecte votre autre appareil, {device} qui lit {title}. Vous restez connecté sur ce téléphone.",
+ "Signs out all {n} other devices, including {device} playing {title}. You stay signed in on this phone.": "Déconnecte vos {n} autres appareils, dont {device} qui lit {title}. Vous restez connecté sur ce téléphone.",
+ "Signs out all {n} other devices, including the {playing} playing right now. You stay signed in on this phone.": "Déconnecte vos {n} autres appareils, dont les {playing} en lecture en ce moment. Vous restez connecté sur ce téléphone.",
+ "Your admin can see these devices too, and sign them out.": "Votre administrateur voit aussi ces appareils et peut les déconnecter."
 }

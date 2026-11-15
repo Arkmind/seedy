@@ -30,7 +30,7 @@ import java.time.Clock
  * last and what it's playing; renaming one, removing one (it's signed out) or signing out every other device.
  */
 
-enum class DeviceKind { Tv, Phone, Computer }
+enum class DeviceKind { Tv, Phone, Tablet, Computer }
 
 private val TvWords = Regex("\\btv\\b|android ?tv|fire ?tv|roku|shield|chromecast|apple ?tv|tvos|tizen|webos|kodi|xbox|playstation|living room|bedroom")
 private val PhoneWords = Regex("iphone|ipad|ipod|android|mobile|phone|tablet|swiftfin|findroid|\\bios\\b")

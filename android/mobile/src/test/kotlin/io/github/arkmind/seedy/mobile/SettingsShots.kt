@@ -96,9 +96,8 @@ class SettingsShots {
     @Config(qualifiers = "w390dp-h1980dp-mdpi")
     fun subtitles() = shot("AndroidSettingsSubtitles") { SubtitlesPage(SettingsSamples.state, actions, nav) }
 
-    /** No board: Profile › Signed in on, the server Devices board's rows for one person. */
     @Test
-    @Config(qualifiers = "w390dp-h844dp-mdpi")
+    @Config(qualifiers = "w390dp-h1070dp-mdpi")
     fun devices() = shot("AndroidSettingsDevices") {
         io.github.arkmind.seedy.mobile.settings.MyDevicesPage(SettingsSamples.devices, object : io.github.arkmind.seedy.core.settings.MyDevicesActions {}, nav)
     }
@@ -154,21 +153,35 @@ object SettingsSamples {
         ),
         lastPlayed = "The Pass, today",
         passwordChanged = "Changed 3 months ago",
-        devices = 4,
+        devices = 5,
         openRequests = 3,
         serverSummary = "seedy-server · 3 playing · 2 plugin updates",
         code = CodeState("4F7Q2K"),
     )
 
-    private fun device(id: String, name: String, kind: io.github.arkmind.seedy.core.admin.people.DeviceKind, app: String, last: String, mine: Boolean = false) =
-        io.github.arkmind.seedy.core.admin.people.DeviceRow(id, name, name, kind, app, null, "Arky", 0, null, last, mine = mine)
+    /** Board day: 15 Nov 2026, noon. */
+    private val clock = java.time.Clock.fixed(java.time.Instant.parse("2026-11-15T12:00:00Z"), java.time.ZoneOffset.UTC)
+
+    private fun mine(
+        id: String, name: String, reported: String, app: String, version: String, signedIn: String, last: String?, network: String,
+        current: Boolean = false, active: Boolean = false, isNew: Boolean = false, ip: String? = null,
+        playing: io.github.arkmind.seedy.core.seedy.MyDevicePlaying? = null,
+    ) = io.github.arkmind.seedy.core.seedy.MyDevice(
+        id = id, name = name, reportedName = reported, appName = app, appVersion = version, signedInAt = signedIn, firstSeenAt = signedIn,
+        lastActiveAt = last, ip = ip, network = network, current = current, active = active, isNew = isNew, playing = playing,
+    )
+
+    private val boardDevices = listOf(
+        mine("pixel", "Pixel 9", "Pixel 9", "Seedy for Android", "1.6.0", "2026-08-28T10:00:00Z", "2026-11-15T12:00:00Z", "home", current = true, active = true, ip = "192.168.1.30"),
+        mine("tv", "Living room TV", "Living room TV", "Seedy for Android TV", "1.4.2", "2026-09-12T10:00:00Z", "2026-11-15T12:00:00Z", "home", active = true,
+            playing = io.github.arkmind.seedy.core.seedy.MyDevicePlaying("x", "Northbound", "Episode", 3, 2, false)),
+        mine("mac", "MacBook", "Chrome on macOS", "Seedy", "0.4.0", "2026-11-02T10:00:00Z", "2026-11-15T10:00:00Z", "home"),
+        mine("ipad", "iPad Air", "iPad Air", "Seedy for iOS", "1.6", "2026-07-04T10:00:00Z", "2026-11-12T12:00:00Z", "home"),
+        mine("ff", "Firefox on Linux", "Firefox on Linux", "Seedy", "0.4.0", "2026-11-14T23:12:00Z", "2026-11-14T23:12:00Z", "away", isNew = true, ip = "82.64.113.20"),
+    )
 
     val devices = io.github.arkmind.seedy.core.settings.MyDevicesState(
-        devices = listOf(
-            device("1", "Pixel 9", io.github.arkmind.seedy.core.admin.people.DeviceKind.Phone, "Seedy 1.0", "Now", mine = true),
-            device("2", "Living room TV", io.github.arkmind.seedy.core.admin.people.DeviceKind.Tv, "Seedy 1.0", "Today, 21:14"),
-            device("3", "MacBook Air", io.github.arkmind.seedy.core.admin.people.DeviceKind.Computer, "Seedy 1.0 · Safari", "Yesterday, 18:05"),
-            device("4", "iPad", io.github.arkmind.seedy.core.admin.people.DeviceKind.Phone, "Swiftfin 1.6", "17 Oct"),
-        ),
+        devices = boardDevices.map { io.github.arkmind.seedy.core.settings.myDeviceRow(it, clock) },
+        everywhere = io.github.arkmind.seedy.core.settings.everywhereText(boardDevices.filter { !it.current }),
     )
 }

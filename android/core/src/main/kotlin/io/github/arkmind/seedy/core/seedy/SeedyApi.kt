@@ -21,6 +21,17 @@ class SeedyApi(private val api: ApiClient) {
     /** When the person's password last changed (only the activity log knows; the plugin reads it for everyone). */
     suspend fun passwordState(): PasswordState = api.get<PasswordState>("/Seedy/Me/Password").content
 
+    /** Everywhere the person is signed in (Settings › Profile › Signed in on). */
+    suspend fun myDevices(): List<MyDevice> = api.get<MyDevices>("/Seedy/Me/Devices").content.devices
+
+    /** Signs one of the person's other devices out: playback there stops and its token stops working. */
+    suspend fun signOutDevice(id: String) {
+        api.delete<Unit>("/Seedy/Me/Devices", queryParameters = mapOf("id" to id))
+    }
+
+    /** Signs out every device but this one; returns how many. */
+    suspend fun signOutOtherDevices(): Int = api.post<SignedOut>("/Seedy/Me/Devices/SignOutOthers").content.signedOut
+
     /** How many of the person's requests are still open (Settings › My requests). */
     suspend fun openRequests(): Int = api.get<MyRequests>("/Seedy/Requests/Mine").content.open
 
