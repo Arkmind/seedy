@@ -273,9 +273,12 @@ export function SeerrStatusPill({ status }: { status: SeerrItem['status'] }) {
   return null;
 }
 
+/* "movie" / "series" inside a poster's spoken name. */
+const kindWord = (item: Pick<SeerrItem, 'mediaType'>) => (item.mediaType === 'movie' ? t('movie') : t('series'));
+
 export function TypePill({ type }: { type: 'movie' | 'tv' | 'upcoming' }) {
   const cls = type === 'movie' ? 'is-movie' : type === 'tv' ? 'is-series' : 'is-upcoming';
-  return <span class={'type-pill ' + cls}>{type === 'movie' ? 'Movie' : type === 'tv' ? t('Series') : t('Upcoming')}</span>;
+  return <span class={'type-pill ' + cls}>{type === 'movie' ? t('Movie') : type === 'tv' ? t('Series') : t('Upcoming')}</span>;
 }
 
 export const seerrPath = (s: Pick<SeerrItem, 'mediaType' | 'tmdbId'>) => `/request/${s.mediaType}/${s.tmdbId}`;
@@ -310,7 +313,7 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
   return (
     <div class="card poster-card" style={style}>
       <div class="card-media is-poster" tabIndex={-1}>
-        <Link to={target} class="poster-link" aria-label={`${title}, ${item.mediaType === 'movie' ? 'movie' : 'series'}${item.year && !upcoming ? ', ' + item.year : ''}`}>
+        <Link to={target} class="poster-link" aria-label={item.year && !upcoming ? t('{title}, {kind}, {year}', { title, kind: kindWord(item), year: item.year }) : t('{title}, {kind}', { title, kind: kindWord(item) })}>
           {poster ? <Img src={poster} class="art" /> : <span aria-hidden="true" class="art-title">{title}</span>}
         </Link>
         <TypePill type={upcoming ? 'upcoming' : item.mediaType} />
@@ -340,7 +343,7 @@ export function PosterCard({ item, width, canRequest, onRequest, requesting, sho
         )}
       </Link>
       {showRequestButton && requestable && (
-        <button type="button" class="btn btn-primary is-sm is-block" aria-label={`Request ${item.title} (${item.mediaType === 'movie' ? 'movie' : 'series'}${item.year ? ', ' + item.year : ''})`} aria-haspopup={item.mediaType === 'tv' ? 'dialog' : undefined} disabled={requesting} onClick={() => onRequest(item)}>
+        <button type="button" class="btn btn-primary is-sm is-block" aria-label={item.year ? t('Request {title} ({kind}, {year})', { title: item.title, kind: kindWord(item), year: item.year }) : t('Request {title} ({kind})', { title: item.title, kind: kindWord(item) })} aria-haspopup={item.mediaType === 'tv' ? 'dialog' : undefined} disabled={requesting} onClick={() => onRequest(item)}>
           <Icon name="plus" size={18} stroke={2.6} />
           {requesting ? t('Requesting…') : t('Request')}
         </button>
@@ -395,8 +398,8 @@ export function Top10Card({ rank, item, meta, onOpen }: { rank: number; item: Ba
 }
 
 /* My media: one tile per library. */
-export function LibraryTile({ view, width = 300, artSrc }: { view: BaseItem & { Covers?: string[] }; width?: number; artSrc?: string }) {
-  const art = artSrc ? { src: artSrc, titleOnArt: false } : cardArt(view, 640);
+export function LibraryTile({ view, width = 300 }: { view: BaseItem & { Covers?: string[] }; width?: number }) {
+  const art = cardArt(view, 640);
   const covers = !art.src && view.Covers?.length ? view.Covers : null;
   return (
     <Link to={`/library/${view.Id}`} class={'lib-tile' + (covers ? ' has-covers' + (view.CollectionType === 'books' ? ' is-books' : '') : '')} style={{ flex: `0 0 ${width}px`, width: width + 'px' }}>

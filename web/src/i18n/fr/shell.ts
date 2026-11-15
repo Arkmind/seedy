@@ -63,7 +63,18 @@ const fr: Record<string, string> = {
   "Last seen {when}": "Vu {when}",
   "Trying again in {n} s": "Nouvel essai dans {n} s",
   "Trying again…": "Nouvel essai…",
-  "Dismiss": "Fermer"
+  "Dismiss": "Fermer",
+  "not watched": "pas vu",
+  "movie": "film",
+  "series": "série",
+  "{title}, {kind}, {year}": "{title}, {kind}, {year}",
+  "{title}, {kind}": "{title}, {kind}",
+  "Request {title} ({kind}, {year})": "Demander {title} ({kind}, {year})",
+  "Request {title} ({kind})": "Demander {title} ({kind})",
+  "{n} new episode": "{n} nouvel épisode",
+  "{n} new episodes": "{n} nouveaux épisodes",
+  "{n} video or photo": "{n} vidéo ou photo",
+  "{n} videos and photos": "{n} vidéos et photos"
 };
 
 export default fr;

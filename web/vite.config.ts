@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import preact from '@preact/preset-vite';
 import { seedyMock } from './dev/mock-plugin';
@@ -6,8 +7,13 @@ import { libmedia } from './vite/libmedia';
 // The plugin serves the build at {baseUrl}/seedy/ with relative asset URLs.
 // `bun run dev` serves at /seedy/ and proxies Jellyfin from dev/docker-compose.yml.
 // SEEDY_MOCK=1 answers /Seedy/* from fixtures, for working on screens before the plugin is installed.
+// The version Seedy reports to Jellyfin: the release being built (build.sh's VERSION), else the plugin project's.
+const csproj = readFileSync(new URL('../src/Jellyfin.Plugin.Seedy/Jellyfin.Plugin.Seedy.csproj', import.meta.url), 'utf8');
+const SEEDY_VERSION = process.env.VERSION || /<Version>([^<]+)<\/Version>/.exec(csproj)?.[1] || '0.0.0';
+
 export default defineConfig(({ command }) => ({
   base: command === 'serve' ? '/seedy/' : './',
+  define: { __SEEDY_VERSION__: JSON.stringify(SEEDY_VERSION) },
   plugins: [preact(), libmedia(), ...(process.env.SEEDY_MOCK === '1' ? [seedyMock()] : [])],
   build: {
     outDir: '../src/Jellyfin.Plugin.Seedy/Web',

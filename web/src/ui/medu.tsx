@@ -112,22 +112,17 @@ export interface MeduProps {
   torch?: boolean;
   /** The soft accent halo behind the bell. */
   glow?: boolean;
-  /** Bubbles drifting up around Medu (the idle hero). */
-  bubbles?: boolean;
-  /** Spoken name; Medu is decoration (aria-hidden) unless this is given. */
-  label?: string;
   class?: string;
 }
 
-export function Medu({ mood = 'idle', size, torch = false, glow, bubbles = false, label, class: cls }: MeduProps) {
+export function Medu({ mood = 'idle', size, torch = false, glow, class: cls }: MeduProps) {
   const uid = useId().replace(/[^\w-]/g, '');
   const small = size < 80;
   const halo = glow ?? !small;
   const speed = mood === 'sleepy' ? ' m-slow' : mood === 'yay' || mood === 'party' ? ' m-fast' : '';
-  const a11y = label ? { role: 'img' as const, 'aria-label': label } : { 'aria-hidden': true };
   const torchArm = mood === 'search' && torch && !small;
   return (
-    <svg class={`medu${speed}${cls ? ` ${cls}` : ''}`} viewBox="0 -24 200 264" width={size} height={Math.round(size * 1.32)} {...a11y}>
+    <svg class={`medu${speed}${cls ? ` ${cls}` : ''}`} viewBox="0 -24 200 264" width={size} height={Math.round(size * 1.32)} aria-hidden="true">
       <defs>
         <linearGradient id={`mb-${uid}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#fdf6fe" />
@@ -147,9 +142,6 @@ export function Medu({ mood = 'idle', size, torch = false, glow, bubbles = false
         </>}
       </defs>
       {halo && <circle cx="100" cy="96" r="108" fill={`url(#mg-${uid})`} />}
-      {bubbles && ([[26, 196, 5, -0.6], [176, 170, 7, -2.1], [160, 226, 4, -3.3], [40, 140, 3.5, -1.4]] as const).map(([cx, cy, r, delay]) => (
-        <circle key={cx} class="m-bub" cx={cx} cy={cy} r={r} fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="2" style={{ animationDelay: `${delay}s` }} />
-      ))}
       <g class="m-float">
         {small ? <>
           {[['d1', TENTACLES.d1], ['d2', 'M100 118 C94 144 108 162 98 190 C92 206 102 218 98 230'], ['d3', TENTACLES.d4]].map(([delay, d]) => (
@@ -235,7 +227,7 @@ export function Medu({ mood = 'idle', size, torch = false, glow, bubbles = false
 }
 
 /** Medu above a title, a plain sentence and a way out: the empty pages (Empty pages and My requests boards). */
-export function MeduState({ mood = 'sleepy', size = 150, title, text, actions, children, large, bare, as: H = 'h2', torch }: {
+export function MeduState({ mood = 'sleepy', size = 150, title, text, actions, children, large }: {
   mood?: MeduMood;
   size?: number;
   title: ComponentChildren;
@@ -245,16 +237,12 @@ export function MeduState({ mood = 'sleepy', size = 150, title, text, actions, c
   children?: ComponentChildren;
   /** The bigger My requests variant (30 px title). */
   large?: boolean;
-  /** Without the panel behind it, for places that already sit in one. */
-  bare?: boolean;
-  as?: 'h1' | 'h2' | 'h3';
-  torch?: boolean;
 }) {
   return (
-    <div class={'medu-state' + (large ? ' is-large' : '') + (bare ? ' is-bare' : '')}>
+    <div class={'medu-state' + (large ? ' is-large' : '')}>
       <div class="medu-state-body">
-        <Medu mood={mood} size={size} torch={torch} />
-        <H class="medu-state-title">{title}</H>
+        <Medu mood={mood} size={size} />
+        <h2 class="medu-state-title">{title}</h2>
         {text && <p class="medu-state-text">{text}</p>}
         {actions && <div class="medu-state-actions">{actions}</div>}
         {children}

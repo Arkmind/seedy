@@ -70,8 +70,6 @@ a.btn-primary:hover, a.btn-square:hover { color: var(--seedy-text); }
 .icon-btn.is-48 { width: 48px; height: 48px; }
 .icon-btn.is-40 { width: 40px; height: 40px; border-radius: var(--r-menu); }
 .icon-btn.is-36 { width: 36px; height: 36px; border-radius: var(--r-ctl); }
-.icon-btn.is-34 { width: 34px; height: 34px; border-radius: var(--r-ctl); }
-.icon-btn.is-32 { width: 32px; height: 32px; border-radius: var(--r-ctl); }
 .icon-btn:not(:disabled):hover, .icon-btn[aria-expanded='true'] {
   background: var(--seedy-inverse); color: var(--seedy-ink-inverse);
 }
@@ -95,11 +93,6 @@ a.btn-primary:hover, a.btn-square:hover { color: var(--seedy-text); }
 
 /* ───────────────────────── Tabs ───────────────────────── */
 
-.tab-tray {
-  display: flex; gap: 8px; padding: 6px; border-radius: var(--r-tray);
-  background: var(--seedy-panel); overflow-x: auto; max-width: 100%;
-}
-.tab-tray.is-glass { background: var(--seedy-tray); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
 .tab-row { display: flex; gap: 8px; overflow-x: auto; max-width: 100%; }
 
 .tab {
@@ -299,7 +292,6 @@ a.btn-primary:hover, a.btn-square:hover { color: var(--seedy-text); }
   outline: 2px solid transparent; outline-offset: 3px;
 }
 .card-media.is-poster { aspect-ratio: 2 / 3; }
-.card-media.is-portrait { aspect-ratio: 4 / 5; }
 .card-media.is-square { aspect-ratio: 1 / 1; }
 .card:focus-visible { outline: none; }
 .card:focus-visible .card-media, .card-media:focus-within, .card-media.is-focused { outline-color: var(--seedy-accent); }

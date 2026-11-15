@@ -6,7 +6,6 @@
 .medu .m-d1{animation-delay:-.4s}.medu .m-d2{animation-delay:-.8s}.medu .m-d3{animation-delay:-1.2s}.medu .m-d4{animation-delay:-1.6s}.medu .m-d5{animation-delay:-2s}
 .medu .m-eyes{transform-box:fill-box;transform-origin:50% 50%;animation:medu-blink 5s infinite}
 .medu .m-look{animation:medu-look 3.4s ease-in-out infinite}
-.medu .m-bub{animation:medu-bubble 4.5s ease-in infinite}
 .medu .m-wave{transform-box:fill-box;transform-origin:0% 100%;animation:medu-wave 1.1s ease-in-out infinite}
 .medu .m-q{transform-box:fill-box;transform-origin:50% 100%;animation:medu-tilt 2.2s ease-in-out infinite}
 .medu .m-z{transform-box:fill-box;transform-origin:50% 50%;animation:medu-z 3.6s ease-out infinite}
@@ -23,7 +22,6 @@
 @keyframes medu-wiggle{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
 @keyframes medu-blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
 @keyframes medu-look{0%,18%{transform:translateX(-4px)}42%,64%{transform:translateX(4px)}88%,100%{transform:translateX(-4px)}}
-@keyframes medu-bubble{0%{transform:translateY(0);opacity:0}20%{opacity:.75}100%{transform:translateY(-110px);opacity:0}}
 @keyframes medu-wave{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(16deg)}}
 @keyframes medu-tilt{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(12deg) translateY(-4px)}}
 @keyframes medu-z{0%{transform:translate(0,0) scale(.5);opacity:0}25%{opacity:1}100%{transform:translate(16px,-38px) scale(1.15);opacity:0}}
@@ -36,7 +34,6 @@
 /* ── Medu with a message (Empty pages, My requests empty) ── */
 .medu-state { display: flex; justify-content: center; padding: 48px 32px 56px; border-radius: 24px; background: var(--seedy-panel); }
 .medu-state.is-large { padding: 64px 32px 72px; }
-.medu-state.is-bare { padding: 10px 0 6px; border-radius: 0; background: none; }
 .medu-state-body { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; min-width: 0; }
 .medu-state.is-large .medu-state-body { gap: 14px; }
 .medu-state-title { margin: 0; font-size: 24px; line-height: 1.08; font-weight: 900; letter-spacing: -0.015em; color: #ffffff; overflow-wrap: anywhere; }

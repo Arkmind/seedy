@@ -1,7 +1,9 @@
 import type { AuthResult, User } from './types';
 import { removeLocal, safeLocal, saveLocal } from '../lib/store';
 
-export const APP_VERSION = '0.1.0';
+/* The release this build is (build.sh's VERSION), sent to Jellyfin as the client's version. */
+declare const __SEEDY_VERSION__: string;
+export const APP_VERSION = __SEEDY_VERSION__;
 export const CLIENT_NAME = 'Seedy';
 
 /* Where Seedy lives. The plugin tells the page in two meta tags: the server's base url ("" or e.g. "/jellyfin"), and

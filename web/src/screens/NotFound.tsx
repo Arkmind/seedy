@@ -80,16 +80,14 @@ const pickMeta = (item: BaseItem) =>
   item.Type === 'Series' ? [t('Series'), seasonsLabel(item)].filter(Boolean).join(' · ')
     : [item.Type === 'Movie' ? t('Movie') : '', item.ProductionYear].filter(Boolean).join(' · ');
 
-export function NotFound({ title = false, reason }: {
+export function NotFound({ title = false }: {
   /** A title link (/details/…) rather than a page. */
   title?: boolean;
-  /** What the server said, for the admins' line. */
-  reason?: string;
 }) {
   const loc = useLocation();
   const [at] = useState(() => new Date());
   const picks = usePicks();
-  const why = reason ?? (title ? t('no item with this ID in any library') : t('no page at this address'));
+  const why = title ? t('no item with this ID in any library') : t('no page at this address');
   // Item ids are shortened to their first 8 characters on screen; Copy details keeps the whole request.
   const shown = loc.path.replace(/^(\/details\/[0-9a-f]{8})[0-9a-f]{24}$/i, '$1');
   const query = loc.query.toString();

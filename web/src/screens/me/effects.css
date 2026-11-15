@@ -17,7 +17,7 @@ html.me-fast .scrim { animation-duration: 90ms; }
 html.me-fast .me-saver-slide { transition-duration: 500ms; }
 
 /* ── Smooth scrolling: rows glide when moved by arrows, keys or a remote ── */
-html.me-smooth .row-scroller, html.me-smooth .tab-tray, html.me-smooth .tab-row { scroll-behavior: smooth; }
+html.me-smooth .row-scroller, html.me-smooth .tab-row { scroll-behavior: smooth; }
 
 /* ── TV layout: larger type and a focus ring that's always there for remotes and gamepads ── */
 html.seedy-tv { --gutter: 56px; }

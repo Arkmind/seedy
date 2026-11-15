@@ -49,14 +49,14 @@ export function Thumb({ item, width, class: cls }: { item: BaseItem; width: numb
 }
 
 /* "Actor · 4 titles in your library", filled in once known. */
-export function PersonLine({ person, fallback = 'Person', short }: { person: BaseItem; fallback?: string; short?: boolean }) {
+export function PersonLine({ person, fallback, short }: { person: BaseItem; fallback?: string; short?: boolean }) {
   const [info, setInfo] = useState<PersonInfo | undefined>();
   useEffect(() => {
     let live = true;
     personMeta(person).then((i) => { if (live) setInfo(i); });
     return () => { live = false; };
   }, [person.Id]);
-  return <>{info ? (short ? info.role : personLine(info)) : fallback}</>;
+  return <>{info ? (short ? t(info.role) : personLine(info)) : fallback ?? t('Person')}</>;
 }
 
 /* Genres for "Browse by genre": the server's most used, at most eight. */

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { APP_BASE, SERVER_URL } from '../../api/client';
-import { adminRemoveLogo, adminUploadLogo, logoUrl, type AdminConfig, type MaxQuality, type PlaybackPrefs, type SkipMode } from '../../api/seedy';
+import { adminRemoveLogo, adminUploadLogo, brandLogoUrl, type AdminConfig, type MaxQuality, type PlaybackPrefs, type SkipMode } from '../../api/seedy';
 import { applyBranding } from '../../lib/app-state';
 import { NumField, Panel, RadioCards, SavedNote, Segmented, SelectField, SettingRow, Switch } from '../../ui/controls';
 import { toast } from '../../ui/overlay';
@@ -200,7 +200,7 @@ function LogoRow({ branding }: { branding: AdminConfig['branding'] }) {
     <SettingRow name={t('Logo')} help={t('SVG or PNG, square or wide')}>
       <div class="setting-controls is-12">
         <span class={'logo-box' + (busy ? ' is-busy' : '')} aria-hidden="true">
-          {branding.hasLogo ? <img src={logoUrl(branding.logoVersion)} alt="" /> : <span class="brand-mark">{initial}</span>}
+          {branding.hasLogo ? <img src={brandLogoUrl(branding.logoVersion)} alt="" /> : <span class="brand-mark">{initial}</span>}
         </span>
         <span class="logo-file" title={fileName}>{fileName}</span>
         <button type="button" class="btn btn-secondary is-sm" disabled={busy} onClick={() => input.current?.click()} aria-label={branding.hasLogo ? t('Replace logo') : t('Upload a logo')}>

@@ -476,7 +476,7 @@ export function rowMeta(item: BaseItem): string {
       const seasons = item.ChildCount ? plural(item.ChildCount, 'season') : '';
       return join(yearRange(item), seasons);
     }
-    case 'BoxSet': return join('Collection', item.ChildCount ? plural(item.ChildCount, 'title') : '');
+    case 'BoxSet': return join(t('Collection'), item.ChildCount ? plural(item.ChildCount, 'title') : '');
     case 'Episode': return join(episodeTag(item), inProgress ? timeLeft(remainingSeconds(item)) : run);
     case 'Person': return '';
     case 'MusicArtist': return t('Artist');
@@ -488,7 +488,7 @@ export function rowMeta(item: BaseItem): string {
       return join(
         item.ProductionYear ? String(item.ProductionYear) : '',
         item.Genres?.[0],
-        inProgress ? timeLeft(remainingSeconds(item)) : ud?.Played ? run : ud ? 'not watched' : run
+        inProgress ? timeLeft(remainingSeconds(item)) : ud?.Played ? run : ud ? t('not watched') : run
       );
   }
 }

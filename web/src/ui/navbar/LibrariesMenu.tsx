@@ -9,7 +9,8 @@ import { Link, href, navigate } from '../../lib/router';
 import { createStore, useStore } from '../../lib/store';
 import { Icon } from '../icons';
 import { NbIcon, libraryIcon } from './icons';
-import { t } from '../../lib/i18n';
+import { t, tn } from '../../lib/i18n';
+import { plural } from '../../lib/format';
 
 /* The Libraries menu (Navigation bar board, section 2): every library in a two-column grid with its count, the
    current one raised, then "Viewing history" and "Order and hide libraries". On phones it opens as a sheet. */
@@ -32,8 +33,6 @@ function jellyfinHref(v: BaseItem): string {
 
 /* ── Counts: "248 movies", "61 shows · 4 new episodes", "1,204 videos and photos" ── */
 
-const fmt = (n: number) => n.toLocaleString('en-US');
-const count = (n: number, one: string, many = one + 's') => `${fmt(n)} ${n === 1 ? one : many}`;
 const countsStore = createStore<Record<string, string>>({});
 let countsAt = 0;
 let countsFor = '';
@@ -45,7 +44,7 @@ const total = (q: ItemsQuery) =>
 async function countLine(v: BaseItem): Promise<string> {
   const parentId = v.Id;
   switch (v.CollectionType) {
-    case 'movies': return count(await total({ parentId, includeItemTypes: ['Movie'] }), 'movie');
+    case 'movies': return plural(await total({ parentId, includeItemTypes: ['Movie'] }), 'movie');
     case 'tvshows': {
       const [shows, recent] = await Promise.all([
         total({ parentId, includeItemTypes: ['Series'] }),
@@ -56,23 +55,23 @@ async function countLine(v: BaseItem): Promise<string> {
       ]);
       const week = Date.now() - 7 * 86_400_000;
       const fresh = recent.Items.filter((e) => e.DateCreated && new Date(e.DateCreated).getTime() >= week).length;
-      return count(shows, 'show') + (fresh ? ` · ${count(fresh, 'new episode')}` : '');
+      return plural(shows, 'show') + (fresh ? ` · ${tn(fresh, '{n} new episode', '{n} new episodes')}` : '');
     }
-    case 'boxsets': return count(await total({ parentId, includeItemTypes: ['BoxSet'] }), 'collection');
+    case 'boxsets': return plural(await total({ parentId, includeItemTypes: ['BoxSet'] }), 'collection');
     case 'homevideos': {
       const n = await total({ parentId, includeItemTypes: ['Video', 'Photo'] });
-      return n === 1 ? '1 video or photo' : `${fmt(n)} videos and photos`;
+      return tn(n, '{n} video or photo', '{n} videos and photos');
     }
-    case 'photos': return count(await total({ parentId, includeItemTypes: ['Photo'] }), 'photo');
+    case 'photos': return plural(await total({ parentId, includeItemTypes: ['Photo'] }), 'photo');
     case 'livetv': {
       const r = await get<ItemsResult>('/LiveTv/Channels', { userId: currentUserId(), limit: 1, enableTotalRecordCount: true, enableImages: false });
-      return count(r.TotalRecordCount, 'channel');
+      return plural(r.TotalRecordCount, 'channel');
     }
-    case 'playlists': return count(await total({ parentId, includeItemTypes: ['Playlist'] }), 'playlist');
-    case 'music': return count(await total({ parentId, includeItemTypes: ['MusicAlbum'] }), 'album');
-    case 'musicvideos': return count(await total({ parentId, includeItemTypes: ['MusicVideo'] }), 'music video');
-    case 'books': return count(await total({ parentId, includeItemTypes: ['Book'] }), 'book');
-    default: return count(await total({ parentId, excludeItemTypes: ['Folder', 'CollectionFolder', 'Season'] }), 'item');
+    case 'playlists': return plural(await total({ parentId, includeItemTypes: ['Playlist'] }), 'playlist');
+    case 'music': return plural(await total({ parentId, includeItemTypes: ['MusicAlbum'] }), 'album');
+    case 'musicvideos': return plural(await total({ parentId, includeItemTypes: ['MusicVideo'] }), 'music video');
+    case 'books': return plural(await total({ parentId, includeItemTypes: ['Book'] }), 'book');
+    default: return plural(await total({ parentId, excludeItemTypes: ['Folder', 'CollectionFolder', 'Season'] }), 'item');
   }
 }
 

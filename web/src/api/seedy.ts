@@ -315,7 +315,7 @@ export interface PlayLogProfile { userId: string; name: string; imageTag?: strin
 
 export const getClientBranding = () => request<Branding>('GET', '/Seedy/Client', { token: null });
 export const signInBackdrops = () => request<string[]>('GET', '/Seedy/Client/Backdrops', { token: null });
-export const logoUrl = (version: string) => url('/Seedy/Client/Logo', { v: version });
+export const brandLogoUrl = (version: string) => url('/Seedy/Client/Logo', { v: version });
 /** The tab icon: the uploaded logo, or the brand mark (the name's first letter). */
 export const faviconUrl = (b: Pick<Branding, 'logoVersion' | 'name'>) =>
   `${SERVER_URL}/Seedy/Client/Favicon?v=${encodeURIComponent(`${b.logoVersion}-${b.name}`)}`; // as the plugin writes it in index.html

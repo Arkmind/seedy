@@ -1,6 +1,6 @@
 import { createPortal } from 'preact/compat';
 import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
-import { logoUrl as seedyLogoUrl, type Me } from '../../api/seedy';
+import { brandLogoUrl, type Me } from '../../api/seedy';
 import { userImageUrl } from '../../api/images';
 import { JELLYFIN_WEB } from '../../api/client';
 import { brandingStore, meStore, signOut, userStore, viewsStore } from '../../lib/app-state';
@@ -27,7 +27,7 @@ export function BrandMark({ size = 34 }: { size?: number }) {
   const b = useStore(brandingStore);
   const initial = (b.name || 'S').trim().charAt(0).toUpperCase();
   if (b.hasLogo) {
-    return <img src={seedyLogoUrl(b.logoVersion)} alt="" class="brand-logo" style={{ height: size + 'px', maxWidth: size * 3 + 'px' }} />;
+    return <img src={brandLogoUrl(b.logoVersion)} alt="" class="brand-logo" style={{ height: size + 'px', maxWidth: size * 3 + 'px' }} />;
   }
   return (
     <span class="brand-mark" style={{ width: size + 'px', height: size + 'px', fontSize: Math.round(size * 0.53) + 'px', borderRadius: Math.round(size * 0.29) + 'px' }}>
@@ -128,7 +128,7 @@ function requestsPath(me: Me): string | null {
 }
 
 /* Requests (when Seerr, Lidarr or a book app is connected), cast, and the account button. */
-export function HeaderActions({ glass, active }: { glass?: boolean; active?: HeaderActive; hideSearch?: boolean }) {
+export function HeaderActions({ glass, active }: { glass?: boolean; active?: HeaderActive }) {
   const me = useStore(meStore);
   const current = active === 'requests';
   const to = requestsPath(me);
