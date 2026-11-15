@@ -42,6 +42,7 @@ public sealed class PlaybackRecorder : IHostedService
     private readonly ILibraryManager _library;
     private readonly IMediaSourceManager _mediaSources;
     private readonly Audiobooks _audiobooks;
+    private readonly ClientDecoding _decoding;
     private readonly SeedyDatabase _db;
     private readonly ILogger<PlaybackRecorder> _logger;
     private readonly ConcurrentDictionary<string, Active> _active = new(StringComparer.Ordinal);
@@ -58,10 +59,12 @@ public sealed class PlaybackRecorder : IHostedService
     /// <param name="library">Library manager.</param>
     /// <param name="mediaSources">Media source manager.</param>
     /// <param name="audiobooks">Audiobooks in several files.</param>
+    /// <param name="decoding">Browsers decoding their own video.</param>
     /// <param name="db">Database.</param>
     /// <param name="logger">Logger.</param>
-    public PlaybackRecorder(ISessionManager sessions, ILibraryManager library, IMediaSourceManager mediaSources, Audiobooks audiobooks, SeedyDatabase db, ILogger<PlaybackRecorder> logger)
+    public PlaybackRecorder(ISessionManager sessions, ILibraryManager library, IMediaSourceManager mediaSources, Audiobooks audiobooks, ClientDecoding decoding, SeedyDatabase db, ILogger<PlaybackRecorder> logger)
     {
+        _decoding = decoding;
         _sessions = sessions;
         _library = library;
         _mediaSources = mediaSources;
@@ -384,19 +387,21 @@ public sealed class PlaybackRecorder : IHostedService
         }
     }
 
-    /// <summary>Ranks play methods by how much work they take the server, so the heaviest one can be kept.</summary>
+    /// <summary>Ranks play methods by how much converting the play needed, so the heaviest one can be kept. Decoding in
+    /// the browser outranks the direct methods: the file couldn't play as it is, only the browser did the work.</summary>
     /// <param name="method">Play method.</param>
-    /// <returns>3 for a transcode down to 0 for unknown.</returns>
+    /// <returns>4 for a transcode down to 0 for unknown.</returns>
     internal static int MethodWeight(string? method) => method switch
     {
-        "Transcode" => 3,
+        "Transcode" => 4,
+        "ClientDecode" => 3,
         "DirectStream" => 2,
         "DirectPlay" => 1,
         _ => 0
     };
 
     // How it plays right now, from the session: the heaviest method seen during the play is kept.
-    private static void Capture(Active a, SessionInfo? session)
+    private void Capture(Active a, SessionInfo? session)
     {
         if (session is null)
         {
@@ -419,6 +424,12 @@ public sealed class PlaybackRecorder : IHostedService
         if (reported == PlayMethod.Transcode && ti is null)
         {
             a.TranscodePending = true;
+        }
+
+        // The web app's experimental player decodes in the browser: Jellyfin only sees the file going out as it is.
+        if (method is "DirectPlay" or "DirectStream" && session.DeviceId is { } device && _decoding.Decodes(device, p.ItemId))
+        {
+            method = "ClientDecode";
         }
 
         if (method is not null && MethodWeight(method) >= MethodWeight(p.PlayMethod))

@@ -17,9 +17,10 @@ export const kindLabel = (k: Kind) => ({
   show: t('Shows'), movie: t('Movies'), music: t('Music'), livetv: t('Live TV'), book: t('Books'), other: t('Other videos')
 })[k];
 
-export const METHOD_COLOUR: Record<Method, string> = { DirectPlay: '#9fe0b0', DirectStream: '#9fd3ff', Transcode: '#ffc98a' };
+/* Decoded on client: the web app's experimental player decoded the video in the browser (the same accent as Playing now). */
+export const METHOD_COLOUR: Record<Method, string> = { DirectPlay: '#9fe0b0', ClientDecode: 'var(--seedy-accent)', DirectStream: '#9fd3ff', Transcode: '#ffc98a' };
 
-export const methodLabel = (m: Method) => ({ DirectPlay: t('Direct play'), DirectStream: t('Direct stream'), Transcode: t('Transcoded') })[m];
+export const methodLabel = (m: Method) => ({ DirectPlay: t('Direct play'), ClientDecode: t('Decoded on client'), DirectStream: t('Direct stream'), Transcode: t('Transcoded') })[m];
 
 const HOUR = 3_600_000;
 
