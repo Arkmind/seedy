@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.4.5.0",
+        "changelog": "## What's Changed\n* Feat/stats client decode by @Arkmind in https://github.com/Arkmind/seedy/pull/85\n* Feature/devices by @Arkmind in https://github.com/Arkmind/seedy/pull/86\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.4.4...v0.4.5",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.4.5/seedy_0.4.5.0.zip",
+        "checksum": "f011873502049151e0927529126046bc",
+        "timestamp": "2026-11-15T18:02:50Z"
+      },
+      {
         "version": "0.4.4.0",
         "changelog": "## What's Changed\n* Fix/player error cursor by @Arkmind in https://github.com/Arkmind/seedy/pull/84\n\n\n**Full Changelog**: https://github.com/Arkmind/seedy/compare/v0.4.3...v0.4.4",
         "targetAbi": "12.0.0.0",
