@@ -218,11 +218,13 @@ public class SeedyController : ControllerBase
         {
             try
             {
-                var lookup = Task.WhenAll(_seerr.AccountFor(user, ct), _seerr.PublicUrlAsync(ct));
+                var accountTask = _seerr.AccountFor(user, ct);
+                var urlTask = _seerr.PublicUrlAsync(ct);
+                var lookup = Task.WhenAll(accountTask, urlTask);
                 if (await Task.WhenAny(lookup, Task.Delay(TimeSpan.FromSeconds(2), ct)).ConfigureAwait(false) == lookup)
                 {
-                    (account, matchedBy) = await _seerr.AccountFor(user, ct).ConfigureAwait(false);
-                    publicUrl = await _seerr.PublicUrlAsync(ct).ConfigureAwait(false);
+                    (account, matchedBy) = await accountTask.ConfigureAwait(false);
+                    publicUrl = await urlTask.ConfigureAwait(false);
                 }
             }
 #pragma warning disable CA1031 // Seerr trouble shows up as "not connected", never as a broken app.
@@ -236,7 +238,6 @@ public class SeedyController : ControllerBase
         // Profiles with a maturity limit don't browse Seerr: its titles carry no ratings Seedy could filter on.
         var restricted = user.MaxParentalRatingScore is not null;
         var seerrForUser = connected && !restricted;
-        var profile = ConfigMapper.PlayLogProfile(c, uid);
         return new MeDto
         {
             IsAdmin = user.IsAdmin(),
@@ -269,7 +270,7 @@ public class SeedyController : ControllerBase
                 LibrarrUrl = user.IsAdmin() && ConfigMapper.BookAppReady(c, "librarr") ? c.LibrarrUrl : null,
                 ReadarrUrl = user.IsAdmin() && ConfigMapper.BookAppReady(c, "readarr") ? c.ReadarrUrl : null
             },
-            HistoryEnabled = c.PlayLogEnabled && c.UseForHistory && profile.History,
+            HistoryEnabled = HistoryAllowed(uid),
             HomeRows = ConfigMapper.HomeRows(c).Select(r => new HomeRowSettingDto
             {
                 Kind = r.Kind,
