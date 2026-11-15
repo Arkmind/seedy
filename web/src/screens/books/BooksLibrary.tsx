@@ -15,7 +15,7 @@ import { AudioCover, BookCover } from './covers';
 import { isBookOrPart } from '../../audio/api';
 import { authorsOf, getBookInfo, isAudioBook, isComic, normalize, seriesOf, workKey, type Reading } from './api';
 import {
-  AudioCard, BookCard, ContinueCard, SectionHead, SeriesCard, VolumeCard, bookSub, comicSub, roughTime, useColumns,
+  AudioCard, BookCard, ContinueCard, SectionHead, SeriesCard, VolumeCard, bookSub, comicSub, roughTime, useColumns, chapterIndexAt, fileExt, surnameFirst,
   type ContinueEntry, type SeriesGroup
 } from './parts';
 import { LibraryMenuItems } from '../../ui/library-menu';
@@ -57,11 +57,7 @@ function sortItems(items: BaseItem[], sort: SortId, reading: Map<string, Reading
 const released = (it: BaseItem) => (it.PremiereDate ? time(it.PremiereDate) : it.ProductionYear ? new Date(it.ProductionYear, 0, 1).getTime() : 0);
 const lastRead = (it: BaseItem, reading: Map<string, Reading>) => Math.max(time(reading.get(it.Id)?.UpdatedAt), time(it.UserData?.LastPlayedDate));
 /* "Mara Linde" sorts under L. */
-const authorSort = (it: BaseItem) => {
-  const name = authorsOf(it)[0]?.Name ?? '';
-  const parts = name.trim().split(/\s+/);
-  return (parts.length > 1 ? parts[parts.length - 1] + ' ' + parts.slice(0, -1).join(' ') : name).toLowerCase() || '￿';
-};
+const authorSort = (it: BaseItem) => surnameFirst(authorsOf(it)[0]?.Name ?? '') || '￿';
 
 /* Whether a book belongs to a series with more than one volume here. */
 const running = (data: BooksData, it: BaseItem) => { const s = seriesOf(it); return !!s && data.series.some((g) => g.key === normalize(s)); };
@@ -313,13 +309,13 @@ async function readingEntry(item: BaseItem, r: Reading): Promise<ContinueEntry> 
     const pages = info?.Pages ?? 0;
     const page = Math.min(pages, (Number(r.Locator) || 0) + 1);
     return {
-      item, kind: t('Comic · {format}', { format: (/\.(\w+)$/.exec(item.Path ?? '')?.[1] ?? 'CBZ').toUpperCase() }),
+      item, kind: t('Comic · {format}', { format: fileExt(item, 'CBZ').toUpperCase() }),
       where: pages ? t('Page {n} of {total}', { n: page, total: pages }) : undefined,
       fraction, done: t('{n}% read', { n: Math.round(r.Percent) }),
       left: pages ? tn(Math.max(0, pages - page), '{n} page left', '{n} pages left') : undefined
     };
   }
-  const format = (/\.(\w+)$/.exec(item.Path ?? '')?.[1] ?? 'EPUB').toUpperCase();
+  const format = fileExt(item, 'EPUB').toUpperCase();
   const chapter = r.ChapterIndex && r.Chapter ? t('Chapter {n} · {title}', { n: r.ChapterIndex, title: r.Chapter }) : r.Chapter;
   const minutes = info?.Minutes ? info.Minutes * (1 - fraction) : 0;
   return {
@@ -334,8 +330,7 @@ function audioEntry(item: BaseItem, live: boolean): ContinueEntry {
   const total = item.RunTimeTicks ?? 0;
   const fraction = total ? pos / total : 0;
   const chapters = item.Chapters ?? [];
-  let ci = -1;
-  chapters.forEach((c, i) => { if (c.StartPositionTicks <= pos) ci = i; });
+  const ci = chapterIndexAt(chapters, pos);
   const ch = ci >= 0 ? chapters[ci] : undefined;
   return {
     item,
@@ -397,8 +392,7 @@ function Authors({ data, sort, focus, tabTo }: { data: BooksData; sort: SortId; 
         map.set(key, g);
       }
     }
-    const surname = (n: string) => { const p = n.trim().split(/\s+/); return (p.length > 1 ? p[p.length - 1] + ' ' + p.slice(0, -1).join(' ') : n).toLowerCase(); };
-    const byName = (a: AuthorGroup, b: AuthorGroup) => (!a.name ? 1 : !b.name ? -1 : surname(a.name).localeCompare(surname(b.name)));
+    const byName = (a: AuthorGroup, b: AuthorGroup) => (!a.name ? 1 : !b.name ? -1 : surnameFirst(a.name).localeCompare(surnameFirst(b.name)));
     const list = Array.from(map.values());
     if (sort === 'added') return list.sort((a, b) => (b.added - a.added) || byName(a, b));
     if (sort === 'read') return list.sort((a, b) => (b.readAt - a.readAt) || byName(a, b));

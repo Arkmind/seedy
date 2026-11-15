@@ -216,6 +216,22 @@ export function ContinueCard({ entry }: { entry: ContinueEntry }) {
   );
 }
 
+/* The chapter a position falls in (-1 before the first). */
+export function chapterIndexAt(chapters: { StartPositionTicks: number }[], pos: number): number {
+  let ci = -1;
+  chapters.forEach((c, i) => { if (c.StartPositionTicks <= pos) ci = i; });
+  return ci;
+}
+
+/* "Mara Linde" → "linde mara", so authors sort by surname. */
+export function surnameFirst(name: string): string {
+  const p = name.trim().split(/\s+/);
+  return (p.length > 1 ? p[p.length - 1] + ' ' + p.slice(0, -1).join(' ') : name).toLowerCase();
+}
+
+/* A file's extension from its path ("epub"), or [fallback]. */
+export const fileExt = (item: Pick<BaseItem, 'Path'>, fallback = '') => /\.(\w+)$/.exec(item.Path ?? '')?.[1] ?? fallback;
+
 /* A volume in a series: "Book 2 · read" with a tick, "Book 3 · 46%" in the accent, "Book 4 · new". */
 export function VolumeCard({ item, reading, current }: { item: BaseItem; reading?: Reading; current?: boolean }) {
   const n = item.IndexNumber;

@@ -22,7 +22,7 @@ import {
 import { useBooksData } from './library-data';
 import { epubLanguage } from './epub-meta';
 import { AudioCover, BookCover } from './covers';
-import { BookCard, HeadphonesIcon, plainText, roughTime, VolumeCard } from './parts';
+import { BookCard, HeadphonesIcon, plainText, roughTime, VolumeCard, chapterIndexAt, fileExt } from './parts';
 import './books.css';
 import './details.css';
 
@@ -87,8 +87,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
     const total = item.RunTimeTicks ?? 0;
     if (pos > 0 && total && !item.UserData?.Played) {
       const chapters = item.Chapters ?? [];
-      let ci = -1;
-      chapters.forEach((c, i) => { if (c.StartPositionTicks <= pos) ci = i; });
+      const ci = chapterIndexAt(chapters, pos);
       progress = {
         fraction: pos / total,
         text: dot(`${Math.round((pos / total) * 100)}%`, ci >= 0 && chapters.length > 1 ? t('Chapter {n} of {total}', { n: ci + 1, total: chapters.length }) : '', timeLeft(ticksToSeconds(total - pos)))
@@ -317,7 +316,7 @@ function FormatCard({ item, current, canDownload }: { item: BaseItem; current: b
   const audio = f === 'audio';
   // A book in several files (an MP3 per chapter) says so: "MP3 · 8 files".
   const parts = partsOf(item);
-  const container = (parts ? item.Container ?? '' : /\.(\w+)$/.exec(item.Path ?? '')?.[1] ?? '').toUpperCase();
+  const container = (parts ? item.Container ?? '' : fileExt(item)).toUpperCase();
   const narrator = audio ? narratorOf(item) : undefined;
   const note = audio ? (narrator ? t('narrated by {name}', { name: narrator }) : runtime(item))
     : f === 'epub' || f === 'cbz' ? t('reads in Seedy')
