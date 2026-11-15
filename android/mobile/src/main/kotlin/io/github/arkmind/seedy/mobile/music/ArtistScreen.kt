@@ -52,8 +52,9 @@ import io.github.arkmind.seedy.core.music.playsLabel
 import io.github.arkmind.seedy.core.music.releaseLabel
 import io.github.arkmind.seedy.core.music.releaseOf
 import io.github.arkmind.seedy.core.music.yearOf
+import io.github.arkmind.seedy.mobile.browse.Message
+import io.github.arkmind.seedy.mobile.browse.SectionHead
 import io.github.arkmind.seedy.mobile.browse.topInset
-import io.github.arkmind.seedy.mobile.library.Message
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.theme.LocalAccent

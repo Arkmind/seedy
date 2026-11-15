@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,14 +31,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,11 +53,14 @@ import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.seedy.SeerrDetails
 import io.github.arkmind.seedy.core.seedy.SeerrSeason
 import io.github.arkmind.seedy.core.seedy.tmdbImage
+import io.github.arkmind.seedy.mobile.browse.Message
 import io.github.arkmind.seedy.mobile.browse.topInset
-import io.github.arkmind.seedy.mobile.library.Message
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
+import io.github.arkmind.seedy.mobile.parts.GlassButton
+import io.github.arkmind.seedy.mobile.parts.HeroScrims
 import io.github.arkmind.seedy.mobile.parts.Toast
+import io.github.arkmind.seedy.mobile.parts.fitTitleSize
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.seasons.RequestSeasonsSheet
 import io.github.arkmind.seedy.ui.components.Artwork
@@ -75,7 +74,6 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
 import io.github.arkmind.seedy.ui.theme.seerrToneColour
 import java.util.Locale
-import kotlin.math.min
 
 /** What the Seerr title page does; the route wires these to the view model and navigation. */
 class SeerrTitleActions(
@@ -184,19 +182,9 @@ private fun TopButtons(actions: SeerrTitleActions) {
         Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = topInset()),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        GlassButton(WebIcons.ArrowLeft, 22.dp, t("Back"), actions.onBack)
+        GlassButton(WebIcons.ArrowLeft, 22.dp, actions.onBack, t("Back"))
         Spacer(Modifier.weight(1f))
-        actions.onOpenSeerr?.let { GlassButton(WebIcons.External, 20.dp, t("Open in Seerr"), it) }
-    }
-}
-
-@Composable
-private fun GlassButton(icon: IconDef, size: Dp, label: String, onClick: () -> Unit) {
-    Box(
-        Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(SeedyColors.Bg.copy(alpha = 0.5f)).tap(onClick = onClick).semantics { contentDescription = label },
-        contentAlignment = Alignment.Center,
-    ) {
-        SIcon(icon, size = size, color = SeedyColors.White)
+        actions.onOpenSeerr?.let { GlassButton(WebIcons.External, 20.dp, it, t("Open in Seerr")) }
     }
 }
 
@@ -210,8 +198,7 @@ private fun Top(d: SeerrDetails, state: SeerrTitleViewModel.State, canRequest: B
     Box(Modifier.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth().height(240.dp)) {
             Artwork(tmdbImage(d.backdropPath, "w1280") ?: tmdbImage(d.posterPath, "w780"), Modifier.fillMaxSize(), placeholder = SeedyColors.Bg)
-            Box(Modifier.fillMaxWidth().height(120.dp).background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.65f), Color.Transparent))))
-            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.7f).background(Brush.verticalGradient(listOf(Color.Transparent, SeedyColors.Bg))))
+            HeroScrims()
             TopButtons(actions)
         }
         Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 180.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -220,7 +207,7 @@ private fun Top(d: SeerrDetails, state: SeerrTitleViewModel.State, canRequest: B
                 SeerrTitleViewModel.statusPill(d.status)?.let { (label, tone) -> StatusPill(label, tone) }
             }
             BoxWithConstraints {
-                SText(d.title, size = titleSize(d.title, maxWidth), weight = 900, lineHeight = 0.95f, tracking = -0.02f, color = SeedyColors.White, uppercase = true, maxLines = 3)
+                SText(d.title, size = fitTitleSize(d.title, maxWidth), weight = 900, lineHeight = 0.95f, tracking = -0.02f, color = SeedyColors.White, uppercase = true, maxLines = 3)
             }
             Meta(d)
             d.tagline?.takeIf { it.isNotBlank() }?.let { SText(it, size = 13.sp, weight = 600, color = SeedyColors.Text, maxLines = 2) }
@@ -270,12 +257,6 @@ private fun Top(d: SeerrDetails, state: SeerrTitleViewModel.State, canRequest: B
             Info(d)
         }
     }
-}
-
-/** 32 px, smaller when the title's longest word wouldn't fit on a line (as the details page). */
-private fun titleSize(title: String, maxWidth: Dp): TextUnit {
-    val longest = title.split(Regex("\\s+")).maxOfOrNull { it.length }?.coerceAtLeast(4) ?: 4
-    return min(32f, maxWidth.value / (longest * 0.72f)).sp
 }
 
 @Composable

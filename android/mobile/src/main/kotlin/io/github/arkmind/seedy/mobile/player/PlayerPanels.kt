@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.format.audioTrackLabel
 import io.github.arkmind.seedy.core.format.episodeMeta
+import io.github.arkmind.seedy.core.format.inProgress
 import io.github.arkmind.seedy.core.format.playbackSpeedLabel
 import io.github.arkmind.seedy.core.format.progress
 import io.github.arkmind.seedy.core.format.subtitleTrackLabel
@@ -115,7 +116,7 @@ fun EpisodesPanel(
                     ) {
                         Box(Modifier.width(112.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(9.dp)).alpha(if (future) 0.35f else 1f)) {
                             Artwork(viewer.images?.landscape(e, 240, viewer.episodeImages), Modifier.matchParentSize())
-                            if (e.progress > 0f && e.userData?.played != true) {
+                            if (e.inProgress) {
                                 Box(Modifier.align(Alignment.BottomCenter).padding(5.dp).fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.25f))) {
                                     Box(Modifier.fillMaxHeight().fillMaxWidth(e.progress).background(Color.White))
                                 }

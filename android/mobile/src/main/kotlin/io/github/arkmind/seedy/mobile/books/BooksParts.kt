@@ -47,30 +47,6 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 
 internal val Dim = Color(0xFF6A6A6A)
 
-/** "Recently added ……… See all": a 17 px title and a link on its baseline. */
-@Composable
-fun SectionHead(title: String, modifier: Modifier = Modifier, link: String? = null, top: Dp = 22.dp, onLink: () -> Unit = {}) {
-    Row(
-        modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = top, bottom = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        SText(title, Modifier.weight(1f).alignByBaseline(), size = 17.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
-        if (link != null) SText(link, Modifier.alignByBaseline().tap(onClick = onLink), size = 13.sp, weight = 600, color = SeedyColors.Text2, maxLines = 1)
-    }
-}
-
-/** A 36 px chip with 12 px corners (the books views). */
-@Composable
-fun BooksChip(label: String, on: Boolean, onClick: () -> Unit) {
-    Box(
-        Modifier.height(36.dp).clip(RoundedCornerShape(12.dp)).background(if (on) SeedyColors.Inverse else SeedyColors.Surface)
-            .tap(onClick = onClick).padding(horizontal = 14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        SText(label, size = 13.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.InkInverse else SeedyColors.Text, maxLines = 1)
-    }
-}
-
 /** A 4 px progress line: white on the dark track. */
 @Composable
 fun ProgressLine(fraction: Float, modifier: Modifier = Modifier, track: Color = SeedyColors.Surface2) {
@@ -234,16 +210,3 @@ fun <T> GridRows(items: List<T>, columns: Int, modifier: Modifier = Modifier, ga
     }
 }
 
-/** A message in the page: a title and a line under it, and an optional button. */
-@Composable
-fun BooksEmpty(title: String, text: String? = null, action: String? = null, onAction: () -> Unit = {}) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SText(title, size = 17.sp, weight = 800, color = SeedyColors.White, align = androidx.compose.ui.text.style.TextAlign.Center)
-        if (text != null) SText(text, size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2, align = androidx.compose.ui.text.style.TextAlign.Center)
-        if (action != null) {
-            Box(Modifier.padding(top = 8.dp).height(40.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Surface).tap(onClick = onAction).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                SText(action, size = 13.sp, weight = 700, color = SeedyColors.White)
-            }
-        }
-    }
-}

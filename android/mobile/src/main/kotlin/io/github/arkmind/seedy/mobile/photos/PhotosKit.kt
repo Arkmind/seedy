@@ -14,8 +14,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -224,21 +229,16 @@ fun DayHead(title: String, sub: String) {
     }
 }
 
-/* ───────── Chips, buttons ───────── */
+/* ───────── Paging ───────── */
 
-/** A 36 px chip with 12 px corners (the phone's views). */
+/** Asks for the next page ([onLoadMore]) once [list] is within 8 rows of its end, unless it's [done] or [loading]. */
 @Composable
-fun PhotoChip(label: String, on: Boolean, icon: IconDef? = null, count: String? = null, onClick: () -> Unit) {
-    Row(
-        Modifier.height(36.dp).clip(RoundedCornerShape(12.dp)).background(if (on) SeedyColors.Inverse else SeedyColors.Surface)
-            .tap(onClick = onClick).padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
-    ) {
-        if (icon != null) SIcon(icon, size = 15.dp, color = if (on) SeedyColors.InkInverse else SeedyColors.Text)
-        SText(label, size = 13.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.InkInverse else SeedyColors.Text, maxLines = 1)
-        if (count != null) SText(count, size = 13.sp, weight = 700, color = if (on) Color(0xFF6A6A6A) else SeedyColors.Text3, maxLines = 1)
-    }
+fun LoadMoreEffect(list: LazyListState, size: Int, done: Boolean, loading: Boolean, onLoadMore: () -> Unit) {
+    val nearEnd by remember { derivedStateOf { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index?.let { it >= list.layoutInfo.totalItemsCount - 8 } == true } }
+    LaunchedEffect(nearEnd, size) { if (nearEnd && !done && !loading) onLoadMore() }
 }
+
+/* ───────── Chips, buttons ───────── */
 
 /** The boards' 44 px buttons: light ([primary]) or dark, an icon and a label. */
 @Composable
@@ -306,18 +306,6 @@ fun FolderCard(item: BaseItemDto, info: FolderInfo?, modifier: Modifier = Modifi
 /** A thin accent ring (the viewer's current thumbnail). */
 fun Modifier.ring(on: Boolean): Modifier = if (on) this.border(2.dp, SeedyColors.White, RoundedCornerShape(8.dp)) else this
 
-@Composable
-fun EmptyNote(title: String, text: String? = null, action: String? = null, onAction: () -> Unit = {}) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SText(title, size = 17.sp, weight = 800, color = SeedyColors.White, align = androidx.compose.ui.text.style.TextAlign.Center)
-        if (text != null) SText(text, size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2, align = androidx.compose.ui.text.style.TextAlign.Center)
-        if (action != null) {
-            Box(Modifier.padding(top = 8.dp).height(40.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Surface).tap(onClick = onAction).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                SText(action, size = 13.sp, weight = 700, color = SeedyColors.White)
-            }
-        }
-    }
-}
 
 /** A placeholder block while a page loads. */
 @Composable

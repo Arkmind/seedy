@@ -6,26 +6,36 @@ import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.ui.components.Overlay
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 
 /**
@@ -33,7 +43,7 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
  * as its content up to 150 px from the top. Back or a tap on the dimmed page closes it.
  */
 @Composable
-fun BottomSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) = io.github.arkmind.seedy.ui.components.Overlay {
+fun BottomSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) = Overlay {
     BackHandler(onBack = onDismiss)
     val shown = remember { MutableTransitionState(false).apply { targetState = true } }
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -49,3 +59,35 @@ fun BottomSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Un
         }
     }
 }
+
+/**
+ * A request sheet's frame (Request seasons, the music and book requests): from 150 px down over the dimmed page, the
+ * grabber, [content] scrolling over the pinned [footer]. Back or a tap on the dimmed page closes it.
+ */
+@Composable
+fun TallSheet(onDismiss: () -> Unit, footer: @Composable ColumnScope.() -> Unit, content: @Composable ColumnScope.() -> Unit) =
+    Overlay {
+        BackHandler(onBack = onDismiss)
+        val shown = remember { MutableTransitionState(false).apply { targetState = true } }
+        Box(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().background(Color(0xA8050505)).tap(onClick = onDismiss))
+            AnimatedVisibility(shown, enter = slideInVertically { it / 3 } + fadeIn()) {
+                val shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
+                Column(Modifier.fillMaxSize().padding(top = 150.dp).shadow(40.dp, shape, ambientColor = Color.Black, spotColor = Color.Black).clip(shape).background(SeedyColors.Panel).blockTaps()) {
+                    Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp, bottom = 6.dp).size(36.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(SeedyColors.Stroke))
+                    Column(
+                        Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        content = content,
+                    )
+                    val bottom = max(26.dp, WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 12.dp)
+                    Column(
+                        Modifier.fillMaxWidth().drawBehind { drawLine(SeedyColors.Line, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }
+                            .padding(start = 16.dp, end = 16.dp, top = 13.dp, bottom = bottom),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        content = footer,
+                    )
+                }
+            }
+        }
+    }

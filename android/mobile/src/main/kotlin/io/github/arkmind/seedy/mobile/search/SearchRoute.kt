@@ -156,7 +156,7 @@ fun SearchScreen(state: SearchViewModel.State, actions: SearchActions, bottomPad
     LazyColumn(Modifier.fillMaxSize().background(SeedyColors.Bg), contentPadding = PaddingValues(bottom = bottomPadding + 24.dp)) {
         item(key = "top") {
             Column(Modifier.padding(start = 16.dp, end = 16.dp, top = topInset()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Field(state.text, actions, autofocus)
+                SearchField(state.text, actions.onText, actions.onBack, autofocus, t("Search movies, shows and people"))
                 if (results != null && !results.isEmpty) {
                     val all = results.all
                     ChipRow(Modifier.bleed(16.dp), side = 16.dp) {
@@ -179,9 +179,9 @@ fun SearchScreen(state: SearchViewModel.State, actions: SearchActions, bottomPad
     }
 }
 
-
+/** The search field of board "Android · Search": back, what's typed ([placeholder] until then) and Clear. */
 @Composable
-private fun Field(text: String, actions: SearchActions, autofocus: Boolean) {
+fun SearchField(text: String, onText: (String) -> Unit, onBack: () -> Unit, autofocus: Boolean, placeholder: String) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val focus = remember { FocusRequester() }
@@ -192,17 +192,17 @@ private fun Field(text: String, actions: SearchActions, autofocus: Boolean) {
             .then(if (focused) Modifier.border(2.dp, accent, shape) else Modifier).padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).tap(onClick = actions.onBack), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).tap(onClick = onBack), contentAlignment = Alignment.Center) {
             SIcon(WebIcons.ArrowLeft, size = 22.dp, color = SeedyColors.White)
         }
         // The caret sits after what's typed, also when the text comes from elsewhere (a recent search, Clear).
         var field by remember { mutableStateOf(TextFieldValue(text, TextRange(text.length))) }
         if (field.text != text) field = TextFieldValue(text, TextRange(text.length))
         Box(Modifier.weight(1f).padding(start = 2.dp), contentAlignment = Alignment.CenterStart) {
-            if (text.isEmpty()) SText(t("Search movies, shows and people"), size = 15.sp, weight = 600, color = SeedyColors.Text3, maxLines = 1)
+            if (text.isEmpty()) SText(placeholder, size = 15.sp, weight = 600, color = SeedyColors.Text3, maxLines = 1)
             BasicTextField(
                 value = field,
-                onValueChange = { field = it; if (it.text != text) actions.onText(it.text) },
+                onValueChange = { field = it; if (it.text != text) onText(it.text) },
                 singleLine = true,
                 interactionSource = interaction,
                 textStyle = BaseText.copy(fontSize = 15.sp, fontWeight = FontWeight(600), color = SeedyColors.White),
@@ -213,7 +213,7 @@ private fun Field(text: String, actions: SearchActions, autofocus: Boolean) {
             )
         }
         if (text.isNotEmpty()) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).tap { actions.onText("") }, contentAlignment = Alignment.Center) {
+            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).tap { onText("") }, contentAlignment = Alignment.Center) {
                 SIcon(WebIcons.Close, size = 18.dp, color = SeedyColors.TextHero, stroke = 2.4f)
             }
         }

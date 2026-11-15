@@ -212,30 +212,6 @@ fun EqBars(playing: Boolean, modifier: Modifier = Modifier, size: Dp = 16.dp, co
 /** Whether the eq bars move (off in screenshot tests). */
 val LocalMusicMotion = androidx.compose.runtime.staticCompositionLocalOf { true }
 
-/** A music page's 36 px chip (board "Android · Music": 12 px corners). */
-@Composable
-fun MusicChip(label: String, on: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
-        modifier.height(36.dp).clip(RoundedCornerShape(12.dp)).background(if (on) SeedyColors.Inverse else SeedyColors.Surface)
-            .tap(onClick = onClick).padding(horizontal = 14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        SText(label, size = 13.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.InkInverse else SeedyColors.Text, maxLines = 1)
-    }
-}
-
-/** A section's title and its link ("See all"), 22 px above and 10 under. */
-@Composable
-fun SectionHead(title: String, modifier: Modifier = Modifier, link: String? = null, onLink: () -> Unit = {}, top: Dp = 22.dp, bottom: Dp = 10.dp) {
-    Row(
-        modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = top, bottom = bottom),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        SText(title, Modifier.weight(1f).alignByBaseline(), size = 17.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
-        if (link != null) SText(link, Modifier.alignByBaseline().tap(onClick = onLink), size = 13.sp, weight = 600, color = SeedyColors.Text2, maxLines = 1)
-    }
-}
-
 /** The music pages' header: Back, a title (22 px black), then [actions] (44 px buttons). */
 @Composable
 fun MusicHeader(title: String?, onBack: () -> Unit, modifier: Modifier = Modifier, top: Dp, actions: @Composable () -> Unit = {}) {

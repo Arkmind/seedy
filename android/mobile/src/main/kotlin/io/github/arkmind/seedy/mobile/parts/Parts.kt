@@ -84,6 +84,14 @@ fun Modifier.bleed(h: Dp): Modifier = this.layout { measurable, constraints ->
     layout(placeable.width - extra, placeable.height) { placeable.place(-h.roundToPx(), 0) }
 }
 
+/** Widens the element by [start] and [end] into the page margin (each side rounded to whole pixels on its own). */
+fun Modifier.bleed(start: Dp, end: Dp): Modifier = this.layout { measurable, constraints ->
+    val s = start.roundToPx()
+    val e = end.roundToPx()
+    val p = measurable.measure(constraints.copy(minWidth = constraints.minWidth + s + e, maxWidth = constraints.maxWidth + s + e))
+    layout(p.width - s - e, p.height) { p.place(-s, 0) }
+}
+
 /** A 44 px header button with a 22 px icon (back arrow, search, cast…). */
 @Composable
 fun HeaderButton(icon: IconDef, onClick: () -> Unit, modifier: Modifier = Modifier, color: Color = SeedyColors.White, stroke: Float = icon.stroke) {

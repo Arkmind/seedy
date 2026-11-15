@@ -64,6 +64,8 @@ import io.github.arkmind.seedy.core.format.year
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
+import io.github.arkmind.seedy.mobile.browse.EmptyNote
+import io.github.arkmind.seedy.mobile.browse.SectionHead
 import io.github.arkmind.seedy.mobile.browse.topInset
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.mobile.parts.tap
@@ -103,7 +105,7 @@ fun BookScreen(state: BookViewModel.State, actions: BookActions, bottomPadding: 
         if (item == null) {
             Column {
                 Row(Modifier.padding(start = 8.dp, top = topInset())) { HeaderButton(BookIcons.Back, actions.onBack) }
-                if (state.error) BooksEmpty(t("Couldn’t load this title"), action = t("Try again"), onAction = actions.onBack)
+                if (state.error) EmptyNote(t("Couldn’t load this title"), action = t("Try again"), onAction = actions.onBack)
             }
             return@Box
         }

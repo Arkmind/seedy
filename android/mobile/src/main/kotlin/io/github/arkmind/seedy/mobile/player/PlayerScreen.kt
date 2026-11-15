@@ -54,6 +54,7 @@ import androidx.media3.common.text.Cue
 import io.github.arkmind.seedy.core.format.clock
 import io.github.arkmind.seedy.core.format.playbackSpeedLabel
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.mobile.parts.blockTaps
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.player.PlayerState
 import io.github.arkmind.seedy.core.settings.ResolvedStyle
@@ -444,7 +445,7 @@ fun Modifier.panelCard(): Modifier = this
     .clip(RoundedCornerShape(20.dp))
     .background(Color(0xF7141414))
     .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(20.dp))
-    .pointerInput(Unit) { detectTapGestures { } }
+    .blockTaps()
 
 @Composable
 fun PanelClose(onClose: () -> Unit) {

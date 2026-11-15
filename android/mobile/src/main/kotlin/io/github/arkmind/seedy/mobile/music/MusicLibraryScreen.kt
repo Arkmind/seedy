@@ -53,9 +53,11 @@ import io.github.arkmind.seedy.core.music.playsLabel
 import io.github.arkmind.seedy.core.music.songsLabel
 import io.github.arkmind.seedy.core.music.yearOf
 import io.github.arkmind.seedy.mobile.browse.ChipRow
+import io.github.arkmind.seedy.mobile.browse.Message
+import io.github.arkmind.seedy.mobile.browse.SectionHead
+import io.github.arkmind.seedy.mobile.browse.SquareChip
 import io.github.arkmind.seedy.mobile.browse.ToolButton
 import io.github.arkmind.seedy.mobile.browse.topInset
-import io.github.arkmind.seedy.mobile.library.Message
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.coverUrl
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -119,7 +121,7 @@ fun MusicLibraryScreen(
         }
         item(key = "chips") {
             ChipRow(Modifier.padding(top = 12.dp)) {
-                items(MusicTab.entries, key = { it.name }) { tab -> MusicChip(t(tab.label), tab == state.tab, { actions.onTab(tab) }) }
+                items(MusicTab.entries, key = { it.name }) { tab -> SquareChip(t(tab.label), tab == state.tab) { actions.onTab(tab) } }
             }
         }
         if (state.error) {

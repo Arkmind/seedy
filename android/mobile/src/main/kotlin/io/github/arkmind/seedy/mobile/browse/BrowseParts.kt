@@ -4,6 +4,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -36,6 +38,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
@@ -106,6 +109,37 @@ fun Chip(label: String, on: Boolean, onClick: () -> Unit, modifier: Modifier = M
         }
     }
 }
+
+/**
+ * A 36 px chip with 12 px corners (the music, books and photos views): an [icon] before the label, a [count] after it.
+ */
+@Composable
+fun SquareChip(label: String, on: Boolean, modifier: Modifier = Modifier, icon: IconDef? = null, count: String? = null, onClick: () -> Unit) {
+    Row(
+        modifier.height(36.dp).clip(RoundedCornerShape(12.dp)).background(if (on) SeedyColors.Inverse else SeedyColors.Surface)
+            .tap(onClick = onClick).padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        if (icon != null) SIcon(icon, size = 15.dp, color = if (on) SeedyColors.InkInverse else SeedyColors.Text)
+        SText(label, size = 13.sp, weight = if (on) 800 else 600, color = if (on) SeedyColors.InkInverse else SeedyColors.Text, maxLines = 1)
+        if (count != null) SText(count, size = 13.sp, weight = 700, color = if (on) Color(0xFF6A6A6A) else SeedyColors.Text3, maxLines = 1)
+    }
+}
+
+/** "Recently added ……… See all": a 17 px title and a link on its baseline, [top] above and [bottom] under. */
+@Composable
+fun SectionHead(title: String, modifier: Modifier = Modifier, link: String? = null, top: Dp = 22.dp, bottom: Dp = 10.dp, onLink: () -> Unit = {}) {
+    Row(
+        modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = top, bottom = bottom),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SText(title, Modifier.weight(1f).alignByBaseline(), size = 17.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
+        if (link != null) SText(link, Modifier.alignByBaseline().tap(onClick = onLink), size = 13.sp, weight = 600, color = SeedyColors.Text2, maxLines = 1)
+    }
+}
+
+/** A grid item across the whole line. */
+fun LazyGridScope.fullLine(key: Any, content: @Composable () -> Unit) = item(key = key, span = { GridItemSpan(maxLineSpan) }) { content() }
 
 /** A row of chips that scrolls sideways, 20 px in from the edges. */
 @Composable
@@ -291,3 +325,31 @@ fun Portrait(item: BaseItemDto, size: Dp, modifier: Modifier = Modifier, letters
     }
 }
 
+/** A message filling the page (nothing here, couldn't load): a title, a line and an optional dark button. */
+@Composable
+fun EmptyNote(title: String, text: String? = null, action: String? = null, onAction: () -> Unit = {}) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SText(title, size = 17.sp, weight = 800, color = SeedyColors.White, align = TextAlign.Center)
+        if (text != null) SText(text, size = 13.sp, lineHeight = 1.45f, color = SeedyColors.Text2, align = TextAlign.Center)
+        if (action != null) {
+            Box(Modifier.padding(top = 8.dp).height(40.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Surface).tap(onClick = onAction).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                SText(action, size = 13.sp, weight = 700, color = SeedyColors.White)
+            }
+        }
+    }
+}
+
+/** A message in a list: a title, a line and an optional light button. */
+@Composable
+fun Message(title: String, text: String, action: String? = null, onAction: () -> Unit = {}) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SText(title, size = 16.sp, weight = 800, color = SeedyColors.White, align = TextAlign.Center)
+        SText(text, size = 13.sp, color = SeedyColors.Text2, align = TextAlign.Center)
+        if (action != null) {
+            SText(
+                action, Modifier.padding(top = 8.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Inverse).tap(onClick = onAction).padding(horizontal = 16.dp, vertical = 10.dp),
+                size = 13.sp, weight = 800, color = SeedyColors.InkInverse,
+            )
+        }
+    }
+}

@@ -17,8 +17,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,6 +30,8 @@ import io.github.arkmind.seedy.core.photos.Memory
 import io.github.arkmind.seedy.core.photos.PhotosTab
 import io.github.arkmind.seedy.core.photos.PhotosViewModel
 import io.github.arkmind.seedy.core.photos.countsLine
+import io.github.arkmind.seedy.mobile.browse.EmptyNote
+import io.github.arkmind.seedy.mobile.browse.SquareChip
 import io.github.arkmind.seedy.mobile.browse.topInset
 import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.ui.theme.SText
@@ -67,13 +67,12 @@ fun PhotosScreen(state: PhotosViewModel.State, actions: PhotosActions, bottomPad
         val months = remember(state.items, state.cameras, state.camera, state.tab) { state.months }
         val lines = remember(months, width, rowPx) { timelineLines(months, width, rowPx, gapPx) }
         val list = rememberLazyListState()
-        val nearEnd by remember { derivedStateOf { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index?.let { it >= list.layoutInfo.totalItemsCount - 8 } == true } }
-        LaunchedEffect(nearEnd, state.items.size) { if (nearEnd && !state.done && !state.loading) actions.onLoadMore() }
+        LoadMoreEffect(list, state.items.size, state.done, state.loading, actions.onLoadMore)
         LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(bottom = bottomPadding + 24.dp)) {
             item(key = "head") { Header(state, actions) }
             item(key = "chips") {
                 LazyRow(Modifier.fillMaxWidth().padding(top = 12.dp), contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(PhotosTab.entries, key = { it.name }) { tb -> PhotoChip(t(tb.label), tb == state.tab) { actions.onTab(tb) } }
+                    items(PhotosTab.entries, key = { it.name }) { tb -> SquareChip(t(tb.label), tb == state.tab) { actions.onTab(tb) } }
                 }
             }
             when (state.tab) {
@@ -89,7 +88,7 @@ fun PhotosScreen(state: PhotosViewModel.State, actions: PhotosActions, bottomPad
                             item(key = "cams") {
                                 LazyRow(Modifier.fillMaxWidth().padding(top = 14.dp), contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     items(cams, key = { it.first }) { (name, items) ->
-                                        PhotoChip(name.ifEmpty { noCamera() }, name == current, icon = PhotoIcons.Camera, count = items.size.toString()) { actions.onCamera(name) }
+                                        SquareChip(name.ifEmpty { noCamera() }, name == current, icon = PhotoIcons.Camera, count = items.size.toString()) { actions.onCamera(name) }
                                     }
                                 }
                             }

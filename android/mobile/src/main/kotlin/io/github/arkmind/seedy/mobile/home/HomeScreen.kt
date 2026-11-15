@@ -5,6 +5,9 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.ui.graphics.graphicsLayer
+import io.github.arkmind.seedy.core.format.inProgress
+import io.github.arkmind.seedy.mobile.browse.topInset
+import io.github.arkmind.seedy.mobile.parts.fitTitleSize
 import io.github.arkmind.seedy.ui.components.Medu
 import io.github.arkmind.seedy.ui.components.MeduMood
 import androidx.compose.animation.animateColorAsState
@@ -17,8 +20,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,7 +27,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -59,7 +59,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
@@ -95,7 +94,6 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.SeedyMotion
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
-import kotlin.math.min
 
 /** What the header's account menu offers. */
 data class AccountActions(val onSwitchProfile: () -> Unit, val onSignOut: () -> Unit, val onSettings: () -> Unit = {})
@@ -208,7 +206,7 @@ private fun continueEntries(item: BaseItemDto, finish: (Boolean) -> Unit): List<
 @Composable
 private fun Header(account: AccountActions, onSearch: () -> Unit, stuck: Boolean) {
     val viewer = LocalViewer.current
-    val top = max(36.dp, WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 12.dp)
+    val top = topInset()
     // The web blurs what's under its 85 % scrim; without a blur, anything see-through shows the artwork, so it's solid.
     val scrim by animateColorAsState(if (stuck) SeedyColors.Bg else Color.Transparent, tween(SeedyMotion.Fast), label = "header")
     val line by animateColorAsState(if (stuck) SeedyColors.Hairline else Color.Transparent, tween(SeedyMotion.Fast), label = "header-line")
@@ -306,7 +304,7 @@ private fun HeroPage(entry: FeaturedEntry, onOpen: (BaseItemDto) -> Unit, onPlay
             }
             SText(
                 item.name.orEmpty(),
-                size = heroTitleSize(item.name.orEmpty(), maxWidth = LocalConfiguration.current.screenWidthDp.dp - 40.dp),
+                size = fitTitleSize(item.name.orEmpty(), maxWidth = LocalConfiguration.current.screenWidthDp.dp - 40.dp, max = 40f),
                 weight = 900, tracking = -0.02f, lineHeight = 0.92f, color = SeedyColors.White, uppercase = true, maxLines = 3,
             )
             SText(item.heroMeta, size = 13.sp, color = SeedyColors.TextHero, maxLines = 1)
@@ -333,12 +331,6 @@ private fun HeroPage(entry: FeaturedEntry, onOpen: (BaseItemDto) -> Unit, onPlay
 
 /** The hero's info circle is a little smaller than the web's (r 8.5). */
 private val HeroInfo = IconDef(2.2f, "M3.5 12a8.5 8.5 0 1 0 17 0a8.5 8.5 0 1 0 -17 0Z", "M12 11v5", "M12 8h.01")
-
-/** 40 px, or smaller so the title's longest word fits on one line (Noto Sans Black capitals run about 0.72 em). */
-private fun heroTitleSize(title: String, maxWidth: Dp): TextUnit {
-    val longest = title.split(Regex("\\s+")).maxOfOrNull { it.length }?.coerceAtLeast(4) ?: 4
-    return min(40f, maxWidth.value / (longest * 0.72f)).sp
-}
 
 @Composable
 private fun HomeRowView(
@@ -404,7 +396,7 @@ private fun LandscapeCard(item: BaseItemDto, kind: String, onOpen: (BaseItemDto)
                     size = 11.sp, weight = 700, color = SeedyColors.Text, maxLines = 1,
                 )
             }
-            if (progress > 0f && item.userData?.played != true) {
+            if (item.inProgress) {
                 Box(Modifier.align(Alignment.BottomCenter).padding(8.dp).fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.24f))) {
                     Box(Modifier.fillMaxHeight().fillMaxWidth(progress).background(SeedyColors.White))
                 }
