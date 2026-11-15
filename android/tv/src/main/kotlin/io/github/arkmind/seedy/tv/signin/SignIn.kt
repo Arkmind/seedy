@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import io.github.arkmind.seedy.core.data.host
+import io.github.arkmind.seedy.tv.parts.FocusWhen
 import io.github.arkmind.seedy.tv.parts.TvBigButton
 import io.github.arkmind.seedy.ui.components.DeepScenes
 import io.github.arkmind.seedy.ui.components.DeepSea
@@ -177,7 +178,7 @@ fun TvProfilesScreen(
             }
         }
     }
-    LaunchedEffect(state.profiles.isNotEmpty()) { if (state.profiles.isNotEmpty()) first.focusSoon() }
+    FocusWhen(state.profiles.isNotEmpty(), first)
 }
 
 @Composable

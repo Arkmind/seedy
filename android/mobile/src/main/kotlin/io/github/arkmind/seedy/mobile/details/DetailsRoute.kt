@@ -1,8 +1,5 @@
 package io.github.arkmind.seedy.mobile.details
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -38,6 +35,7 @@ import io.github.arkmind.seedy.mobile.nav.MobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.seasons.RequestSeasonsSheet
+import io.github.arkmind.seedy.ui.components.openUrl
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.currentSession
@@ -76,10 +74,7 @@ fun DetailsRoute(id: UUID) {
                     vm.trailer { trailer ->
                         when (trailer) {
                             is DetailsViewModel.Trailer.Local -> nav.play(trailer.item)
-                            is DetailsViewModel.Trailer.Url -> try {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(trailer.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                            } catch (_: ActivityNotFoundException) {
-                            }
+                            is DetailsViewModel.Trailer.Url -> context.openUrl(trailer.url)
                         }
                     }
                 },

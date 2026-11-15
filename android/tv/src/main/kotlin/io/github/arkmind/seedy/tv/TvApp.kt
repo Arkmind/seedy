@@ -2,16 +2,14 @@ package io.github.arkmind.seedy.tv
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,8 +18,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -51,13 +47,12 @@ import io.github.arkmind.seedy.tv.requests.openSeerr
 import io.github.arkmind.seedy.tv.requests.TvSeerrTitleRoute
 import io.github.arkmind.seedy.tv.search.TvSearchPlace
 import io.github.arkmind.seedy.tv.settings.TvSettingsRoute
+import io.github.arkmind.seedy.tv.shell.tvPlaces
 import io.github.arkmind.seedy.ui.theme.LocalCore
 import io.github.arkmind.seedy.ui.theme.LocalSession
+import io.github.arkmind.seedy.ui.theme.SessionTheme
 import org.jellyfin.sdk.model.api.CollectionType
 import io.github.arkmind.seedy.tv.home.TvHomeScreen
-import io.github.arkmind.seedy.tv.parts.TvButton
-import io.github.arkmind.seedy.tv.parts.bp
-import io.github.arkmind.seedy.tv.parts.focusSoon
 import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.shell.RailInset
 import io.github.arkmind.seedy.tv.shell.TvPlace
@@ -70,46 +65,25 @@ import io.github.arkmind.seedy.tv.signin.TvProfilesScreen
 import io.github.arkmind.seedy.tv.signin.TvUnreachableScreen
 import io.github.arkmind.seedy.ui.theme.rememberRetryClock
 import io.github.arkmind.seedy.ui.theme.LocalViewer
-import io.github.arkmind.seedy.core.seedy.logoUrl
-import io.github.arkmind.seedy.ui.components.LocalBrandLogo
-import io.github.arkmind.seedy.ui.theme.rememberAccent
 import io.github.arkmind.seedy.ui.theme.rememberViewer
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import io.github.arkmind.seedy.ui.theme.SeedyTheme
-import io.github.arkmind.seedy.ui.theme.parseHexColor
 import kotlinx.coroutines.launch
 
 /** The Android TV app: the same journey as the phone (server, profile, home), drawn for the remote. */
 @Composable
 fun TvApp(core: SeedyCore, appVersion: String = "") {
     val state by core.sessions.state.collectAsStateWithLifecycle()
-    val signedIn = (state as? SessionState.SignedIn)?.session
-    val accent = when (val s = state) {
-        is SessionState.SignedIn -> rememberAccent(signedIn, s.session.server.seedy?.accent)
-        is SessionState.SignedOut -> parseHexColor(s.server.seedy?.accent)
-        else -> null
-    }
-    val me = signedIn?.seedyFlow?.collectAsStateWithLifecycle()?.value
-    val logo = when (val s = state) {
-        is SessionState.SignedIn -> (me?.branding ?: s.session.server.seedy)?.logoUrl(s.session.server.address)
-        is SessionState.SignedOut -> s.server.seedy?.logoUrl(s.server.address)
-        else -> null
-    }
     // The server finder's "Use Quick Connect": the server's sign-in opens on Quick Connect's code.
     var quickConnectNext by rememberSaveable { mutableStateOf(false) }
     val finderQuickConnect = { quickConnectNext = true }
-    SeedyTheme(accent = accent ?: SeedyColors.Accent) {
-        CompositionLocalProvider(LocalBrandLogo provides logo) {
-            Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
-                when (val s = state) {
-                    SessionState.Starting -> Unit
-                    SessionState.NoServer -> AddServerEntry(core, finderQuickConnect)
-                    is SessionState.SignedOut -> SignInFlow(core, s.server, quickConnectNext, finderQuickConnect) { quickConnectNext = false }
-                    is SessionState.Unreachable -> Unreachable(core, s.server, finderQuickConnect)
-                    is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
-                }
-            }
+    SessionTheme(state) {
+        when (val s = state) {
+            SessionState.Starting -> Unit
+            SessionState.NoServer -> AddServerEntry(core, finderQuickConnect)
+            is SessionState.SignedOut -> SignInFlow(core, s.server, quickConnectNext, finderQuickConnect) { quickConnectNext = false }
+            is SessionState.Unreachable -> Unreachable(core, s.server, finderQuickConnect)
+            is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
         }
     }
 }
@@ -192,7 +166,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
     val scope = rememberCoroutineScope()
     val images = remember(session) { Images(session.api) }
     val viewer = rememberViewer(session, images)
-    val places = if (viewer.requests) TvPlace.entries else TvPlace.entries - TvPlace.Requests
+    val places = tvPlaces(viewer.requests)
     var place by rememberSaveable { mutableStateOf(TvPlace.Home) }
     val stack = remember(session) { mutableStateListOf<Any>(PlacesKey) }
     val nav = remember(stack) { TvNav(stack) }
@@ -210,21 +184,21 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                     val overlay = remember { OverlayHost() }
                     Box(Modifier.fillMaxSize()) {
                         CompositionLocalProvider(LocalOverlayHost provides overlay) {
-                        when (place) {
-                            TvPlace.Home -> {
-                                val state by home.state.collectAsStateWithLifecycle()
-                                TvHomeScreen(
-                                    state, onOpen = nav::open, onPlay = nav::play, onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
-                                    onFinish = home::finishWatching,
-                                )
+                            when (place) {
+                                TvPlace.Home -> {
+                                    val state by home.state.collectAsStateWithLifecycle()
+                                    TvHomeScreen(
+                                        state, onOpen = nav::open, onPlay = nav::play, onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
+                                        onFinish = home::finishWatching,
+                                    )
+                                }
+                                TvPlace.Search -> TvSearchPlace()
+                                TvPlace.Movies -> LibraryPlace(home, CollectionType.MOVIES)
+                                TvPlace.Shows -> LibraryPlace(home, CollectionType.TVSHOWS)
+                                TvPlace.LiveTv -> TvLiveTvPlace()
+                                TvPlace.Favorites -> TvFavoritesPlace()
+                                TvPlace.Requests -> TvRequestsPlace(onSearch = { place = TvPlace.Search })
                             }
-                            TvPlace.Search -> TvSearchPlace()
-                            TvPlace.Movies -> LibraryPlace(home, CollectionType.MOVIES)
-                            TvPlace.Shows -> LibraryPlace(home, CollectionType.TVSHOWS)
-                            TvPlace.LiveTv -> TvLiveTvPlace()
-                            TvPlace.Favorites -> TvFavoritesPlace()
-                            TvPlace.Requests -> TvRequestsPlace(onSearch = { place = TvPlace.Search })
-                        }
                         }
                         TvRail(
                             places = places,
@@ -252,7 +226,7 @@ private fun LibraryPlace(home: HomeViewModel, type: CollectionType) {
     val state by home.state.collectAsStateWithLifecycle()
     val library = state.libraries.firstOrNull { it.collectionType == type }
     if (library != null) {
-        androidx.compose.runtime.key(library.id) { TvLibraryRoute(library.id) }
+        key(library.id) { TvLibraryRoute(library.id) }
     } else {
         Box(Modifier.fillMaxSize().padding(start = RailInset).background(SeedyColors.Bg), contentAlignment = Alignment.Center) {
             SText(if (state.loading) "" else t("No library of this kind on this server"), size = 24.bsp, color = SeedyColors.Text2)

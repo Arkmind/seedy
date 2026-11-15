@@ -63,6 +63,7 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
+import io.github.arkmind.seedy.ui.theme.seasonPillColours
 
 /**
  * Board "Android · Request seasons": the sheet that asks Seerr for a series' seasons. Any page can open it (a series'
@@ -253,12 +254,7 @@ private fun SeasonRow(row: RequestSeasonsViewModel.Row, on: Boolean, onClick: ()
 
 @Composable
 private fun StatusPill(row: RequestSeasonsViewModel.Row) {
-    val (bg, ink, dot) = when (row.kind) {
-        RequestSeasonsViewModel.Kind.Server -> Triple(SeedyColors.Ok.copy(alpha = 0.1f), SeedyColors.Ok, SeedyColors.Ok)
-        RequestSeasonsViewModel.Kind.Pending -> Triple(SeedyColors.Pending.copy(alpha = 0.1f), SeedyColors.Pending, SeedyColors.Pending)
-        RequestSeasonsViewModel.Kind.Blocked -> Triple(Color(0xFF262626), SeedyColors.TextHero, SeedyColors.Danger)
-        else -> Triple(Color(0xFF262626), SeedyColors.TextHero, Color(0xFF6A6A6A))
-    }
+    val (bg, ink, dot) = seasonPillColours(row.kind)
     Row(
         Modifier.clip(CircleShape).background(bg).padding(horizontal = 9.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),

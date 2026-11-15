@@ -1,8 +1,5 @@
 package io.github.arkmind.seedy.tv.details
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -21,6 +18,7 @@ import io.github.arkmind.seedy.core.feature.DetailsViewModel
 import io.github.arkmind.seedy.core.seedy.canRequest
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
 import io.github.arkmind.seedy.tv.seasons.TvRequestSeasonsDialog
+import io.github.arkmind.seedy.ui.components.openUrl
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.currentSession
 import java.util.UUID
@@ -50,10 +48,7 @@ fun TvDetailsRoute(id: UUID) {
                         when (trailer) {
                             is DetailsViewModel.Trailer.Local -> nav.play(trailer.item)
                             // YouTube's TV app takes the link (Android TV has it).
-                            is DetailsViewModel.Trailer.Url -> try {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(trailer.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                            } catch (_: ActivityNotFoundException) {
-                            }
+                            is DetailsViewModel.Trailer.Url -> context.openUrl(trailer.url)
                         }
                     }
                 },

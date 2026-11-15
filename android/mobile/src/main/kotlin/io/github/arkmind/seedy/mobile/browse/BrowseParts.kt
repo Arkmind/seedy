@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -67,8 +66,7 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.NotoLineRatio
 import io.github.arkmind.seedy.ui.theme.SText
-import androidx.compose.ui.layout.layout
-import kotlin.math.roundToInt
+import io.github.arkmind.seedy.ui.theme.cssLineBox
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import org.jellyfin.sdk.model.api.BaseItemDto
 
@@ -245,11 +243,7 @@ fun MarkedText(text: AnnotatedString, size: TextUnit, weight: Int, color: Color,
     val trim = lineHeight?.takeIf { it < NotoLineRatio }
     BasicText(
         if (uppercase) AnnotatedString(text.text.uppercase(), text.spanStyles) else text,
-        if (trim != null) modifier.layout { measurable, constraints ->
-            val p = measurable.measure(constraints)
-            val cut = ((NotoLineRatio - trim) * size.toPx()).coerceAtLeast(0f)
-            layout(p.width, (p.height - cut).roundToInt()) { p.place(0, -(cut / 2).roundToInt()) }
-        } else modifier,
+        if (trim != null) modifier.cssLineBox(size, trim) else modifier,
         style = BaseText.copy(fontSize = size, fontWeight = FontWeight(weight), color = color),
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,

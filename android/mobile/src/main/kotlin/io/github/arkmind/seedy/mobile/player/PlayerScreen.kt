@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.BasicText
+import androidx.media3.common.text.Cue
 import io.github.arkmind.seedy.core.format.clock
 import io.github.arkmind.seedy.core.format.playbackSpeedLabel
 import io.github.arkmind.seedy.core.i18n.t
@@ -57,6 +59,7 @@ import io.github.arkmind.seedy.player.PlayerState
 import io.github.arkmind.seedy.core.settings.ResolvedStyle
 import io.github.arkmind.seedy.ui.components.SubtitleLine
 import io.github.arkmind.seedy.ui.components.SeekGlyph
+import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.IconPart
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -86,9 +89,6 @@ enum class PlayerPanel { Episodes, Tracks, Speed, Style }
 
 /** The board's bottom actions. */
 private object PlayerIcons {
-    val Episodes = IconDef(2f, "M5 8h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z", "M6 5h12", "M9 2h6")
-    val Tracks = IconDef(2f, "M6 5h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z", "M7 11h3M13 11h4", "M7 15h6M15.5 15H17")
-    val Speed = IconDef(2f, "M12 21a9 9 0 1 1 9-9", "M12 12l4-4")
     val Next = IconDef(2f, listOf(IconPart("M6 5v14l10-7z", filled = true), IconPart("M18.5 5v14")))
     val Pip = IconDef(2f, "M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z", "M13 11h4a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1Z")
 }
@@ -236,9 +236,9 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
             if (state.live) LiveProgress(state) else Scrubber(state, actions.onSeekTo)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 val episode = item?.type == BaseItemKind.EPISODE
-                if (episode) Action(PlayerIcons.Episodes, t("Episodes")) { actions.onPanel(PlayerPanel.Episodes) }
-                Action(PlayerIcons.Tracks, t("Subtitles and audio"), dot = state.subtitleIndex >= 0) { actions.onPanel(PlayerPanel.Tracks) }
-                if (!state.live) Action(PlayerIcons.Speed, t("Speed {speed}", "speed" to playbackSpeedLabel(state.speed))) { actions.onPanel(PlayerPanel.Speed) }
+                if (episode) Action(AppIcons.PlayerEpisodes, t("Episodes")) { actions.onPanel(PlayerPanel.Episodes) }
+                Action(AppIcons.Tracks, t("Subtitles and audio"), dot = state.subtitleIndex >= 0) { actions.onPanel(PlayerPanel.Tracks) }
+                if (!state.live) Action(AppIcons.Speed, t("Speed {speed}", "speed" to playbackSpeedLabel(state.speed))) { actions.onPanel(PlayerPanel.Speed) }
                 if (state.next != null) Action(PlayerIcons.Next, t("Next episode"), onClick = actions.onNext)
             }
         }
@@ -378,20 +378,26 @@ private fun TimeText(text: String) {
     BasicText(text, style = BaseText.copy(fontSize = 12.sp, fontWeight = FontWeight(600), color = SeedyColors.Text, fontFeatureSettings = "tnum"))
 }
 
+/** The file's picture subtitles (PGS, DVD) where it places them, else [bottomGap] above the bottom edge. */
+@Composable
+private fun BoxWithConstraintsScope.PictureCues(cues: List<Cue>, bottomGap: Dp) {
+    val w = maxWidth
+    val h = maxHeight
+    for (cue in cues) {
+        val bitmap = cue.bitmap ?: continue
+        val width = if (cue.size > 0f) w * cue.size else w * 0.5f
+        val height = if (cue.bitmapHeight > 0f) h * cue.bitmapHeight else width * (bitmap.height.toFloat() / bitmap.width)
+        val x = if (cue.position >= 0f) w * cue.position - width * (if (cue.positionAnchor == 1) 0.5f else if (cue.positionAnchor == 2) 1f else 0f) else (w - width) / 2
+        val y = if (cue.line >= 0f && cue.lineType == 0) h * cue.line else h - height - bottomGap
+        Image(bitmap.asImageBitmap(), null, Modifier.offset(x, y).size(width, height))
+    }
+}
+
 /** Text subtitles (Seedy draws them, so their timing can move) and picture subtitles from the file. */
 @Composable
 private fun Subtitles(state: PlayerState, lifted: Boolean, subtitleSize: TextUnit) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val w = maxWidth
-        val h = maxHeight
-        for (cue in state.pictureCues) {
-            val bitmap = cue.bitmap ?: continue
-            val width = if (cue.size > 0f) w * cue.size else w * 0.5f
-            val height = if (cue.bitmapHeight > 0f) h * cue.bitmapHeight else width * (bitmap.height.toFloat() / bitmap.width)
-            val x = if (cue.position >= 0f) w * cue.position - width * (if (cue.positionAnchor == 1) 0.5f else if (cue.positionAnchor == 2) 1f else 0f) else (w - width) / 2
-            val y = if (cue.line >= 0f && cue.lineType == 0) h * cue.line else h - height - 24.dp
-            Image(bitmap.asImageBitmap(), null, Modifier.offset(x, y).size(width, height))
-        }
+        PictureCues(state.pictureCues, 24.dp)
         if (state.lines.isNotEmpty()) {
             BasicText(
                 state.lines.joinToString("\n"),
@@ -409,16 +415,7 @@ private fun Subtitles(state: PlayerState, lifted: Boolean, subtitleSize: TextUni
 @Composable
 private fun LookSubtitles(state: PlayerState, look: ResolvedStyle, lifted: Boolean) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val w = maxWidth
-        val h = maxHeight
-        for (cue in state.pictureCues) {
-            val bitmap = cue.bitmap ?: continue
-            val width = if (cue.size > 0f) w * cue.size else w * 0.5f
-            val height = if (cue.bitmapHeight > 0f) h * cue.bitmapHeight else width * (bitmap.height.toFloat() / bitmap.width)
-            val x = if (cue.position >= 0f) w * cue.position - width * (if (cue.positionAnchor == 1) 0.5f else if (cue.positionAnchor == 2) 1f else 0f) else (w - width) / 2
-            val y = if (cue.line >= 0f && cue.lineType == 0) h * cue.line else h - height - 24.dp
-            Image(bitmap.asImageBitmap(), null, Modifier.offset(x, y).size(width, height))
-        }
+        PictureCues(state.pictureCues, 24.dp)
         if (state.lines.isNotEmpty()) {
             val size = when (look.size) {
                 "small" -> 15.sp

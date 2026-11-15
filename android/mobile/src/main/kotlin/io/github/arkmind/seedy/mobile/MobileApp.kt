@@ -1,7 +1,6 @@
 package io.github.arkmind.seedy.mobile
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,9 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -77,14 +74,11 @@ import io.github.arkmind.seedy.ui.theme.LocalCore
 import io.github.arkmind.seedy.ui.theme.LocalSession
 import io.github.arkmind.seedy.mobile.home.AccountActions
 import io.github.arkmind.seedy.mobile.home.HomeScreen
-import io.github.arkmind.seedy.mobile.parts.PrimaryButton
 import io.github.arkmind.seedy.mobile.parts.Tab
 import io.github.arkmind.seedy.mobile.parts.TabBar
 import io.github.arkmind.seedy.ui.components.LocalOverlayHost
 import io.github.arkmind.seedy.ui.components.OverlayHost
-import io.github.arkmind.seedy.mobile.parts.pagePadding
 import io.github.arkmind.seedy.mobile.parts.tabBarHeight
-import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.signin.AddServerScreen
 import io.github.arkmind.seedy.mobile.signin.ForgotSheet
 import io.github.arkmind.seedy.mobile.signin.PasswordScreen
@@ -94,52 +88,31 @@ import io.github.arkmind.seedy.mobile.signin.SignInFor
 import io.github.arkmind.seedy.mobile.signin.UnreachableScreen
 import io.github.arkmind.seedy.mobile.notify.RequestLink
 import io.github.arkmind.seedy.mobile.notify.RequestLinks
+import io.github.arkmind.seedy.ui.theme.SessionTheme
 import io.github.arkmind.seedy.ui.theme.rememberRetryClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberUpdatedState
 import kotlinx.coroutines.flow.filterNotNull
 import io.github.arkmind.seedy.ui.theme.LocalViewer
-import io.github.arkmind.seedy.core.seedy.logoUrl
-import io.github.arkmind.seedy.ui.components.LocalBrandLogo
-import io.github.arkmind.seedy.ui.theme.rememberAccent
 import io.github.arkmind.seedy.ui.theme.rememberViewer
-import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import io.github.arkmind.seedy.ui.theme.SeedyTheme
-import io.github.arkmind.seedy.ui.theme.parseHexColor
 import kotlinx.coroutines.launch
 
 /** The phone app: follows the session from "Add your server" through sign-in to the signed-in tabs. */
 @Composable
 fun MobileApp(core: SeedyCore, appVersion: String = "") {
     val state by core.sessions.state.collectAsStateWithLifecycle()
-    val signedIn = (state as? SessionState.SignedIn)?.session
-    val accent = when (val s = state) {
-        is SessionState.SignedIn -> rememberAccent(signedIn, s.session.server.seedy?.accent)
-        is SessionState.SignedOut -> parseHexColor(s.server.seedy?.accent)
-        else -> null
-    }
-    val me = signedIn?.seedyFlow?.collectAsStateWithLifecycle()?.value
-    val logo = when (val s = state) {
-        is SessionState.SignedIn -> (me?.branding ?: s.session.server.seedy)?.logoUrl(s.session.server.address)
-        is SessionState.SignedOut -> s.server.seedy?.logoUrl(s.server.address)
-        else -> null
-    }
     // The server finder's "Sign in with Quick Connect": the server's sign-in opens on Quick Connect's code.
     var quickConnectNext by rememberSaveable { mutableStateOf(false) }
     val finderQuickConnect = { quickConnectNext = true }
-    SeedyTheme(accent = accent ?: SeedyColors.Accent) {
-        CompositionLocalProvider(LocalBrandLogo provides logo) {
-            Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
-                when (val s = state) {
-                    SessionState.Starting -> Unit
-                    SessionState.NoServer -> AddServerEntry(core, onBack = null, onQuickConnect = finderQuickConnect)
-                    is SessionState.SignedOut -> SignInFlow(core, s.server, quickConnectNext, finderQuickConnect) { quickConnectNext = false }
-                    is SessionState.Unreachable -> Unreachable(core, s.server, finderQuickConnect)
-                    is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
-                }
-            }
+    SessionTheme(state) {
+        when (val s = state) {
+            SessionState.Starting -> Unit
+            SessionState.NoServer -> AddServerEntry(core, onBack = null, onQuickConnect = finderQuickConnect)
+            is SessionState.SignedOut -> SignInFlow(core, s.server, quickConnectNext, finderQuickConnect) { quickConnectNext = false }
+            is SessionState.Unreachable -> Unreachable(core, s.server, finderQuickConnect)
+            is SessionState.SignedIn -> SignedIn(core, s.session, appVersion)
         }
     }
 }

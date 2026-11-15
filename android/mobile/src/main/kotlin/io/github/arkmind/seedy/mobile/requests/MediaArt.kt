@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
@@ -37,12 +36,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import kotlin.math.roundToInt
+import io.github.arkmind.seedy.ui.theme.cssLineBox
 import io.github.arkmind.seedy.core.mediarequests.MediaFormat
 import io.github.arkmind.seedy.ui.components.CoverPalettes
 import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
-import io.github.arkmind.seedy.ui.theme.NotoLineRatio
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.parseHexColor
@@ -77,11 +75,7 @@ private val BookPaths = listOf(
 private fun CssText(text: String, modifier: Modifier, size: TextUnit, weight: Int, color: Color, lineHeight: Float, tracking: Float = 0f, maxLines: Int = 3) {
     BasicText(
         text.uppercase(),
-        modifier.layout { measurable, constraints ->
-            val placeable = measurable.measure(constraints)
-            val cut = ((NotoLineRatio - lineHeight) * size.toPx()).coerceAtLeast(0f)
-            layout(placeable.width, (placeable.height - cut).roundToInt().coerceAtLeast(0)) { placeable.place(0, -(cut / 2).roundToInt()) }
-        },
+        modifier.cssLineBox(size, lineHeight),
         style = BaseText.copy(
             fontSize = size, fontWeight = FontWeight(weight), color = color, lineHeight = lineHeight.em,
             letterSpacing = if (tracking == 0f) TextUnit.Unspecified else tracking.em,

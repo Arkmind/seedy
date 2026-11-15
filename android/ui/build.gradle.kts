@@ -22,6 +22,7 @@ dependencies {
     api(libs.compose.foundation)
     api(libs.compose.ui.tooling.preview)
     api(libs.coil.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.coil.network.okhttp)
     debugImplementation(libs.compose.ui.tooling)
 }

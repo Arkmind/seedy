@@ -1,6 +1,7 @@
 package io.github.arkmind.seedy.player
 
 import io.github.arkmind.seedy.core.data.ioOrNull
+import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession
 import io.github.arkmind.seedy.core.session.queryString
 import io.github.arkmind.seedy.core.session.serverBase
@@ -28,6 +29,18 @@ import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
 
 /** Why playback couldn't start, with Jellyfin's codes ("NotAllowed", "NoCompatibleStream", "RateLimitExceeded"). */
 class PlaybackProblem(val code: String) : Exception(code)
+
+/** A problem's title and explanation for the player's error page: Jellyfin's codes and the player's own. */
+fun problemText(code: String): Pair<String, String> = when (code) {
+    "NotAllowed" -> t("Not allowed on this profile") to t("Your profile isn't allowed to play this title. Ask the server's admin if that's unexpected.")
+    "NoCompatibleStream" -> t("Can't play this here") to t("This device can't play the file and the server couldn't convert it.")
+    "RateLimitExceeded" -> t("Server is busy") to t("Too many streams are playing on this server right now. Try again in a moment.")
+    "network" -> t("Can't reach the server") to t("The stream stopped loading. Check your connection and try again.")
+    "media" -> t("Playback stopped") to t("The video couldn't be decoded on this device.")
+    "serverError" -> t("Couldn't start playback") to t("The server couldn't prepare this title for playback. Try again in a moment.")
+    "liveUnavailable" -> t("This channel isn't available right now") to t("The server couldn't open the channel's stream. Try another channel or come back later.")
+    else -> t("Couldn't start playback") to code
+}
 
 /** What to ask the server for. Stream indexes are Jellyfin's; subtitle -1 is off. */
 data class StreamOptions(

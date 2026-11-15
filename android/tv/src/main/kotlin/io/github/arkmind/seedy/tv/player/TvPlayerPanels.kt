@@ -69,6 +69,7 @@ import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusRing
 import io.github.arkmind.seedy.tv.parts.focusSoon
 import io.github.arkmind.seedy.ui.components.Artwork
+import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
@@ -359,14 +360,6 @@ enum class PictureSize(val label: String, val scale: ContentScale) {
     Stretch("Stretch", ContentScale.FillBounds),
 }
 
-private object SettingsIcons {
-    val Quality = IconDef(2f, "M3 6h18v12H3z", "M7 10v4M11 10v4M15 10h2v4h-2")
-    val Speed = IconDef(2f, "M12 21a9 9 0 1 1 9-9", "M12 12l4-4")
-    val Picture = IconDef(2f, "M4 9V4h5M20 9V4h-5", "M4 15v5h5M20 15v5h-5")
-    val Chapters = IconDef(2f, "M9 6h11M9 12h11M9 18h11", "M4 6h.01M4 12h.01M4 18h.01")
-    val Info = IconDef(2f, "M12 3a9 9 0 1 1 0 18a9 9 0 1 1 0-18z", "M12 11v5M12 8h.01")
-}
-
 /** Board "Android TV · Player settings": quality, speed, picture size, chapters and playback info, each with its page. */
 @Composable
 fun TvSettingsPanel(
@@ -395,13 +388,13 @@ fun TvSettingsPanel(
                 }
                 val resolution = state.streamLabel.split(" · ").getOrNull(1).orEmpty()
                 val quality = if (state.quality == Quality.Auto) listOf(t("Original"), resolution.substringBefore(' ')).filter { it.isNotBlank() }.joinToString(" · ") else t(state.quality.label)
-                SettingRow(SettingsIcons.Quality, t("Quality"), method, quality, Modifier.focusRequester(first)) { onPage(SettingsPage.Quality) }
-                SettingRow(SettingsIcons.Speed, t("Speed"), t("Voices keep their normal pitch"), playbackSpeedLabel(state.speed)) { onPage(SettingsPage.Speed) }
-                SettingRow(SettingsIcons.Picture, t("Picture size"), t("Fit the whole picture on screen").takeIf { picture == PictureSize.Fit } ?: t("Fill the screen, cropping the edges").takeIf { picture == PictureSize.Fill } ?: t("Stretch the picture to the screen"), t(picture.label)) { onPage(SettingsPage.Picture) }
+                SettingRow(TvPlayerIcons.Quality, t("Quality"), method, quality, Modifier.focusRequester(first)) { onPage(SettingsPage.Quality) }
+                SettingRow(AppIcons.Speed, t("Speed"), t("Voices keep their normal pitch"), playbackSpeedLabel(state.speed)) { onPage(SettingsPage.Speed) }
+                SettingRow(TvPlayerIcons.Picture, t("Picture size"), t("Fit the whole picture on screen").takeIf { picture == PictureSize.Fit } ?: t("Fill the screen, cropping the edges").takeIf { picture == PictureSize.Fill } ?: t("Stretch the picture to the screen"), t(picture.label)) { onPage(SettingsPage.Picture) }
                 if (chapters.isNotEmpty()) {
-                    SettingRow(SettingsIcons.Chapters, t("Chapters"), tn(chapters.size, "{n} chapter", "{n} chapters"), currentChapter?.name.orEmpty()) { onPage(SettingsPage.Chapters) }
+                    SettingRow(TvPlayerIcons.ChapterList, t("Chapters"), tn(chapters.size, "{n} chapter", "{n} chapters"), currentChapter?.name.orEmpty()) { onPage(SettingsPage.Chapters) }
                 }
-                SettingRow(SettingsIcons.Info, t("Playback info"), t("Bitrate, codecs and why it transcodes"), if (info) t("On") else t("Off")) { onInfo(!info) }
+                SettingRow(TvPlayerIcons.Info, t("Playback info"), t("Bitrate, codecs and why it transcodes"), if (info) t("On") else t("Off")) { onInfo(!info) }
             }
         }
         SettingsPage.Quality -> SidePanel(680, t("Quality"), headerGap = 26 - 8) {

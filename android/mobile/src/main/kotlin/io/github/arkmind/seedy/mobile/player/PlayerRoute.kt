@@ -41,6 +41,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.compose.ContentFrame
 import io.github.arkmind.seedy.core.feature.SettingsViewModel
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.player.problemText
 import io.github.arkmind.seedy.ui.theme.LocalCore
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.parts.PrimaryButton
@@ -210,16 +211,7 @@ private fun FullScreenSideways(activity: ComponentActivity?) {
 /** Why playback stopped, in words (the web's copy), and a way back. */
 @Composable
 private fun Problem(code: String, onBack: () -> Unit) {
-    val (title, text) = when (code) {
-        "NotAllowed" -> t("Not allowed on this profile") to t("Your profile isn't allowed to play this title. Ask the server's admin if that's unexpected.")
-        "NoCompatibleStream" -> t("Can't play this here") to t("This device can't play the file and the server couldn't convert it.")
-        "RateLimitExceeded" -> t("Server is busy") to t("Too many streams are playing on this server right now. Try again in a moment.")
-        "network" -> t("Can't reach the server") to t("The stream stopped loading. Check your connection and try again.")
-        "media" -> t("Playback stopped") to t("The video couldn't be decoded on this device.")
-        "serverError" -> t("Couldn't start playback") to t("The server couldn't prepare this title for playback. Try again in a moment.")
-        "liveUnavailable" -> t("This channel isn't available right now") to t("The server couldn't open the channel's stream. Try another channel or come back later.")
-        else -> t("Couldn't start playback") to code
-    }
+    val (title, text) = problemText(code)
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         Column(Modifier.width(420.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SText(title, size = 20.sp, weight = 900, color = SeedyColors.White, align = TextAlign.Center)

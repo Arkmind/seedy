@@ -1,6 +1,6 @@
 package io.github.arkmind.seedy.tv.player
 
-import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.EaseInOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,8 +43,6 @@ import kotlin.math.floor
 
 /** How long the player sits paused before the screensaver comes. */
 const val ScreensaverAfterMs = 3 * 60_000L
-
-private val EaseInOut = CubicBezierEasing(.42f, 0f, .58f, 1f)
 
 /** The screensaver's slow drift (48 s, ease-in-out between the boards' four points), in board pixels. */
 private fun drift(t: Double): Pair<Float, Float> {

@@ -50,12 +50,12 @@ import io.github.arkmind.seedy.core.feature.SeasonsTarget
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.seedy.SeerrDetails
+import io.github.arkmind.seedy.tv.parts.FocusWhen
 import io.github.arkmind.seedy.tv.parts.TvPressable
 import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusRing
 import io.github.arkmind.seedy.tv.parts.focusScale
-import io.github.arkmind.seedy.tv.parts.focusSoon
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -64,6 +64,7 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
+import io.github.arkmind.seedy.ui.theme.seasonPillColours
 
 /**
  * Board "Android TV · Request seasons": the dialog that asks Seerr for a series' seasons, over any page (a series'
@@ -166,7 +167,7 @@ fun TvRequestSeasonsContent(
             Footer(state, onSubmit, onDismiss)
         }
     }
-    LaunchedEffect(state.details != null || state.failed) { if (state.details != null || state.failed) firstFocus.focusSoon() }
+    FocusWhen(state.details != null || state.failed, firstFocus)
 }
 
 @Composable
@@ -246,12 +247,7 @@ private fun SeasonRow(row: RequestSeasonsViewModel.Row, on: Boolean, onClick: ()
 
 @Composable
 private fun StatusPill(row: RequestSeasonsViewModel.Row) {
-    val (bg, ink, dot) = when (row.kind) {
-        RequestSeasonsViewModel.Kind.Server -> Triple(SeedyColors.Ok.copy(alpha = 0.1f), SeedyColors.Ok, SeedyColors.Ok)
-        RequestSeasonsViewModel.Kind.Pending -> Triple(SeedyColors.Pending.copy(alpha = 0.1f), SeedyColors.Pending, SeedyColors.Pending)
-        RequestSeasonsViewModel.Kind.Blocked -> Triple(Color(0xFF262626), SeedyColors.TextHero, SeedyColors.Danger)
-        else -> Triple(Color(0xFF262626), SeedyColors.TextHero, Color(0xFF6A6A6A))
-    }
+    val (bg, ink, dot) = seasonPillColours(row.kind)
     Row(
         Modifier.clip(CircleShape).background(bg).padding(horizontal = 14.bp, vertical = 6.bp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.bp),

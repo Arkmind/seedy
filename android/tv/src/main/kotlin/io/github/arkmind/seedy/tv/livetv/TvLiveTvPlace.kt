@@ -3,7 +3,6 @@ package io.github.arkmind.seedy.tv.livetv
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,16 +64,16 @@ import io.github.arkmind.seedy.core.livetv.LiveTv
 import io.github.arkmind.seedy.player.LivePreview
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
 import io.github.arkmind.seedy.tv.nav.TvRoute
+import io.github.arkmind.seedy.tv.parts.FocusWhen
+import io.github.arkmind.seedy.tv.parts.NoFocusScroll
 import io.github.arkmind.seedy.tv.parts.TvPressable
 import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusRing
-import io.github.arkmind.seedy.tv.parts.focusSoon
 import io.github.arkmind.seedy.tv.shell.RailInset
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.components.ChannelLogo
-import io.github.arkmind.seedy.ui.icons.IconDef
-import io.github.arkmind.seedy.ui.icons.IconPart
+import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
@@ -91,16 +90,9 @@ import java.time.LocalDateTime
 
 private val LiveRed = Color(0xFFD63C3C)
 private val RecRed = Color(0xFFFF5C5C)
-private val FilledHeart = IconDef(0f, listOf(IconPart("M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z", filled = true)))
-
 /** The guide's span across the screen: two hours, four half-hour columns. */
 private const val SpanMinutes = 120
 
-/** Lets the guide's rows ignore focus; the screen scrolls the row in use to the top itself. */
-@OptIn(ExperimentalFoundationApi::class)
-private object NoFocusScroll : BringIntoViewSpec {
-    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
-}
 
 /** The rail's Live TV: board "Android TV · Live TV guide". */
 @Composable
@@ -183,7 +175,7 @@ fun TvGuide(
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.bp),
         ) {
             Pill({ onFavoritesOnly(!state.favoritesOnly) }) { ink ->
-                SIcon(if (state.favoritesOnly) FilledHeart else WebIcons.Heart, size = 22.bp, color = if (state.favoritesOnly) accent else ink)
+                SIcon(if (state.favoritesOnly) AppIcons.HeartSolid else WebIcons.Heart, size = 22.bp, color = if (state.favoritesOnly) accent else ink)
                 SText(if (state.favoritesOnly) t("Favorites") else t("All channels"), size = 19.bsp, weight = 700, color = ink)
             }
             Pill({ onDay(if (state.day == LocalDate.now()) LocalDate.now().plusDays(1) else LocalDate.now()) }) { ink ->
@@ -260,7 +252,7 @@ fun TvGuide(
             }
         }
     }
-    LaunchedEffect(shown.isNotEmpty()) { if (shown.isNotEmpty()) first.focusSoon() }
+    FocusWhen(shown.isNotEmpty(), first)
 }
 
 private fun dayLabel(day: LocalDate): String {

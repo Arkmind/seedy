@@ -1,8 +1,5 @@
 package io.github.arkmind.seedy.mobile.requests
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -68,6 +65,7 @@ import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.seasons.RequestSeasonsSheet
 import io.github.arkmind.seedy.ui.components.Artwork
+import io.github.arkmind.seedy.ui.components.openUrl
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
@@ -75,6 +73,7 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
+import io.github.arkmind.seedy.ui.theme.seerrToneColour
 import java.util.Locale
 import kotlin.math.min
 
@@ -103,12 +102,6 @@ fun SeerrTitleRoute(mediaType: String, tmdbId: Int) {
     val vm = viewModel(key = "seerr:$mediaType:$tmdbId") { SeerrTitleViewModel(session, mediaType, tmdbId) }
     val state by vm.state.collectAsStateWithLifecycle()
     var seasons by rememberSaveable { mutableStateOf(false) }
-    fun browse(url: String) {
-        try {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } catch (_: ActivityNotFoundException) {
-        }
-    }
     val d = state.details
     val local = uuidOf(d?.jellyfinItemId)
     Box(Modifier.fillMaxSize()) {
@@ -123,8 +116,8 @@ fun SeerrTitleRoute(mediaType: String, tmdbId: Int) {
                 onSeasons = { seasons = true },
                 onLibrary = { local?.let { nav.go(Route.Details(it)) } },
                 onPlay = { local?.let { nav.go(Route.Player(it)) } },
-                onTrailer = d?.trailerUrl?.let { url -> { browse(url) } },
-                onOpenSeerr = vm.seerrUrl?.let { url -> { browse(url) } },
+                onTrailer = d?.trailerUrl?.let { url -> { context.openUrl(url) } },
+                onOpenSeerr = vm.seerrUrl?.let { url -> { context.openUrl(url) } },
                 onRetry = vm::load,
                 onMessageShown = vm::clearMessage,
             ),
@@ -300,16 +293,9 @@ private fun StatusPill(label: String, tone: String, background: Color = SeedyCol
         Modifier.height(26.dp).clip(CircleShape).background(background).padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(Modifier.size(6.dp).background(toneOf(tone), CircleShape))
+        Box(Modifier.size(6.dp).background(seerrToneColour(tone), CircleShape))
         SText(label, size = 11.sp, weight = 700, color = SeedyColors.Text, maxLines = 1)
     }
-}
-
-private fun toneOf(tone: String): Color = when (tone) {
-    "ok" -> SeedyColors.Ok
-    "pending" -> SeedyColors.Pending
-    "danger" -> SeedyColors.Danger
-    else -> SeedyColors.Text3
 }
 
 @OptIn(ExperimentalLayoutApi::class)

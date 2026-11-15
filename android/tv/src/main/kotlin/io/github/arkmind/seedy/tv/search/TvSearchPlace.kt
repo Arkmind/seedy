@@ -51,7 +51,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -99,10 +98,10 @@ import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.NotoLineRatio
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import io.github.arkmind.seedy.ui.theme.cssLineBox
 import io.github.arkmind.seedy.ui.theme.currentSession
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
-import kotlin.math.roundToInt
 
 /** Board "Android TV · Search". */
 @Composable
@@ -482,11 +481,7 @@ private fun Marked(text: String, query: String, size: TextUnit, weight: Int, col
     val trim = lineHeight?.takeIf { it < NotoLineRatio }
     BasicText(
         shown,
-        if (trim != null) Modifier.layout { measurable, constraints ->
-            val p = measurable.measure(constraints)
-            val cut = ((NotoLineRatio - trim) * size.toPx()).coerceAtLeast(0f)
-            layout(p.width, (p.height - cut).roundToInt()) { p.place(0, -(cut / 2).roundToInt()) }
-        } else Modifier,
+        if (trim != null) Modifier.cssLineBox(size, trim) else Modifier,
         style = BaseText.copy(fontSize = size, fontWeight = FontWeight(weight), color = color),
         maxLines = 1, overflow = TextOverflow.Ellipsis,
     )

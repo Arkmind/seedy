@@ -50,7 +50,7 @@ import io.github.arkmind.seedy.core.browse.letterOf
 import io.github.arkmind.seedy.core.feature.LibraryViewModel
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
-import io.github.arkmind.seedy.tv.browse.FocusWhen
+import io.github.arkmind.seedy.tv.parts.FocusWhen
 import io.github.arkmind.seedy.tv.browse.TvCardSkeleton
 import io.github.arkmind.seedy.tv.browse.TvChoice
 import io.github.arkmind.seedy.tv.browse.TvGridCard
@@ -59,7 +59,7 @@ import io.github.arkmind.seedy.tv.browse.TvPanelLabel
 import io.github.arkmind.seedy.tv.browse.TvSidePanel
 import io.github.arkmind.seedy.tv.browse.TvTab
 import io.github.arkmind.seedy.tv.browse.TvToolButton
-import io.github.arkmind.seedy.tv.browse.maybeFocus
+import io.github.arkmind.seedy.tv.parts.maybeFocus
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
 import io.github.arkmind.seedy.tv.parts.TvPressable
 import io.github.arkmind.seedy.tv.parts.bp

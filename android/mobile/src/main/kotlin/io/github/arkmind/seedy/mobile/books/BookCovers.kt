@@ -30,11 +30,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
 import io.github.arkmind.seedy.ui.theme.BaseText
-import io.github.arkmind.seedy.ui.theme.NotoLineRatio
-import kotlin.math.roundToInt
+import io.github.arkmind.seedy.ui.theme.cssLineBox
 import coil3.compose.AsyncImage
 import io.github.arkmind.seedy.core.audio.authorLine
 import io.github.arkmind.seedy.ui.components.AudioCover
@@ -145,11 +143,7 @@ fun BookCover(
 fun CoverText(text: String, modifier: Modifier, size: TextUnit, lineHeight: Float, tracking: Float, color: Color) {
     BasicText(
         text.uppercase(),
-        modifier.layout { measurable, constraints ->
-            val p = measurable.measure(constraints)
-            val cut = ((NotoLineRatio - lineHeight) * size.toPx()).coerceAtLeast(0f)
-            layout(p.width, (p.height - cut).roundToInt().coerceAtLeast(0)) { p.place(0, -(cut / 2).roundToInt()) }
-        },
+        modifier.cssLineBox(size, lineHeight),
         style = BaseText.copy(fontSize = size, fontWeight = FontWeight(900), color = color, letterSpacing = tracking.em, lineHeight = lineHeight.em),
     )
 }

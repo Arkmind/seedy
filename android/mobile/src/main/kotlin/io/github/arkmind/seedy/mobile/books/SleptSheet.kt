@@ -38,8 +38,8 @@ import io.github.arkmind.seedy.player.audio.Slept
 import io.github.arkmind.seedy.ui.components.Medu
 import io.github.arkmind.seedy.ui.components.MeduMood
 import io.github.arkmind.seedy.ui.components.Overlay
-import io.github.arkmind.seedy.ui.icons.AppIcons
 import io.github.arkmind.seedy.ui.icons.SIcon
+import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 
@@ -83,7 +83,7 @@ fun SleptSheet(title: String, slept: Slept, onResume: () -> Unit, onMore: () -> 
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                     ) {
-                        SIcon(AppIcons.Resume, size = 18.dp, color = SeedyColors.InkInverse)
+                        SIcon(WebIcons.PlayRound, size = 18.dp, color = SeedyColors.InkInverse)
                         SText(t("Resume from {time}", "time" to at), size = 15.sp, weight = 800, color = SeedyColors.InkInverse)
                     }
                     Box(

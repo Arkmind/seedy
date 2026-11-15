@@ -1,7 +1,8 @@
 package io.github.arkmind.seedy.ui.components
 
 import android.graphics.BlurMaskFilter
-import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.EaseIn
+import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.Canvas
@@ -37,9 +38,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.floor
 import kotlin.math.tan
-
-private val EaseInOut = CubicBezierEasing(.42f, 0f, .58f, 1f)
-private val EaseIn = CubicBezierEasing(.42f, 0f, 1f, 1f)
 
 /** CSS `animation-direction: alternate`: how far along (eased) the loop is, running back on every other turn. */
 private fun alternate(t: Double, dur: Double, delay: Double, ease: Easing = EaseInOut): Float {

@@ -1,9 +1,5 @@
 package io.github.arkmind.seedy.mobile.requests
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -126,14 +122,6 @@ fun mediaOpeners(onMessage: (String) -> Unit): MediaOpeners {
             },
             item = openItem,
         )
-    }
-}
-
-/** Opens [url] in the browser. */
-fun Context.openUrl(url: String) {
-    try {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    } catch (_: ActivityNotFoundException) {
     }
 }
 

@@ -49,6 +49,7 @@ import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tabBarHeight
 import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.ui.components.openUrl
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession

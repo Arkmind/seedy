@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.format.join
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.requests.RequestFormat
-import io.github.arkmind.seedy.core.requests.RequestState
 import io.github.arkmind.seedy.core.requests.SeerrRequest
 import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.seedy.tmdbImage
@@ -36,18 +35,9 @@ import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import io.github.arkmind.seedy.ui.theme.toneColour
 import java.time.LocalDate
 import java.util.Locale
-
-/** The colour a request's state is written in. */
-@Composable
-fun toneColour(tone: RequestState.Tone): Color = when (tone) {
-    RequestState.Tone.Ok -> SeedyColors.Ok
-    RequestState.Tone.Pending -> SeedyColors.Pending
-    RequestState.Tone.Accent -> LocalAccent.current
-    RequestState.Tone.Danger -> SeedyColors.Danger
-    RequestState.Tone.Muted -> SeedyColors.Text3
-}
 
 /** "★ 7.4 · 2026", or an upcoming title's date (lit when it's soon). */
 @Composable

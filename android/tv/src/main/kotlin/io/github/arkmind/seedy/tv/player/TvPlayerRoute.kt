@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.produceState
 import android.text.format.DateFormat
+import io.github.arkmind.seedy.player.problemText
 import java.time.LocalDateTime
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -244,16 +245,7 @@ fun TvPlayerRoute(id: UUID) {
 /** Why playback stopped, in words, and a way back. */
 @Composable
 private fun Problem(code: String, onBack: () -> Unit) {
-    val (title, text) = when (code) {
-        "NotAllowed" -> t("Not allowed on this profile") to t("Your profile isn't allowed to play this title. Ask the server's admin if that's unexpected.")
-        "NoCompatibleStream" -> t("Can't play this here") to t("This device can't play the file and the server couldn't convert it.")
-        "RateLimitExceeded" -> t("Server is busy") to t("Too many streams are playing on this server right now. Try again in a moment.")
-        "network" -> t("Can't reach the server") to t("The stream stopped loading. Check your connection and try again.")
-        "media" -> t("Playback stopped") to t("The video couldn't be decoded on this device.")
-        "serverError" -> t("Couldn't start playback") to t("The server couldn't prepare this title for playback. Try again in a moment.")
-        "liveUnavailable" -> t("This channel isn't available right now") to t("The server couldn't open the channel's stream. Try another channel or come back later.")
-        else -> t("Couldn't start playback") to code
-    }
+    val (title, text) = problemText(code)
     val back = remember { FocusRequester() }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(Modifier.width(900.bp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.bp)) {

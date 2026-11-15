@@ -111,7 +111,7 @@ fun SText(
 }
 
 /** Shrinks a text box from Noto's natural line height to [ratio] × [size], keeping the glyphs centred. */
-private fun Modifier.cssLineBox(size: TextUnit, ratio: Float): Modifier = this.layout { measurable, constraints ->
+fun Modifier.cssLineBox(size: TextUnit, ratio: Float): Modifier = this.layout { measurable, constraints ->
     val placeable = measurable.measure(constraints)
     val px = size.toPx()
     val cut = ((NotoLineRatio - ratio) * px).coerceAtLeast(0f)
