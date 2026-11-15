@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { get } from '../../api/client';
 import type { SkipMode } from '../../api/seedy';
-import { DEFAULT_PLAYBACK, meStore, userStore } from '../../lib/app-state';
+import { DEFAULT_PLAYBACK, meStore, playbackPrefs, userStore } from '../../lib/app-state';
 import { useStore } from '../../lib/store';
 import { NumField, Panel, Segmented, Switch } from '../../ui/controls';
 import {
@@ -91,7 +91,7 @@ export function MePlayback() {
     );
   }, []);
 
-  const pb = { ...DEFAULT_PLAYBACK, ...(me.prefs?.playback ?? {}) };
+  const pb = playbackPrefs(me.prefs);
   const custom = customPlayback(me.prefs?.custom);
   const cfg: FullUserConfig = user?.Configuration ?? {};
   const remoteLimit = (user?.Policy as { RemoteClientBitrateLimit?: number } | undefined)?.RemoteClientBitrateLimit ?? 0;

@@ -3,7 +3,7 @@ import { fileBase64 } from '../../api/images';
 import { CARD_FIELDS, getMe, getUserViews } from '../../api/jellyfin';
 import { getMe as getSeedyMe, savePrefs, type PlaybackPrefs, type UserPrefs } from '../../api/seedy';
 import type { ItemsResult, User, UserConfiguration } from '../../api/types';
-import { applyBranding, DEFAULT_PLAYBACK, meStore, setPrefsBusyCheck, userStore, viewsStore } from '../../lib/app-state';
+import { applyBranding, meStore, playbackPrefs, setPrefsBusyCheck, userStore, viewsStore } from '../../lib/app-state';
 import { createStore, safeLocal, saveLocal, useStore } from '../../lib/store';
 import type { SaveState } from '../../ui/controls';
 
@@ -177,7 +177,7 @@ export const saveCustom = (patch: Record<string, unknown>, delay = 0) => savePre
 
 /* The plugin replaces playback prefs as a whole, so send every field. */
 export const savePlayback = (patch: Partial<PlaybackPrefs>) =>
-  savePrefsPatch({ playback: { ...DEFAULT_PLAYBACK, ...(meStore.get().prefs?.playback ?? {}), ...patch } });
+  savePrefsPatch({ playback: { ...playbackPrefs(), ...patch } });
 
 /* "Try again" after a failed save. */
 export function retrySave() {

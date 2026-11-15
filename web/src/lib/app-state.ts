@@ -40,6 +40,9 @@ const fallbackMe = (): seedy.Me => ({
 
 export const userStore = createStore<User | null>(null);
 export const meStore = createStore<seedy.Me>(fallbackMe());
+
+/* The profile's playback settings over the defaults. */
+export const playbackPrefs = (prefs: seedy.UserPrefs | undefined = meStore.get().prefs): seedy.PlaybackPrefs => ({ ...DEFAULT_PLAYBACK, ...(prefs?.playback ?? {}) });
 export const viewsStore = createStore<BaseItem[]>([]);
 export const brandingStore = createStore<seedy.Branding>(DEFAULT_BRANDING);
 /* 'offline': the server didn't answer (restarting, network down) — keep the session and offer a retry. */

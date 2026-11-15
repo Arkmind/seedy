@@ -9,7 +9,7 @@ import { chapterImageUrl, primaryUrl } from '../api/images';
 import type { PlaybackPrefs, SubtitlePrefs } from '../api/seedy';
 import { savePrefsPatch as queuePrefs } from '../screens/me/prefs';
 import type { BaseItem, MediaSegment, MediaSource, MediaStream } from '../api/types';
-import { currentUserId, DEFAULT_PLAYBACK, DEFAULT_SUBTITLES, meStore, userStore } from '../lib/app-state';
+import { currentUserId, DEFAULT_SUBTITLES, meStore, playbackPrefs, userStore } from '../lib/app-state';
 import {
   endsAt, episodeTag, seasonEpisodeLong, secondsToTicks, ticksToSeconds, timeLeft, timecode
 } from '../lib/format';
@@ -172,7 +172,7 @@ export function Player({ id }: { id: string }) {
   }
   if (state.item.Type === 'TvChannel') {
     // Live TV: its own player (Player · Live TV board); the address follows the channel without reloading it.
-    const prefs: PlaybackPrefs = { ...DEFAULT_PLAYBACK, ...(meStore.get().prefs?.playback ?? {}) };
+    const prefs: PlaybackPrefs = playbackPrefs();
     return (
       <LivePlayer
         key="live"
@@ -335,7 +335,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const me = useStore(meStore);
   const user = useStore(userStore);
   const dev = useStore(deviceStore);
-  const prefs: PlaybackPrefs = { ...DEFAULT_PLAYBACK, ...(me.prefs?.playback ?? {}) };
+  const prefs: PlaybackPrefs = playbackPrefs(me.prefs);
   const custom = customPlayback(me.prefs?.custom);
   const steps = seekSteps(dev, prefs);
   const isPreroll = !!params.preroll;
