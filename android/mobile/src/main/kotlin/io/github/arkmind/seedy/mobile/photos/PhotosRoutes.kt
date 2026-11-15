@@ -98,7 +98,7 @@ fun PhotosRoute(id: UUID) {
                         add(MenuEntry(PhotoIcons.Refresh, t("Scan library files"), t("Look for new and changed media"), line = true, run = {
                             scope.launch {
                                 val ok = runCatching { api.scan(id) }.isSuccess
-                                message = if (ok) t("Scanning {name}", "name" to state.name) else t("Couldn’t start the scan")
+                                message = if (ok) t("Scanning {name}", "name" to state.name) else t("Couldn't start the scan")
                             }
                         }))
                     }
