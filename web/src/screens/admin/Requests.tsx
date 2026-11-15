@@ -3,7 +3,6 @@ import {
   adminSeerrLink, adminSeerrMatch, adminSeerrSetKey, adminSeerrUsers, adminSetCanRequest,
   type AdminConfig, type SeerrAccount, type SeerrUser
 } from '../../api/seedy';
-import { userImageUrl } from '../../api/images';
 import { useStore } from '../../lib/store';
 import { meStore, refreshMe } from '../../lib/app-state';
 import { Panel, RadioCards, SavedNote, SelectField, SettingRow, Switch } from '../../ui/controls';
@@ -11,13 +10,13 @@ import { Icon } from '../../ui/icons';
 import { Sheet, toast, toastError } from '../../ui/overlay';
 import { t } from '../../lib/i18n';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
+import { patchRow, PROFILE_COLOURS, ProfileAvatar, roleOf, TableError, TableSkeleton } from './parts';
 import {
   accountsStore, editConfig, flushConfig, loadAccounts, mergeServerConfig, seerrTestStore, testSeerr, useAdminConfig
 } from './config';
 
 type Req = AdminConfig['requests'];
 
-const AVATAR_COLOURS = ['#f0f0f0', '#9fd3ff', '#b8f59f', '#ffc98a'];
 
 const SHOWS: { key: 'showDiscover' | 'showUpcomingMovies' | 'showRequestButtons' | 'showRequestInSearch'; name: string; help: string }[] = [
   { key: 'showDiscover', name: 'Discover row', help: 'Popular titles not in the library' },
@@ -275,21 +274,6 @@ function WhoPanel({ req }: { req: Req }) {
 
 /* ── Accounts ── */
 
-function roleOf(a: SeerrAccount) {
-  if (a.isAdmin) return t('Administrator');
-  if (a.maxParentalRating) return t('Maturity limit: {rating}', { rating: a.maxParentalRating });
-  return t('User');
-}
-
-export function ProfileAvatar({ userId, name, imageTag, index }: { userId: string; name: string; imageTag?: string; index: number }) {
-  const img = imageTag ? userImageUrl({ Id: userId, PrimaryImageTag: imageTag }, 72) : undefined;
-  return (
-    <span class="avatar" aria-hidden="true" style={img ? undefined : { background: AVATAR_COLOURS[index % AVATAR_COLOURS.length] }}>
-      {img ? <img src={img} alt="" /> : name.trim().charAt(0).toUpperCase()}
-    </span>
-  );
-}
-
 function AccountsPanel() {
   const { data, error, loading } = useStore(accountsStore);
   const [matching, setMatching] = useState(false);
@@ -311,13 +295,13 @@ function AccountsPanel() {
   };
 
   const setCan = async (a: SeerrAccount, on: boolean) => {
-    accountsStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === a.userId ? { ...x, canRequest: on } : x)) }));
+    patchRow(accountsStore, a.userId, { canRequest: on });
     try {
       const list = await adminSetCanRequest(a.userId, on);
       refreshMe();
       accountsStore.set({ data: list, loading: false });
     } catch (e) {
-      accountsStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === a.userId ? { ...x, canRequest: !on } : x)) }));
+      patchRow(accountsStore, a.userId, { canRequest: !on });
       toastError(t('Couldn’t change {name}.', { name: a.name }), e);
     }
   };
@@ -347,15 +331,9 @@ function AccountsPanel() {
         </button>
       </div>
       {!data && error ? (
-        <div class="admin-inline-error" role="alert">
-          <span class="dot is-danger" />
-          {t('Couldn’t load the accounts.')} {error.message}
-          <button type="button" class="btn btn-secondary is-sm" onClick={() => loadAccounts(true)}>{t('Try again')}</button>
-        </div>
+        <TableError text={t('Couldn’t load the accounts.')} error={error.message} onRetry={() => loadAccounts(true)} />
       ) : !data ? (
-        <div class="table-skel" aria-busy={loading ? 'true' : undefined}>
-          {[0, 1, 2, 3].map((i) => <span key={i} class="skel" />)}
-        </div>
+        <TableSkeleton busy={loading} />
       ) : (
         <div class="table-scroll">
           <div role="table" aria-label={t('Seerr accounts')} class="table acc-table">
@@ -460,9 +438,9 @@ function LinkSheet({ account, accounts, onClose }: { account: SeerrAccount | nul
       </div>
       <p class="sheet-text">{t('Pick the Seerr account {name} requests as. Their Seerr limits and auto-approval apply.', { name: account?.name ?? '' })}</p>
       {error ? (
-        <div class="admin-inline-error" role="alert"><span class="dot is-danger" />{t('Couldn’t load Seerr’s users.')} {error}</div>
+        <TableError text={t('Couldn’t load Seerr’s users.')} error={error} />
       ) : !users ? (
-        <div class="table-skel" aria-busy="true">{[0, 1, 2].map((i) => <span key={i} class="skel" />)}</div>
+        <TableSkeleton rows={3} busy />
       ) : users.length === 0 ? (
         <p class="sheet-text">{t('Seerr has no users yet.')}</p>
       ) : (
@@ -480,7 +458,7 @@ function LinkSheet({ account, accounts, onClose }: { account: SeerrAccount | nul
                 onClick={() => void pick(u)}
               >
                 <span class="lead">
-                  <span class="avatar" aria-hidden="true" style={{ background: AVATAR_COLOURS[i % AVATAR_COLOURS.length] }}>
+                  <span class="avatar" aria-hidden="true" style={{ background: PROFILE_COLOURS[i % PROFILE_COLOURS.length] }}>
                     {u.avatar ? <img src={u.avatar} alt="" /> : u.displayName.charAt(0).toUpperCase()}
                   </span>
                   <span class="two">

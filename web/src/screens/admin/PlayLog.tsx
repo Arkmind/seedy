@@ -7,7 +7,7 @@ import { Icon } from '../../ui/icons';
 import { confirm, toast, toastError } from '../../ui/overlay';
 import { formatNumber, t } from '../../lib/i18n';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
-import { ProfileAvatar } from './Requests';
+import { patchRow, ProfileAvatar, TableError, TableSkeleton } from './parts';
 import { editConfig, loadProfiles, profilesStore, statusStore, useAdminConfig } from './config';
 import { saveBlob } from '../../lib/clipboard';
 
@@ -92,11 +92,11 @@ function ProfilesPanel() {
   const [busy, setBusy] = useState<string | null>(null);
 
   const toggle = async (p: PlayLogProfile, key: 'top10' | 'history', on: boolean) => {
-    profilesStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === p.userId ? { ...x, [key]: on } : x)) }));
+    patchRow(profilesStore, p.userId, { [key]: on });
     try {
       profilesStore.set({ data: await adminPlayLogProfile(p.userId, { [key]: on }), loading: false });
     } catch (e) {
-      profilesStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === p.userId ? { ...x, [key]: !on } : x)) }));
+      patchRow(profilesStore, p.userId, { [key]: !on });
       toastError(t('Couldn’t change {name}.', { name: p.name }), e);
     }
   };
@@ -135,15 +135,9 @@ function ProfilesPanel() {
   return (
     <Panel id="prof" title={t('Profiles')} text={t('Leave a profile out of the Top 10, hide its history page, or export and clear its plays.')} gap={14}>
       {!data && error ? (
-        <div class="admin-inline-error" role="alert">
-          <span class="dot is-danger" />
-          {t('Couldn’t load the profiles.')} {error.message}
-          <button type="button" class="btn btn-secondary is-sm" onClick={() => loadProfiles(true)}>{t('Try again')}</button>
-        </div>
+        <TableError text={t('Couldn’t load the profiles.')} error={error.message} onRetry={() => loadProfiles(true)} />
       ) : !data ? (
-        <div class="table-skel" aria-busy={loading ? 'true' : undefined}>
-          {[0, 1, 2, 3].map((i) => <span key={i} class="skel" />)}
-        </div>
+        <TableSkeleton busy={loading} />
       ) : (
         <div class="table-scroll">
           <div role="table" aria-label={t('Play log by profile')} class="table log-table">

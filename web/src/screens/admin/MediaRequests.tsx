@@ -13,7 +13,7 @@ import { Icon, type IconName } from '../../ui/icons';
 import { MenuButton, MenuItem, Sheet, toast, toastError } from '../../ui/overlay';
 import { AdminLayout, LoadError, PanelSkeletons } from './AdminLayout';
 import { editConfig, flushConfig, mergeServerConfig, useAdminConfig } from './config';
-import { ProfileAvatar } from './Requests';
+import { patchRow, ProfileAvatar, roleOf, TableError, TableSkeleton } from './parts';
 import { capitalize, joinNames } from '../../lib/format';
 import '../requests/media.css';
 
@@ -60,12 +60,12 @@ function loadInfo() {
   adminMediaInfo().then((data) => infoStore.set({ data, loading: false }), () => infoStore.set((s) => ({ ...s, loading: false })));
 }
 
-const profilesStore = createStore<{ data?: AdminMediaProfile[]; error?: Error }>({});
+const mediaProfilesStore = createStore<{ data?: AdminMediaProfile[]; error?: Error }>({});
 
 export function AdminMediaRequests() {
   const { config, error, save, reload } = useAdminConfig();
   const m = config ? media(config) : null;
-  useEffect(() => { loadInfo(); adminMediaProfiles().then((data) => profilesStore.set({ data }), (e: Error) => profilesStore.set({ error: e })); }, []);
+  useEffect(() => { loadInfo(); adminMediaProfiles().then((data) => mediaProfilesStore.set({ data }), (e: Error) => mediaProfilesStore.set({ error: e })); }, []);
   // Test what's set up when the page opens, unless it was tested a minute ago.
   useEffect(() => {
     if (!m) return;
@@ -432,23 +432,22 @@ function LimitCell({ value, options, word, label, onChange, suffix }: { value: n
 }
 
 function LimitsPanel() {
-  const { data, error } = useStore(profilesStore);
+  const { data, error } = useStore(mediaProfilesStore);
   const change = async (p: AdminMediaProfile, patch: Partial<AdminMediaProfile>) => {
-    profilesStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === p.userId ? { ...x, ...patch } : x)) }));
+    patchRow(mediaProfilesStore, p.userId, patch);
     try {
-      profilesStore.set({ data: await adminMediaProfile(p.userId, patch) });
+      mediaProfilesStore.set({ data: await adminMediaProfile(p.userId, patch) });
     } catch (e) {
-      profilesStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === p.userId ? p : x)) }));
+      mediaProfilesStore.set((s) => ({ ...s, data: s.data?.map((x) => (x.userId === p.userId ? p : x)) }));
       toastError(t('Couldn’t change {name}.', { name: p.name }), e);
     }
   };
-  const role = (p: AdminMediaProfile) => (p.isAdmin ? t('Administrator') : p.maxParentalRating ? t('Maturity limit: {rating}', { rating: p.maxParentalRating }) : t('User'));
   return (
     <Panel id="lim" title={t('Approvals and limits')} text={t('Seedy handles approvals for music and books, then sends only approved requests. Librarr’s own approval queue is skipped.')} gap={14}>
       {!data && error ? (
-        <div class="admin-inline-error" role="alert"><span class="dot is-danger" />{t('Couldn’t load the profiles.')} {error.message}</div>
+        <TableError text={t('Couldn’t load the profiles.')} error={error.message} />
       ) : !data ? (
-        <div class="table-skel" aria-busy="true">{[0, 1, 2, 3].map((i) => <span key={i} class="skel" />)}</div>
+        <TableSkeleton busy />
       ) : (
         <div class="table-scroll">
           <div role="table" aria-label={t('Request limits')} class="table amr-limits">
@@ -465,7 +464,7 @@ function LimitsPanel() {
                   <div role="cell" class="table-cell">
                     <span class="who">
                       <ProfileAvatar userId={p.userId} name={p.name} imageTag={p.imageTag} index={i} />
-                      <span class="who-text"><span class="who-name">{p.name}</span><span class="who-sub">{role(p)}</span></span>
+                      <span class="who-text"><span class="who-name">{p.name}</span><span class="who-sub">{roleOf(p)}</span></span>
                     </span>
                   </div>
                   <div role="cell" class="table-cell">

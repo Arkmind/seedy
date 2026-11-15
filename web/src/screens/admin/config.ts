@@ -200,29 +200,28 @@ export function testSeerr(body: { url?: string; apiKey?: string } = {}) {
   );
 }
 
-export const accountsStore = createStore<{ data?: SeerrAccount[]; error?: Error; loading: boolean }>({ loading: false });
-
-export function loadAccounts(force = false) {
-  const s = accountsStore.get();
-  if ((s.data && !force) || s.loading) return;
-  accountsStore.set((p) => ({ ...p, loading: true }));
-  seedy.adminSeerrAccounts().then(
-    (data) => accountsStore.set({ data, loading: false }),
-    (error: Error) => accountsStore.set((p) => ({ ...p, error, loading: false }))
-  );
+/* A list loaded once and kept between pages; `load(true)` fetches it again. */
+function cachedList<T>(fetch: () => Promise<T[]>) {
+  const store = createStore<{ data?: T[]; error?: Error; loading: boolean }>({ loading: false });
+  const load = (force = false) => {
+    const s = store.get();
+    if ((s.data && !force) || s.loading) return;
+    store.set((p) => ({ ...p, loading: true }));
+    fetch().then(
+      (data) => store.set({ data, loading: false }),
+      (error: Error) => store.set((p) => ({ ...p, error, loading: false }))
+    );
+  };
+  return { store, load };
 }
 
-export const profilesStore = createStore<{ data?: PlayLogProfile[]; error?: Error; loading: boolean }>({ loading: false });
+const accounts = cachedList<SeerrAccount>(() => seedy.adminSeerrAccounts());
+export const accountsStore = accounts.store;
+export const loadAccounts = accounts.load;
 
-export function loadProfiles(force = false) {
-  const s = profilesStore.get();
-  if ((s.data && !force) || s.loading) return;
-  profilesStore.set((p) => ({ ...p, loading: true }));
-  seedy.adminPlayLogProfiles().then(
-    (data) => profilesStore.set({ data, loading: false }),
-    (error: Error) => profilesStore.set((p) => ({ ...p, error, loading: false }))
-  );
-}
+const profiles = cachedList<PlayLogProfile>(() => seedy.adminPlayLogProfiles());
+export const profilesStore = profiles.store;
+export const loadProfiles = profiles.load;
 
 /* ── Leaving a page with unsaved changes ── */
 
