@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.tv.player
 
+import android.os.SystemClock
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
@@ -42,6 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.compose.ContentFrame
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.player.PlayerViewModel
+import io.github.arkmind.seedy.player.StillWatchingStopMs
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
 import io.github.arkmind.seedy.tv.parts.TvButton
 import io.github.arkmind.seedy.tv.parts.bp
@@ -95,7 +97,7 @@ fun TvPlayerRoute(id: UUID) {
     var saver by remember { mutableStateOf(false) }
     LaunchedEffect(state.playing, touched, state.problem, state.item?.id) {
         saver = false
-        if (!state.playing && state.item != null && state.problem == null && !state.live) {
+        if (!state.playing && state.item != null && state.problem == null && !state.live && state.ask == null) {
             delay(ScreensaverAfterMs)
             saver = true
         }
@@ -109,9 +111,9 @@ fun TvPlayerRoute(id: UUID) {
     }
     // Where the remote lands: the button whose panel just closed; else Skip when there's something to skip, else
     // Pause; the hidden-controls catcher when the controls are away.
-    LaunchedEffect(controls, tool) {
+    LaunchedEffect(controls, tool, state.ask) {
         when {
-            tool != null -> Unit
+            tool != null || state.ask != null -> Unit
             controls -> {
                 val back = opener?.let { focus.tools.getValue(it) }
                 opener = null
@@ -124,11 +126,13 @@ fun TvPlayerRoute(id: UUID) {
         seasonId = state.item?.seasonId
         seasonEpisodes = null
     }
+    // "Still watching?" covers the player: no panel stays open under it.
+    LaunchedEffect(state.ask) { if (state.ask != null) tool = null }
 
     BackHandler {
         when {
             saver -> touched++
-            state.problem != null -> nav.back()
+            state.problem != null || state.ask != null -> nav.back()
             // A settings page goes back to the settings list; Chapters opened from its own button just closes.
             tool == TvTool.Settings && page != SettingsPage.Main -> page = SettingsPage.Main
             tool != null -> tool = null
@@ -148,11 +152,15 @@ fun TvPlayerRoute(id: UUID) {
     Box(
         Modifier.fillMaxSize()
             .onPreviewKeyEvent { e ->
+                // Any key says someone is there ("Are you still watching?").
+                if (e.type == KeyEventType.KeyDown) player.touched()
                 if (saver) {
                     // The key only wakes the player up (its key-up is swallowed too).
                     if (e.type == KeyEventType.KeyDown) touched++
                     return@onPreviewKeyEvent true
                 }
+                // "Still watching?" takes the remote: its two buttons and Back.
+                if (state.ask != null) return@onPreviewKeyEvent false
                 if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 touched++
                 when (e.key) {
@@ -177,7 +185,7 @@ fun TvPlayerRoute(id: UUID) {
     ) {
         TvPlayerScreen(
             state = state,
-            controls = controls && tool == null && state.problem == null,
+            controls = controls && tool == null && state.problem == null && state.ask == null,
             seekBack = player.seekBackSeconds,
             seekForward = player.seekForwardSeconds,
             subtitleSize = subtitleSize,
@@ -233,6 +241,28 @@ fun TvPlayerRoute(id: UUID) {
             },
         )
         state.problem?.let { Problem(it, onBack = { nav.back() }) }
+        val ask = state.ask
+        val item = state.item
+        val next = state.next
+        if (ask != null && item != null && next != null) {
+            // Nobody answers: the player closes when the countdown ends, freeing the server.
+            val left by produceState((StillWatchingStopMs / 1000).toInt(), ask) {
+                val end = SystemClock.elapsedRealtime() + StillWatchingStopMs
+                while (true) {
+                    val ms = end - SystemClock.elapsedRealtime()
+                    value = ((ms + 999) / 1000).toInt().coerceAtLeast(0)
+                    if (ms <= 0) break
+                    delay(1000 - ms % 1000)
+                }
+                nav.back()
+            }
+            TvStillWatching(
+                item = item, next = next, ask = ask, secondsLeft = left,
+                fraction = if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 1f,
+                onKeep = player::keepWatching,
+                onDone = { nav.back() },
+            )
+        }
         if (saver) state.item?.let { item ->
             val now by produceState(LocalDateTime.now()) {
                 while (true) {

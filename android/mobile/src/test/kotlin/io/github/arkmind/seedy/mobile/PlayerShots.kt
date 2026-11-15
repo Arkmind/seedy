@@ -16,6 +16,11 @@ import io.github.arkmind.seedy.mobile.player.EpisodesPanel
 import io.github.arkmind.seedy.mobile.player.PhonePlayerScreen
 import io.github.arkmind.seedy.mobile.player.PlayerActions
 import io.github.arkmind.seedy.mobile.player.SpeedPanel
+import io.github.arkmind.seedy.mobile.player.StillWatchingScreen
+import io.github.arkmind.seedy.player.StillWatchingAsk
+import io.github.arkmind.seedy.ui.components.BoardScene
+import androidx.compose.ui.geometry.Rect
+import java.time.LocalTime
 import io.github.arkmind.seedy.mobile.player.TracksPanel
 import io.github.arkmind.seedy.player.PlayerState
 import io.github.arkmind.seedy.ui.theme.SeedyTheme
@@ -103,6 +108,24 @@ class PlayerShots {
 
     /** No board: Subtitle style, from the tracks panel (the Subtitles settings page in the panel's frame). */
     @Test fun style() = shot("AndroidPlayerStyle") { StylePanel(SettingsSamples.state, object : io.github.arkmind.seedy.core.settings.SettingsActions {}, {}, {}) }
+
+    /** Board "Android · Still watching?": S3 E3 ended the third episode in a row, the stream stops in 14:32. */
+    @Test
+    fun stillWatching() {
+        val finished = Samples.thePass.copy(indexNumber = 3)
+        val next = Samples.thePass.copy(id = UUID.nameUUIDFromBytes("The Crossing".toByteArray()), name = "The Crossing", indexNumber = 4, runTimeTicks = 47 * 60 * 10_000_000L)
+        compose.setContent {
+            SeedyTheme {
+                StillWatchingScreen(
+                    item = finished, next = next, ask = StillWatchingAsk(3, 140, byTime = false), secondsLeft = 14 * 60 + 32, fraction = 1f,
+                    onKeep = {}, onDone = {}, now = LocalTime.of(23, 34),
+                    backdrop = { BoardScene(Modifier.fillMaxSize()) },
+                    thumb = { BoardScene(Modifier.matchParentSize(), Rect(420f, 300f, 1320f, 806f)) },
+                )
+            }
+        }
+        compose.onRoot().captureRoboImage("src/test/screenshots/AndroidPlayerStillWatching.png")
+    }
 
     @Test
     fun gestures() {

@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.mobile.player
 
 import android.app.PictureInPictureParams
 import android.content.pm.ActivityInfo
+import android.os.SystemClock
 import android.util.Rational
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -20,11 +21,21 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
@@ -48,6 +59,7 @@ import io.github.arkmind.seedy.ui.theme.LocalCore
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.parts.PrimaryButton
 import io.github.arkmind.seedy.player.PlayerViewModel
+import io.github.arkmind.seedy.player.StillWatchingStopMs
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
@@ -118,10 +130,12 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
         seasonId = state.item?.seasonId
         seasonEpisodes = null
     }
+    // "Still watching?" covers the player: no panel stays open under it.
+    LaunchedEffect(state.ask) { if (state.ask != null) panel = null }
 
     BackHandler {
         when {
-            state.problem != null -> nav.back()
+            state.problem != null || state.ask != null -> nav.back()
             panel == PlayerPanel.Style -> panel = PlayerPanel.Tracks
             panel != null -> panel = null
             locked -> controls = true
@@ -130,66 +144,106 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
     }
 
     val subtitlePrefs = session.seedy?.prefs?.subtitles
-    PhonePlayerScreen(
-        state = state,
-        controls = controls && !pip && panel == null && state.problem == null,
-        locked = locked,
-        seekBack = player.seekBackSeconds,
-        seekForward = player.seekForwardSeconds,
-        subtitleSize = when (subtitlePrefs?.size) {
-            "S" -> 15.sp
-            "L" -> 22.sp
-            "XL" -> 26.sp
-            else -> 18.sp
-        },
-        lift = subtitlePrefs?.lift ?: true,
-        look = player.subtitleLook(device),
-        doubleTapSeek = player.settings.doubleTapSeek,
-        swipeLevels = swipeLevels,
-        actions = PlayerActions(
-            onBack = { nav.back() },
-            onPlayPause = { touched++; player.playPause() },
-            onSeekBy = { touched++; player.seekBy(it) },
-            onSeekTo = { touched++; player.seekTo(it) },
-            onSkip = player::skip,
-            onNext = player::playNext,
-            onLock = { locked = !locked; controls = true; touched++ },
-            onPip = {
-                activity?.enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build())
-            },
-            onPanel = { panel = it },
-        ),
-        onToggleControls = { controls = !controls; touched++ },
-        video = { ContentFrame(player = player.exo, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) },
-        panel = {
-            when (panel) {
-                PlayerPanel.Episodes -> EpisodesPanel(
-                    state = state,
-                    episodes = seasonEpisodes ?: state.episodes,
-                    seasonId = seasonId,
-                    onSeason = { s ->
-                        seasonId = s.id
-                        scope.launch { seasonEpisodes = player.season(s.id) }
-                    },
-                    onEpisode = { e -> panel = null; player.play(e) },
-                    onClose = { panel = null },
-                )
-                PlayerPanel.Tracks -> TracksPanel(
-                    state = state,
-                    onAudio = player::selectAudio,
-                    onSubtitle = player::selectSubtitle,
-                    onOffset = player::setSubtitleOffset,
-                    onStyle = { settings.load("subtitles"); panel = PlayerPanel.Style },
-                    onClose = { panel = null },
-                )
-                PlayerPanel.Speed -> SpeedPanel(state.speed, onSpeed = { player.setSpeed(it); panel = null }, onClose = { panel = null })
-                PlayerPanel.Style -> StylePanel(settingsState, settings, onBack = { panel = PlayerPanel.Tracks }, onClose = { panel = null })
-                null -> Unit
+    // Any touch on the player, or a key (the volume), says someone is there ("Are you still watching?"); watched,
+    // never taken. The player holds the focus so the keys come through here.
+    val keys = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { keys.requestFocus() } }
+    Box(
+        Modifier.fillMaxSize()
+            .pointerInput(player) {
+                awaitPointerEventScope {
+                    while (true) {
+                        if (awaitPointerEvent(PointerEventPass.Initial).type == PointerEventType.Press) player.touched()
+                    }
+                }
             }
-        },
-    )
+            .onPreviewKeyEvent { if (it.type == KeyEventType.KeyDown) player.touched(); false }
+            .focusRequester(keys)
+            .focusable(),
+    ) {
+        PhonePlayerScreen(
+            state = state,
+            controls = controls && !pip && panel == null && state.problem == null,
+            locked = locked,
+            seekBack = player.seekBackSeconds,
+            seekForward = player.seekForwardSeconds,
+            subtitleSize = when (subtitlePrefs?.size) {
+                "S" -> 15.sp
+                "L" -> 22.sp
+                "XL" -> 26.sp
+                else -> 18.sp
+            },
+            lift = subtitlePrefs?.lift ?: true,
+            look = player.subtitleLook(device),
+            doubleTapSeek = player.settings.doubleTapSeek,
+            swipeLevels = swipeLevels,
+            actions = PlayerActions(
+                onBack = { nav.back() },
+                onPlayPause = { touched++; player.playPause() },
+                onSeekBy = { touched++; player.seekBy(it) },
+                onSeekTo = { touched++; player.seekTo(it) },
+                onSkip = player::skip,
+                onNext = player::playNext,
+                onLock = { locked = !locked; controls = true; touched++ },
+                onPip = {
+                    activity?.enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build())
+                },
+                onPanel = { panel = it },
+            ),
+            onToggleControls = { controls = !controls; touched++ },
+            video = { ContentFrame(player = player.exo, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) },
+            panel = {
+                when (panel) {
+                    PlayerPanel.Episodes -> EpisodesPanel(
+                        state = state,
+                        episodes = seasonEpisodes ?: state.episodes,
+                        seasonId = seasonId,
+                        onSeason = { s ->
+                            seasonId = s.id
+                            scope.launch { seasonEpisodes = player.season(s.id) }
+                        },
+                        onEpisode = { e -> panel = null; player.play(e) },
+                        onClose = { panel = null },
+                    )
+                    PlayerPanel.Tracks -> TracksPanel(
+                        state = state,
+                        onAudio = player::selectAudio,
+                        onSubtitle = player::selectSubtitle,
+                        onOffset = player::setSubtitleOffset,
+                        onStyle = { settings.load("subtitles"); panel = PlayerPanel.Style },
+                        onClose = { panel = null },
+                    )
+                    PlayerPanel.Speed -> SpeedPanel(state.speed, onSpeed = { player.setSpeed(it); panel = null }, onClose = { panel = null })
+                    PlayerPanel.Style -> StylePanel(settingsState, settings, onBack = { panel = PlayerPanel.Tracks }, onClose = { panel = null })
+                    null -> Unit
+                }
+            },
+        )
 
-    state.problem?.let { problem -> Problem(problem, onBack = { nav.back() }) }
+        state.problem?.let { problem -> Problem(problem, onBack = { nav.back() }) }
+        val ask = state.ask
+        val item = state.item
+        val next = state.next
+        if (ask != null && item != null && next != null) {
+            // Nobody answers: the player closes when the countdown ends, freeing the server.
+            val left by produceState((StillWatchingStopMs / 1000).toInt(), ask) {
+                val end = SystemClock.elapsedRealtime() + StillWatchingStopMs
+                while (true) {
+                    val ms = end - SystemClock.elapsedRealtime()
+                    value = ((ms + 999) / 1000).toInt().coerceAtLeast(0)
+                    if (ms <= 0) break
+                    delay(1000 - ms % 1000)
+                }
+                nav.back()
+            }
+            StillWatchingScreen(
+                item = item, next = next, ask = ask, secondsLeft = left,
+                fraction = if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 1f,
+                onKeep = player::keepWatching,
+                onDone = { nav.back() },
+            )
+        }
+    }
 }
 
 /** Sideways, edge to edge, system bars hidden and the screen kept on while the player is open. */

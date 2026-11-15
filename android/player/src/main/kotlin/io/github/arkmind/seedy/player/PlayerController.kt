@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.player
 
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -26,6 +27,7 @@ import io.github.arkmind.seedy.core.format.Images
 import io.github.arkmind.seedy.core.format.TICKS_PER_SECOND
 import io.github.arkmind.seedy.core.format.episodeTag
 import io.github.arkmind.seedy.core.settings.ResolvedStyle
+import io.github.arkmind.seedy.core.settings.StillWatchingRules
 import io.github.arkmind.seedy.core.settings.SystemCaptions
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.CoroutineScope
@@ -87,6 +89,8 @@ data class PlayerState(
     val episodes: List<BaseItemDto> = emptyList(),
     /** A live channel's programme on now (refreshed every minute). */
     val program: BaseItemDto? = null,
+    /** The episode ended and Seedy asks "Still watching?" before playing [next]. */
+    val ask: StillWatchingAsk? = null,
 ) {
     val live: Boolean get() = item?.type == BaseItemKind.TV_CHANNEL
 }
@@ -191,6 +195,27 @@ class PlayerController(private val context: Context, private val session: UserSe
 
     /** Settings · Gestures and Remote. */
     val settings: DeviceSettings get() = device
+
+    /**
+     * "Are you still watching?" (Settings · Playback): the episodes auto-played in a row and when someone last touched
+     * the player. Opening the player is someone being there.
+     */
+    private val stillWatching = StillWatchingRules.of(session.seedy?.prefs?.custom.orEmpty())
+    private var run = 0
+    private var lastInput = SystemClock.elapsedRealtime()
+
+    /** Someone is there: a touch on the phone's player, a key on the TV's. The run starts over. */
+    fun touched() {
+        run = 0
+        lastInput = SystemClock.elapsedRealtime()
+    }
+
+    /** "Still watching?" › Keep watching: on to the next episode, the run started over. */
+    fun keepWatching() {
+        touched()
+        _state.update { it.copy(ask = null) }
+        playNext()
+    }
 
     /** The audio and subtitle kind picked in the last episode, for "Keep my audio and subtitle choice". */
     private data class Picks(val seriesId: UUID?, val audioLang: String?, val subtitleLang: String?, val subtitleOff: Boolean, val forced: Boolean)
@@ -504,7 +529,15 @@ class PlayerController(private val context: Context, private val session: UserSe
         scope.launch {
             reportNow { streams.reportStopped(it.copy(positionTicks = _state.value.durationMs * 10_000)) }
             started = false
-            if (prefs?.autoPlayNext != false) _state.value.next?.let { play(it) }
+            if (prefs?.autoPlayNext != false) _state.value.next?.let { next ->
+                // Auto-play, unless it's time to ask whether anyone is still there. Only episodes have a next one here
+                // (no film starts on its own after a movie), so the run is of episodes.
+                val movie = _state.value.item?.type == BaseItemKind.MOVIE
+                val ask = stillWatchingAsk(stillWatching, movie, run, SystemClock.elapsedRealtime() - lastInput)
+                if (ask != null) return@launch _state.update { it.copy(ask = ask) }
+                run++
+                play(next)
+            }
         }
     }
 

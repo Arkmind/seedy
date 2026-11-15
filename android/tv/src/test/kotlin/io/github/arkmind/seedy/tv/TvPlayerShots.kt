@@ -24,6 +24,10 @@ import io.github.arkmind.seedy.tv.player.TvPlayerFocus
 import io.github.arkmind.seedy.tv.player.TvPlayerScreen
 import io.github.arkmind.seedy.tv.player.TvSettingsPanel
 import io.github.arkmind.seedy.tv.player.TvTracksPanel
+import io.github.arkmind.seedy.tv.player.TvStillWatching
+import io.github.arkmind.seedy.player.StillWatchingAsk
+import io.github.arkmind.seedy.ui.components.BoardScene
+import androidx.compose.ui.geometry.Rect
 import io.github.arkmind.seedy.ui.theme.SeedyTheme
 import org.jellyfin.sdk.model.api.ChapterInfo
 import org.jellyfin.sdk.model.api.MediaSegmentDto
@@ -118,6 +122,27 @@ class TvPlayerShots {
     @Test fun episodesManySeasons() = shot("TVPlayerEpisodesManySeasons") {
         val many = state.copy(seasons = (1..20).map { n -> Samples.northbound.copy(id = UUID.nameUUIDFromBytes("Season $n".toByteArray()), name = "Season $n") })
         TvEpisodesPanel(many, many.seasons[2].id, listOf(Samples.thePass, Samples.glassHarbor), {}, {})
+    }
+
+    /** Board "Android TV · Still watching?": S3 E3 ended the third episode in a row, the stream stops in 14:32. */
+    @Test
+    fun stillWatching() {
+        val finished = Samples.thePass.copy(indexNumber = 3)
+        val next = Samples.thePass.copy(id = UUID.nameUUIDFromBytes("The Crossing".toByteArray()), name = "The Crossing", indexNumber = 4, runTimeTicks = 47 * 60 * 10_000_000L)
+        compose.setContent {
+            val inputMode = LocalInputModeManager.current
+            SideEffect { inputMode.requestInputMode(InputMode.Keyboard) }
+            SeedyTheme {
+                TvStillWatching(
+                    item = finished, next = next, ask = StillWatchingAsk(3, 140, byTime = false), secondsLeft = 14 * 60 + 32, fraction = 1f,
+                    onKeep = {}, onDone = {}, now = java.time.LocalTime.of(23, 34),
+                    backdrop = { BoardScene(Modifier.fillMaxSize()) },
+                    thumb = { BoardScene(Modifier.matchParentSize(), Rect(420f, 300f, 1320f, 806f)) },
+                )
+            }
+        }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("src/test/screenshots/TVPlayerStillWatching.png")
     }
 
     @Test fun settings() = shot("TVPlayerSettings") {
