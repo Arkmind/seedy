@@ -209,7 +209,7 @@ export function EpubSettingsPanel({ value, onChange, onClose }: { value: EpubSet
         options={[{ value: 'tight', label: t('Tight') }, { value: 'normal', label: tc('Normal', 'spacing') }, { value: 'airy', label: t('Airy') }]} />
       <Seg<Margins> label={t('Margins')} value={value.margins} onChange={(margins) => onChange({ margins })}
         options={[{ value: 'narrow', label: t('Narrow') }, { value: 'normal', label: tc('Normal', 'margins') }, { value: 'wide', label: t('Wide') }]} />
-      <Seg<Layout> label={t('Layout')} value={value.layout} onChange={(layout) => onChange({ layout })}
+      <Seg<Layout> label={tc('Layout', 'reader')} value={value.layout} onChange={(layout) => onChange({ layout })}
         options={[{ value: 'one', label: t('One page') }, { value: 'two', label: t('Two pages') }, { value: 'scroll', label: t('Scroll') }]} />
       <span class="rs-note">{t('Saved for this book on every device. Your place syncs through the server.')}</span>
     </section>
@@ -224,7 +224,7 @@ export function ComicSettingsPanel({ value, onChange, onClose }: { value: ComicS
     <section ref={ref} role="dialog" aria-labelledby="rs-h" class="rs-panel" tabIndex={-1}>
       <h2 id="rs-h" class="rs-title">{t('Reading settings')}</h2>
       <ThemePicker value={value.theme} onChange={(theme) => onChange({ theme })} />
-      <Seg<Layout> label={t('Layout')} value={value.layout} onChange={(layout) => onChange({ layout })}
+      <Seg<Layout> label={tc('Layout', 'reader')} value={value.layout} onChange={(layout) => onChange({ layout })}
         options={[{ value: 'one', label: t('One page') }, { value: 'two', label: t('Two pages') }, { value: 'scroll', label: t('Scroll') }]} />
       <Seg<Fit> label={t('Fit')} value={value.fit} onChange={(fit) => onChange({ fit })}
         options={[{ value: 'screen', label: t('Screen') }, { value: 'width', label: t('Width') }]} />

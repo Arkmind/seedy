@@ -94,7 +94,7 @@ const fr: Record<string, string> = {
   'Publisher': 'Éditeur',
   'Narrator': 'Narrateur',
   'Open series': 'Ouvrir la série',
-  'More by {name}': 'Du même auteur : {name}',
+  'More by {name}|author': 'Du même auteur : {name}',
 
   // Reader: frame
   'Back to the book': 'Retour au livre',
@@ -149,7 +149,7 @@ const fr: Record<string, string> = {
   'Narrow': 'Étroites',
   'Normal|margins': 'Normales',
   'Wide': 'Larges',
-  'Layout': 'Mise en page',
+  'Layout|reader': 'Mise en page',
   'One page': 'Une page',
   'Two pages': 'Deux pages',
   'Scroll': 'Défilement',

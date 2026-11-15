@@ -6,7 +6,7 @@ import { partsOf } from '../../audio/api';
 import { playAudiobook } from '../../audio/engine';
 import { canDownload, userStore } from '../../lib/app-state';
 import { capitalize, dayOf, displayLanguage, duration, itemYear, longDate, pct, ticksToSeconds, timeLeft } from '../../lib/format';
-import { formatNumber, locale, t, tn } from '../../lib/i18n';
+import { formatNumber, locale, t, tc, tn } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
@@ -280,7 +280,7 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
         {author && more.length > 0 && (
           <section class="bk-sec" aria-labelledby="bkd-by">
             <div class="bk-sec-head">
-              <h2 id="bkd-by" class="bk-sec-title">{t('More by {name}', { name: author.Name })}</h2>
+              <h2 id="bkd-by" class="bk-sec-title">{tc('More by {name}', 'author', { name: author.Name })}</h2>
               <Link to={`${libPath}?tab=authors&author=${encodeURIComponent(author.Name)}`} class="bk-sec-link">{t('See all')}</Link>
             </div>
             <div class="bk-grid">
