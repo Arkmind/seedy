@@ -98,7 +98,13 @@ const ICONS = {
   // Item dialogs: metadata, identify, images
   lockOpen: { w: 2, body: <><rect x="5" y="11" width="14" height="9" rx="2" />{p('M8 11V8a4 4 0 0 1 7.7-1.5')}</> },
   bin: { w: 2, body: <>{p('M4 7h16')}{p('M10 11v6')}{p('M14 11v6')}{p('M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12')}{p('M9 7V4h6v3')}</> },
-  uploadUp: { w: 2.2, body: <>{p('M12 16V4')}{p('M7 9l5-5 5 5')}{p('M5 20h14')}</> }
+  uploadUp: { w: 2.2, body: <>{p('M12 16V4')}{p('M7 9l5-5 5 5')}{p('M5 20h14')}</> },
+  // Settings › Devices
+  deviceTv: { w: 2.2, body: <>{p('M3 5h18v12H3z')}{p('M8 21h8')}{p('M12 17v4')}</> },
+  deviceLaptop: { w: 2.2, body: <>{p('M4 5h16v11H4z')}{p('M2 19.5h20')}</> },
+  devicePhone: { w: 2.2, body: <>{p('M7.5 2.5h9a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1z')}{p('M11 18.5h2')}</> },
+  deviceTablet: { w: 2.2, body: <>{p('M5.5 3h13a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z')}{p('M11 17.5h2')}</> },
+  playLine: { w: 3, body: p('M7 4.5v15l12-7.5z') }
 } satisfies Record<string, IconDef>;
 
 export type IconName = keyof typeof ICONS;
