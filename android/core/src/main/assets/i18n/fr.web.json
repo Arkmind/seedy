@@ -896,6 +896,7 @@
  "Declined {title}": "{title} refusé",
  "Decode on the GPU": "Décoder sur le GPU",
  "Decoded here": "Décodé ici",
+ "Decoded on client": "Décodé par le client",
  "Decodes HEVC and other formats here instead of the server converting them. Needs a fast processor": "Décode le HEVC et d’autres formats ici plutôt que de laisser le serveur les convertir. Demande un processeur rapide",
  "Default": "Par défaut",
  "Deinterlacing": "Désentrelacement",

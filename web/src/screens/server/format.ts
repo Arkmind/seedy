@@ -282,7 +282,8 @@ export function playMethod(s: Session): PlayMethodKind {
   return 'direct';
 }
 
-export function playDetail(s: Session): string {
+/* `onClient`: the web app's experimental player decodes the file in the browser (Jellyfin only sees a direct play). */
+export function playDetail(s: Session, onClient = false): string {
   const item = s.NowPlayingItem;
   const streams = item?.MediaStreams ?? item?.MediaSources?.[0]?.MediaStreams ?? [];
   const video = streams.find((x) => x.Type === 'Video');
@@ -296,7 +297,7 @@ export function playDetail(s: Session): string {
     const v = [resolution(video?.Width, video?.Height), srcVideo, rangeLabel(video)].filter(Boolean).join(' ');
     const a = [srcAudio, audio?.ChannelLayout?.replace(/\(.*\)/, '') || channels(audio?.Channels)].filter(Boolean).join(' ');
     const rate = mbps(item?.MediaSources?.[0]?.Bitrate ?? video?.BitRate);
-    return [t('Direct play'), v, a, rate].filter(Boolean).join(' · ');
+    return [onClient ? t('Decoded on client') : t('Direct play'), v, a, rate].filter(Boolean).join(' · ');
   }
   if (method === 'stream') {
     const parts = [t('Direct stream')];

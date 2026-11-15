@@ -24,6 +24,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<Statistics>();
         serviceCollection.AddSingleton<ContinueWatching>();
         serviceCollection.AddSingleton<DeviceTracker>();
+        serviceCollection.AddSingleton<ClientDecoding>();
         serviceCollection.AddSingleton<Services.Media.ServiceHttp>();
         serviceCollection.AddSingleton<Services.Media.LidarrClient>();
         serviceCollection.AddSingleton<Services.Media.ShelfarrClient>();

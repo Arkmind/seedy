@@ -1262,7 +1262,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const rootCls = [
     'pl-root',
     controlsVisible ? '' : 'is-chrome-hidden',
-    !controlsVisible && !overlayOwnsScreen && !isAudio ? 'is-idle' : '',
+    !controlsVisible && !overlayOwnsScreen && !fatal && !isAudio ? 'is-idle' : '',
     overlayOwnsScreen ? 'is-overlay' : '',
     endShown ? 'is-end' : '',
     isAudio ? 'is-audio' : ''

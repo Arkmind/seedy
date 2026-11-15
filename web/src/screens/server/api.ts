@@ -659,6 +659,16 @@ export interface Session {
 }
 
 export const getSessions = (signal?: AbortSignal) => get<Session[]>('/Sessions', { activeWithinSeconds: 960 }, signal);
+
+/* Jellyfin sees the web app's experimental player as a direct play; Seedy knows which browsers decode the video. */
+export interface PlayingSession extends Session { decodedOnClient: boolean }
+export async function getPlaying(signal?: AbortSignal): Promise<PlayingSession[]> {
+  const [list, decoders] = await Promise.all([
+    getSessions(signal),
+    get<{ deviceId: string; itemId: string }[]>('/Seedy/Admin/Decoders', undefined, signal).catch(() => [])
+  ]);
+  return list.map((s) => ({ ...s, decodedOnClient: decoders.some((d) => d.deviceId === s.DeviceId && sameId(d.itemId, s.NowPlayingItem?.Id)) }));
+}
 export const sendSessionMessage = (id: string, Header: string, Text: string) =>
   post<void>(`/Sessions/${id}/Message`, { Header, Text, TimeoutMs: 15000 });
 export const stopSession = (id: string) => post<void>(`/Sessions/${id}/Playing/Stop`);

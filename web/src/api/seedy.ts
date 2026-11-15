@@ -351,6 +351,10 @@ export const getHome = () => get<{ rows: HomeRow[] }>('/Seedy/Home');
 export const getFeatured = () => get<FeaturedEntry[]>('/Seedy/Home/Featured');
 export const getTop10 = () => get<{ items: Top10Entry[]; quiet: boolean }>('/Seedy/Home/Top10');
 export const recordOrigin = (itemId: string, row: string) => post<void>('/Seedy/Plays/Origin', { itemId, row });
+/* Whether the browser decodes the video (the experimental player), for the admin's Playing now. */
+export const recordDecoder = (itemId: string, onClient: boolean) => post<void>('/Seedy/Plays/Decoder', { itemId, onClient });
+/* Swaps a sign-in borrowed from Jellyfin's web app for one made for Seedy, so its websocket joins the playing session. */
+export const ownToken = (token: string) => request<{ accessToken: string }>('POST', '/Seedy/Me/Token', { token });
 export const getTrailer = (itemId: string) => get<TrailerInfo | undefined>(`/Seedy/Items/${itemId}/Trailer`);
 
 export const getHistory = (q: { startIndex?: number; limit?: number; type?: 'all' | 'movies' | 'shows'; search?: string; includeHidden?: boolean }) =>

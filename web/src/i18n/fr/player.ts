@@ -26,6 +26,7 @@ const fr: Record<string, string> = {
   '{time} of {total}': '{time} sur {total}',
   'Direct play': 'Lecture directe',
   'Decoded here': 'Décodé ici',
+  'Decoded on client': 'Décodé par le client',
   'Usual player': 'Lecteur habituel',
   'Couldn’t play it the usual way': 'Impossible de le lire de la façon habituelle',
   'Experimental player on the left, usual player on the right': 'Lecteur expérimental à gauche, lecteur habituel à droite',
