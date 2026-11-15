@@ -13,12 +13,13 @@ const ANSWER_MS = 15 * 60_000;
 
 /* "Still watching?" (PlayerStillWatching board; Settings · Playback → Ask "Are you still watching?"). Auto-play stops
    here after a run of episodes or a long stretch with nobody touching anything. */
-export function StillWatching({ item, next, episodes, minutes, byTime, fraction, onContinue, onLeave, onSettings }: {
+export function StillWatching({ item, next, count, movies, minutes, byTime, fraction, onContinue, onLeave, onSettings }: {
   /* What just finished, and what would play next. */
   item: BaseItem;
   next: BaseItem;
-  /* Episodes played in a row, and minutes since anyone touched the player. */
-  episodes: number;
+  /* Episodes (or movies) played in a row, and minutes since anyone touched the player. */
+  count: number;
+  movies: boolean;
   minutes: number;
   byTime: boolean;
   fraction: number;
@@ -43,9 +44,13 @@ export function StillWatching({ item, next, episodes, minutes, byTime, fraction,
 
   const why = byTime
     ? t('You’ve been watching for {time} without touching anything, so Seedy paused before the next one.', { time: duration(minutes * 60) })
-    : episodes === 1
-      ? t('You’ve watched a whole episode without touching anything, so Seedy paused before the next one.')
-      : t('You’ve watched {n} episodes in a row without touching anything, so Seedy paused before the next one.', { n: episodes });
+    : movies
+      ? count === 1
+        ? t('You’ve watched a whole movie without touching anything, so Seedy paused before the next one.')
+        : t('You’ve watched {n} movies in a row without touching anything, so Seedy paused before the next one.', { n: count })
+      : count === 1
+        ? t('You’ve watched a whole episode without touching anything, so Seedy paused before the next one.')
+        : t('You’ve watched {n} episodes in a row without touching anything, so Seedy paused before the next one.', { n: count });
   const tag = item.Type === 'Episode' ? episodeTag(item) : '';
   const kicker = item.Type === 'Episode'
     ? [item.SeriesName, tag && t('{what} finished', { what: tag })]

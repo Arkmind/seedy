@@ -41,7 +41,7 @@ import { loadPgs } from './pgs';
 import { Scrubber, VolumeSlider } from './Scrubber';
 import {
   applyCastQuality, AUTO_BITRATE, autoBitrate, bitrateLabel, customPlayback, detectLocation, deviceStore, locationStore, maxVideoWidth,
-  resolveStyle, seekSteps, segmentMode, setSubtitleStyle, SIZE_FROM_PREFS, SIZE_TO_PREFS, softPlayerSlow, type DeviceSettings,
+  resolveStyle, seekSteps, stillRule, segmentMode, setSubtitleStyle, SIZE_FROM_PREFS, SIZE_TO_PREFS, softPlayerSlow, type DeviceSettings,
   type NetworkLocation, type SubtitleStyle
 } from './settings';
 import { StillWatching } from './StillWatching';
@@ -253,8 +253,12 @@ const NO_CUES: Cue[] = [];
 const skippedCopy = (type: string) =>
   tr(type === 'Intro' ? 'Skipped intro' : type === 'Recap' ? 'Skipped recap' : type === 'Preview' ? 'Skipped preview' : type === 'Commercial' ? 'Skipped ad' : 'Skipped');
 
-/* "Still watching?": episodes auto-played in a row, and since when nobody has touched anything. */
-const presence = { episodes: 0, since: Date.now(), auto: false };
+/* "Still watching?": episodes and movies auto-played in a row, and since when nobody has touched anything. */
+const presence = { episodes: 0, movies: 0, since: Date.now(), auto: false };
+const resetPresence = () => { presence.episodes = 0; presence.movies = 0; presence.since = Date.now(); };
+
+/* Why "Still watching?" came up, and what it holds back. */
+interface Ask { next: BaseItem; pick: boolean; byTime: boolean; count: number; movies: boolean; minutes: number }
 
 const prefQuality = (q: PlaybackPrefs['maxQuality']): QualityId => (q === '4k' || q === '1080p' || q === '720p' ? q : 'auto');
 
@@ -416,7 +420,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const subStyle: SubtitleStyle = resolveStyle(dev, subPrefs);
   const [pip, setPip] = useState(false);
   /* The run as it was when the question came up (moving the mouse to answer starts a new run). */
-  const [ask, setAsk] = useState<{ byTime: boolean; episodes: number; minutes: number } | null>(null);
+  const [ask, setAsk] = useState<Ask | null>(null);
   const [itemVersion, setItemVersion] = useState(0);
 
   const [panel, setPanel] = useState<Panel>(null);
@@ -791,22 +795,28 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     if (inEndZone()) sess()?.stop({ ended: true });
     leavePlayer(to);
   };
+  /* Asks whether anyone is still there instead of auto-playing [upcoming] when a ticked rule is met: episodes in a
+     row (after an episode), movies in a row (after a movie), or time without touching anything. */
+  const askInstead = (upcoming: BaseItem, pick: boolean) => {
+    if (inGroup()) return false;
+    const sw = custom.stillWatching;
+    const minutes = (Date.now() - presence.since) / 60000;
+    const movies = isMovie;
+    const rule = movies ? stillRule(sw, 'movies') : item.Type === 'Episode' ? stillRule(sw, 'episodes') : 0;
+    const count = (movies ? presence.movies : presence.episodes) + 1;
+    const byCount = rule > 0 && count >= rule;
+    const byTime = stillRule(sw, 'minutes') > 0 && minutes >= stillRule(sw, 'minutes');
+    if (!byCount && !byTime) return false;
+    if (!el().paused) pause();
+    setUpNext('dismissed');
+    setEndFlow('dismissed');
+    setPanel(null);
+    setAsk({ next: upcoming, pick, byTime: byTime && !byCount, count, movies, minutes: Math.round(minutes) });
+    return true;
+  };
   /* Auto-play, unless it's time to ask whether anyone is still there. */
   const autoNext = () => {
-    if (!next) return;
-    const sw = custom.stillWatching;
-    if (sw && !inGroup()) {
-      const minutes = (Date.now() - presence.since) / 60000;
-      const byEpisodes = presence.episodes + 1 >= sw.episodes;
-      const byTime = sw.minutes > 0 && minutes >= sw.minutes;
-      if (byEpisodes || byTime) {
-        if (!el().paused) pause();
-        setUpNext('dismissed');
-        setPanel(null);
-        setAsk({ byTime: byTime && !byEpisodes, episodes: presence.episodes + 1, minutes: Math.round(minutes) });
-        return;
-      }
-    }
+    if (!next || askInstead(next, false)) return;
     presence.auto = true;
     goNext(true);
   };
@@ -823,6 +833,13 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const playItem = (it: BaseItem) => {
     if (inGroup()) { void requestQueue(it.Id, 0); return; }
     navigate(`/play/${it.Id}`, { replace: true });
+  };
+  /* The end-of-movie countdown ran out: the first pick, unless it's time to ask. */
+  const autoPick = () => {
+    const pick = picks[0];
+    if (!pick || askInstead(pick, true)) return;
+    presence.auto = true;
+    playItem(pick);
   };
 
   const setSubtitle = (index: number) => {
@@ -948,13 +965,13 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
 
   /* Someone is there whenever the player gets real input; an auto-played episode adds to the run. */
   useEffect(() => {
-    if (presence.auto) presence.episodes++;
-    else { presence.episodes = 0; presence.since = Date.now(); }
+    if (!presence.auto) resetPresence();
+    else if (item.Type === 'Movie') presence.movies++;
+    else presence.episodes++;
     presence.auto = false;
     const here = (e: Event) => {
       if (e.type === 'pointermove' && !(e as PointerEvent).movementX && !(e as PointerEvent).movementY) return;
-      presence.episodes = 0;
-      presence.since = Date.now();
+      resetPresence();
     };
     const types = ['pointermove', 'pointerdown', 'wheel', 'keydown'];
     types.forEach((t) => window.addEventListener(t, here, { passive: true }));
@@ -1067,7 +1084,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const upNextShown = upNext === 'shown' && !!next;
   const endShown = endFlow === 'shown' && isMovie && picks.length > 0;
   const upCount = useCountdown(upNextShown && prefs.autoPlayNext && !ask, !m.paused || m.ended, prefs.upNextSeconds, autoNext);
-  const endCount = useCountdown(endShown, !m.paused || m.ended, prefs.moviePicksSeconds, () => picks[0] && playItem(picks[0]));
+  const endCount = useCountdown(endShown && !ask, !m.paused || m.ended, prefs.moviePicksSeconds, autoPick);
 
   /* ── SyncPlay binding ── */
   useEffect(() => bindSyncPlayer({
@@ -1527,15 +1544,21 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
         </>
       )}
 
-      {ask && next && (
+      {ask && (
         <StillWatching
           item={item}
-          next={next}
-          episodes={ask.episodes}
+          next={ask.next}
+          count={ask.count}
+          movies={ask.movies}
           minutes={ask.minutes}
           byTime={ask.byTime}
           fraction={fraction}
-          onContinue={() => { presence.episodes = 0; presence.since = Date.now(); setAsk(null); goNext(true); }}
+          onContinue={() => {
+            resetPresence();
+            setAsk(null);
+            if (ask.pick) playItem(ask.next);
+            else goNext(true);
+          }}
           onLeave={() => doneForNow()}
           onSettings={() => doneForNow('/settings/playback')}
         />

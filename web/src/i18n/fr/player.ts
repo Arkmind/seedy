@@ -148,6 +148,8 @@ const fr: Record<string, string> = {
   '{what} finished': '{what} terminé',
   'You’ve watched {n} episodes in a row without touching anything, so Seedy paused before the next one.': 'Vous avez regardé {n} épisodes d’affilée sans toucher à rien, alors Seedy a fait une pause avant le suivant.',
   'You’ve watched a whole episode without touching anything, so Seedy paused before the next one.': 'Vous avez regardé un épisode entier sans toucher à rien, alors Seedy a fait une pause avant le suivant.',
+  'You’ve watched {n} movies in a row without touching anything, so Seedy paused before the next one.': 'Vous avez regardé {n} films d’affilée sans toucher à rien, alors Seedy a fait une pause avant le suivant.',
+  'You’ve watched a whole movie without touching anything, so Seedy paused before the next one.': 'Vous avez regardé un film entier sans toucher à rien, alors Seedy a fait une pause avant le suivant.',
   'You’ve been watching for {time} without touching anything, so Seedy paused before the next one.': 'Vous regardez depuis {time} sans toucher à rien, alors Seedy a fait une pause avant le suivant.',
   'Keep watching': 'Continuer à regarder',
   'I’m done for now': 'J’arrête pour l’instant',

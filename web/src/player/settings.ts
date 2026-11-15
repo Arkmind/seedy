@@ -199,33 +199,45 @@ export const CUSTOM_KEYS = {
   moviePicks: 'playback.moviePicks'
 } as const;
 
-export interface StillWatching { episodes: number; minutes: number }
+/* "Ask “Are you still watching?”": three rules, each with its count (kept while unticked); `off` lists the unticked
+   ones. Older profiles saved { episodes, minutes } (both on) or false (never). */
+export type StillRule = 'episodes' | 'minutes' | 'movies';
+export interface StillWatching { episodes: number; minutes: number; movies: number; off: StillRule[] }
+export const STILL_RULES: StillRule[] = ['episodes', 'minutes', 'movies'];
+/* A rule's count when it's ticked, else 0. */
+export const stillRule = (sw: StillWatching, rule: StillRule) => (sw.off.includes(rule) ? 0 : sw[rule]);
 
 export interface CustomPlayback {
   skipPreview: SkipMode;
   skipCommercial: SkipMode;
-  /* null = never ask. */
-  stillWatching: StillWatching | null;
+  stillWatching: StillWatching;
   cinemaMode: boolean;
   moviePicks: boolean;
 }
 
-const STILL_WATCHING_DEFAULT: StillWatching = { episodes: 3, minutes: 90 };
+export const STILL_WATCHING_DEFAULT: StillWatching = { episodes: 3, minutes: 90, movies: 2, off: ['minutes'] };
+
+function stillWatching(v: unknown): StillWatching {
+  const d = STILL_WATCHING_DEFAULT;
+  if (v === false || v === 'off') return { ...d, off: [...STILL_RULES] };
+  if (!v || typeof v !== 'object') return d;
+  const o = v as Record<string, unknown>;
+  const count = (k: StillRule) => (Number(o[k]) > 0 ? Number(o[k]) : 0);
+  const sw = { episodes: count('episodes') || d.episodes, minutes: count('minutes') || d.minutes, movies: count('movies') || d.movies };
+  const off = Array.isArray(o.off)
+    ? STILL_RULES.filter((r) => (o.off as unknown[]).includes(r))
+    : STILL_RULES.filter((r) => r !== 'movies' && !count(r));
+  return { ...sw, off };
+}
 
 const isSkip = (v: unknown): v is SkipMode => v === 'auto' || v === 'button' || v === 'off';
 
 export function customPlayback(custom: Record<string, unknown> | undefined): CustomPlayback {
   const c = custom ?? {};
-  const sw = c[CUSTOM_KEYS.stillWatching];
-  let stillWatching: StillWatching | null = STILL_WATCHING_DEFAULT;
-  if (sw === false || sw === 'off') stillWatching = null;
-  else if (sw && typeof sw === 'object' && Number((sw as StillWatching).episodes) > 0) {
-    stillWatching = { episodes: Number((sw as StillWatching).episodes), minutes: Number((sw as StillWatching).minutes) || 0 };
-  }
   return {
     skipPreview: isSkip(c[CUSTOM_KEYS.skipPreview]) ? (c[CUSTOM_KEYS.skipPreview] as SkipMode) : 'auto',
     skipCommercial: isSkip(c[CUSTOM_KEYS.skipCommercial]) ? (c[CUSTOM_KEYS.skipCommercial] as SkipMode) : 'auto',
-    stillWatching,
+    stillWatching: stillWatching(c[CUSTOM_KEYS.stillWatching]),
     cinemaMode: c[CUSTOM_KEYS.cinemaMode] === true,
     moviePicks: c[CUSTOM_KEYS.moviePicks] !== false
   };
