@@ -7,7 +7,7 @@ import { saveBlob } from '../../../lib/clipboard';
 
 export type Range = '7d' | '30d' | '12m' | 'all';
 export type Kind = 'show' | 'movie' | 'music' | 'livetv' | 'book' | 'other';
-export type Method = 'DirectPlay' | 'DirectStream' | 'Transcode';
+export type Method = 'DirectPlay' | 'ClientDecode' | 'DirectStream' | 'Transcode';
 
 interface StatsPeak { streams: number; at: string; bitrate?: number | null }
 
@@ -28,7 +28,7 @@ export interface Stats {
     transcodePct?: number | null; prevTranscodePct?: number | null;
   };
   buckets: { start: string; watchMs: number; plays: number; kinds: Record<Kind, number> }[];
-  methods: { directPlay: number; directStream: number; transcode: number };
+  methods: { directPlay: number; clientDecode?: number; directStream: number; transcode: number };
   reasons: { key: 'video' | 'bitrate' | 'subtitles' | 'audio' | 'container' | 'other'; plays: number; codec?: string | null; devices: string[]; capMbps?: number | null }[];
   kinds: Record<Kind, number>;
   heat: number[][];

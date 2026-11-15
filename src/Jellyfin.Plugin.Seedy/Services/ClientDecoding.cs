@@ -7,7 +7,8 @@ namespace Jellyfin.Plugin.Seedy.Services;
 
 /// <summary>
 /// Which browsers decode their video themselves (the web app's experimental player). Jellyfin only sees a direct play,
-/// so the web app says so as playback starts, and the admin's Playing now matches it by device and title.
+/// so the web app says so as playback starts. The admin's Playing now matches it by device and title, and the play log
+/// records those plays as ClientDecode.
 /// </summary>
 public sealed class ClientDecoding
 {
@@ -35,6 +36,13 @@ public sealed class ClientDecoding
             _devices.TryRemove(stale, out _);
         }
     }
+
+    /// <summary>Gets whether a device decodes a title itself.</summary>
+    /// <param name="deviceId">Device id.</param>
+    /// <param name="itemId">Item id ("N").</param>
+    /// <returns>True while the browser decodes it.</returns>
+    public bool Decodes(string deviceId, string itemId)
+        => _devices.TryGetValue(deviceId, out var d) && string.Equals(d.ItemId, itemId, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Lists the devices decoding on their own and what they decode.</summary>
     /// <returns>Device id and item id pairs.</returns>

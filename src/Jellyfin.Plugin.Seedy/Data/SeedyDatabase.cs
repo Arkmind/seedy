@@ -62,7 +62,7 @@ public sealed class PlayRecord
     /// <summary>Gets or sets how long it actually played, pauses left out (null for plays recorded before Seedy counted it).</summary>
     public long? WatchedMs { get; set; }
 
-    /// <summary>Gets or sets how it played: DirectPlay, DirectStream or Transcode (the heaviest seen during the play).</summary>
+    /// <summary>Gets or sets how it played: DirectPlay, DirectStream, ClientDecode (the browser decoded the video) or Transcode (the heaviest seen during the play).</summary>
     public string? PlayMethod { get; set; }
 
     /// <summary>Gets or sets Jellyfin's transcode reasons, comma separated.</summary>

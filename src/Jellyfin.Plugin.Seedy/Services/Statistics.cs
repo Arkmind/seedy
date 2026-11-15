@@ -290,6 +290,7 @@ public sealed partial class Statistics
         {
             ["directPlay"] = rows.Count(r => r.Play.PlayMethod == "DirectPlay"),
             ["directStream"] = rows.Count(r => r.Play.PlayMethod == "DirectStream"),
+            ["clientDecode"] = rows.Count(r => r.Play.PlayMethod == "ClientDecode"),
             ["transcode"] = rows.Count(r => r.Play.PlayMethod == "Transcode")
         };
         dto.Reasons = Reasons(rows.Where(r => r.Play.PlayMethod == "Transcode").ToList());
@@ -842,7 +843,7 @@ public sealed partial class Statistics
                 (r.Watched / 60000.0).ToString("0.0", CultureInfo.InvariantCulture),
                 p.RuntimeTicks > 0 ? Math.Clamp(100.0 * p.PositionTicks / p.RuntimeTicks, 0, 100).ToString("0", CultureInfo.InvariantCulture) : string.Empty,
                 p.Finished ? "yes" : "no",
-                p.PlayMethod switch { "DirectPlay" => "direct play", "DirectStream" => "direct stream", "Transcode" => "transcoded", _ => string.Empty },
+                p.PlayMethod switch { "DirectPlay" => "direct play", "DirectStream" => "direct stream", "ClientDecode" => "decoded on client", "Transcode" => "transcoded", _ => string.Empty },
                 Cell(p.TranscodeReasons),
                 p.Bitrate > 0 ? (p.Bitrate.Value / 1_000_000.0).ToString("0.0", CultureInfo.InvariantCulture) : string.Empty
             }));

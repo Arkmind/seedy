@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using Jellyfin.Data;
+using Jellyfin.Data.Queries;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Database.Implementations.Enums;
+using MediaBrowser.Controller.Devices;
 using MediaBrowser.Controller.Library;
 
 namespace Jellyfin.Plugin.Seedy.Services;
@@ -35,6 +37,35 @@ public static class UserContext
     /// <returns>App name, or null.</returns>
     public static string? GetClientName(this ClaimsPrincipal principal)
         => principal.Claims.FirstOrDefault(c => c.Type == "Jellyfin-Client")?.Value;
+
+    /// <summary>Gets a claim Jellyfin puts on authenticated requests ("Jellyfin-Token", "Jellyfin-DeviceId"…).</summary>
+    /// <param name="principal">The request user.</param>
+    /// <param name="type">Claim type.</param>
+    /// <returns>The value, or null.</returns>
+    public static string? GetClaim(this ClaimsPrincipal principal, string type)
+        => principal.Claims.FirstOrDefault(c => c.Type == type)?.Value;
+
+    /// <summary>
+    /// Gets whether the request's token was made for another app or device than the one using it: the web app picks up
+    /// the sign-in of Jellyfin's own web app. Jellyfin ties the websocket to the token's own app and device, so on such a
+    /// token the socket and the playing session are two sessions, and the admin can't stop or message the player.
+    /// </summary>
+    /// <param name="principal">The request user.</param>
+    /// <param name="devices">Device manager.</param>
+    /// <returns>True when the token belongs to another app or device; false for its own token and for API keys.</returns>
+    public static bool UsesBorrowedToken(this ClaimsPrincipal principal, IDeviceManager devices)
+    {
+        var token = principal.GetClaim("Jellyfin-Token");
+        if (string.IsNullOrEmpty(token))
+        {
+            return false;
+        }
+
+        var device = devices.GetDevices(new DeviceQuery { AccessToken = token }).Items.FirstOrDefault();
+        return device is not null
+            && !(string.Equals(device.AppName, principal.GetClientName(), StringComparison.Ordinal)
+                && string.Equals(device.DeviceId, principal.GetClaim("Jellyfin-DeviceId"), StringComparison.Ordinal));
+    }
 
     /// <summary>Gets the signed-in user.</summary>
     /// <param name="principal">The request user.</param>

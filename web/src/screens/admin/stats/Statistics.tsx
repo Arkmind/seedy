@@ -445,8 +445,11 @@ function reasonText(r: Stats['reasons'][number]): { name: string; note?: string 
 
 function HowItPlayed({ data }: { data: Stats }) {
   const m = data.methods;
-  const total = m.directPlay + m.directStream + m.transcode;
-  const rows = ([['DirectPlay', m.directPlay], ['DirectStream', m.directStream], ['Transcode', m.transcode]] as const);
+  const client = m.clientDecode ?? 0;
+  const total = m.directPlay + client + m.directStream + m.transcode;
+  // Decoded on client only shows once a play used the experimental player.
+  const rows = ([['DirectPlay', m.directPlay], ['ClientDecode', client], ['DirectStream', m.directStream], ['Transcode', m.transcode]] as const)
+    .filter(([k, v]) => k !== 'ClientDecode' || v > 0);
   const reasons = data.reasons.filter((r) => r.plays > 0);
   const reasonTotal = reasons.reduce((s, r) => s + r.plays, 0);
   return (

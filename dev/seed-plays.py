@@ -85,6 +85,7 @@ DEVICES = [
     ('iPhone', 'Swiftfin iOS', 'Transcode', 0.55),
     ('Chrome on Windows', 'Seedy', 'DirectPlay', 0.7),
     ('Firefox on Linux', 'Seedy', 'DirectStream', 0.6),
+    ('Edge on Windows', 'Seedy', 'ClientDecode', 0.75),  # the experimental player decoding HEVC in the browser
     ('Pixel 8', 'Seedy for Android', 'DirectPlay', 0.8),
     ('Apple TV', 'Swiftfin tvOS', 'DirectPlay', 0.9),
 ]
@@ -142,7 +143,7 @@ for back in range(DAYS, -1, -1):
                     run = random.choice([24, 42, 52]) * 60 * 10_000_000  # the test files are short clips: pretend a real length
                     full = random.random() < 0.8
                     watched = run / 10_000_000 * (1 if full else random.uniform(0.2, 0.8))
-                    vcodec = 'hevc' if method == 'Transcode' and 'Video' in (reasons or '') else 'h264'
+                    vcodec = 'hevc' if method == 'ClientDecode' or (method == 'Transcode' and 'Video' in (reasons or '')) else 'h264'
                     start = add(user, e, 'show', start, watched, dev, e.get('SeriesId') or e['Id'], e.get('SeriesName') or e['Name'], 'Episode', run,
                                 int(run * (1 if full else watched * 10_000_000 / run)), full, lib(e), method, reasons,
                                 random.choice([4, 8, 12, 20]) * 1_000_000, vcodec, 'pgssub' if 'Subtitle' in (reasons or '') else None) + timedelta(minutes=random.randint(1, 6))
@@ -152,7 +153,7 @@ for back in range(DAYS, -1, -1):
                 full = random.random() < 0.7
                 watched = run / 10_000_000 * (1 if full else random.uniform(0.15, 0.7))
                 add(user, m, 'movie', start, watched, dev, m['Id'], m['Name'], 'Movie', run, int(run if full else watched * 10_000_000), full, lib(m),
-                    method, reasons, random.choice([8, 15, 25, 40]) * 1_000_000, 'hevc' if 'Video' in (reasons or '') else 'h264', 'pgssub' if 'Subtitle' in (reasons or '') else None)
+                    method, reasons, random.choice([8, 15, 25, 40]) * 1_000_000, 'hevc' if method == 'ClientDecode' or 'Video' in (reasons or '') else 'h264', 'pgssub' if 'Subtitle' in (reasons or '') else None)
             elif kind == 'music' and songs:
                 first = random.randrange(len(songs))
                 for k in range(random.randint(4, 14)):
