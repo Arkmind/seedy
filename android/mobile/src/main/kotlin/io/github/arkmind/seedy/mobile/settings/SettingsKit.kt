@@ -501,8 +501,8 @@ fun <T> SegRow(name: String, help: String?, options: List<Choice<T>>, value: T, 
 }
 
 /**
- * The boards' segmented control: a #1f1f1f well of [height] px options, the picked one light; [count] adds a grey
- * number after an option's name ("All 5").
+ * The boards' segmented control: a #1f1f1f well ([well]) of [height] px options, the picked one light; [count] adds a
+ * grey number after an option's name ("All 5").
  */
 @Composable
 fun <T> Segmented(
@@ -513,12 +513,15 @@ fun <T> Segmented(
     height: Dp = 36.dp,
     size: Int = 12,
     count: ((T) -> String?)? = null,
+    well: Color = SeedyColors.Surface,
+    wellRadius: Dp = 13.dp,
+    radius: Dp = 10.dp,
 ) {
-    Row(modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp)).background(SeedyColors.Surface).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+    Row(modifier.fillMaxWidth().clip(RoundedCornerShape(wellRadius)).background(well).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
         for (o in options) {
             val on = o.value == value
             Box(
-                Modifier.weight(1f).height(height).clip(RoundedCornerShape(10.dp)).background(if (on) SeedyColors.Inverse else Color.Transparent)
+                Modifier.weight(1f).height(height).clip(RoundedCornerShape(radius)).background(if (on) SeedyColors.Inverse else Color.Transparent)
                     .tap(role = Role.RadioButton) { onChange(o.value) }.padding(horizontal = 4.dp),
                 contentAlignment = Alignment.Center,
             ) {

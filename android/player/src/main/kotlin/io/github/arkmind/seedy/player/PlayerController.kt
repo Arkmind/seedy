@@ -2,6 +2,7 @@ package io.github.arkmind.seedy.player
 
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -26,6 +27,7 @@ import io.github.arkmind.seedy.core.format.Images
 import io.github.arkmind.seedy.core.format.TICKS_PER_SECOND
 import io.github.arkmind.seedy.core.format.episodeTag
 import io.github.arkmind.seedy.core.settings.ResolvedStyle
+import io.github.arkmind.seedy.core.settings.StillWatchingRules
 import io.github.arkmind.seedy.core.settings.SystemCaptions
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.CoroutineScope
@@ -39,6 +41,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.liveTvApi
 import org.jellyfin.sdk.api.client.extensions.mediaSegmentApi
@@ -87,6 +91,13 @@ data class PlayerState(
     val episodes: List<BaseItemDto> = emptyList(),
     /** A live channel's programme on now (refreshed every minute). */
     val program: BaseItemDto? = null,
+    /** Seedy asks "Still watching?" before playing [asked] (the next episode, or the end-of-movie pick). */
+    val ask: StillWatchingAsk? = null,
+    val asked: BaseItemDto? = null,
+    /** A movie's similar titles, for the end-of-movie screen ([endShown]); the first one plays in [pickLeft] s. */
+    val picks: List<BaseItemDto> = emptyList(),
+    val endShown: Boolean = false,
+    val pickLeft: Int? = null,
 ) {
     val live: Boolean get() = item?.type == BaseItemKind.TV_CHANNEL
 }
@@ -192,6 +203,58 @@ class PlayerController(private val context: Context, private val session: UserSe
     /** Settings · Gestures and Remote. */
     val settings: DeviceSettings get() = device
 
+    /**
+     * "Are you still watching?" (Settings · Playback): the episodes and movies auto-started in a row and when someone
+     * last touched the player. Starting something by hand is someone being there.
+     */
+    private val stillWatching = StillWatchingRules.of(session.seedy?.prefs?.custom.orEmpty())
+    private var episodeRun = 0
+    private var movieRun = 0
+    private var lastInput = SystemClock.elapsedRealtime()
+    /** What starts next was started by Seedy (the next episode, a pick when the countdown ran out). */
+    private var autoStart = false
+    /** Leaving from the credits: the stop is reported at the end, so the title counts as watched. */
+    private var finishOnRelease = false
+
+    /** The end of a movie: Settings · Playback › "Suggestions when a movie ends" (the web's, on unless turned off). */
+    private val moviePicksOn = session.seedy?.prefs?.custom?.get("playback.moviePicks")
+        ?.let { runCatching { it.jsonPrimitive.booleanOrNull }.getOrNull() } != false
+    /** How long the first pick counts down (the profile's Movie picks countdown). */
+    val pickSeconds: Int get() = prefs?.moviePicksSeconds ?: 15
+    private var endFlow = EndFlow.Idle
+
+    /** Someone is there: a touch on the phone's player, a key on the TV's. The runs start over. */
+    fun touched() {
+        episodeRun = 0
+        movieRun = 0
+        lastInput = SystemClock.elapsedRealtime()
+    }
+
+    /** "Still watching?" › Keep watching: on to what it held back, the runs started over. */
+    fun keepWatching() {
+        val upcoming = _state.value.asked ?: _state.value.next ?: return
+        touched()
+        _state.update { it.copy(ask = null, asked = null) }
+        play(upcoming)
+    }
+
+    /** Leaving now ("I’m done for now", Back to browse): from the credits, this one counts as watched. */
+    fun doneForNow() {
+        if (_state.value.ended || inEndZone()) finishOnRelease = true
+    }
+
+    /** End of a movie › Watch credits: the screen goes and the video is full size again. */
+    fun watchCredits() {
+        touched()
+        setEndFlow(EndFlow.Dismissed)
+    }
+
+    /** End of a movie › a pick chosen by hand (Play, or one of "Or try"). */
+    fun playPick(pick: BaseItemDto) {
+        touched()
+        play(pick)
+    }
+
     /** The audio and subtitle kind picked in the last episode, for "Keep my audio and subtitle choice". */
     private data class Picks(val seriesId: UUID?, val audioLang: String?, val subtitleLang: String?, val subtitleOff: Boolean, val forced: Boolean)
     private var picks: Picks? = null
@@ -251,6 +314,15 @@ class PlayerController(private val context: Context, private val session: UserSe
         item = it
         started = false
         skipped.clear()
+        // A title Seedy started adds to its run; one started by hand starts the runs over.
+        if (autoStart) {
+            if (it.type == BaseItemKind.MOVIE) movieRun++ else episodeRun++
+        } else {
+            touched()
+        }
+        autoStart = false
+        endFlow = EndFlow.Idle
+        finishOnRelease = false
         _state.update { s -> PlayerState(item = it, quality = s.quality, speed = s.speed, subtitleOffsetMs = s.subtitleOffsetMs) }
         val resumeTicks = startTicks ?: if (it.userData?.played == true) 0L else it.userData?.playbackPositionTicks ?: 0L
         val source = it.mediaSources?.firstOrNull()
@@ -266,6 +338,7 @@ class PlayerController(private val context: Context, private val session: UserSe
         startTicking()
         scope.launch { loadSegments(it) }
         scope.launch { loadEpisodes(it) }
+        scope.launch { loadPicks(it) }
     }
 
     private suspend fun openStream(opts: StreamOptions, keepPaused: Boolean = false) {
@@ -504,8 +577,58 @@ class PlayerController(private val context: Context, private val session: UserSe
         scope.launch {
             reportNow { streams.reportStopped(it.copy(positionTicks = _state.value.durationMs * 10_000)) }
             started = false
-            if (prefs?.autoPlayNext != false) _state.value.next?.let { play(it) }
+            val next = _state.value.next
+            when {
+                next != null && prefs?.autoPlayNext != false -> autoPlay(next)
+                // A movie with picks: the end-of-movie screen (again, after Watch credits), its countdown going on.
+                // (Not when its countdown already ran out and the pick is on its way.)
+                _state.value.item?.type == BaseItemKind.MOVIE && _state.value.picks.isNotEmpty() && _state.value.pickLeft != 0 -> setEndFlow(EndFlow.Shown)
+            }
         }
+    }
+
+    /** Starts [upcoming] as Seedy's own pick, unless it's time to ask whether anyone is still there. */
+    private fun autoPlay(upcoming: BaseItemDto) {
+        val movie = _state.value.item?.type == BaseItemKind.MOVIE
+        val ask = stillWatchingAsk(stillWatching, movie, if (movie) movieRun else episodeRun, SystemClock.elapsedRealtime() - lastInput)
+        if (ask != null) {
+            exo.playWhenReady = false
+            endFlow = EndFlow.Dismissed
+            _state.update { it.copy(ask = ask, asked = upcoming, endShown = false, pickLeft = null) }
+            return
+        }
+        autoStart = true
+        play(upcoming)
+    }
+
+    /** Puts the end-of-movie screen up or away; its countdown starts over each time it comes up. */
+    private fun setEndFlow(flow: EndFlow) {
+        val was = endFlow
+        endFlow = flow
+        val shown = flow == EndFlow.Shown
+        _state.update {
+            it.copy(
+                endShown = shown,
+                pickLeft = when {
+                    !shown || pickSeconds <= 0 -> null
+                    was == EndFlow.Shown -> it.pickLeft
+                    else -> pickSeconds
+                },
+            )
+        }
+    }
+
+    /** The picks' countdown, a second at a time: at 0 the first pick plays (or Seedy asks first). */
+    private fun countDown() {
+        val st = _state.value
+        val left = st.pickLeft ?: return
+        if (!st.endShown || st.ask != null || left <= 0) return
+        val next = countdownStep(left, exo.isPlaying, st.ended)
+        if (next > 0) return _state.update { it.copy(pickLeft = next) }
+        // Once: the pick is on its way (or Seedy asks first).
+        _state.update { it.copy(pickLeft = 0) }
+        endFlow = EndFlow.Dismissed
+        st.picks.firstOrNull()?.let(::autoPlay)
     }
 
     private fun startTicking() {
@@ -525,6 +648,12 @@ class PlayerController(private val context: Context, private val session: UserSe
             },
             scope.launch {
                 while (isActive) {
+                    delay(1_000)
+                    countDown()
+                }
+            },
+            scope.launch {
+                while (isActive) {
                     delay(30_000)
                     stream?.takeIf { it.method != PlayMethod.DIRECT_PLAY }?.let { streams.ping(it) }
                 }
@@ -538,13 +667,22 @@ class PlayerController(private val context: Context, private val session: UserSe
         val st = _state.value
         val lines = text?.at(pos, st.subtitleOffsetMs).orEmpty()
         val ticks = pos * 10_000
-        val seg = st.segments.firstOrNull { ticks >= it.startTicks && ticks < it.endTicks - TICKS_PER_SECOND && skipMode(it.type) != "off" }
+        // A movie with picks keeps its credits: the end-of-movie screen comes up over them instead.
+        val picking = st.item?.type == BaseItemKind.MOVIE && st.picks.isNotEmpty()
+        val seg = st.segments.firstOrNull {
+            ticks >= it.startTicks && ticks < it.endTicks - TICKS_PER_SECOND && skipMode(it.type) != "off" && !(picking && it.type == MediaSegmentType.OUTRO)
+        }
         if (seg != null && skipMode(seg.type) == "auto" && seg.id !in skipped) {
             skipped += seg.id
             seekTo(seg.endTicks / 10_000)
             return
         }
         _state.update { it.copy(positionMs = pos, durationMs = dur, bufferedMs = exo.bufferedPosition, lines = lines, skip = seg?.takeIf { s -> s.id !in skipped }) }
+        if (picking && dur > 0 && !st.ended && st.ask == null && skipMode(MediaSegmentType.OUTRO) != "off") {
+            val credits = st.segments.firstOrNull { it.type == MediaSegmentType.OUTRO }?.let { it.startTicks / 10_000 }
+            val flow = endFlowAt(endFlow, pos, moviePicksAt(dur, credits))
+            if (flow != endFlow) setEndFlow(flow)
+        }
     }
 
     private fun skipMode(type: MediaSegmentType): String = when (type) {
@@ -581,6 +719,20 @@ class PlayerController(private val context: Context, private val session: UserSe
                 )
             }
         }
+    }
+
+    /** A movie's similar titles for its end (not for trailers before it, nor with the suggestions turned off). */
+    private suspend fun loadPicks(it: BaseItemDto) {
+        if (it.type != BaseItemKind.MOVIE || !moviePicksOn) return
+        val similar = runCatching {
+            withIo {
+                session.api.libraryApi.getSimilarItems(
+                    itemId = it.id, userId = session.userId, limit = 8,
+                    fields = listOf(ItemFields.GENRES, ItemFields.PRIMARY_IMAGE_ASPECT_RATIO),
+                ).content.items
+            }
+        }.getOrDefault(emptyList())
+        _state.update { s -> if (s.item?.id == it.id) s.copy(picks = moviePicks(similar, it)) else s }
     }
 
     /** A channel's programme on now, refreshed every minute while it plays. */
@@ -641,7 +793,7 @@ class PlayerController(private val context: Context, private val session: UserSe
     /** Reports the stop, ends any conversion and frees the decoder. Call once, when the player closes. */
     fun release() {
         jobs.forEach { it.cancel() }
-        val snapshot = Triple(item, stream, exo.currentPosition)
+        val snapshot = Triple(item, stream, if (finishOnRelease) _state.value.durationMs else exo.currentPosition)
         val paused = !exo.playWhenReady
         val speed = exo.playbackParameters.speed
         VideoService.stop(context, mediaSession, background)

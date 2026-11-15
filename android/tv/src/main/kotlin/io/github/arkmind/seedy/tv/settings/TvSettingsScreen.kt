@@ -463,11 +463,7 @@ private fun PlaybackSection(state: SettingsState, actions: SettingsActions, f: (
             (Choices.UpNextSeconds + pb.upNextSeconds).distinct().sorted().map { Choice(it, Choices.seconds(it)) }, pb.upNextSeconds,
             { v -> actions.setPlayback { it.copy(upNextSeconds = v) } },
         )
-        val still = state.stillWatching
-        TvChoiceRow(
-            t("Ask “Are you still watching?”"), t("Pauses auto-play when nobody’s there"),
-            (Choices.StillWatching + still).distinct().map { Choice(it, Choices.stillWatching(it, short = true)) }, still, actions::setStillWatching,
-        )
+        TvStillWatchingRow(state.stillWatching, actions::setStillWatching, focus = f("stillWatching"))
     }
     val c = state.config
     TvSwitchRow(

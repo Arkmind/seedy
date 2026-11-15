@@ -15,6 +15,7 @@ import io.github.arkmind.seedy.core.data.SubtitleStyle
 import io.github.arkmind.seedy.core.seedy.HomeRowPref
 import io.github.arkmind.seedy.core.seedy.HomeRowSetting
 import io.github.arkmind.seedy.core.seedy.PlaybackPrefs
+import io.github.arkmind.seedy.core.settings.StillWatchingRules
 import io.github.arkmind.seedy.core.seedy.RequestsFeatures
 import io.github.arkmind.seedy.core.seedy.SeerrAccountRef
 import io.github.arkmind.seedy.core.seedy.UserPrefs
@@ -89,7 +90,7 @@ class SettingsShots {
     fun home() = shot("AndroidSettingsHome") { HomeScreenPage(SettingsSamples.state, actions, nav, dragging = "top10") }
 
     @Test
-    @Config(qualifiers = "w390dp-h2120dp-mdpi")
+    @Config(qualifiers = "w390dp-h2470dp-mdpi")
     fun playback() = shot("AndroidSettingsPlayback") { PlaybackPage(SettingsSamples.state, actions, nav) }
 
     @Test
@@ -129,6 +130,8 @@ object SettingsSamples {
             },
             custom = mapOf(
                 "display.language" to JsonPrimitive("en"),
+                // The board's rules: 3 episodes and 90 min ticked, movies (1) not.
+                "playback.stillWatching" to StillWatchingRules(episodes = 3, minutes = 90, minutesOn = true, movies = 1, moviesOn = false).toJson(),
                 "home.opensOn" to buildJsonObject { put(shows.toString().replace("-", ""), "suggestions") },
             ),
         ),

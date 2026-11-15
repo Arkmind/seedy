@@ -1,4 +1,6 @@
 {
+ "A whole episode without a tap, so Seedy paused before the next one.": "Un épisode entier sans un geste, alors Seedy a fait une pause avant le suivant.",
+ "A whole movie without a tap, so Seedy paused before the next one.": "Un film entier sans un geste, alors Seedy a fait une pause avant le suivant.",
  "As in the file": "Comme dans le fichier",
  "Back closes": "Retour pour fermer",
  "Bitrate, codecs and why it transcodes": "Débit, codecs et raisons du transcodage",
@@ -28,6 +30,7 @@
  "Shown {s} s earlier": "Affichés {s} s plus tôt",
  "Shown {s} s later": "Affichés {s} s plus tard",
  "Speed {speed}": "Vitesse {speed}",
+ "Stop for now": "Arrêter pour l’instant",
  "Stream": "Flux",
  "Stretch": "Étirer",
  "Stretch the picture to the screen": "Étirer l’image à l’écran",
@@ -58,5 +61,8 @@
  "up to {size} MB": "jusqu’à {size} Mo",
  "{episodes} · {aired} out": "{episodes} · {aired} diffusés",
  "{n} chapter": "{n} chapitre",
- "{n} chapters": "{n} chapitres"
+ "{n} chapters": "{n} chapitres",
+ "{n} episodes in a row without a tap, so Seedy paused before the next one.": "{n} épisodes d’affilée sans un geste, alors Seedy a fait une pause avant le suivant.",
+ "{n} movies in a row without a tap, so Seedy paused before the next one.": "{n} films d’affilée sans un geste, alors Seedy a fait une pause avant le suivant.",
+ "{time} without a tap, so Seedy paused before the next one.": "{time} sans un geste, alors Seedy a fait une pause avant le suivant."
 }

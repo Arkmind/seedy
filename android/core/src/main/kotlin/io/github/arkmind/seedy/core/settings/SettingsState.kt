@@ -100,18 +100,8 @@ data class SettingsState(
         else -> t("Auto")
     }
 
-    /** The "Are you still watching?" choice: "off" or "episodes:minutes". */
-    val stillWatching: String
-        get() {
-            val v = custom[Keys.StillWatching] ?: return "3:90"
-            if (v is JsonObject) {
-                val e = v["episodes"]?.jsonPrimitive?.intOrNull ?: return "3:90"
-                val m = v["minutes"]?.jsonPrimitive?.intOrNull ?: 0
-                return if (e > 0) "$e:$m" else "off"
-            }
-            val p = runCatching { v.jsonPrimitive }.getOrNull()
-            return if (p?.booleanOrNull == false || p?.contentOrNull == "off") "off" else "3:90"
-        }
+    /** "Are you still watching?": its three rules. */
+    val stillWatching: StillWatchingRules get() = StillWatchingRules.of(custom)
 
     val seekBack: Int get() = device.seekBack ?: playback.seekBackSeconds
     val seekForward: Int get() = device.seekForward ?: playback.seekForwardSeconds
@@ -269,7 +259,7 @@ interface SettingsActions {
     fun setCustom(key: String, value: JsonElement?) {}
     fun setPlayback(transform: (PlaybackPrefs) -> PlaybackPrefs) {}
     fun setAutoPlayNext(on: Boolean) {}
-    fun setStillWatching(value: String) {}
+    fun setStillWatching(rules: StillWatchingRules) {}
     fun setPrivacy(personalRecs: Boolean, countInTop10: Boolean) {}
     fun setRowOrder(mine: Boolean) {}
     fun setRows(rows: List<HomeRowPref>) {}

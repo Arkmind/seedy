@@ -5,14 +5,16 @@ import { DEFAULT_PLAYBACK, meStore, playbackPrefs, userStore } from '../../lib/a
 import { useStore } from '../../lib/store';
 import { NumField, Panel, Segmented, Switch } from '../../ui/controls';
 import {
-  BITRATES, CUSTOM_KEYS, RESOLUTIONS, bitrateLabel, customPlayback, deviceStore, seekSteps, setDevice, type DeviceSettings, type MaxResolution
+  BITRATES, CUSTOM_KEYS, RESOLUTIONS, STILL_RULES, bitrateLabel, customPlayback, deviceStore, seekSteps, setDevice, type DeviceSettings,
+  type MaxResolution, type StillRule, type StillWatching
 } from '../../player/settings';
 import { softAvailable, type SoftMode } from '../../player/soft-profile';
+import { Icon } from '../../ui/icons';
 import { DeviceTag, MeLayout } from './MeLayout';
 import { PlaybackRow, Picker, languageOptions, tOptions, useFreshUser, useLanguages, type PickOption } from './playback-parts';
 import { SaveLine } from './parts';
 import { type FullUserConfig, saveCustom, savePlayback, saveUserConfig } from './prefs';
-import { getLang, t } from '../../lib/i18n';
+import { getLang, t, tn } from '../../lib/i18n';
 
 /* Settings · Playback (MePlayback board). Quality and a few audio/skip settings are per device;
    the rest follow the profile, and Jellyfin's own options are saved to its UserConfiguration. */
@@ -31,13 +33,62 @@ const CHANNELS: PickOption<DeviceSettings['audioChannels']>[] = [
   { value: 1, label: 'Mono' }
 ];
 
-const STILL_WATCHING: PickOption<string>[] = [
-  { value: 'off', label: 'Never' },
-  { value: '2:60', label: 'After 2 episodes or 60 min' },
-  { value: '3:90', label: 'After 3 episodes or 90 min' },
-  { value: '4:120', label: 'After 4 episodes or 2 hours' },
-  { value: '6:180', label: 'After 6 episodes or 3 hours' }
-];
+/* "Ask “Are you still watching?”": the rules, their words and counts (minutes for the time rule). */
+const STILL_RULE: Record<StillRule, { name: string; help: string; counts: number[] }> = {
+  episodes: { name: 'After episodes in a row', help: 'Shows only', counts: [2, 3, 4] },
+  minutes: { name: 'After watching for a while', help: 'Shows and movies, without a break', counts: [90, 120, 180] },
+  movies: { name: 'After movies in a row', help: 'Before end-of-movie picks or the next film start', counts: [1, 2, 3] }
+};
+
+const stillCount = (rule: StillRule, n: number) =>
+  rule === 'episodes' ? tn(n, '{n} episode', '{n} episodes')
+    : rule === 'movies' ? tn(n, '{n} movie', '{n} movies')
+      : n >= 120 && n % 60 === 0 ? t('{n} h', { n: n / 60 }) : t('{n} min', { n });
+
+/* Tick any rules; each keeps its count while unticked (dimmed), and picking a count ticks its rule. */
+function StillRules({ value }: { value: StillWatching }) {
+  const save = (patch: Partial<StillWatching>) => void saveCustom({ [CUSTOM_KEYS.stillWatching]: { ...value, ...patch } });
+  return (
+    <div role="group" aria-label={t('Ask “Are you still watching?”')} class="me-pb-rules">
+      {STILL_RULES.map((rule) => {
+        const on = !value.off.includes(rule);
+        const { name, help, counts } = STILL_RULE[rule];
+        const choices = counts.includes(value[rule]) ? counts : [...counts, value[rule]].sort((a, b) => a - b);
+        return (
+          <div key={rule} class={'me-pb-rule' + (on ? ' is-on' : '')}>
+            <label class="me-pb-rule-label">
+              <input
+                type="checkbox"
+                class="me-pb-rule-input"
+                checked={on}
+                onChange={() => save({ off: on ? [...value.off, rule] : value.off.filter((r) => r !== rule) })}
+              />
+              <span class="me-pb-check" aria-hidden="true">{on && <Icon name="check" size={14} stroke={3.2} />}</span>
+              <span class="me-pb-rule-text">
+                <span class="me-pb-rule-name">{t(name)}</span>
+                <span class="me-pb-rule-help">{t(help)}</span>
+              </span>
+            </label>
+            <div role="radiogroup" aria-label={t(name)} class="me-pb-rule-seg">
+              {choices.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  role="radio"
+                  aria-checked={n === value[rule] ? 'true' : 'false'}
+                  class="me-pb-rule-opt"
+                  onClick={() => save({ [rule]: n, off: value.off.filter((r) => r !== rule) })}
+                >
+                  {stillCount(rule, n)}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 const PAUSE_SCREEN: PickOption<number>[] = [
   { value: 0, label: 'Never' },
@@ -71,8 +122,6 @@ const SOFT_PLAYER: PickOption<SoftMode>[] = [
   { value: 'any', label: 'When needed, any size' },
   { value: 'always', label: 'Every video (for testing)' }
 ];
-
-const stillValue = (sw: { episodes: number; minutes: number } | null) => (sw ? `${sw.episodes}:${sw.minutes}` : 'off');
 
 export function MePlayback() {
   const me = useStore(meStore);
@@ -183,18 +232,11 @@ export function MePlayback() {
               onChange={(v) => void savePlayback({ upNextSeconds: v })}
             />
           </PlaybackRow>
-          <PlaybackRow name={t('Ask “Are you still watching?”')} help={t('Pauses auto-play when nobody’s there')}>
-            <Picker
-              label={t('Ask “Are you still watching?”')}
-              value={stillValue(custom.stillWatching)}
-              options={STILL_WATCHING.some((o) => o.value === stillValue(custom.stillWatching))
-                ? tOptions(STILL_WATCHING)
-                : [...tOptions(STILL_WATCHING), { value: stillValue(custom.stillWatching), label: t('After {episodes} episodes or {minutes} min', { episodes: custom.stillWatching!.episodes, minutes: custom.stillWatching!.minutes }) }]}
-              onChange={(v) => {
-                const [episodes, minutes] = v.split(':').map(Number);
-                void saveCustom({ [CUSTOM_KEYS.stillWatching]: v === 'off' ? false : { episodes, minutes } });
-              }}
-            />
+          <PlaybackRow
+            name={t('Ask “Are you still watching?”')}
+            help={t('Seedy pauses and asks when any rule you tick is met. Touching the remote, the screen or the volume starts the count again.')}
+          >
+            <StillRules value={custom.stillWatching} />
           </PlaybackRow>
           <PlaybackRow name={t('Keep my audio choice')} help={t('Pick the same kind of track as the last episode')}>
             <Switch

@@ -26,6 +26,7 @@ import io.github.arkmind.seedy.core.settings.ResolvedStyle
 import io.github.arkmind.seedy.core.settings.SettingsActions
 import io.github.arkmind.seedy.core.settings.SettingsState
 import io.github.arkmind.seedy.core.settings.SettingsState.Companion.Keys
+import io.github.arkmind.seedy.core.settings.StillWatchingRules
 import io.github.arkmind.seedy.core.settings.SystemCaptions
 import io.github.arkmind.seedy.core.settings.CodeState
 import kotlinx.coroutines.Dispatchers
@@ -169,13 +170,7 @@ class SettingsViewModel(
         setConfig { it.copy(enableNextEpisodeAutoPlay = on) }
     }
 
-    override fun setStillWatching(value: String) {
-        val v: JsonElement = if (value == "off") JsonPrimitive(false) else {
-            val (e, m) = value.split(':').map { it.toInt() }
-            buildJsonObject { put("episodes", e); put("minutes", m) }
-        }
-        setCustom(Keys.StillWatching, v)
-    }
+    override fun setStillWatching(rules: StillWatchingRules) = setCustom(Keys.StillWatching, rules.toJson())
 
     override fun setPrivacy(personalRecs: Boolean, countInTop10: Boolean) {
         val next = PrivacyPrefs(personalRecs, countInTop10)

@@ -110,3 +110,37 @@
   .me-pb-adv-sum { padding: 20px; }
   .me-pb-adv-body { padding: 0 20px 20px; }
 }
+
+/* ── Ask "Are you still watching?": tickable rules, each with its counts ── */
+.me-pb-rules { flex: 1 1 100%; display: flex; flex-direction: column; gap: 6px; }
+.me-pb-rule {
+  position: relative;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px;
+  padding: 12px 14px; border-radius: 13px; background: #1a1a1a;
+}
+.me-pb-rule-label { flex: 1 1 260px; min-width: 0; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.me-pb-rule-input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+.me-pb-check {
+  flex: none; width: 22px; height: 22px; box-sizing: border-box; border-radius: 7px; display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 2px #5a5a5a; color: #1e1e1e; transition: background-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.me-pb-rule.is-on .me-pb-check { background: var(--seedy-accent); box-shadow: none; }
+.me-pb-rule-input:focus-visible + .me-pb-check { outline: 2px solid var(--seedy-accent); outline-offset: 3px; }
+.me-pb-rule-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.me-pb-rule-name { font-size: 14px; font-weight: 700; color: var(--seedy-text-hero); }
+.me-pb-rule.is-on .me-pb-rule-name { color: #ffffff; }
+.me-pb-rule-help { font-size: 12px; color: var(--seedy-text-3); }
+.me-pb-rule-seg { display: flex; gap: 3px; padding: 3px; border-radius: 12px; background: #242424; opacity: 0.4; transition: opacity var(--t-fast) var(--ease); }
+.me-pb-rule.is-on .me-pb-rule-seg, .me-pb-rule-seg:hover, .me-pb-rule-seg:focus-within { opacity: 1; }
+.me-pb-rule-opt {
+  height: 34px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; color: var(--seedy-text-hero);
+  font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.me-pb-rule-opt:hover { color: #ffffff; background: var(--seedy-surface-2); }
+.me-pb-rule-opt[aria-checked='true'] { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-weight: 800; }
+@media (max-width: 720px) {
+  .me-pb-rule { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; border-radius: 14px; }
+  .me-pb-rule-label { flex: none; }
+  .me-pb-rule-opt { flex: 1; min-width: 0; padding: 0 4px; font-size: 12px; }
+}
