@@ -12,12 +12,12 @@ import { ItemCard } from '../../ui/cards';
 import { toast } from '../../ui/overlay';
 import { toggleFavorite } from '../browse/parts';
 import { MoreActions, useView } from '../browse/details-parts';
-import { TRACK_FIELDS, artistTracks, instantMix, type Track } from '../../audio/api';
+import { TRACK_FIELDS, artistTracks, type Track } from '../../audio/api';
 import { Cover, useNearestPalette } from '../../audio/cover';
 import { audioStore, playLoaded, playedStore, togglePlay } from '../../audio/engine';
 import { AIcon, EqIcon } from '../../audio/icons';
 import { clock } from '../../audio/parts';
-import { AlbumCard, ArtistCard, SectionHead, playsLabel, releaseOf, songsLabel, yearOf, type Release, CardSkel, artistAlbums } from './parts';
+import { AlbumCard, ArtistCard, SectionHead, playsLabel, releaseOf, songsLabel, yearOf, type Release, CardSkel, artistAlbums, startMix } from './parts';
 import './music.css';
 
 /* An artist (MusicArtist board): the name over their art; Play, Shuffle, Artist radio, favourite and ⋯; Most played
@@ -70,14 +70,7 @@ export function MusicArtistPage({ item: initial }: { item: BaseItem }) {
       toast(t('Couldn’t start playback'), 'error');
     }
   };
-  const radio = async () => {
-    try {
-      const mixed = await instantMix(item.Id, 150);
-      await playLoaded(mixed, 0, { source: { kind: 'mix', id: item.Id, name: t('{name} radio', { name: item.Name }) } });
-    } catch {
-      toast(t('Couldn’t start the mix'), 'error');
-    }
-  };
+  const radio = () => startMix(item, t('{name} radio', { name: item.Name }));
 
   const d = disc.data;
   const tabs: { id: DiscTab; label: string; n: number }[] = d ? [

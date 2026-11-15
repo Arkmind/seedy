@@ -14,13 +14,13 @@ import { MenuItem, toast } from '../../ui/overlay';
 import { EmptyPlaylist, EmptyState, toggleFavorite } from '../browse/parts';
 import { MoreActions, useView } from '../browse/details-parts';
 import { manageChanged } from '../browse/manage/host';
-import { albumTracks, audioStreamOf, instantMix, playlistTracks, qualityLabel, type Track } from '../../audio/api';
+import { albumTracks, audioStreamOf, playlistTracks, qualityLabel, type Track } from '../../audio/api';
 import { Cover, initialsOf, paletteOf, useCoverTint } from '../../audio/cover';
 import { addToQueue, audioStore, playLoaded, playedStore, togglePlay } from '../../audio/engine';
 import { AIcon } from '../../audio/icons';
 import { sizeLabel } from '../../audio/NowPlaying';
 import {
-  AlbumCard, SectionHead, TrackTable, TracksSkeleton, lengthLabel, longDate, playlistCovers, releaseLabel, releaseOf, songsLabel, yearOf
+  AlbumCard, SectionHead, TrackTable, TracksSkeleton, lengthLabel, longDate, playlistCovers, releaseLabel, releaseOf, songsLabel, yearOf, startMix
 } from './parts';
 import './music.css';
 
@@ -86,14 +86,7 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
     if (here) { togglePlay(); return; }
     if (list.length) void playLoaded(list, 0, { source });
   };
-  const mix = async () => {
-    try {
-      const mixed = await instantMix(item.Id, 150);
-      await playLoaded(mixed.length ? mixed : list, 0, { source: { kind: 'mix', id: item.Id, name: t('{name} mix', { name: item.Name }) } });
-    } catch {
-      toast(t('Couldn’t start the mix'), 'error');
-    }
-  };
+  const mix = () => startMix(item, t('{name} mix', { name: item.Name }), list);
   const remove = async (tk: Track & { PlaylistItemId?: string }) => {
     if (!tk.PlaylistItemId) return;
     try {

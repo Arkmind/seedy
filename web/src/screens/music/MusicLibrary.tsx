@@ -19,7 +19,7 @@ import { AIcon } from '../../audio/icons';
 import {
   AlbumCard, ArtistCard, GenreTile, JumpCard, MUSIC_FIELDS, MixCard, NewPlaylistTile, PlaylistCard, SectionHead, albumArtist,
   albumArtistsCount, albumsLabel, countOf, playlistCovers, playsLabel, songsOf, songsLabel, yearOf, type Mix, CardSkel, artistAlbums,
-  audioPlaylists, playlistPreview
+  audioPlaylists, playlistPreview, musicGenres
 } from './parts';
 import { AlbumsTab, ArtistsTab, FoldersTab, GenresTab, PlaylistsTab, SongsTab } from './tabs';
 import { LibraryMenuItems } from '../../ui/library-menu';
@@ -231,8 +231,7 @@ async function genreMixOf(g: BaseItem): Promise<Mix> {
 }
 
 const getGenres = (viewId: string) =>
-  get<ItemsResult>('/MusicGenres', { userId: currentUserId(), parentId: viewId, fields: 'ItemCounts', enableImages: false, sortBy: 'SortName' })
-    .then((r) => r.Items.slice().sort((a, b) => (b.AlbumCount ?? b.ChildCount ?? 0) - (a.AlbumCount ?? a.ChildCount ?? 0)));
+  musicGenres(viewId).then((r) => r.Items.slice().sort((a, b) => (b.AlbumCount ?? b.ChildCount ?? 0) - (a.AlbumCount ?? a.ChildCount ?? 0)));
 
 function Mixes({ view, top }: { view: BaseItem; top?: TopArtist[] }) {
   const [more, setMore] = useState(false);

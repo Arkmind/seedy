@@ -475,3 +475,18 @@ export const artistAlbums = (a: BaseItem) => {
   const n = a.AlbumCount ?? a.ChildCount;
   return n ? albumsLabel(n) : '';
 };
+
+/* A library's genres with their counts. */
+export const musicGenres = (viewId: string) =>
+  get<ItemsResult>('/MusicGenres', { userId: currentUserId(), parentId: viewId, fields: 'ItemCounts', enableImages: false, sortBy: 'SortName' });
+
+/* An instant mix from an album or artist, named after it ("Album mix", "Artist radio"); [fallback] plays when the
+   server has no mix for it. */
+export async function startMix(seed: BaseItem, name: string, fallback: Track[] = []) {
+  try {
+    const mixed = await instantMix(seed.Id, 150);
+    await playLoaded(mixed.length || !fallback.length ? mixed : fallback, 0, { source: { kind: 'mix', id: seed.Id, name } });
+  } catch {
+    toast(t('Couldn’t start the mix'), 'error');
+  }
+}

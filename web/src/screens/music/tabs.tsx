@@ -16,7 +16,7 @@ import { AIcon } from '../../audio/icons';
 import { Cover } from '../../audio/cover';
 import {
   AlbumCard, ArtistCard, GenreTile, MUSIC_FIELDS, NewPlaylistTile, PlaylistCard, TrackTable, TracksSkeleton, albumArtist, songsLabel,
-  yearOf, CardSkel, artistAlbums, audioPlaylists, playlistPreview, type PlaylistPreview
+  yearOf, CardSkel, artistAlbums, audioPlaylists, playlistPreview, type PlaylistPreview, musicGenres
 } from './parts';
 
 /* The music library's tabs (built in the MusicHome board's language): albums, artists and songs with sorting and a
@@ -203,7 +203,7 @@ export function GenresTab({ view }: { view: BaseItem }) {
 
 function GenreGrid({ view }: { view: BaseItem }) {
   const data = useAsync(() =>
-    get<ItemsResult>('/MusicGenres', { userId: currentUserId(), parentId: view.Id, fields: 'ItemCounts', enableImages: false, sortBy: 'SortName' }).then((r) => r.Items),
+    musicGenres(view.Id).then((r) => r.Items),
   [view.Id]);
   return (
     <section class="mu-sec" aria-label={t('Genres')}>
