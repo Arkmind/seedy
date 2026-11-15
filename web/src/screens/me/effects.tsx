@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { getItems } from '../../api/jellyfin';
 import { backdropUrl, logoUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
-import { DEFAULT_BRANDING, applyBranding, bootState, brandingStore, meStore, setAccentFilter } from '../../lib/app-state';
+import { applyBranding, bootState, brandingStore, DEFAULT_BRANDING, meStore, playbackPrefs, setAccentFilter } from '../../lib/app-state';
 import { dayKey, hhmm24, setDateStyle } from '../../lib/format';
 import { applyLanguagePref, resolveLang, t } from '../../lib/i18n';
 import { back, getLocation, useLocation } from '../../lib/router';
@@ -11,6 +11,7 @@ import { BrandMark } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { Sheet } from '../../ui/overlay';
 import { discoColour, discoOn, setDisco } from '../../party/disco';
+import { deviceStore as playerDeviceStore, seekSteps } from '../../player/settings';
 import { CUSTOM, deviceStore, readCustom, type DevicePrefs } from './prefs';
 import { ShortcutGrid } from './shortcuts';
 import './effects.css';
@@ -431,7 +432,7 @@ export function PersonalHost() {
   const me = useStore(meStore);
   const loc = useLocation();
   useEffect(() => { shortcutsOpen.set(false); }, [loc.path]);
-  const pb = me.prefs?.playback;
+  const steps = seekSteps(useStore(playerDeviceStore), playbackPrefs(me.prefs));
   return (
     <>
       <Sheet open={open} onClose={() => shortcutsOpen.set(false)} label={t('Keyboard shortcuts')} wide>
@@ -439,7 +440,7 @@ export function PersonalHost() {
           <h2 class="sheet-title">{t('Keyboard shortcuts in the player')}</h2>
           <button type="button" class="btn icon-btn is-bare is-40" aria-label={t('Close')} onClick={() => shortcutsOpen.set(false)}><Icon name="close" size={18} /></button>
         </div>
-        <ShortcutGrid back={pb?.seekBackSeconds} forward={pb?.seekForwardSeconds} />
+        <ShortcutGrid back={steps.back} forward={steps.forward} />
         <p class="me-foot">{t('Press ? anywhere in Seedy to see these.')}</p>
       </Sheet>
       {saver && <Screensaver />}

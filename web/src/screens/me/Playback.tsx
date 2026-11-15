@@ -5,7 +5,7 @@ import { DEFAULT_PLAYBACK, meStore, playbackPrefs, userStore } from '../../lib/a
 import { useStore } from '../../lib/store';
 import { NumField, Panel, Segmented, Switch } from '../../ui/controls';
 import {
-  BITRATES, CUSTOM_KEYS, RESOLUTIONS, bitrateLabel, customPlayback, deviceStore, setDevice, type DeviceSettings, type MaxResolution
+  BITRATES, CUSTOM_KEYS, RESOLUTIONS, bitrateLabel, customPlayback, deviceStore, seekSteps, setDevice, type DeviceSettings, type MaxResolution
 } from '../../player/settings';
 import { softAvailable, type SoftMode } from '../../player/soft-profile';
 import { DeviceTag, MeLayout } from './MeLayout';
@@ -229,10 +229,10 @@ export function MePlayback() {
             <Segmented label={t('Credits')} value={pb.skipCredits} options={tOptions(SKIP_OPTIONS)} onChange={(v) => void savePlayback({ skipCredits: v })} />
           </PlaybackRow>
           <PlaybackRow name={t('Skip back')} help={t('Also the J key')} device>
-            <NumField ariaLabel={t('Skip back')} value={dev.seekBack ?? pb.seekBackSeconds} min={5} max={60} suffix="s" onChange={(v) => setDevice('seekBack', v)} />
+            <NumField ariaLabel={t('Skip back')} value={seekSteps(dev, pb).back} min={5} max={60} suffix="s" onChange={(v) => setDevice('seekBack', v)} />
           </PlaybackRow>
           <PlaybackRow name={t('Skip forward')} help={t('Also the L key')} device>
-            <NumField ariaLabel={t('Skip forward')} value={dev.seekForward ?? pb.seekForwardSeconds} min={5} max={120} suffix="s" onChange={(v) => setDevice('seekForward', v)} />
+            <NumField ariaLabel={t('Skip forward')} value={seekSteps(dev, pb).forward} min={5} max={120} suffix="s" onChange={(v) => setDevice('seekForward', v)} />
           </PlaybackRow>
         </Panel>
 
