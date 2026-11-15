@@ -272,6 +272,19 @@ export function Sentinel({ onVisible, token, disabled }: { onVisible: () => void
   return <div ref={ref} aria-hidden="true" class="sentinel" />;
 }
 
+/* The end of a paged grid: the sentinel that loads the next page, a spinner while it loads, Load more after an error. */
+export function PagedFooter({ paged }: { paged: Pick<ReturnType<typeof usePaged>, 'done' | 'loading' | 'error' | 'items' | 'loadMore'> }) {
+  return (
+    <>
+      {!paged.done && <Sentinel onVisible={paged.loadMore} token={paged.items.length} disabled={paged.loading || !!paged.error} />}
+      {paged.loading && paged.items.length > 0 && <div class="lib-loading"><span class="spinner" aria-label={t('Loading more')} /></div>}
+      {paged.error && paged.items.length > 0 && (
+        <div class="grid-more"><button type="button" class="btn btn-secondary" onClick={paged.loadMore}><Icon name="refresh" size={18} />{t('Load more')}</button></div>
+      )}
+    </>
+  );
+}
+
 /* "Showing 60 of 248" with its bar, under a grid that pages in as it scrolls. */
 export function ListFoot({ shown, total, class: cls }: { shown: number; total: number; class?: string }) {
   return (

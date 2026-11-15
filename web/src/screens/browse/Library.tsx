@@ -16,7 +16,7 @@ import { getVirtualFolders } from '../server/api';
 import { MenuButton, MenuItem, Sheet, toast } from '../../ui/overlay';
 import { Row } from '../../ui/Row';
 import {
-  CardGrid, EmptyState, ErrorState, GRID_FIELDS, GridSkeleton, join, ListFoot, ListRows, PageHead, playRandom, RowSkeleton, Sentinel,
+  CardGrid, EmptyState, ErrorState, GRID_FIELDS, GridSkeleton, join, ListFoot, ListRows, PageHead, playRandom, PagedFooter, RowSkeleton,
   useInView, usePaged, yearOf, type GridSelect
 } from './parts';
 import { CUSTOM, readCustom } from '../me/prefs';
@@ -543,11 +543,7 @@ function GridBody({ view, tab, paged, layout, query, sort, order, hasFilters, on
       <div class="lib-body">
         <div class="lib-main" ref={containerRef}>
           {layout === 'list' ? <ListRows items={paged.items} onReplace={paged.replace} /> : <CardGrid items={paged.items} onReplace={paged.replace} select={select} />}
-          {!paged.done && <Sentinel onVisible={paged.loadMore} token={paged.items.length} disabled={paged.loading || !!paged.error} />}
-          {paged.loading && paged.items.length > 0 && <div class="lib-loading"><span class="spinner" aria-label={t('Loading more')} /></div>}
-          {paged.error && paged.items.length > 0 && (
-            <div class="grid-more"><button type="button" class="btn btn-secondary" onClick={paged.loadMore}><Icon name="refresh" size={18} />{t('Load more')}</button></div>
-          )}
+          <PagedFooter paged={paged} />
         </div>
         {showRail && (
           <nav aria-label={t('Jump to letter')} class="az-rail">
