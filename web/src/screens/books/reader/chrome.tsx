@@ -65,20 +65,7 @@ export function BarButton({ icon, label, onClick, pressed, expanded, filled, id 
   );
 }
 
-/* Full screen follows the document; Esc leaves it on its own. */
-export function useFullscreen(): [boolean, () => void] {
-  const [on, setOn] = useState(!!document.fullscreenElement);
-  useEffect(() => {
-    const fn = () => setOn(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', fn);
-    return () => document.removeEventListener('fullscreenchange', fn);
-  }, []);
-  const toggle = () => {
-    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
-    else void document.documentElement.requestFullscreen?.().catch(() => undefined);
-  };
-  return [on, toggle];
-}
+export { useFullscreen } from '../../../lib/fullscreen';
 
 export function TurnButtons({ onPrev, onNext, prevDisabled, nextDisabled, rtl }: { onPrev: () => void; onNext: () => void; prevDisabled?: boolean; nextDisabled?: boolean; rtl?: boolean }) {
   return (

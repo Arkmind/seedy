@@ -23,11 +23,18 @@ export interface BrowserSupport {
 
 let cached: BrowserSupport | null = null;
 
+/* MediaSource, or Safari's ManagedMediaSource (iPhone), for asking which codecs a stream may carry. */
+export const mediaSourceApi = () =>
+  (window as unknown as { MediaSource?: { isTypeSupported(t: string): boolean } }).MediaSource
+    ?? (window as unknown as { ManagedMediaSource?: { isTypeSupported(t: string): boolean } }).ManagedMediaSource;
+
+/* iPhone and iPad (iPadOS says it's a Mac, with a touch screen). */
+export const isIOS = (ua = navigator.userAgent) => /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+
 export function browserSupport(): BrowserSupport {
   if (cached) return cached;
   const v = document.createElement('video');
-  const ms = (window as unknown as { MediaSource?: { isTypeSupported(t: string): boolean } }).MediaSource
-    ?? (window as unknown as { ManagedMediaSource?: { isTypeSupported(t: string): boolean } }).ManagedMediaSource;
+  const ms = mediaSourceApi();
   const can = (type: string) => {
     try {
       if (v.canPlayType(type).replace(/no/, '')) return true;
@@ -43,7 +50,7 @@ export function browserSupport(): BrowserSupport {
   try { hdr = window.matchMedia('(dynamic-range: high)').matches || window.matchMedia('(video-dynamic-range: high)').matches; } catch { /* old browsers */ }
   /* Browsers that tone-map HDR for an SDR screen themselves (as jellyfin-web counts them): everything on Apple devices,
      desktop Chromium and Firefox on macOS. Android Chrome and Firefox elsewhere would show washed-out colours. */
-  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const ios = isIOS(ua);
   const firefox = /Firefox\//.test(ua) && !ios;
   const safari = !chromium && !firefox && /Safari\//.test(ua);
   const toneMaps = ios || safari || (chromium && !/Android/.test(ua)) || (firefox && /Macintosh/.test(ua));

@@ -103,6 +103,9 @@ const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
+/* The speaker for a volume: crossed out when muted or at 0, one wave under half, two above. */
+export const volumeIcon = (volume: number, muted: boolean) => (muted || volume === 0 ? 'mute' : volume < 0.5 ? 'volumeLow' : 'volume');
+
 type IconProps = {
   name: IconName;
   size?: number;

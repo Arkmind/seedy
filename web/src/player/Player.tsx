@@ -1,4 +1,3 @@
-import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { ApiError, get } from '../api/client';
 import { PLAYER_FIELDS, getEpisodes, getItem, getMediaSegments, getSimilar } from '../api/jellyfin';
@@ -10,19 +9,19 @@ import { chapterImageUrl, primaryUrl } from '../api/images';
 import type { PlaybackPrefs, SubtitlePrefs } from '../api/seedy';
 import { savePrefsPatch as queuePrefs } from '../screens/me/prefs';
 import type { BaseItem, MediaSegment, MediaSource, MediaStream } from '../api/types';
-import { DEFAULT_PLAYBACK, currentUserId, meStore, userStore } from '../lib/app-state';
+import { currentUserId, DEFAULT_PLAYBACK, DEFAULT_SUBTITLES, meStore, userStore } from '../lib/app-state';
 import {
   endsAt, episodeTag, seasonEpisodeLong, secondsToTicks, ticksToSeconds, timeLeft, timecode
 } from '../lib/format';
 import { sendOrigin } from '../lib/origin';
 import { on } from '../lib/remote';
 import { back, navigate, useLocation } from '../lib/router';
-import { safeLocal, saveLocal, useStore } from '../lib/store';
+import { safeLocal, useStore } from '../lib/store';
 import { t as tr } from '../lib/i18n';
-import { Icon, SeekIcon } from '../ui/icons';
+import { Icon, SeekIcon, volumeIcon } from '../ui/icons';
 import { Medu } from '../ui/medu';
 import { toast } from '../ui/overlay';
-import { parseAss } from './ass';
+import { loadAss } from './ass';
 import { closestTrack, lastTracks, trackSig } from './carry';
 import { ChaptersPanel } from './ChaptersPanel';
 import { Compare } from './Compare';
@@ -35,15 +34,15 @@ import { MediaBridge } from './media';
 import { useNativeCues } from './native-cues';
 import { PausedOverlay } from './PausedOverlay';
 import {
-  PlaybackError, PlaybackSession, audioStreams, errorCopy, nextAttempt, qualityBitrate, subtitleFormat, subtitleStreams, subtitleUrl,
-  videoStream, type ActiveStream, type FailedPart, type QualityId, type StreamOptions
+  activeAudio, audioStreams, errorCopy, nextAttempt, PlaybackError, PlaybackSession, qualityBitrate, resLabel, subtitleFormat, subtitleStreams,
+  subtitleUrl, videoStream, type ActiveStream, type FailedPart, type QualityId, type StreamOptions
 } from './playback';
 import { loadPgs } from './pgs';
 import { Scrubber, VolumeSlider } from './Scrubber';
 import {
-  applyCastQuality,
-  AUTO_BITRATE, SIZE_TO_PREFS, autoBitrate, bitrateLabel, customPlayback, detectLocation, deviceStore, locationStore, maxVideoWidth,
-  resolveStyle, seekSteps, segmentMode, setSubtitleStyle, type DeviceSettings, type NetworkLocation, type SubSize, type SubtitleStyle
+  applyCastQuality, AUTO_BITRATE, autoBitrate, bitrateLabel, customPlayback, detectLocation, deviceStore, locationStore, maxVideoWidth,
+  resolveStyle, seekSteps, segmentMode, setSubtitleStyle, SIZE_FROM_PREFS, SIZE_TO_PREFS, type DeviceSettings, type NetworkLocation,
+  type SubtitleStyle
 } from './settings';
 import { StillWatching } from './StillWatching';
 import { SubtitleLayer, type LoadedSubtitles } from './SubtitleLayer';
@@ -57,6 +56,9 @@ import { EdgeProgress, UpNext } from './UpNext';
 import { useWakeLock } from './wake-lock';
 import { LivePlayer } from './LivePlayer';
 import { sendToDevice } from '../ui/cast-menu';
+import { toggleFullscreen as toggleFullscreenOf, useFullscreen } from '../lib/fullscreen';
+import { pipSupported, saveVolume, setVolume as setMediaVolume, toggleMute as toggleMediaMute, togglePip as togglePipOf } from './controls';
+import { BackButton, PBtn } from './parts';
 
 /* ───────────────────────── Route entry ───────────────────────── */
 
@@ -171,13 +173,12 @@ export function Player({ id }: { id: string }) {
   if (state.item.Type === 'TvChannel') {
     // Live TV: its own player (Player · Live TV board); the address follows the channel without reloading it.
     const prefs: PlaybackPrefs = { ...DEFAULT_PLAYBACK, ...(meStore.get().prefs?.playback ?? {}) };
-    const cap = prefs.maxQuality !== 'auto' ? qualityBitrate(prefQuality(prefs.maxQuality)) : null;
     return (
       <LivePlayer
         key="live"
         channel={state.item}
         profile={profileOptions(deviceStore.get())}
-        bitrateFor={(q) => (q === 'auto' ? autoBitrate(deviceStore.get(), locationStore.get() ?? 'home', cap) : qualityBitrate(q))}
+        bitrateFor={makeBitrateFor(prefs)}
       />
     );
   }
@@ -187,14 +188,6 @@ export function Player({ id }: { id: string }) {
 const isPlayable = (it: BaseItem) => !it.IsFolder && (it.MediaType === 'Video' || it.MediaType === 'Audio' || !!it.MediaSources?.length);
 
 /* ───────────────────────── Small pieces ───────────────────────── */
-
-function BackButton({ onClick, label }: { onClick: () => void; label?: string }) {
-  return (
-    <button type="button" class="btn player-btn is-soft" aria-label={label ?? tr('Back')} onClick={onClick}>
-      <Icon name="arrowLeft" size={22} />
-    </button>
-  );
-}
 
 /* Playback failed board: Medu has dropped the cable, a plain sentence, the ways out, and what went wrong for whoever
    wants to know. Also used when the title itself can't be loaded. */
@@ -229,38 +222,6 @@ function ErrorPanel({ title, text, details, onRetry, onBack, backLabel, onOtherV
   );
 }
 
-function PBtn({ label, icon, onClick, expanded, children, hidden, disabled }: {
-  label: string; icon?: Parameters<typeof Icon>[0]['name']; onClick: () => void; expanded?: boolean; children?: ComponentChildren; hidden?: boolean; disabled?: boolean;
-}) {
-  if (hidden) return null;
-  return (
-    <button
-      type="button"
-      class="btn player-btn"
-      aria-label={label}
-      aria-expanded={expanded === undefined ? undefined : expanded ? 'true' : 'false'}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {icon && <Icon name={icon} size={22} />}
-      {children}
-    </button>
-  );
-}
-
-function resLabel(w?: number, h?: number): string {
-  if (!w && !h) return '';
-  const W = w ?? 0;
-  const H = h ?? 0;
-  if (W >= 3800 || H >= 2100) return '4K';
-  if (W >= 2500 || H >= 1400) return '1440p';
-  if (W >= 1900 || H >= 1000) return '1080p';
-  if (W >= 1200 || H >= 700) return '720p';
-  if (H >= 560) return '576p';
-  if (H >= 460) return '480p';
-  return H ? `${H}p` : '';
-}
-
 function hdrLabel(range?: string): string {
   if (!range || range === 'SDR' || range === 'Unknown') return '';
   if (range.startsWith('DOVI')) return 'Dolby Vision';
@@ -270,7 +231,7 @@ function hdrLabel(range?: string): string {
 
 function statusText(stream: ActiveStream, isAudio: boolean, vw: number, vh: number): string {
   const s = stream.source;
-  const a = (s.MediaStreams ?? []).find((m) => m.Type === 'Audio' && m.Index === stream.audioIndex) ?? audioStreams(s)[0];
+  const a = activeAudio(stream);
   const ch = channelsLabel(a?.Channels);
   if (isAudio) return [tr(stream.kind), (a?.Codec ?? '').toUpperCase(), ch].filter(Boolean).join(' · ');
   if (stream.kind === 'Transcoding') return [tr('Transcoding'), resLabel(vw, vh)].filter(Boolean).join(' · ');
@@ -297,7 +258,12 @@ const presence = { episodes: 0, since: Date.now(), auto: false };
 
 const prefQuality = (q: PlaybackPrefs['maxQuality']): QualityId => (q === '4k' || q === '1080p' || q === '720p' ? q : 'auto');
 
-const SIZE_FROM_PREFS: Record<SubtitlePrefs['size'], SubSize> = { S: 'small', M: 'normal', L: 'large' };
+/* The bitrate to ask for at quality [q]: "Auto" is this device's limit where it is now (home or away), under the
+   profile's cap. */
+function makeBitrateFor(prefs: PlaybackPrefs) {
+  const cap = prefs.maxQuality !== 'auto' ? qualityBitrate(prefQuality(prefs.maxQuality)) : null;
+  return (q: QualityId, loc: NetworkLocation = locationStore.get() ?? 'home') => (q === 'auto' ? autoBitrate(deviceStore.get(), loc, cap) : qualityBitrate(q));
+}
 
 /* This device's settings, as the device profile takes them. */
 function profileOptions(d: DeviceSettings): ProfileOptions {
@@ -395,11 +361,8 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     return total && pos > total - 10 ? 0 : pos;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  /* "Auto" is this device's limit where it is now (home or away), under the profile's cap. */
   const [quality, setQuality] = useState<QualityId>(memory.quality ?? 'auto');
-  const adminCap = prefs.maxQuality !== 'auto' ? qualityBitrate(prefQuality(prefs.maxQuality)) : null;
-  const bitrateFor = (q: QualityId, loc: NetworkLocation = locationStore.get() ?? 'home') =>
-    (q === 'auto' ? autoBitrate(deviceStore.get(), loc, adminCap) : qualityBitrate(q));
+  const bitrateFor = makeBitrateFor(prefs);
   /* Same kind of tracks as the last episode of this show ("Keep my audio/subtitle choice"). */
   const initialTracks = useMemo(() => {
     let audioIndex = ms0?.DefaultAudioStreamIndex;
@@ -448,7 +411,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const lastSub = useRef<number>(subIndex >= 0 ? subIndex : -1);
   const [loaded, setLoaded] = useState<LoadedSubtitles | null>(null);
   const [subOffset, setSubOffset] = useState(0);
-  const [subPrefs, setSubPrefs] = useState<SubtitlePrefs>(me.prefs?.subtitles ?? { size: 'M', lift: true });
+  const [subPrefs, setSubPrefs] = useState<SubtitlePrefs>(me.prefs?.subtitles ?? DEFAULT_SUBTITLES);
   /* How subtitles look on this device (Settings · Subtitles); the quick S / M / L and lift write to it too. */
   const subStyle: SubtitleStyle = resolveStyle(dev, subPrefs);
   const [pip, setPip] = useState(false);
@@ -462,7 +425,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const [dragAt, setDragAt] = useState<number | null>(null);
   const [wake, setWake] = useState(0);
   const [pauseScreen, setPauseScreen] = useState(false);
-  const [fullscreen, setFullscreen] = useState(!!document.fullscreenElement);
+  const [fullscreen] = useFullscreen();
   const [upNext, setUpNext] = useState<Flow>('idle');
   const [endFlow, setEndFlow] = useState<Flow>('idle');
   const [tile, setTile] = useState<TileRect | null>(null);
@@ -703,8 +666,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
       ['canplay', () => { read({ waiting: false }); reportReady(); }],
       ['volumechange', () => {
         read();
-        saveLocal('seedy.volume', el.volume);
-        saveLocal('seedy.muted', el.muted);
+        saveVolume(el);
         report('volumechange');
       }],
       ['ratechange', () => { read(); report('ratechange'); }],
@@ -730,10 +692,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     const load: Promise<LoadedSubtitles> = format === 'pgs'
       ? loadPgs(url, ctrl.signal).then((cues) => ({ kind: 'pgs', cues }))
       : format === 'ass'
-        ? fetch(url, { signal: ctrl.signal }).then((r) => {
-          if (!r.ok) throw new Error(`Subtitle request failed (${r.status})`);
-          return r.text();
-        }).then((text) => ({ kind: 'ass', track: parseAss(text) }))
+        ? loadAss(url, ctrl.signal).then((track) => ({ kind: 'ass', track }))
         : loadCues(url, ctrl.signal).then((cues) => ({ kind: 'vtt', cues }));
     load.then(setLoaded, (e: Error) => {
       if (e.name !== 'AbortError') toast(tr("Couldn't load those subtitles"), 'error');
@@ -794,29 +753,11 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     sess()?.seek(t);
   };
   const seekBy = (delta: number) => seekTo((sess()?.position() ?? m.time) + delta);
-  const setVolume = (v: number) => {
-    const e = el();
-    e.volume = Math.max(0, Math.min(1, v));
-    e.muted = v <= 0;
-  };
-  const toggleMute = () => {
-    const e = el();
-    if (e.muted || e.volume === 0) {
-      e.muted = false;
-      if (e.volume === 0) e.volume = 0.5;
-    } else e.muted = true;
-  };
-  const toggleFullscreen = () => {
-    if (document.fullscreenElement) { void document.exitFullscreen().catch(() => undefined); return; }
-    const root = document.documentElement;
-    if (root.requestFullscreen) void root.requestFullscreen().catch(() => undefined);
-    else (mediaRef.current as HTMLVideoElement & { webkitEnterFullscreen?: () => void } | null)?.webkitEnterFullscreen?.();
-  };
-  const pipSupported = !isAudio && !soft && typeof document !== 'undefined' && (document as Document & { pictureInPictureEnabled?: boolean }).pictureInPictureEnabled === true;
-  const togglePip = () => {
-    if (document.pictureInPictureElement) void document.exitPictureInPicture().catch(() => undefined);
-    else void mediaRef.current?.requestPictureInPicture?.().catch(() => toast(tr("Picture in picture isn't available"), 'error'));
-  };
+  const setVolume = (v: number) => setMediaVolume(el(), v);
+  const toggleMute = () => toggleMediaMute(el());
+  const toggleFullscreen = () => toggleFullscreenOf(mediaRef.current);
+  const canPip = !isAudio && !soft && typeof document !== 'undefined' && pipSupported();
+  const togglePip = () => togglePipOf(mediaRef.current);
 
   const exit = () => {
     if (inGroup()) void leaveGroup();
@@ -992,12 +933,6 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
       window.clearTimeout(hideTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const fn = () => setFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', fn);
-    return () => document.removeEventListener('fullscreenchange', fn);
   }, []);
 
   /* Someone is there whenever the player gets real input; an auto-played episode adds to the run. */
@@ -1308,7 +1243,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const canFindSubs = !isAudio && !!(user?.Policy?.IsAdministrator || user?.Policy?.EnableSubtitleManagement || me.isAdmin);
   const searchLang = user?.Configuration?.SubtitleLanguagePreference || 'eng';
   const art = isAudio ? primaryUrl(item, 800) : undefined;
-  const volIcon = m.muted || m.volume === 0 ? 'mute' : m.volume < 0.5 ? 'volumeLow' : 'volume';
+  const volIcon = volumeIcon(m.volume, m.muted);
 
   useEffect(() => {
     setTileSettled(false);
@@ -1527,7 +1462,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
                 onClick={() => openTracks('quality')}
                 expanded={tracksTab === 'quality' || tracksTab === 'speed'}
               />
-              <PBtn label={document.pictureInPictureElement ? tr('Exit picture in picture') : tr('Picture in picture')} icon="pip" onClick={togglePip} hidden={!pipSupported} />
+              <PBtn label={document.pictureInPictureElement ? tr('Exit picture in picture') : tr('Picture in picture')} icon="pip" onClick={togglePip} hidden={!canPip} />
               <PBtn label={fullscreen ? tr('Exit full screen') : tr('Full screen')} icon={fullscreen ? 'exitFullscreen' : 'fullscreen'} onClick={toggleFullscreen} hidden={isAudio} />
             </div>
           </div>

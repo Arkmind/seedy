@@ -1,11 +1,11 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { t, tn } from '../../lib/i18n';
-import { Link, navigate } from '../../lib/router';
+import { Link } from '../../lib/router';
 import { Header } from '../../ui/navbar/Header';
 import { toast } from '../../ui/overlay';
-import { loadTuners, recordingNow, useChannels, useTimers } from './data';
-import { LtIcon, type LtIconName } from './parts';
+import { channelByNumber, loadTuners, recordingNow, useChannels, useTimers } from './data';
+import { LtIcon, watch, type LtIconName } from './parts';
 import './livetv.css';
 
 /* The Live TV page shell (all four Live TV boards): "Live TV" with the channel count, the "Channel number" box
@@ -20,7 +20,7 @@ const TABS: { id: LiveTab; path: string; label: string; icon: LtIconName }[] = [
   { id: 'recordings', path: '/livetv/recordings', label: 'Recordings', icon: 'recordings' }
 ];
 
-export function LiveLayout({ tab, children, wide }: { tab: LiveTab; children: ComponentChildren; wide?: boolean }) {
+export function LiveLayout({ tab, children }: { tab: LiveTab; children: ComponentChildren }) {
   const channels = useChannels();
   const timers = useTimers();
   const recNow = recordingNow(timers.timers).length;
@@ -33,7 +33,7 @@ export function LiveLayout({ tab, children, wide }: { tab: LiveTab; children: Co
   }, [tab]);
 
   return (
-    <div class={'page lt-page' + (wide ? ' is-wide' : '')}>
+    <div class="page lt-page">
       <Header active={{ collectionType: 'livetv' }} />
       <main class="lt-main">
         <div class="lt-head">
@@ -70,9 +70,9 @@ function ChannelNumberBox() {
   const go = () => {
     const n = value.trim();
     if (!n) { input.current?.focus(); return; }
-    const ch = list?.find((c) => c.num === n) ?? list?.find((c) => parseFloat(c.num) === parseFloat(n));
+    const ch = channelByNumber(list, n);
     if (!ch) { toast(t('There is no channel {n}', { n }), 'error'); return; }
-    navigate(`/play/${ch.Id}`);
+    watch(ch.Id);
   };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -105,14 +105,14 @@ function ChannelNumberBox() {
   );
 }
 
-export function LiveError({ onRetry, text }: { onRetry: () => void; text?: string }) {
+function LiveError({ onRetry }: { onRetry: () => void }) {
   return (
     <div class="lt-pad">
       <div class="empty" role="alert">
         <span class="empty-icon"><LtIcon name="warn" size={26} /></span>
         <div class="empty-body">
           <span class="empty-title">{t("Couldn't load Live TV")}</span>
-          <span class="empty-text">{text ?? t('The server did not answer. Check that Live TV is set up, then try again.')}</span>
+          <span class="empty-text">{t('The server did not answer. Check that Live TV is set up, then try again.')}</span>
         </div>
         <button type="button" class="btn btn-secondary" onClick={onRetry}>{t('Try again')}</button>
       </div>

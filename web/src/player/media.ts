@@ -16,7 +16,7 @@ export interface MediaLike extends EventTarget {
   pause(): void;
 }
 
-export const MEDIA_EVENTS = [
+const MEDIA_EVENTS = [
   'timeupdate', 'progress', 'durationchange', 'loadedmetadata', 'resize', 'play', 'pause', 'playing', 'waiting',
   'seeking', 'seeked', 'canplay', 'volumechange', 'ratechange', 'ended'
 ] as const;

@@ -25,7 +25,7 @@ export interface LiveChannel extends Channel {
 }
 
 interface ChannelsState { list: LiveChannel[] | null; error?: Error; at: number }
-export const channelsStore = createStore<ChannelsState>({ list: null, at: 0 });
+const channelsStore = createStore<ChannelsState>({ list: null, at: 0 });
 
 export function cleanName(name: string): string {
   const n = name.replace(/\s*\[[^\]]*\]\s*/g, ' ').replace(/\s*\((?:\d{3,4}[pi]|SD|HD|FHD|UHD|4K)\)\s*/gi, ' ').replace(/\s+/g, ' ').trim();
@@ -61,7 +61,7 @@ function decorate(items: Channel[]): LiveChannel[] {
 }
 
 let loading: Promise<void> | null = null;
-export function loadChannels(force = false): Promise<void> {
+function loadChannels(force = false): Promise<void> {
   const s = channelsStore.get();
   if (!force && s.list && Date.now() - s.at < 60_000) return Promise.resolve();
   if (loading) return loading;
@@ -82,6 +82,10 @@ export function useChannels(): ChannelsState & { reload: () => void } {
   }, []);
   return { ...s, reload: () => void loadChannels(true) };
 }
+
+/* The channel a typed number means: that number exactly, else the same value ("5" finds "5.0"). */
+export const channelByNumber = (list: LiveChannel[] | null | undefined, n: string) =>
+  list?.find((c) => c.num === n) ?? list?.find((c) => parseFloat(c.num) === parseFloat(n));
 
 export const isFavorite = (c?: Channel) => !!c?.UserData?.IsFavorite;
 
@@ -117,7 +121,7 @@ export function noteWatched(id: string) {
 /* ── Timers (recordings) ── */
 
 interface TimersState { timers: Timer[] | null; series: SeriesTimer[] | null; error?: Error; at: number }
-export const timersStore = createStore<TimersState>({ timers: null, series: null, at: 0 });
+const timersStore = createStore<TimersState>({ timers: null, series: null, at: 0 });
 
 let timersLoading: Promise<void> | null = null;
 export function loadTimers(force = false): Promise<void> {
@@ -161,6 +165,9 @@ export function recState(p: Program | undefined, timers: Timer[] | null): 'now' 
   if (tm || p.TimerId) return tm?.Status === 'Cancelled' ? null : 'set';
   return null;
 }
+
+/* "Recording", "Recording set", else [idle] ("Record" on a button). */
+export const recordLabel = (rec: 'now' | 'set' | null, idle = t('Record')) => (rec === 'now' ? t('Recording') : rec === 'set' ? t('Recording set') : idle);
 
 const timerFor = (p: Program) => (timersStore.get().timers ?? []).find((x) => (p.TimerId && x.Id === p.TimerId) || x.ProgramId === p.Id);
 
@@ -256,13 +263,19 @@ export function useNow(every = 15_000): number {
 
 export const startMs = (p?: { StartDate?: string }) => (p?.StartDate ? Date.parse(p.StartDate) : NaN);
 export const endMs = (p?: { EndDate?: string }) => (p?.EndDate ? Date.parse(p.EndDate) : NaN);
-export const isAiring = (p: Program | undefined, now: number) => !!p && startMs(p) <= now && now < endMs(p);
-export function fraction(p: Program | undefined, now: number): number {
+type Span = { StartDate?: string; EndDate?: string };
+export const isAiring = (p: Span | undefined, now: number) => !!p && startMs(p) <= now && now < endMs(p);
+/* What a channel is showing now, from its own CurrentProgram. */
+export const airingNow = (c: { CurrentProgram?: Program } | undefined, now: number) => (isAiring(c?.CurrentProgram, now) ? c!.CurrentProgram : undefined);
+export function fraction(p: Span | undefined, now: number): number {
   if (!p) return 0;
   const s = startMs(p);
   const e = endMs(p);
   return e > s ? Math.max(0, Math.min(1, (now - s) / (e - s))) : 0;
 }
+
+/* "20:45": when it starts. */
+export const startClock = (p: { StartDate?: string }) => clock(new Date(startMs(p)));
 
 /* "20:45 – 22:45" */
 export const timeRange = (p: { StartDate?: string; EndDate?: string }) =>
@@ -291,9 +304,12 @@ export function whenLine(p: Program, now: number): string {
   return timeRange(p);
 }
 
+/* "S1 E3" for an episode of a series, else nothing. */
+export const programEpisode = (p: Program) => (p.IsSeries && p.IndexNumber != null ? episodeTag(p) : '');
+
 /* "The Undercroft · S1 E3" */
 export function programTitle(p: Program): string {
-  const ep = p.IsSeries && p.IndexNumber != null ? episodeTag(p) : '';
+  const ep = programEpisode(p);
   return ep ? `${p.Name} · ${ep}` : p.Name ?? '';
 }
 
@@ -320,6 +336,21 @@ export function newTag(p: Program): 'premiere' | 'new' | null {
 
 /* Guide categories, in the board's order. */
 export type Category = 'news' | 'sports' | 'movies' | 'kids';
+/* The guide's and channel list's chips: every channel, the favourites, or what's on in a category. */
+export type ChannelFilter = 'all' | 'fav' | Category;
+
+/* Programmes by channel, each in start order. */
+export function groupByChannel(progs: Iterable<Program>): Map<string, Program[]> {
+  const m = new Map<string, Program[]>();
+  for (const p of progs) {
+    if (!p.ChannelId) continue;
+    const arr = m.get(p.ChannelId) ?? [];
+    arr.push(p);
+    m.set(p.ChannelId, arr);
+  }
+  for (const arr of m.values()) arr.sort((a, b) => startMs(a) - startMs(b));
+  return m;
+}
 export const CATEGORIES: { id: Category; label: string; test: (p: Program) => boolean }[] = [
   { id: 'news', label: 'News', test: (p) => !!p.IsNews },
   { id: 'sports', label: 'Sports', test: (p) => !!p.IsSports },

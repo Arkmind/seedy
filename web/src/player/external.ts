@@ -1,6 +1,7 @@
 import { SERVER_URL, deviceId, sessionToken } from '../api/client';
 import type { BaseItem, MediaSource } from '../api/types';
 import { t } from '../lib/i18n';
+import { isIOS } from './device-profile';
 
 /* "Offer an external player": hand the stream to another app through its URL scheme. */
 
@@ -12,7 +13,7 @@ const intent = (url: string, title: string, pkg?: string) =>
 
 export function externalApps(): ExternalApp[] {
   const ua = navigator.userAgent;
-  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const ios = isIOS(ua);
   const android = /Android/.test(ua);
   const mac = /Macintosh|Mac OS X/.test(ua) && !ios;
   const windows = /Windows/.test(ua);
@@ -42,7 +43,7 @@ export function externalApps(): ExternalApp[] {
 }
 
 /* The file itself, as the server has it (external players do their own decoding and seeking). */
-export function externalStreamUrl(item: BaseItem, source?: MediaSource): string {
+function externalStreamUrl(item: BaseItem, source?: MediaSource): string {
   const ms = source ?? item.MediaSources?.[0];
   const container = (ms?.Container ?? 'mkv').split(',')[0];
   const q = new URLSearchParams({ static: 'true', deviceId: deviceId(), ApiKey: sessionToken() });

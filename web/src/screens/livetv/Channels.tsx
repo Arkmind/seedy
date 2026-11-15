@@ -1,22 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 import { getPrograms, type Program } from '../../api/livetv';
 import { meStore } from '../../lib/app-state';
 import { t } from '../../lib/i18n';
 import { useAsync, useStore } from '../../lib/store';
 import { Icon } from '../../ui/icons';
 import {
-  CATEGORIES, categoryOf, fraction, isAiring, isFavorite, leftLabel, programTitle, recState, startMs, timeRange, toggleFavorite,
-  useChannels, useNow, useTimers, type Category, type LiveChannel
+  airingNow, CATEGORIES, categoryOf, fraction, groupByChannel, isAiring, isFavorite, leftLabel, programTitle, recState, startClock, startMs,
+  timeRange, toggleFavorite, useChannels, useNow, useTimers, type ChannelFilter, type LiveChannel
 } from './data';
 import { LiveLayout, NoChannels } from './LiveLayout';
-import { ChannelLogo, Chip, HeartIcon, LtIcon, watch } from './parts';
+import { ChannelLogo, FilterChips, HeartIcon, LtIcon, useShowMore, watch } from './parts';
 import { pct } from '../../lib/format';
 
 /* Live TV · Channels (no board of its own; built from the Guide's pieces): every channel as a tile with its number,
    logo and name, what's on now with its progress and what's next, and the favourite heart. Filter chips as on the
    Guide, and a field to find a channel by name or number. */
 
-type Filter = 'all' | 'fav' | Category;
 const PAGE = 60;
 
 export function LiveChannels() {
@@ -24,7 +23,7 @@ export function LiveChannels() {
   const { list } = useChannels();
   const { timers } = useTimers();
   const now = useNow(30_000);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<ChannelFilter>('all');
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(PAGE);
   const slot = Math.floor(now / 300_000);
@@ -32,20 +31,10 @@ export function LiveChannels() {
     (signal) => getPrograms({ MinEndDate: new Date().toISOString(), MaxStartDate: new Date(Date.now() + 4 * 3_600_000).toISOString() }, signal).then((r) => r.Items ?? []),
     [slot]
   );
-  const byChannel = useMemo(() => {
-    const m = new Map<string, Program[]>();
-    for (const p of progs.data ?? []) {
-      if (!p.ChannelId) continue;
-      const arr = m.get(p.ChannelId) ?? [];
-      arr.push(p);
-      m.set(p.ChannelId, arr);
-    }
-    for (const arr of m.values()) arr.sort((a, b) => startMs(a) - startMs(b));
-    return m;
-  }, [progs.data]);
+  const byChannel = useMemo(() => groupByChannel(progs.data ?? []), [progs.data]);
 
   const all = list ?? [];
-  const onNow = (c: LiveChannel) => (byChannel.get(c.Id) ?? []).find((p) => isAiring(p, now)) ?? (isAiring(c.CurrentProgram, now) ? c.CurrentProgram : undefined);
+  const onNow = (c: LiveChannel) => (byChannel.get(c.Id) ?? []).find((p) => isAiring(p, now)) ?? airingNow(c, now);
   const nextOf = (c: LiveChannel) => (byChannel.get(c.Id) ?? []).find((p) => startMs(p) > now);
   const q = query.trim().toLowerCase();
   const shown = all
@@ -59,14 +48,7 @@ export function LiveChannels() {
     .sort((a, b) => Number(isFavorite(b)) - Number(isFavorite(a)));
   const page = shown.slice(0, limit);
 
-  const more = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = more.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return;
-    const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) setLimit((l) => l + PAGE); }, { rootMargin: '600px 0px' });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [shown.length > limit, limit]);
+  const more = useShowMore(shown.length > limit, limit, () => setLimit((l) => l + PAGE));
   useEffect(() => { setLimit(PAGE); }, [filter, q]);
 
   if (list && !list.length) return <LiveLayout tab="channels"><NoChannels admin={me.isAdmin} /></LiveLayout>;
@@ -75,12 +57,7 @@ export function LiveChannels() {
   return (
     <LiveLayout tab="channels">
       <div class="lt-guide-bar">
-        <div role="group" aria-label={t('Show channels')} class="lt-chips">
-          <Chip label={t('All')} count={all.length} pressed={filter === 'all'} onClick={() => setFilter('all')} />
-          <Chip label={t('Favorites')} count={favCount} pressed={filter === 'fav'} onClick={() => setFilter('fav')} />
-          <span aria-hidden="true" class="lt-chip-sep" />
-          {CATEGORIES.map((x) => <Chip key={x.id} label={t(x.label)} pressed={filter === x.id} onClick={() => setFilter(filter === x.id ? 'all' : x.id)} />)}
-        </div>
+        <FilterChips filter={filter} onFilter={setFilter} total={all.length} favCount={favCount} />
         <label class="lt-find">
           <LtIcon name="search" size={18} />
           <input type="search" value={query} placeholder={t('Find a channel')} aria-label={t('Find a channel by name or number')}
@@ -150,7 +127,7 @@ function ChannelTile({ channel: c, program: p, next, now, rec }: { channel: Live
             </span>
             <span class="lt-ch-meta"><span>{timeRange(p)}</span><b>{leftLabel(p, now)}</b></span>
             <span class="lt-bar is-5"><i style={{ width: pct(fraction(p, now)) }} /></span>
-            {next && <span class="lt-ch-next">{t('Next')} · <b>{timeRange(next).split(' – ')[0]} {next.Name}</b></span>}
+            {next && <span class="lt-ch-next">{t('Next')} · <b>{startClock(next)} {next.Name}</b></span>}
           </span>
         ) : (
           <span class="lt-ch-now is-none">

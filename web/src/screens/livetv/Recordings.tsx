@@ -12,11 +12,11 @@ import { Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { confirm, toast } from '../../ui/overlay';
 import {
-  categoryOf, channelColor, cleanName, endMs, fraction, loadTimers, programTitle, recordingNow, startMs, timeRange, tunersStore,
-  loadTuners, useChannels, useNow, useTimers, type LiveChannel
+  categoryOf, channelColor, cleanName, endMs, fraction, loadTimers, loadTuners, programTitle, recordingNow, startClock, startMs, timeRange,
+  tunersStore, useChannels, useNow, useTimers, type LiveChannel
 } from './data';
 import { LiveLayout } from './LiveLayout';
-import { Chip, ChannelLogo, LivePill, LtIcon, ProgramArt, StopIcon, hasProgramArt, watch } from './parts';
+import { ChannelLogo, Chip, hasProgramArt, LivePill, LtIcon, ProgramArt, StopIcon, TagPill, watch } from './parts';
 
 /* Live TV · Recordings (board "Live TV · Recordings"): a warning when more recordings overlap than the tuner can
    play at once, what's recording now, scheduled recordings by day, series rules (editable), and what's been
@@ -270,7 +270,7 @@ function RecordingNow({ timer: x, channel, now }: { timer: Timer; channel?: Live
         <span class="lt-recnow-title">{title}</span>
         <span class="lt-recnow-sub">{sub}</span>
         <div class="lt-recnow-progress">
-          <div class="lt-bar is-5 is-rec"><i style={{ width: pct(fraction(x as unknown as Program, now)) }} /></div>
+          <div class="lt-bar is-5 is-rec"><i style={{ width: pct(fraction(x, now)) }} /></div>
           {t('{done} of {total} min', { done, total })}
         </div>
         <div class="lt-recnow-actions">
@@ -306,11 +306,11 @@ function ScheduledRow({ timer: x, channel, overlap }: { timer: Timer; channel?: 
   };
   return (
     <div class={'lt-sched-row' + (overlap ? ' is-overlap' : '')}>
-      <span class="lt-sched-time"><b>{clock(new Date(startMs(x)))}</b><span>{t('to {time}', { time: clock(new Date(endMs(x))) })}</span></span>
+      <span class="lt-sched-time"><b>{startClock(x)}</b><span>{t('to {time}', { time: clock(new Date(endMs(x))) })}</span></span>
       <ChannelLogo channel={channel ?? ({ Id: x.ChannelId, Name: x.ChannelName ?? '' } as LiveChannel)} size={36} radius={10} />
       <span class="lt-two lt-sched-text">
         <span class="lt-sched-title">{title}</span>
-        <span class="lt-sched-sub">{[channel?.label ?? (x.ChannelName ? cleanName(x.ChannelName) : ''), extra].filter(Boolean).join(' · ')}</span>
+        <span class="lt-sched-sub">{[channelName(channel, x.ChannelName), extra].filter(Boolean).join(' · ')}</span>
       </span>
       {overlap && <span class="lt-overlap">{t('Overlaps')}</span>}
       <span class={'lt-kind' + (x.SeriesTimerId ? ' is-series' : '')}>{x.SeriesTimerId ? t('Series') : t('Once')}</span>
@@ -327,8 +327,8 @@ const KEEP = [0, 1, 2, 3, 5, 10, 20];
 
 function ruleSummary(r: SeriesTimer, channel?: LiveChannel): string {
   return [
-    r.RecordAnyChannel ? t('Any channel') : channel?.label ?? (r.ChannelName ? cleanName(r.ChannelName) : ''),
-    r.RecordAnyTime ? (r.RecordNewOnly ? t('New episodes') : t('Every episode')) : t('Around {time}', { time: clock(new Date(startMs(r))) }),
+    r.RecordAnyChannel ? t('Any channel') : channelName(channel, r.ChannelName),
+    r.RecordAnyTime ? (r.RecordNewOnly ? t('New episodes') : t('Every episode')) : t('Around {time}', { time: startClock(r) }),
     r.KeepUpTo > 0 ? t('Keep the last {n}', { n: r.KeepUpTo }) : t('Keep all')
   ].filter(Boolean).join(' · ');
 }
@@ -340,7 +340,7 @@ function SeriesRule({ rule, channel, open, onToggle }: { rule: SeriesTimer; chan
   const set = (patch: Partial<SeriesTimer>) => setDraft((d) => ({ ...d, ...patch }));
   const dirty = JSON.stringify(draft) !== JSON.stringify(rule);
   const name = rule.Name ?? '';
-  const chName = channel?.label ?? (rule.ChannelName ? cleanName(rule.ChannelName) : t('This channel'));
+  const chName = channelName(channel, rule.ChannelName, t('This channel'));
   const thumbTag = rule.ParentThumbImageTag ?? rule.ParentPrimaryImageTag;
   const thumbId = rule.ParentThumbImageTag ? rule.ParentThumbItemId : rule.ParentPrimaryImageItemId;
   const thumb = thumbTag && thumbId ? imageUrl(thumbId, rule.ParentThumbImageTag ? 'Thumb' : 'Primary', { tag: thumbTag, maxWidth: 144 }) : undefined;
@@ -387,7 +387,7 @@ function SeriesRule({ rule, channel, open, onToggle }: { rule: SeriesTimer; chan
     </button>
   );
   if (!open) return <div class="lt-rule">{head}</div>;
-  const at = clock(new Date(startMs(rule)));
+  const at = startClock(rule);
   return (
     <div class="lt-rule is-open">
       {head}
@@ -443,6 +443,9 @@ function SeriesRule({ rule, channel, open, onToggle }: { rule: SeriesTimer; chan
   );
 }
 
+/* A recording's channel as the list names it, else the name the server kept for it (cleaned up), else [empty]. */
+const channelName = (channel: LiveChannel | undefined, name?: string | null, empty = '') => channel?.label ?? (name ? cleanName(name) : empty);
+
 /* ── Recorded ── */
 
 function RecordedCard({ item: r, channel, onDeleted }: { item: Rec; channel?: LiveChannel; onDeleted: () => void }) {
@@ -453,7 +456,7 @@ function RecordedCard({ item: r, channel, onDeleted }: { item: Rec; channel?: Li
   const isNew = !r.UserData?.Played && !pos && !!when && Date.now() - Date.parse(when) < 14 * 86_400_000;
   const episode = (r.IsSeries || r.Type === 'Episode') && r.IndexNumber != null;
   const title = episode ? programTitle({ ...r, IsSeries: true, Name: r.SeriesName ?? r.Name } as Program) : r.Name;
-  const meta = [when ? t('Recorded {date}', { date: fmtWeekdayDate(new Date(when)) }) : '', channel?.label ?? (r.ChannelName ? cleanName(r.ChannelName) : '')].filter(Boolean).join(' · ');
+  const meta = [when ? t('Recorded {date}', { date: fmtWeekdayDate(new Date(when)) }) : '', channelName(channel, r.ChannelName)].filter(Boolean).join(' · ');
   const remove = async () => {
     const ok = await confirm({ title: t('Delete {title}?', { title: title ?? '' }), text: t('The recording is removed from the server.'), action: t('Delete'), danger: true });
     if (!ok) return;
@@ -469,9 +472,9 @@ function RecordedCard({ item: r, channel, onDeleted }: { item: Rec; channel?: Li
     <div class="lt-card is-grid lt-reccard">
       <a href="#" class="lt-card-link" aria-label={t('Play {title}', { title: title ?? '' })} onClick={(e) => { e.preventDefault(); navigate(`/play/${r.Id}`); }}>
         <div class="lt-card-media">
-          {art.src ? <ProgramArt program={r} channel={channel} width={480} /> : <ProgramArt channel={channel} width={480} />}
+          <ProgramArt program={r} channel={channel} width={480} />
           <div class="card-hover"><span class="play-disc is-48"><Icon name="play" size={22} /></span></div>
-          {isNew && <span class="lt-card-pills"><span class="lt-tag"><span class="lt-tag-dot" />{t('New')}</span></span>}
+          {isNew && <span class="lt-card-pills"><TagPill kind="new" /></span>}
           {art.src && channel && <ChannelLogo channel={channel} size={30} radius={8} class="lt-card-logo" />}
           {pos > 0 && total > 0 && <div class="lt-card-bar"><i style={{ width: pct(pos / total) }} /></div>}
         </div>

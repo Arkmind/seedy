@@ -1,5 +1,5 @@
 import type { ComponentChildren } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { SERVER_URL } from '../../api/client';
 import { cardArt } from '../../api/images';
 import type { Channel, Program } from '../../api/livetv';
@@ -8,7 +8,7 @@ import { navigate } from '../../lib/router';
 import { safeLocal, saveLocal } from '../../lib/store';
 import { Icon } from '../../ui/icons';
 import { toast } from '../../ui/overlay';
-import { channelColor, initials, type LiveChannel } from './data';
+import { CATEGORIES, channelColor, initials, type ChannelFilter, type LiveChannel } from './data';
 import type { PreviewState } from './preview';
 
 /* Small pieces the Live TV boards repeat: channel logos, LIVE / New / Premiere pills, the recording dot, programme
@@ -178,13 +178,38 @@ export function watch(channelId?: string) {
 }
 
 /* A chip as on the guide's filter row: "All 301". */
-export function Chip({ label, count, pressed, onClick }: { label: ComponentChildren; count?: number | string; pressed: boolean; onClick: () => void }) {
+export function Chip({ label, count, pressed, onClick }: { label: ComponentChildren; count?: number; pressed: boolean; onClick: () => void }) {
   return (
     <button type="button" class="lt-chip" aria-pressed={pressed ? 'true' : 'false'} onClick={onClick}>
       {label}
-      {count !== undefined && count !== '' && <span class="lt-chip-count">{count}</span>}
+      {count !== undefined && <span class="lt-chip-count">{count}</span>}
     </button>
   );
+}
+
+/* All, Favorites, then the categories (pressing one again goes back to All). */
+export function FilterChips({ filter, onFilter, total, favCount }: { filter: ChannelFilter; onFilter: (f: ChannelFilter) => void; total: number; favCount: number }) {
+  return (
+    <div role="group" aria-label={t('Show channels')} class="lt-chips">
+      <Chip label={t('All')} count={total} pressed={filter === 'all'} onClick={() => onFilter('all')} />
+      <Chip label={t('Favorites')} count={favCount} pressed={filter === 'fav'} onClick={() => onFilter('fav')} />
+      <span aria-hidden="true" class="lt-chip-sep" />
+      {CATEGORIES.map((x) => <Chip key={x.id} label={t(x.label)} pressed={filter === x.id} onClick={() => onFilter(filter === x.id ? 'all' : x.id)} />)}
+    </div>
+  );
+}
+
+/* A long list shows more rows as its end ([ref]'s element) nears the screen. */
+export function useShowMore(hasMore: boolean, limit: number, onMore: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) onMore(); }, { rootMargin: '600px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, limit]);
+  return ref;
 }
 
 /* ── The Live TV boards' own icons (24 px grid, round caps), path for path ── */

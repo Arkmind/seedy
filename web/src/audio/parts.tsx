@@ -78,7 +78,7 @@ export function VolumeBar({ volume, muted, onChange, class: cls }: { volume: num
   );
 }
 
-export const volumeIcon = (volume: number, muted: boolean) => (muted || volume === 0 ? 'mute' : volume < 0.5 ? 'volumeLow' : 'volume');
+export { volumeIcon } from '../ui/icons';
 
 /* "Play on another device": hands the queue to another Jellyfin app and pauses here. */
 export function CastMenu({ class: cls, size = 18, button }: { class: string; size?: number; button?: (open: boolean) => JSX.Element }) {

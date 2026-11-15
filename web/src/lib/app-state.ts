@@ -7,6 +7,9 @@ import * as seedy from '../api/seedy';
 import type { AuthResult, BaseItem, User } from '../api/types';
 import { createStore } from './store';
 
+/* Subtitles at the normal size, lifted above the controls while they show. */
+export const DEFAULT_SUBTITLES: seedy.SubtitlePrefs = { size: 'M', lift: true };
+
 export const DEFAULT_PLAYBACK: seedy.PlaybackPrefs = {
   skipIntro: 'button',
   skipRecap: 'button',
@@ -26,7 +29,7 @@ const fallbackMe = (): seedy.Me => ({
   isAdmin: false,
   branding: DEFAULT_BRANDING,
   prefs: {
-    playback: DEFAULT_PLAYBACK, subtitles: { size: 'M', lift: true }, adaptRowOrder: true, hiddenRows: [], hiddenSeeds: [],
+    playback: DEFAULT_PLAYBACK, subtitles: DEFAULT_SUBTITLES, adaptRowOrder: true, hiddenRows: [], hiddenSeeds: [],
     rowOrder: 'auto', rows: [], privacy: { personalRecs: true, countInTop10: true }, notifyRequests: true, custom: {}
   },
   defaults: DEFAULT_PLAYBACK,

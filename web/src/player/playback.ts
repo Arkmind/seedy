@@ -6,13 +6,11 @@ import {
 import type { BaseItem, MediaSource, MediaStream } from '../api/types';
 import { secondsToTicks, ticksToSeconds } from '../lib/format';
 import { t } from '../lib/i18n';
-import { PROFILE_DEFAULTS, browserSupport, buildDeviceProfile, convertingProfile, type ProfileOptions } from './device-profile';
+import { browserSupport, buildDeviceProfile, convertingProfile, mediaSourceApi, PROFILE_DEFAULTS, type ProfileOptions } from './device-profile';
 import { closeLiveStream, liveDeviceProfile, stopEncoding, trackClose } from './live-profile';
 import { MediaBridge } from './media';
 import type { SoftMedia } from './soft-media';
-import {
-  softAvailable, softDecodes, softDeviceProfile, softExt, softFits, softFixes, type SoftMode
-} from './soft-profile';
+import { softAvailable, softDecodes, softDeviceProfile, softExt, softFits, softFixes, transcodeReasons, type SoftMode } from './soft-profile';
 
 /* PlaybackInfo → stream URL → <video>/<audio> (+ hls.js), and the Sessions/Playing reports around it. */
 
@@ -127,8 +125,7 @@ const AUDIO_CODEC = /^(mp4a|ac-3|ec-3|ac-4|opus|flac|mp3|alac|dts)/i;
    say yes to AC-3 where MediaSource says no), else the picture. */
 function refusedPart(codecs?: string): FailedPart | undefined {
   if (!codecs) return undefined;
-  const ms = (window as unknown as { MediaSource?: { isTypeSupported(t: string): boolean } }).MediaSource
-    ?? (window as unknown as { ManagedMediaSource?: { isTypeSupported(t: string): boolean } }).ManagedMediaSource;
+  const ms = mediaSourceApi();
   const refused = (c: string) => !!ms && !ms.isTypeSupported(`audio/mp4;codecs="${c}"`);
   return codecs.split(',').map((c) => c.trim()).some((c) => AUDIO_CODEC.test(c) && refused(c)) ? 'audio' : 'video';
 }
@@ -148,8 +145,26 @@ export const audioStreams = (s?: MediaSource) => (s?.MediaStreams ?? []).filter(
 export const subtitleStreams = (s?: MediaSource) => (s?.MediaStreams ?? []).filter((m) => m.Type === 'Subtitle');
 export const videoStream = (s?: MediaSource) => (s?.MediaStreams ?? []).find((m) => m.Type === 'Video');
 
+/* "4K", "1080p", "480p": a picture's size as people name it. */
+export function resLabel(w?: number, h?: number): string {
+  if (!w && !h) return '';
+  const W = w ?? 0;
+  const H = h ?? 0;
+  if (W >= 3800 || H >= 2100) return '4K';
+  if (W >= 2500 || H >= 1400) return '1440p';
+  if (W >= 1900 || H >= 1000) return '1080p';
+  if (W >= 1200 || H >= 700) return '720p';
+  if (H >= 560) return '576p';
+  if (H >= 460) return '480p';
+  return H ? `${H}p` : '';
+}
+
+/* The audio track a stream plays: the one asked for, else the first. */
+export const activeAudio = (stream: Pick<ActiveStream, 'source' | 'audioIndex'>) =>
+  audioStreams(stream.source).find((a) => a.Index === stream.audioIndex) ?? audioStreams(stream.source)[0];
+
 /* The track a browser plays from a file on its own. */
-export function fileDefaultAudio(s?: MediaSource): number | undefined {
+function fileDefaultAudio(s?: MediaSource): number | undefined {
   const list = audioStreams(s);
   return (list.find((a) => a.IsDefault) ?? list[0])?.Index;
 }
@@ -157,12 +172,12 @@ export function fileDefaultAudio(s?: MediaSource): number | undefined {
 const VIDEO_REASONS = /Video|ContainerBitrateExceedsLimit|SubtitleCodecNotSupported|RefFrames|Anamorphic|Interlaced|Unknown/;
 
 function transcodeKind(url: string): ActiveStream['kind'] {
-  const reasons = new URL(url, 'http://x').searchParams.get('TranscodeReasons') ?? '';
-  if (!reasons) return 'Transcoding';
-  return VIDEO_REASONS.test(reasons) ? 'Transcoding' : 'Direct stream';
+  const reasons = transcodeReasons(url);
+  if (!reasons.length) return 'Transcoding';
+  return VIDEO_REASONS.test(reasons.join(',')) ? 'Transcoding' : 'Direct stream';
 }
 
-export async function requestStream(item: BaseItem, opts: StreamOptions): Promise<ActiveStream> {
+async function requestStream(item: BaseItem, opts: StreamOptions): Promise<ActiveStream> {
   /* A live TV channel: the server picks its source and opens the live stream; it always goes through the server. */
   const live = item.Type === 'TvChannel';
   const msId = live ? undefined : opts.mediaSourceId ?? item.MediaSources?.[0]?.Id ?? item.Id;
