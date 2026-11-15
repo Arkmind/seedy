@@ -9,7 +9,7 @@ import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { MeduState } from '../../ui/medu';
 import { viewsStore } from '../../lib/app-state';
-import { CardGrid, ErrorState, GridSkeleton, PageHead, getPersonsList, join, toggleFavorite } from './parts';
+import { CardGrid, ErrorState, getPersonsList, GRID_FIELDS, GridSkeleton, join, PageHead, toggleFavorite } from './parts';
 import './lists.css';
 import { t } from '../../lib/i18n';
 
@@ -26,7 +26,7 @@ const GROUPS: Group[] = [
   { id: 'people', title: 'People' }
 ];
 
-const FIELDS = ['PrimaryImageAspectRatio', 'ProductionYear', 'Genres', 'ChildCount', 'DateCreated', 'SortName'];
+const FIELDS = GRID_FIELDS;
 
 export function Favorites() {
   const loc = useLocation();

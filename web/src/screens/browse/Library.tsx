@@ -16,10 +16,11 @@ import { getVirtualFolders } from '../server/api';
 import { MenuButton, MenuItem, Sheet, toast } from '../../ui/overlay';
 import { Row } from '../../ui/Row';
 import {
-  CardGrid, EmptyState, ErrorState, GridSkeleton, join, ListFoot, ListRows, PageHead, playRandom, RowSkeleton, Sentinel, useInView, usePaged,
-  yearOf, type GridSelect
+  CardGrid, EmptyState, ErrorState, GRID_FIELDS, GridSkeleton, join, ListFoot, ListRows, PageHead, playRandom, RowSkeleton, Sentinel,
+  useInView, usePaged, yearOf, type GridSelect
 } from './parts';
 import { CUSTOM, readCustom } from '../me/prefs';
+import './library.css';
 import { headerHeight } from '../../ui/sticky';
 import { t } from '../../lib/i18n';
 import { SelectionBar, useSelection } from './library-select';
@@ -29,7 +30,6 @@ import { MusicLibrary } from '../music/MusicLibrary';
 import { PhotosLibrary } from '../photos/PhotosLibrary';
 import { isPhotoLibrary } from '../photos/api';
 import { LibraryMenuItems } from '../../ui/library-menu';
-import './library.css';
 
 /* ───────── Tabs, sorts and filters ───────── */
 
@@ -137,7 +137,7 @@ function applyFilters(q: ItemsQuery, f: Filters): ItemsQuery {
   };
 }
 
-const LIST_FIELDS = ['PrimaryImageAspectRatio', 'ProductionYear', 'Genres', 'ChildCount', 'DateCreated', 'SortName', 'PremiereDate'];
+const LIST_FIELDS = [...GRID_FIELDS, 'PremiereDate'];
 
 function baseQuery(view: BaseItem, tab: TabId): ItemsQuery {
   const ct = view.CollectionType;
@@ -314,7 +314,6 @@ function LibraryView({ view }: { view: BaseItem }) {
           <SelectionBar
             sel={sel}
             total={paged.total}
-            kindLabel={(n) => t('{n} selected', { n })}
             onSelectAll={selectAll}
             onChanged={refreshPicked}
           />

@@ -12,14 +12,14 @@ import { PosterCard, UpcomingCard, seerrPath } from '../../ui/cards';
 import { Header, type HeaderActive } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import {
-  CardGrid, EmptyState, ErrorState, GridSkeleton, groupUpcoming, ItemGrid, ListFoot, NextUpCard, PageHead, ResumeCard, SeerrGrid, Sentinel,
-  useItemList, usePaged, useRequests, useSeerrPages, watchChanged
+  CardGrid, EmptyState, ErrorState, GRID_FIELDS, GridSkeleton, groupUpcoming, ItemGrid, ListFoot, NextUpCard, PageHead, ResumeCard, SeerrGrid,
+  Sentinel, useItemList, usePaged, useRequests, useSeerrPages, watchChanged
 } from './parts';
 import './lists.css';
 import { getNextUpForMe } from '../me/prefs';
 import { t } from '../../lib/i18n';
 
-const FIELDS = ['PrimaryImageAspectRatio', 'ProductionYear', 'Genres', 'ChildCount', 'DateCreated', 'SortName', 'Overview'];
+const FIELDS = [...GRID_FIELDS, 'Overview'];
 
 export function ListScreen({ kind }: { kind: string }) {
   switch (kind) {

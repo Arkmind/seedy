@@ -421,6 +421,9 @@ export function ErrorState({ error, retry, title }: { error?: Error; retry?: () 
 
 /* ───────── Grids ───────── */
 
+/* What a card in a grid shows (art shape, year, genre, counts) and how the A–Z rail sorts it. */
+export const GRID_FIELDS = ['PrimaryImageAspectRatio', 'ProductionYear', 'Genres', 'ChildCount', 'DateCreated', 'SortName'];
+
 export function GridSkeleton({ count = 12, poster }: { count?: number; poster?: boolean }) {
   return (
     <div class={poster ? 'poster-grid' : 'lib-grid'} aria-busy="true" aria-label={t('Loading')}>

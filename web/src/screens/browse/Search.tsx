@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { getItems } from '../../api/jellyfin';
-import { seerrRequest, seerrSearch, type SeerrItem } from '../../api/seedy';
+import { seerrSearch, type SeerrItem } from '../../api/seedy';
 import type { BaseItem } from '../../api/types';
 import { meStore } from '../../lib/app-state';
 import { episodeTag, plural, yearRange } from '../../lib/format';
@@ -11,13 +11,12 @@ import { CastCard, ItemCard, PosterCard, SkeletonCards } from '../../ui/cards';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { Medu } from '../../ui/medu';
-import { toast } from '../../ui/overlay';
 import { rowMeta, search, type Results } from '../../ui/search/engine';
 import { SearchIdle } from '../../ui/search/parts';
 import { addRecent } from '../../ui/search/recent';
+import { useRequests } from './parts';
 import './search.css';
 import { t } from '../../lib/i18n';
-import { RequestSeasonsDialog } from './request-seasons';
 
 /* Search (Search board): the bar's box holds the query; the page shows everything the bar's dropdown sums up as
    "All N results", then "Request it" from Seerr when nothing in the library matches. `?genre=` lists a genre
@@ -69,8 +68,7 @@ function LibraryResults({ q }: { q: string }) {
   const [lib, setLib] = useState<{ data?: Results; error?: boolean } | null>(null);
   const [tick, setTick] = useState(0);
   const [seerr, setSeerr] = useState<{ items?: SeerrItem[]; total?: number; error?: boolean } | null>(null);
-  const [requesting, setRequesting] = useState<number | null>(null);
-  const [series, setSeries] = useState<SeerrItem | null>(null);
+  const req = useRequests();
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -103,30 +101,6 @@ function LibraryResults({ q }: { q: string }) {
     );
     return () => { live = false; };
   }, [wantSeerr, q]);
-
-  const request = async (item: SeerrItem) => {
-    if (item.mediaType === 'tv') { setSeries(item); return; }
-    setRequesting(item.tmdbId);
-    try {
-      const r = await seerrRequest({ mediaType: item.mediaType, tmdbId: item.tmdbId });
-      setSeerr((s) => s && s.items ? { ...s, items: s.items.map((i) => (i.tmdbId === item.tmdbId && i.mediaType === item.mediaType ? { ...i, status: r.status, requestedByMe: true, requestedBy: undefined } : i)) } : s);
-      toast(t('Requested {title}', { title: item.title }));
-    } catch {
-      toast(t("Couldn't request {title}", { title: item.title }), 'error');
-    } finally {
-      setRequesting(null);
-    }
-  };
-
-  const seasonsDialog = series && (
-    <RequestSeasonsDialog
-      open
-      context="seerr"
-      target={{ tmdbId: series.tmdbId, title: series.title, year: series.year, posterPath: series.posterPath, backdropPath: series.backdropPath }}
-      onClose={() => setSeries(null)}
-      onDone={(r) => setSeerr((s) => s && s.items ? { ...s, items: s.items.map((i) => (i.tmdbId === series.tmdbId && i.mediaType === 'tv' ? { ...i, status: r.status, requestedByMe: true, requestedBy: undefined } : i)) } : s)}
-    />
-  );
 
   if (lib?.error) {
     return (
@@ -163,8 +137,8 @@ function LibraryResults({ q }: { q: string }) {
           </div>
         </section>
 
-        {wantSeerr && seerr && <SeerrResults q={q} seerr={seerr} requesting={requesting} onRequest={request} />}
-        {seasonsDialog}
+        {wantSeerr && seerr && <SeerrResults q={q} seerr={seerr} req={req} />}
+        {req.dialog}
       </>
     );
   }
@@ -223,23 +197,23 @@ function LibraryResults({ q }: { q: string }) {
           </div>
         </Section>
       )}
-      {wantSeerr && seerr && <SeerrResults q={q} seerr={seerr} requesting={requesting} onRequest={request} more />}
-      {seasonsDialog}
+      {wantSeerr && seerr && <SeerrResults q={q} seerr={seerr} req={req} more />}
+      {req.dialog}
     </>
   );
 }
 
 /* Seerr's answer as posters with Request buttons. Under library results ("more") it leaves out what the library
    already has, and stays hidden when Seerr has nothing else. */
-function SeerrResults({ q, seerr, requesting, onRequest, more }: {
+function SeerrResults({ q, seerr, req, more }: {
   q: string;
   seerr: { items?: SeerrItem[]; total?: number; error?: boolean };
-  requesting: number | null;
-  onRequest: (item: SeerrItem) => void;
+  req: ReturnType<typeof useRequests>;
   more?: boolean;
 }) {
   const me = useStore(meStore);
-  const items = more ? seerr.items?.filter((it) => it.status !== 'available') : seerr.items;
+  const all = seerr.items?.map(req.apply);
+  const items = more ? all?.filter((it) => it.status !== 'available') : all;
   if (more && (seerr.error || (items && items.length === 0))) return null;
   const total = more ? items?.length ?? 0 : seerr.total ?? seerr.items?.length ?? 0;
   return (
@@ -260,8 +234,8 @@ function SeerrResults({ q, seerr, requesting, onRequest, more }: {
               key={it.mediaType + it.tmdbId}
               item={it}
               canRequest={me.requests.canRequest}
-              onRequest={onRequest}
-              requesting={requesting === it.tmdbId}
+              onRequest={req.request}
+              requesting={req.busy(it)}
               showRequestButton
               requestedLabel={it.requestedByMe ? t('Requested by you') : it.requestedBy ? t('Requested by {name}', { name: it.requestedBy }) : t('Requested')}
             />

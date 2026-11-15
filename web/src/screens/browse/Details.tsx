@@ -15,8 +15,8 @@ import { Icon } from '../../ui/icons';
 import { MenuItem, toast } from '../../ui/overlay';
 import { playPath } from '../../ui/cards';
 import {
-  CardGrid, EmptyPlaylist, EmptyState, episodeLabel, ErrorState, findView, GridSkeleton, playRandom, resolvePlayable, seasonsLabel,
-  toggleFavorite, togglePlayed, useItemList, yearOf
+  CardGrid, EmptyPlaylist, EmptyState, episodeLabel, ErrorState, findView, GRID_FIELDS, GridSkeleton, playRandom, resolvePlayable,
+  seasonsLabel, toggleFavorite, togglePlayed, useItemList, yearOf
 } from './parts';
 import {
   CastRow, DetailsHero, DetailsSkeleton, MetaLine, MoreActions, SeasonEpisodes, SimilarRow, SquareToggle, TrailerButton,
@@ -496,7 +496,7 @@ function PersonPage({ item: initial }: { item: BaseItem }) {
   const [more, setMore] = useState(false);
   const { items, setItems, replace } = useItemList();
   const films = useAsync(
-    () => getItems({ personIds: [item.Id], includeItemTypes: ['Movie', 'Series'], sortBy: ['PremiereDate', 'ProductionYear', 'SortName'], sortOrder: 'Descending', limit: 200, fields: ['PrimaryImageAspectRatio', 'ProductionYear', 'Genres', 'ChildCount', 'DateCreated', 'SortName'] }),
+    () => getItems({ personIds: [item.Id], includeItemTypes: ['Movie', 'Series'], sortBy: ['PremiereDate', 'ProductionYear', 'SortName'], sortOrder: 'Descending', limit: 200, fields: GRID_FIELDS }),
     [item.Id]
   );
   useEffect(() => { if (films.data) setItems(films.data.Items); }, [films.data]);

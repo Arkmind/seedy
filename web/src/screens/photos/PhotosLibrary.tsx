@@ -13,7 +13,7 @@ import { Header } from '../../ui/navbar/Header';
 import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { headerHeight } from '../../ui/sticky';
 import { EmptyState, ErrorState, Sentinel, usePaged } from '../browse/parts';
-import { useSelection, type Selection } from '../browse/library-select';
+import { SelectionHead, useSelection, type Selection } from '../browse/library-select';
 import { openManage } from '../browse/manage/host';
 import { manageChanged } from '../browse/manage/host';
 import { Icon } from '../../ui/icons';
@@ -349,15 +349,7 @@ export function PhotoSelectionBar({ sel, total, name, onChanged, onSelectAll, on
   const allFav = n > 0 && sel.items.every((x) => x.UserData?.IsFavorite);
   return (
     <div role="toolbar" aria-label={t('{n} selected', { n })} class="lib-sel ph-sel">
-      <div class="lib-sel-left">
-        <button type="button" class="lib-sel-close" aria-label={t('Stop selecting')} onClick={sel.stop}><Icon name="close" size={18} stroke={2.2} /></button>
-        <span class="lib-sel-count" aria-live="polite">{t('{n} selected', { n })}</span>
-        {n < total && (
-          <button type="button" class="lib-sel-all" disabled={busy !== null} onClick={() => { setBusy('all'); onSelectAll().finally(() => setBusy(null)); }}>
-            {busy === 'all' ? t('Selecting…') : t('Select all {n}', { n: total })}
-          </button>
-        )}
-      </div>
+      <SelectionHead sel={sel} total={total} busy={busy} setBusy={setBusy} onSelectAll={onSelectAll} />
       <div class="lib-sel-actions">
         <button type="button" class="lib-sel-btn" disabled={!n || busy !== null} onClick={() => void fav(!allFav)}>
           <PIcon name="heart" size={18} filled={allFav} />{busy === 'fav' ? t('Working…') : allFav ? t('Remove from favorites') : t('Add to favorites')}

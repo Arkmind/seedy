@@ -71,12 +71,28 @@ async function each(items: BaseItem[], fn: (id: string) => Promise<unknown>): Pr
   return failed;
 }
 
-export function SelectionBar({ sel, total, kindLabel, onSelectAll, onChanged }: {
+/* The start of a selection bar: close, "3 selected" and "Select all 248". */
+export function SelectionHead({ sel, total, busy, setBusy, onSelectAll }: {
+  sel: Selection; total: number; busy: string | null; setBusy: (b: string | null) => void; onSelectAll: () => Promise<void>;
+}) {
+  const n = sel.items.length;
+  return (
+    <div class="lib-sel-left">
+      <button type="button" class="lib-sel-close" aria-label={t('Stop selecting')} onClick={sel.stop}><Icon name="close" size={18} stroke={2.2} /></button>
+      <span class="lib-sel-count" aria-live="polite">{t('{n} selected', { n })}</span>
+      {n < total && (
+        <button type="button" class="lib-sel-all" disabled={busy !== null} onClick={() => { setBusy('all'); onSelectAll().finally(() => setBusy(null)); }}>
+          {busy === 'all' ? t('Selecting…') : t('Select all {n}', { n: total })}
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function SelectionBar({ sel, total, onSelectAll, onChanged }: {
   sel: Selection;
   /* Everything in this view (for "Select all 248"). */
   total: number;
-  /* "{n} movies selected" for the toolbar's name. */
-  kindLabel: (n: number) => string;
   onSelectAll: () => Promise<void>;
   onChanged: () => void;
 }) {
@@ -106,16 +122,8 @@ export function SelectionBar({ sel, total, kindLabel, onSelectAll, onChanged }: 
   );
 
   return (
-    <div role="toolbar" aria-label={kindLabel(n)} class="lib-sel">
-      <div class="lib-sel-left">
-        <button type="button" class="lib-sel-close" aria-label={t('Stop selecting')} onClick={sel.stop}><Icon name="close" size={18} stroke={2.2} /></button>
-        <span class="lib-sel-count" aria-live="polite">{t('{n} selected', { n })}</span>
-        {n < total && (
-          <button type="button" class="lib-sel-all" disabled={busy !== null} onClick={() => { setBusy('all'); onSelectAll().finally(() => setBusy(null)); }}>
-            {busy === 'all' ? t('Selecting…') : t('Select all {n}', { n: total })}
-          </button>
-        )}
-      </div>
+    <div role="toolbar" aria-label={t('{n} selected', { n })} class="lib-sel">
+      <SelectionHead sel={sel} total={total} busy={busy} setBusy={setBusy} onSelectAll={onSelectAll} />
       <div class="lib-sel-actions">
         {btn('playlist', 'playlistAdd', t('Add to playlist'), () => setPicker((p) => (p === 'playlist' ? null : 'playlist')), playlistRef)}
         {canCollect() && btn('collection', 'collection', t('Add to collection'), () => setPicker((p) => (p === 'collection' ? null : 'collection')), collectionRef)}

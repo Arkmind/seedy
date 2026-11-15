@@ -22,7 +22,6 @@
 }
 .dhero-main { flex: 1 1 520px; max-width: 680px; min-width: 0; display: flex; align-items: flex-end; gap: 28px; }
 .dhero-info { flex: 1; min-width: 0; container-type: inline-size; display: flex; flex-direction: column; gap: 18px; }
-.dhero-cover { flex: none; width: 220px; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-panel); box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55); }
 
 .dhero-back {
   align-self: flex-start; display: flex; align-items: center; gap: 6px;
@@ -159,25 +158,6 @@ a.ep-row:hover .ep-hover, a.ep-row:focus-visible .ep-hover { opacity: 1; }
 .person-bio.is-open { display: block; }
 .person-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px; }
 
-/* ── Album tracks ── */
-.tracks { list-style: none; margin: 0; padding: 8px; border-radius: var(--r-panel); background: var(--seedy-panel); max-width: 980px; }
-.track {
-  display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 8px 14px; border-radius: var(--r-menu); color: var(--seedy-text);
-  transition: background-color var(--t-fast) var(--ease);
-}
-.track:hover { background: var(--seedy-surface); color: #ffffff; }
-.track:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 0; }
-.track-no { width: 32px; flex: none; text-align: right; font-size: 13px; font-weight: 700; color: var(--seedy-text-3); font-variant-numeric: tabular-nums; }
-.track-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.track-title { font-size: 15px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.track-artist { font-size: 13px; color: var(--seedy-text-3); }
-.track-time { font-size: 13px; color: var(--seedy-text-3); }
-.track-play {
-  width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  background: var(--seedy-inverse); color: var(--seedy-ink-inverse); opacity: 0; transition: opacity var(--t-fast) var(--ease);
-}
-.track:hover .track-play, .track:focus-visible .track-play { opacity: 1; }
-
 @media (max-width: 900px) {
   .dhero-body { padding-top: 200px; }
   .dhero-panel { flex: 1 1 100%; }
@@ -187,7 +167,6 @@ a.ep-row:hover .ep-hover, a.ep-row:focus-visible .ep-hover { opacity: 1; }
   .dhero { min-height: 640px; }
   .dhero-body { gap: 24px; padding-bottom: 28px; }
   .dhero-main { flex-basis: 100%; flex-wrap: wrap; }
-  .dhero-cover { width: 140px; }
   .dhero-title, .dhero-title.is-long { --title-size: 48px; }
   .dhero-overview { font-size: 15px; -webkit-line-clamp: 4; }
   .dhero-actions .btn-primary { flex: 1 1 100%; padding: 0 20px; }
@@ -204,5 +183,4 @@ a.ep-row:hover .ep-hover, a.ep-row:focus-visible .ep-hover { opacity: 1; }
   .dhero-shade-x { background: linear-gradient(0deg, rgba(14, 14, 14, 0.97) 0%, rgba(14, 14, 14, 0.82) 55%, rgba(14, 14, 14, 0.25) 100%); }
   .person-portrait { width: 140px; }
   .person-name { font-size: 40px; }
-  .track-no { width: 22px; }
 }

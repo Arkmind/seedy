@@ -112,11 +112,7 @@ a.reqs-name:hover { color: #ffffff; text-decoration: underline; text-underline-o
 
 /* ── My requests · All requests · search results ── */
 
-.reqs-listing, .reqs-results { display: flex; flex-direction: column; gap: 20px; }
-.reqs-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-.reqs-filters .tab { flex: none; }
-.reqs-filters-end { display: flex; align-items: center; gap: 12px; margin-left: auto; }
-.reqs-total { font-size: 14px; font-weight: 600; color: var(--seedy-text-3); white-space: nowrap; }
+.reqs-results { display: flex; flex-direction: column; gap: 20px; }
 
 @media (max-width: 720px) {
   .reqs-main { gap: 24px; padding-top: 16px; }
