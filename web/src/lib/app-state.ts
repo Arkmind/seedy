@@ -1,5 +1,5 @@
 import {
-  ApiError, allowAdoption, blockAdoption, candidateSessions, currentUserId, sessionFromAuth, setSession, setUnauthorizedHandler, storedSession, type Session
+  ApiError, allowAdoption, blockAdoption, candidateSessions, currentUserId, isJellyfinWebToken, sessionFromAuth, setSession, setUnauthorizedHandler, storedSession, type Session
 } from '../api/client';
 import { castTarget } from './cast';
 import * as jf from '../api/jellyfin';
@@ -137,6 +137,12 @@ export async function boot() {
     try {
       const user = await jf.getMe(s.token);
       const session: Session = { ...s, userId: user.Id, userName: user.Name };
+      /* Jellyfin ties the websocket to the app a token was made for: on Jellyfin web's token it lands in a session of
+         its own, and the admin can't stop or message the playing one. Trade it for one made for Seedy. */
+      if (isJellyfinWebToken(s.token)) {
+        const own = await seedy.ownToken(s.token).catch(() => null);
+        if (own?.accessToken) session.token = own.accessToken;
+      }
       setSession(session);
       await loadSignedIn(user);
       return;

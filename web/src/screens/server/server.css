@@ -90,7 +90,8 @@
 span.srv-now-art { display: block; aspect-ratio: 16 / 9; border-radius: 11px; }
 .srv-now-art .art-title { font-size: 16px; right: 14px; bottom: 26px; }
 .srv-now-art .art-logo { bottom: 22px; max-height: 34%; }
-.srv-now-pill { position: absolute; top: 8px; left: 8px; color: var(--seedy-text); }
+.srv-now-pills { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; flex-wrap: wrap; gap: 6px; color: var(--seedy-text); pointer-events: none; }
+.srv-now-paused svg { flex: none; }
 .srv-now-bar { position: absolute; left: 8px; right: 8px; bottom: 8px; height: 5px; border-radius: 3px; background: var(--seedy-track); overflow: hidden; }
 .srv-now-bar > i { display: block; height: 100%; background: #ffffff; }
 .srv-now-who { display: flex; align-items: flex-start; gap: 10px; }
