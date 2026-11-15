@@ -68,7 +68,14 @@ public sealed class OpenLibraryClient
         // Descriptions often end with source notes and links; keep the first paragraph.
         var cut = text.IndexOf("\n", StringComparison.Ordinal);
         text = (cut > 40 ? text[..cut] : text).Trim();
-        return text.Length > 420 ? text[..text.LastIndexOf(' ', 417)] + "…" : text;
+        if (text.Length <= 420)
+        {
+            return text;
+        }
+
+        // No space to cut at (CJK text): cut mid-run instead.
+        var space = text.LastIndexOf(' ', 417);
+        return text[..(space > 0 ? space : 417)] + "…";
     }
 
     private static BookCardDto? Card(JsonNode? w)
