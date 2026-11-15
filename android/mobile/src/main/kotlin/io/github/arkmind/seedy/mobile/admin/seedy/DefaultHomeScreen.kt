@@ -118,11 +118,11 @@ fun DefaultHomeScreen(state: HomeAdminState, actions: HomeAdminActions, onBack: 
     var genreSheet by remember { mutableStateOf(false) }
     var titleSheet by remember { mutableStateOf(false) }
     val changes = state.changes
-    leaveGuard(changes > 0, t("Your changes to the home screen haven’t been saved yet. If you leave now, they’re lost."), onBack)
+    val back = leaveGuard(changes > 0, t("Your changes to the home screen haven’t been saved yet. If you leave now, they’re lost."), onBack)
     SettingsPage(
         t("Home screen"),
         t("The home screen every new profile starts with. After that, row order adapts to each person unless they or you turn it off."),
-        onBack,
+        back,
         overlay = {
             SheetHost(sheet)
             val h = state.home

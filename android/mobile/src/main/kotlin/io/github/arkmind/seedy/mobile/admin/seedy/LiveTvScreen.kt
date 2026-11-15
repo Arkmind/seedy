@@ -127,11 +127,11 @@ private fun LiveTvMain(state: LiveTvAdminState, actions: LiveTvAdminActions, onB
     var recSheet by remember { mutableStateOf<RecSheet?>(null) }
     var browse by remember { mutableStateOf<RecSheet?>(null) }
     val changes = state.changes
-    leaveGuard(changes > 0, t("Your changes to Live TV haven’t been saved yet. If you leave now, they’re lost."), onBack)
+    val back = leaveGuard(changes > 0, t("Your changes to Live TV haven’t been saved yet. If you leave now, they’re lost."), onBack)
     SettingsPage(
         t("Live TV"),
         t("Tuners, guide data and recordings."),
-        onBack,
+        back,
         overlay = {
             SheetHost(sheet)
             tunerMenu?.let { r ->

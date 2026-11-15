@@ -73,11 +73,11 @@ fun NetworkingScreen(state: NetworkingState, actions: NetworkingActions, onBack:
     var passwordSheet by remember { mutableStateOf(false) }
     val changes = state.changes
     val bar = changes > 0 || state.restarting
-    leaveGuard(changes > 0, t("Your changes to the network settings haven’t been saved yet. If you leave now, they’re lost."), onBack)
+    val back = leaveGuard(changes > 0, t("Your changes to the network settings haven’t been saved yet. If you leave now, they’re lost."), onBack)
     SettingsPage(
         t("Networking"),
         t("Ports, HTTPS, remote access and your home network. Every change here needs a restart."),
-        onBack,
+        back,
         overlay = {
             val c = state.value
             if (confirm) {
