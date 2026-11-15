@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 
-/** The music and book requests' wording (web: media-parts.tsx, music.tsx, books.tsx), on Thursday 29 Oct 2026. */
+/** The music and book requests' wording (web: media-parts.tsx, RequestsMusic.tsx, RequestsBooks.tsx), on Thursday 29 Oct 2026. */
 class MediaFormatTest {
     private val today = LocalDate.of(2026, 10, 29)
     private val json = Json { ignoreUnknownKeys = true }

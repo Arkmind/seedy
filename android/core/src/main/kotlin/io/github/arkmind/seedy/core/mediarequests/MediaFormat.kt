@@ -16,8 +16,9 @@ import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 /*
- * The words of the music and book request pages (web: screens/requests/media-parts.tsx, music.tsx, books.tsx,
- * mine.tsx and the dialogs): request names, the lines under them, where they are on their way, card states.
+ * The words of the music and book request pages (web: screens/requests/media-parts.tsx, RequestsMusic.tsx,
+ * RequestsBooks.tsx, RequestsMine.tsx and the dialogs): request names, the lines under them, where they are on their
+ * way, card states.
  */
 
 /** The services a person can request from, in the web's order. */

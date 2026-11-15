@@ -88,7 +88,7 @@ class MediaActions(
 /**
  * Boards "Android · Requests · Music" and "… Books": the header with Search and Open in Lidarr/Shelfarr, the service
  * tabs, the Discover · My requests (· All requests) switch, the requests in progress and Discover's rows; the other
- * tabs list the requests on their way (web: mine.tsx).
+ * tabs list the requests on their way (web: RequestsMine.tsx).
  */
 @Composable
 fun MediaRequestsScreen(

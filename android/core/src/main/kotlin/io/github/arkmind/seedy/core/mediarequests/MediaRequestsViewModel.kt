@@ -23,9 +23,9 @@ enum class MediaTab { Discover, Mine, All }
 data class MediaProgress(val requests: List<MediaRequest>, val waiting: Int, val downloading: Int, val searching: Int, val ready: Int)
 
 /**
- * The Requests tab's Music and Books (web: screens/requests/music.tsx, books.tsx, mine.tsx): Discover's rows, the
- * person's requests (and everyone's for those who manage them) with approve, decline, search again, accept a lesser
- * quality and cancel.
+ * The Requests tab's Music and Books (web: screens/requests/RequestsMusic.tsx, RequestsBooks.tsx, RequestsMine.tsx):
+ * Discover's rows, the person's requests (and everyone's for those who manage them) with approve, decline, search
+ * again, accept a lesser quality and cancel.
  */
 class MediaRequestsViewModel(session: UserSession) : ViewModel() {
     val api = MediaRequestsApi(session.api)
