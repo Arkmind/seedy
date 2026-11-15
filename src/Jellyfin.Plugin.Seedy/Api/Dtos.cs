@@ -119,6 +119,69 @@ public sealed class PasswordStateDto
     [JsonPropertyName("changedAt")] public DateTime? ChangedAt { get; set; }
 }
 
+/// <summary>Settings › Devices: everywhere the person is signed in.</summary>
+public sealed class MyDevicesDto
+{
+    [JsonPropertyName("devices")] public List<MyDeviceDto> Devices { get; set; } = new();
+}
+
+public sealed class MyDeviceDto
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the name people know it by: the admin's custom name, else the one the app reported.</summary>
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the name the app reported ("Firefox on Linux", "Pixel 9").</summary>
+    [JsonPropertyName("reportedName")] public string ReportedName { get; set; } = string.Empty;
+
+    [JsonPropertyName("appName")] public string AppName { get; set; } = string.Empty;
+    [JsonPropertyName("appVersion")] public string AppVersion { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets when this sign-in started (UTC).</summary>
+    [JsonPropertyName("signedInAt")] public DateTime SignedInAt { get; set; }
+
+    /// <summary>Gets or sets when the device first showed up for this person (UTC).</summary>
+    [JsonPropertyName("firstSeenAt")] public DateTime FirstSeenAt { get; set; }
+
+    [JsonPropertyName("lastActiveAt")] public DateTime? LastActiveAt { get; set; }
+
+    /// <summary>Gets or sets the last address it connected from, when known.</summary>
+    [JsonPropertyName("ip")] public string? Ip { get; set; }
+
+    /// <summary>Gets or sets "home" (inside the server's local network), "away", or null when the address is unknown.</summary>
+    [JsonPropertyName("network")] public string? Network { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the request came from this device.</summary>
+    [JsonPropertyName("current")] public bool Current { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether it is in use right now.</summary>
+    [JsonPropertyName("active")] public bool Active { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether it first showed up in the last week.</summary>
+    [JsonPropertyName("isNew")] public bool IsNew { get; set; }
+
+    [JsonPropertyName("playing")] public MyDevicePlayingDto? Playing { get; set; }
+}
+
+public sealed class MyDevicePlayingDto
+{
+    [JsonPropertyName("itemId")] public string ItemId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the series for an episode, the item's own name otherwise.</summary>
+    [JsonPropertyName("title")] public string Title { get; set; } = string.Empty;
+
+    [JsonPropertyName("type")] public string Type { get; set; } = string.Empty;
+    [JsonPropertyName("season")] public int? Season { get; set; }
+    [JsonPropertyName("episode")] public int? Episode { get; set; }
+    [JsonPropertyName("paused")] public bool Paused { get; set; }
+}
+
+public sealed class SignedOutDto
+{
+    [JsonPropertyName("signedOut")] public int SignedOut { get; set; }
+}
+
 public sealed class MeDto
 {
     [JsonPropertyName("isAdmin")] public bool IsAdmin { get; set; }

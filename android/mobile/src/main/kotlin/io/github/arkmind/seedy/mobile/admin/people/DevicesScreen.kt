@@ -169,7 +169,7 @@ private val ComputerIcon = IconDef(1.8f, "M6 5h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H
 
 internal fun deviceIcon(kind: DeviceKind): IconDef = when (kind) {
     DeviceKind.Tv -> TvIcon
-    DeviceKind.Phone -> PhoneIcon
+    DeviceKind.Phone, DeviceKind.Tablet -> PhoneIcon
     DeviceKind.Computer -> ComputerIcon
 }
 

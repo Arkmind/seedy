@@ -133,8 +133,8 @@ fun ProfilePage(state: SettingsState, actions: SettingsActions, nav: SettingsNav
             }
         }
 
-        // Jellyfin lets only admins list and sign out devices.
-        if (state.isAdmin) {
+        // Seedy lists anyone's own devices; plain Jellyfin lets only admins list and sign them out.
+        if (state.seedy || state.isAdmin) {
             Section(t("Devices")) {
                 row {
                     PickRow(t("Signed in on"), t("Sign out the ones you don’t use any more"), state.devices?.let { tn(it, "{n} device", "{n} devices") } ?: "") { nav.open("devices") }

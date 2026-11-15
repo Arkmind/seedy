@@ -313,6 +313,25 @@ export interface SeerrUser { id: number; displayName: string; email?: string; je
 
 export interface PlayLogProfile { userId: string; name: string; imageTag?: string; plays: number; top10: boolean; history: boolean }
 
+/* Settings › Devices: one place the person is signed in. */
+export interface MyDevice {
+  id: string;
+  /** The admin's custom name, else the one the app reported. */
+  name: string;
+  reportedName: string;
+  appName: string;
+  appVersion: string;
+  signedInAt: string;
+  firstSeenAt: string;
+  lastActiveAt?: string | null;
+  ip?: string | null;
+  network?: 'home' | 'away' | null;
+  current: boolean;
+  active: boolean;
+  isNew: boolean;
+  playing?: { itemId: string; title: string; type: string; season?: number | null; episode?: number | null; paused: boolean } | null;
+}
+
 /* ── Calls ── */
 
 export const getClientBranding = () => request<Branding>('GET', '/Seedy/Client', { token: null });
@@ -325,6 +344,9 @@ export const faviconUrl = (b: Pick<Branding, 'logoVersion' | 'name'>) =>
 export const getMe = () => get<Me>('/Seedy/Me');
 /** When the person's password last changed (from the activity log); null when unknown. */
 export const passwordState = () => get<{ changedAt: string | null }>('/Seedy/Me/Password');
+export const myDevices = () => get<{ devices: MyDevice[] }>('/Seedy/Me/Devices');
+export const signOutDevice = (id: string) => del<void>('/Seedy/Me/Devices', { id });
+export const signOutOtherDevices = () => post<{ signedOut: number }>('/Seedy/Me/Devices/SignOutOthers');
 export const savePrefs = (prefs: Partial<UserPrefs>) => post<UserPrefs>('/Seedy/Me/Prefs', prefs);
 
 export const getHome = () => get<{ rows: HomeRow[] }>('/Seedy/Home');

@@ -20,6 +20,7 @@ import { startReadyWatch } from './screens/requests/ready';
 import { MeduToastHost } from './ui/medu-toast';
 import { PartyHost } from './party/PartyHost';
 import { MeProfile } from './screens/me/Profile';
+import { MeDevices } from './screens/me/Devices';
 import { MeHome } from './screens/me/HomeScreen';
 import { MePlayback } from './screens/me/Playback';
 import { MeSubtitles } from './screens/me/Subtitles';
@@ -100,6 +101,7 @@ const ROUTES: Route[] = [
   { pattern: '/livetv/channels', render: () => <LiveChannels /> },
   { pattern: '/livetv/recordings', render: () => <LiveRecordings /> },
   { pattern: '/settings', render: () => <MeProfile /> },
+  { pattern: '/settings/devices', render: () => <MeDevices /> },
   { pattern: '/settings/home', render: () => <MeHome /> },
   { pattern: '/settings/playback', render: () => <MePlayback /> },
   { pattern: '/settings/subtitles', render: () => <MeSubtitles /> },

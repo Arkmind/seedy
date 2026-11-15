@@ -90,4 +90,9 @@ object WebIcons {
     val LockOpen = IconDef(2f, listOf(IconPart("M7 11h10a2 2 0 0 1 2 2v5a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-5a2 2 0 0 1 2 -2Z"), IconPart("M8 11V8a4 4 0 0 1 7.7-1.5")))
     val Bin = IconDef(2f, listOf(IconPart("M4 7h16"), IconPart("M10 11v6"), IconPart("M14 11v6"), IconPart("M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"), IconPart("M9 7V4h6v3")))
     val UploadUp = IconDef(2.2f, listOf(IconPart("M12 16V4"), IconPart("M7 9l5-5 5 5"), IconPart("M5 20h14")))
+    val DeviceTv = IconDef(2.2f, listOf(IconPart("M3 5h18v12H3z"), IconPart("M8 21h8"), IconPart("M12 17v4")))
+    val DeviceLaptop = IconDef(2.2f, listOf(IconPart("M4 5h16v11H4z"), IconPart("M2 19.5h20")))
+    val DevicePhone = IconDef(2.2f, listOf(IconPart("M7.5 2.5h9a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1z"), IconPart("M11 18.5h2")))
+    val DeviceTablet = IconDef(2.2f, listOf(IconPart("M5.5 3h13a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"), IconPart("M11 17.5h2")))
+    val PlayLine = IconDef(3f, listOf(IconPart("M7 4.5v15l12-7.5z")))
 }

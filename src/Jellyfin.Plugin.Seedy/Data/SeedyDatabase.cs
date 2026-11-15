@@ -174,6 +174,7 @@ public sealed partial class SeedyDatabase : IDisposable
         MigrateReading(c);
         MigrateRequests(c);
         MigrateStats(c);
+        MigrateDevices(c);
     }
 
     private static long Ms(DateTime d) => new DateTimeOffset(DateTime.SpecifyKind(d, DateTimeKind.Utc)).ToUnixTimeMilliseconds();

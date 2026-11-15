@@ -1,0 +1,111 @@
+/* Settings · Devices (MeDevices board). */
+
+/* "This device", "Other devices": headings outside the panels, 14 px above them. */
+.me-dev-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: -10px; }
+.me-dev-head h2 { font-size: 18px; font-weight: 800; color: #ffffff; }
+.me-dev-head p { font-size: 14px; line-height: 1.5; color: var(--seedy-text-2); }
+
+.me-dev-list { display: flex; flex-direction: column; padding: 8px 24px; border-radius: var(--r-panel); background: var(--seedy-panel); }
+.me-dev { border-top: 1px solid transparent; }
+.me-dev + .me-dev { border-top-color: var(--seedy-line); }
+.me-dev-row {
+  display: grid; grid-template-columns: 48px minmax(0, 1fr) 160px 120px; align-items: center; gap: 16px; padding: 16px 0;
+}
+.me-dev-icon {
+  flex: none; width: 48px; height: 48px; border-radius: 14px; background: var(--seedy-surface); color: var(--seedy-text);
+  display: flex; align-items: center; justify-content: center;
+}
+.me-dev-text { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.me-dev-name { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 15px; font-weight: 800; color: #ffffff; overflow-wrap: anywhere; }
+.me-dev-tag {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: var(--r-pill); background: var(--seedy-surface);
+  font-size: 11px; font-weight: 800; color: var(--seedy-text-hero); white-space: nowrap;
+}
+.me-dev-tag.is-playing { background: rgba(159, 224, 176, 0.12); color: var(--seedy-ok); }
+.me-dev-tag.is-playing::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.me-dev-tag.is-new { background: rgba(255, 201, 138, 0.14); color: var(--seedy-pending); }
+.me-dev-app { font-size: 13px; color: var(--seedy-text-3); overflow-wrap: anywhere; }
+.me-dev-ip { font-family: ui-monospace, monospace; }
+.me-dev-playing { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--seedy-ok); }
+.me-dev-when { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.me-dev-last { font-weight: 700; color: var(--seedy-text); }
+.me-dev-last.is-active { color: var(--seedy-ok); }
+.me-dev-since { color: var(--seedy-text-3); }
+.me-dev-here { justify-self: end; font-size: 13px; color: var(--seedy-text-3); }
+.me-dev-none { padding: 16px 0; font-size: 14px; color: var(--seedy-text-3); }
+
+.me-dev-out {
+  justify-self: end; height: 40px; padding: 0 16px; border: 0; border-radius: var(--r-menu); background: var(--seedy-surface); color: #ffffff;
+  font-family: inherit; font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.me-dev-out:hover:not(:disabled) { background: var(--seedy-surface-2); }
+.me-dev-out.is-danger { background: rgba(255, 138, 138, 0.14); color: var(--seedy-danger); }
+.me-dev-out.is-danger:hover:not(:disabled) { background: rgba(255, 138, 138, 0.22); }
+
+/* Under a new device seen from away: 64 px in, under the text. */
+.me-dev-warn { display: flex; gap: 8px; margin: -6px 0 12px 64px; font-size: 13px; line-height: 1.5; color: var(--seedy-pending); }
+.me-dev-warn svg { flex: none; margin-top: 2px; }
+
+.me-dev-confirm {
+  display: flex; flex-direction: column; gap: 14px; margin: 0 0 16px 64px; padding: 16px 18px; border-radius: 14px;
+  background: #1c1515; box-shadow: inset 0 0 0 1px rgba(255, 138, 138, 0.3); outline: none;
+}
+.me-dev-confirm-text { display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.5; color: var(--seedy-text-hero); }
+.me-dev-confirm-title { font-size: 15px; line-height: normal; font-weight: 800; color: #ffffff; }
+.me-dev-confirm-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.me-dev-yes, .me-dev-no {
+  height: 42px; padding: 0 16px; border: 0; border-radius: var(--r-menu); font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: filter var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+}
+.me-dev-yes { padding: 0 18px; background: var(--seedy-danger); color: var(--seedy-ink-inverse); font-weight: 800; }
+.me-dev-yes:hover:not(:disabled) { filter: brightness(1.08); }
+.me-dev-no { background: var(--seedy-surface-2); color: #ffffff; }
+.me-dev-no:hover { background: #343434; }
+
+/* A 22 px accent box with a check, over a real checkbox. */
+.me-dev-check { position: relative; display: flex; align-items: center; gap: 10px; align-self: flex-start; font-size: 14px; font-weight: 600; color: var(--seedy-text); cursor: pointer; }
+.me-dev-check input { position: absolute; width: 22px; height: 22px; margin: 0; opacity: 0; cursor: pointer; }
+.me-dev-box {
+  flex: none; width: 22px; height: 22px; border-radius: 7px; background: var(--seedy-surface-2); color: var(--seedy-ink-inverse);
+  display: flex; align-items: center; justify-content: center;
+}
+.me-dev-box svg { visibility: hidden; }
+.me-dev-check input:checked + .me-dev-box { background: var(--seedy-accent); }
+.me-dev-check input:checked + .me-dev-box svg { visibility: visible; }
+.me-dev-check input:focus-visible + .me-dev-box { outline: 2px solid var(--seedy-accent); outline-offset: 2px; }
+
+.me-dev-all {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px;
+  padding: 22px 24px; border-radius: var(--r-panel); background: var(--seedy-panel);
+}
+.me-dev-all-text { flex: 1 1 360px; display: flex; flex-direction: column; gap: 4px; }
+.me-dev-all-text h2 { font-size: 18px; font-weight: 800; color: #ffffff; }
+.me-dev-all-text p { font-size: 14px; line-height: 1.5; color: var(--seedy-text-2); }
+.me-dev-all-btn {
+  height: 44px; padding: 0 18px; border: 0; border-radius: var(--r-card); background: rgba(255, 138, 138, 0.14); color: var(--seedy-danger);
+  font-family: inherit; font-size: 14px; font-weight: 800; white-space: nowrap; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease);
+}
+.me-dev-all-btn:hover:not(:disabled) { background: rgba(255, 138, 138, 0.22); }
+
+.me-dev-failed { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
+
+/* Phones: the times go under the name and the button stays on the right. */
+@media (max-width: 640px) {
+  .me-dev-list { padding: 4px 16px; }
+  .me-dev-row {
+    grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: 'icon text action' 'icon when action';
+    align-items: start; gap: 6px 12px; padding: 14px 0;
+  }
+  .me-dev-icon { grid-area: icon; width: 40px; height: 40px; border-radius: 12px; }
+  .me-dev-icon svg { width: 20px; height: 20px; }
+  .me-dev-text { grid-area: text; }
+  .me-dev-when { grid-area: when; flex-direction: row; flex-wrap: wrap; gap: 0 6px; }
+  .me-dev-out, .me-dev-here { grid-area: action; }
+  .me-dev-out { height: 34px; padding: 0 12px; border-radius: 11px; font-size: 12px; font-weight: 800; }
+  .me-dev-warn { margin: -4px 0 12px 52px; }
+  .me-dev-confirm { margin: 0 0 14px; }
+  .me-dev-all-text { flex-basis: 100%; }
+  .me-dev-all-btn { flex: 1; }
+}

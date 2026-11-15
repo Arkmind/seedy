@@ -62,6 +62,36 @@ data class PrivacyPrefs(val personalRecs: Boolean = true, val countInTop10: Bool
 @Serializable
 data class PasswordState(val changedAt: String? = null)
 
+/** GET /Seedy/Me/Devices: everywhere the person is signed in, this device included. */
+@Serializable
+data class MyDevices(val devices: List<MyDevice> = emptyList())
+
+/** One sign-in; [network] is "home", "away" or null when the address is unknown, dates are UTC. */
+@Serializable
+data class MyDevice(
+    val id: String = "",
+    val name: String = "",
+    val reportedName: String = "",
+    val appName: String = "",
+    val appVersion: String = "",
+    val signedInAt: String? = null,
+    val firstSeenAt: String? = null,
+    val lastActiveAt: String? = null,
+    val ip: String? = null,
+    val network: String? = null,
+    val current: Boolean = false,
+    val active: Boolean = false,
+    val isNew: Boolean = false,
+    val playing: MyDevicePlaying? = null,
+)
+
+/** What a device plays; [title] is the series for an episode. */
+@Serializable
+data class MyDevicePlaying(val itemId: String = "", val title: String = "", val type: String = "", val season: Int? = null, val episode: Int? = null, val paused: Boolean = false)
+
+@Serializable
+data class SignedOut(val signedOut: Int = 0)
+
 /** The person's own Seerr account, as their settings show it; [linkedBy] is "jellyfin" or "manual". */
 @Serializable
 data class SeerrAccountRef(val name: String = "", val linkedBy: String = "jellyfin")

@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { ApiError, browserName, deviceId, deviceName, getSession, get, request } from '../../api/client';
 import { quickConnectEnabled } from '../../api/jellyfin';
 import { userImageUrl } from '../../api/images';
-import { myRequests, passwordState } from '../../api/seedy';
+import { myDevices, myRequests, passwordState } from '../../api/seedy';
 import type { SessionInfo } from '../../api/types';
 import { meStore, userStore } from '../../lib/app-state';
-import { Link } from '../../lib/router';
+import { Link, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { Switch } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
@@ -14,7 +14,7 @@ import { DeviceTag, MeLayout } from './MeLayout';
 import { reloadUser, removeUserImage, savePrefsPatch, uploadUserImage } from './prefs';
 import { MeRow, MeSection, SaveLine } from './parts';
 import './parts.css';
-import { t, tx } from '../../lib/i18n';
+import { t, tn, tx } from '../../lib/i18n';
 
 /* Settings · Profile and sign-in (MeProfile board). */
 
@@ -25,6 +25,7 @@ export function MeProfile() {
   const privacy = prefs.privacy ?? { personalRecs: true, countInTop10: true };
   const requests = useAsync(() => (me.requests.connected ? myRequests() : Promise.resolve(null)), [me.requests.connected]);
   const seerrName = requests.data?.results.find((r) => r.requestedBy)?.requestedBy ?? user?.Name ?? '';
+  const devices = useAsync(() => myDevices().then((r) => r.devices.length), []);
 
   return (
     <MeLayout
@@ -67,6 +68,12 @@ export function MeProfile() {
             <Link to="/history" class="me-chip-link">{t('Open history')}</Link>
           </MeRow>
         )}
+      </MeSection>
+
+      <MeSection id="devices" title={t('Devices')}>
+        <MeRow name={t('Signed in on')} help={t('Sign out the ones you don’t use any more')}>
+          <Link to="/settings/devices" class="me-chip-link">{devices.data ? tn(devices.data, '{n} device', '{n} devices') : t('See devices')}</Link>
+        </MeRow>
       </MeSection>
 
       <SaveLine />
@@ -164,6 +171,14 @@ function PasswordSection() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [changedNow, setChangedNow] = useState(false);
+  const form = useRef<HTMLFormElement>(null);
+  const focus = useLocation().query.get('focus');
+  /* Settings › Devices sends people here after signing out a device they don't know. */
+  useEffect(() => {
+    if (focus !== 'password' || !form.current) return;
+    form.current.scrollIntoView({ block: 'center' });
+    form.current.querySelector<HTMLInputElement>('input:not([readonly])')?.focus({ preventScroll: true });
+  }, [focus]);
   /* Only the activity log knows when a password changed; the Seedy plugin reads it for everyone. */
   const changed = useAsync(async () => {
     if (!user) return null;
@@ -209,7 +224,7 @@ function PasswordSection() {
         <h2 id="pw-h" class="me-section-title">{t('Password')}</h2>
         <p class="me-section-help is-tight">{changed.loading && !changedNow ? <span class="skel skel-line" style={{ display: 'block', width: '160px', marginTop: '4px' }} /> : line}</p>
       </div>
-      <form class="me-pw" onSubmit={submit}>
+      <form ref={form} class="me-pw" onSubmit={submit}>
         {/* A hidden username helps password managers file the change under the right account. */}
         <input type="text" autoComplete="username" value={user?.Name ?? ''} class="sr-only" tabIndex={-1} aria-hidden="true" readOnly />
         <div class="me-pw-grid">
