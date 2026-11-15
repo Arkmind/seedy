@@ -9,7 +9,7 @@ import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { Popover, toast } from '../../ui/overlay';
 import { TRACK_FIELDS, instantMix, type Track } from '../../audio/api';
-import { Cover, initialsOf, useNearestPalette } from '../../audio/cover';
+import { Cover, initialsOf, PALETTES, useNearestPalette } from '../../audio/cover';
 import {
   addToQueue, audioStore, favoriteStore, playItem, playLoaded, toggleTrackFavorite, togglePlay, type PlayOptions
 } from '../../audio/engine';
@@ -222,7 +222,7 @@ export function lengthLabel(seconds: number): string {
 export const GENRE_ORDER = [0, 8, 2, 6, 4, 3, 1, 7, 5];
 
 export function GenreTile({ genre, index, sample, to }: { genre: BaseItem; index: number; sample?: Track | null; to: string }) {
-  const bg = paletteOfIndex(GENRE_ORDER[index % GENRE_ORDER.length])[1];
+  const bg = PALETTES[GENRE_ORDER[index % GENRE_ORDER.length] % PALETTES.length][1];
   const count = (genre as BaseItem & { AlbumCount?: number }).AlbumCount ?? genre.ChildCount;
   return (
     <Link to={to} class="mu-genre" style={{ background: bg }}>
@@ -232,12 +232,6 @@ export function GenreTile({ genre, index, sample, to }: { genre: BaseItem; index
     </Link>
   );
 }
-
-const PALETTE_HEX = [
-  ['#1c2a3a', '#2f4a66'], ['#3a1d2e', '#6b2f4f'], ['#13302b', '#1f5a4d'], ['#2b2118', '#5c3b22'], ['#1d1d2e', '#3b3b6b'],
-  ['#262626', '#444444'], ['#36200f', '#a3471f'], ['#0f2233', '#1b6f8f'], ['#2a1035', '#7a3fd1']
-];
-const paletteOfIndex = (i: number) => PALETTE_HEX[i % PALETTE_HEX.length];
 
 /* Jump back in: an album, playlist or artist played lately. */
 export function JumpCard({ item, sub, current }: { item: BaseItem; sub: string; current?: { playing: boolean } }) {
