@@ -132,6 +132,10 @@ public sealed class MeDto
     /// <summary>Gets or sets the admin's Home rows as this person can have them (unavailable ones switched off).</summary>
     [JsonPropertyName("homeRows")] public List<HomeRowSettingDto> HomeRows { get; set; } = [];
     [JsonPropertyName("pluginVersion")] public string PluginVersion { get; set; } = "0.1.0";
+
+    /// <summary>Gets or sets a value indicating whether the request's token belongs to another app or device (Seedy
+    /// picked up Jellyfin web's sign-in): the web app then trades it through POST /Seedy/Me/Token.</summary>
+    [JsonPropertyName("borrowedToken")] public bool BorrowedToken { get; set; }
 }
 
 public sealed class HomeRowDto

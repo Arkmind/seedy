@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Jellyfin.Data.Queries;
 using Jellyfin.Plugin.Seedy.Services;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller.Devices;
@@ -52,11 +51,11 @@ public class SessionController : ControllerBase
     public async Task<ActionResult<TokenDto>> OwnToken()
     {
         var user = User.GetUser(_users);
-        var token = Claim("Jellyfin-Token");
+        var token = User.GetClaim("Jellyfin-Token");
         var app = User.GetClientName();
-        var deviceId = Claim("Jellyfin-DeviceId");
+        var deviceId = User.GetClaim("Jellyfin-DeviceId");
         var deviceName = User.GetDeviceName();
-        var version = Claim("Jellyfin-Version");
+        var version = User.GetClaim("Jellyfin-Version");
         if (user is null || token is null)
         {
             return Unauthorized();
@@ -67,8 +66,7 @@ public class SessionController : ControllerBase
             return BadRequest();
         }
 
-        var current = _devices.GetDevices(new DeviceQuery { AccessToken = token }).Items.FirstOrDefault();
-        if (current is not null && string.Equals(current.AppName, app, StringComparison.Ordinal) && string.Equals(current.DeviceId, deviceId, StringComparison.Ordinal))
+        if (!User.UsesBorrowedToken(_devices))
         {
             return new TokenDto { AccessToken = token };
         }
@@ -92,7 +90,7 @@ public class SessionController : ControllerBase
     [HttpPost("Plays/Decoder")]
     public ActionResult PostDecoder([FromBody] DecoderBody body)
     {
-        var deviceId = Claim("Jellyfin-DeviceId");
+        var deviceId = User.GetClaim("Jellyfin-DeviceId");
         if (User.GetUser(_users) is null || string.IsNullOrWhiteSpace(deviceId))
         {
             return Unauthorized();
@@ -112,6 +110,4 @@ public class SessionController : ControllerBase
     [Authorize(Policy = Policies.RequiresElevation)]
     public ActionResult<List<DecoderDto>> GetDecoders()
         => _decoding.List().Select(d => new DecoderDto { DeviceId = d.DeviceId, ItemId = d.ItemId }).ToList();
-
-    private string? Claim(string type) => User.Claims.FirstOrDefault(c => c.Type == type)?.Value;
 }

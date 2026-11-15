@@ -81,6 +81,8 @@ export interface Me {
   /** The admin's Home rows as this person can have them (rows they can't get are switched off). */
   homeRows?: HomeRowSetting[];
   pluginVersion: string;
+  /** The sign-in belongs to another app or device (Jellyfin's web app): trade it with ownToken(). Older plugins leave it out. */
+  borrowedToken?: boolean;
 }
 
 export type RowKind =
@@ -332,7 +334,7 @@ export const recordOrigin = (itemId: string, row: string) => post<void>('/Seedy/
 /* Whether the browser decodes the video (the experimental player), for the admin's Playing now. */
 export const recordDecoder = (itemId: string, onClient: boolean) => post<void>('/Seedy/Plays/Decoder', { itemId, onClient });
 /* Swaps a sign-in borrowed from Jellyfin's web app for one made for Seedy, so its websocket joins the playing session. */
-export const ownToken = (token: string) => request<{ accessToken: string }>('POST', '/Seedy/Me/Token', { token });
+export const ownToken = () => post<{ accessToken: string }>('/Seedy/Me/Token');
 export const getTrailer = (itemId: string) => get<TrailerInfo | undefined>(`/Seedy/Items/${itemId}/Trailer`);
 
 export const getHistory = (q: { startIndex?: number; limit?: number; type?: 'all' | 'movies' | 'shows'; search?: string; includeHidden?: boolean }) =>

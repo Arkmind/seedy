@@ -1,5 +1,5 @@
 import {
-  ApiError, allowAdoption, blockAdoption, candidateSessions, currentUserId, isJellyfinWebToken, sessionFromAuth, setSession, setUnauthorizedHandler, storedSession, type Session
+  ApiError, allowAdoption, blockAdoption, candidateSessions, currentUserId, getSession, sessionFromAuth, setSession, setUnauthorizedHandler, storedSession, type Session
 } from '../api/client';
 import { castTarget } from './cast';
 import * as jf from '../api/jellyfin';
@@ -100,6 +100,14 @@ async function loadSignedIn(user: User) {
     seedy.getMe().catch(() => ({ ...fallbackMe(), isAdmin: !!user.Policy?.IsAdministrator })),
     jf.getUserViews().then((r) => r.Items).catch(() => [] as BaseItem[])
   ]);
+  /* Jellyfin ties the websocket to the app and device a token was made for. On a token borrowed from Jellyfin's web
+     app (even an older one) the socket lands in a session of its own, and the admin can't stop or message the player:
+     the plugin says so, and Seedy trades it for a token of its own before the socket opens. */
+  const current = getSession();
+  if (me.borrowedToken && current) {
+    const own = await seedy.ownToken().catch(() => null);
+    if (own?.accessToken && getSession() === current) setSession({ ...current, token: own.accessToken });
+  }
   meStore.set(me);
   applyBranding(me.branding);
   viewsStore.set(views);
@@ -137,12 +145,6 @@ export async function boot() {
     try {
       const user = await jf.getMe(s.token);
       const session: Session = { ...s, userId: user.Id, userName: user.Name };
-      /* Jellyfin ties the websocket to the app a token was made for: on Jellyfin web's token it lands in a session of
-         its own, and the admin can't stop or message the playing one. Trade it for one made for Seedy. */
-      if (isJellyfinWebToken(s.token)) {
-        const own = await seedy.ownToken(s.token).catch(() => null);
-        if (own?.accessToken) session.token = own.accessToken;
-      }
       setSession(session);
       await loadSignedIn(user);
       return;

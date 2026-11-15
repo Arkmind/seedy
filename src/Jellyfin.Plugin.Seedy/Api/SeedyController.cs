@@ -9,6 +9,7 @@ using Jellyfin.Data.Queries;
 using Jellyfin.Database.Implementations.Enums;
 using Jellyfin.Plugin.Seedy.Data;
 using Jellyfin.Plugin.Seedy.Services;
+using MediaBrowser.Controller.Devices;
 using MediaBrowser.Controller.Drawing;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
@@ -40,6 +41,7 @@ public class SeedyController : ControllerBase
     private readonly PlaybackRecorder _recorder;
     private readonly IImageProcessor _images;
     private readonly IActivityManager _activity;
+    private readonly IDeviceManager _devices;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SeedyController"/> class.
@@ -52,8 +54,11 @@ public class SeedyController : ControllerBase
     /// <param name="seerr">Seerr service.</param>
     /// <param name="recorder">Play recorder.</param>
     /// <param name="images">Image processor.</param>
-    public SeedyController(IUserManager users, ILibraryManager library, SeedyDatabase db, PrefsService prefs, HomeService home, SeerrService seerr, PlaybackRecorder recorder, IImageProcessor images, IActivityManager activity)
+    /// <param name="activity">Activity log.</param>
+    /// <param name="devices">Device manager.</param>
+    public SeedyController(IUserManager users, ILibraryManager library, SeedyDatabase db, PrefsService prefs, HomeService home, SeerrService seerr, PlaybackRecorder recorder, IImageProcessor images, IActivityManager activity, IDeviceManager devices)
     {
+        _devices = devices;
         _activity = activity;
         _images = images;
         _users = users;
@@ -283,7 +288,8 @@ public class SeedyController : ControllerBase
                 },
                 Count = r.Count > 0 ? r.Count : null
             }).ToList(),
-            PluginVersion = VersionString
+            PluginVersion = VersionString,
+            BorrowedToken = User.UsesBorrowedToken(_devices)
         };
     }
 

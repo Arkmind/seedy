@@ -79,9 +79,6 @@ function adoptJellyfinWebSession(): Session | null {
   return { userId: match.UserId, token: match.AccessToken, serverId: match.Id, userName: '' };
 }
 
-/* Whether a token is the one Seedy picked up from Jellyfin's web app. */
-export const isJellyfinWebToken = (token: string) => adoptJellyfinWebSession()?.token === token;
-
 export function getSession(): Session | null {
   return session;
 }
