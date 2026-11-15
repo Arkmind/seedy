@@ -1,4 +1,3 @@
-import type { ComponentType } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { bootState, meStore } from './lib/app-state';
 import { match, useLocation } from './lib/router';
@@ -20,13 +19,6 @@ import { Unreachable } from './screens/Unreachable';
 import { startReadyWatch } from './screens/requests/ready';
 import { MeduToastHost } from './ui/medu-toast';
 import { PartyHost } from './party/PartyHost';
-import { AdminGeneral } from './screens/admin/General';
-import { AdminHome } from './screens/admin/HomeScreen';
-import { AdminRequests } from './screens/admin/Requests';
-import { AdminMediaRequests } from './screens/admin/MediaRequests';
-import { AdminPlayLog } from './screens/admin/PlayLog';
-import { AdminStatistics } from './screens/admin/stats/Statistics';
-import { AdminStatisticsDay } from './screens/admin/stats/StatisticsDay';
 import { MeProfile } from './screens/me/Profile';
 import { MeHome } from './screens/me/HomeScreen';
 import { MePlayback } from './screens/me/Playback';
@@ -34,21 +26,6 @@ import { MeSubtitles } from './screens/me/Subtitles';
 import { MeDisplay } from './screens/me/Display';
 import { MeControls } from './screens/me/Controls';
 import { PersonalHost } from './screens/me/effects';
-import { ServerOverview } from './screens/server/Overview';
-import { ServerSettings } from './screens/server/Settings';
-import { ServerUsers } from './screens/server/Users';
-import { ServerUserEdit } from './screens/server/UserEdit';
-import { ServerLibraries } from './screens/server/Libraries';
-import { ServerPlayback } from './screens/server/Playback';
-import { ServerNetworking } from './screens/server/Networking';
-import { ServerLiveTV } from './screens/server/LiveTV';
-import { ServerDevices } from './screens/server/Devices';
-import { ServerActivity } from './screens/server/Activity';
-import { ServerPlugins } from './screens/server/Plugins';
-import { ServerTasks } from './screens/server/Tasks';
-import { ServerBackups } from './screens/server/Backups';
-import { ServerLogs } from './screens/server/Logs';
-import { ServerApiKeys } from './screens/server/ApiKeys';
 import { RequestsBrowse, RequestsDiscover } from './screens/requests/Requests';
 import { RequestsMine } from './screens/requests/mine';
 import { MusicBrowse, MusicDiscover } from './screens/requests/music';
@@ -58,35 +35,51 @@ import { LiveGuide } from './screens/livetv/Guide';
 import { LiveChannels } from './screens/livetv/Channels';
 import { LiveRecordings } from './screens/livetv/Recordings';
 
-/* The player pulls in hls.js, so it loads on first play. */
-function LazyPlayer(props: { id: string }) {
-  const [Comp, setComp] = useState<ComponentType<{ id: string }> | null>(null);
-  useEffect(() => {
-    import('./player/Player').then(
-      (m) => {
-        try { sessionStorage.removeItem('seedy.reloaded'); } catch { /* storage unavailable */ }
-        setComp(() => m.Player);
-      },
-      () => {
-        // After a plugin update an open tab asks for the old player chunk; reload once to pick up the new build.
-        let reloaded = false;
-        try { reloaded = sessionStorage.getItem('seedy.reloaded') === '1'; sessionStorage.setItem('seedy.reloaded', '1'); } catch { /* storage unavailable */ }
-        if (!reloaded) window.location.reload();
-      }
-    );
-  }, []);
-  if (!Comp) return <div class="boot" style={{ background: '#000' }}><div class="spinner" /></div>;
-  return <Comp {...props} />;
+/* A module that loads on first use (the player pulls in hls.js, the reader epub.js; the admin pages are for admins
+   only). After a plugin update an open tab asks for the old chunk: the page reloads once to pick up the new build. */
+function lazyModule<M>(load: () => Promise<M>): () => M | null {
+  let loaded: M | null = null;
+  return function useModule() {
+    const [mod, setMod] = useState<M | null>(loaded);
+    useEffect(() => {
+      if (mod) return;
+      load().then(
+        (m) => {
+          loaded = m;
+          try { sessionStorage.removeItem('seedy.reloaded'); } catch { /* storage unavailable */ }
+          setMod(m);
+        },
+        () => {
+          let reloaded = false;
+          try { reloaded = sessionStorage.getItem('seedy.reloaded') === '1'; sessionStorage.setItem('seedy.reloaded', '1'); } catch { /* storage unavailable */ }
+          if (!reloaded) window.location.reload();
+        }
+      );
+    }, []);
+    return mod;
+  };
 }
 
-/* The book reader pulls in epub.js, so it loads on first use too. */
+const usePlayer = lazyModule(() => import('./player/Player'));
+const useReader = lazyModule(() => import('./screens/books/reader/Reader'));
+const useAdmin = lazyModule(() => import('./screens/admin-routes'));
+
+const Spinner = ({ background }: { background?: string }) => <div class="boot" style={background ? { background } : undefined}><div class="spinner" /></div>;
+
+function LazyPlayer(props: { id: string }) {
+  const m = usePlayer();
+  return m ? <m.Player {...props} /> : <Spinner background="#000" />;
+}
+
 function LazyReader(props: { id: string }) {
-  const [Comp, setComp] = useState<ComponentType<{ id: string }> | null>(null);
-  useEffect(() => {
-    import('./screens/books/reader/Reader').then((m) => setComp(() => m.Reader), () => window.location.reload());
-  }, []);
-  if (!Comp) return <div class="boot" style={{ background: '#111111' }}><div class="spinner" /></div>;
-  return <Comp {...props} />;
+  const m = useReader();
+  return m ? <m.Reader {...props} /> : <Spinner background="#111111" />;
+}
+
+type AdminScreens = typeof import('./screens/admin-routes');
+function Admin({ render }: { render: (m: AdminScreens) => preact.JSX.Element }) {
+  const m = useAdmin();
+  return m ? render(m) : <Spinner />;
 }
 
 type Route = { pattern: string; render: (p: Record<string, string>) => preact.JSX.Element; admin?: boolean };
@@ -120,28 +113,28 @@ const ROUTES: Route[] = [
   { pattern: '/requests/music/discover/:row', render: (p) => <MusicBrowse row={p.row} /> },
   { pattern: '/requests/books', render: () => <BooksDiscover /> },
   { pattern: '/requests/books/discover/:row', render: (p) => <BooksBrowse row={p.row} /> },
-  { pattern: '/admin', render: () => <AdminGeneral />, admin: true },
-  { pattern: '/admin/home', render: () => <AdminHome />, admin: true },
-  { pattern: '/admin/requests', render: () => <AdminRequests />, admin: true },
-  { pattern: '/admin/media-requests', render: () => <AdminMediaRequests />, admin: true },
-  { pattern: '/admin/statistics', render: () => <AdminStatistics />, admin: true },
-  { pattern: '/admin/statistics/:date', render: (p) => <AdminStatisticsDay date={p.date} />, admin: true },
-  { pattern: '/admin/playlog', render: () => <AdminPlayLog />, admin: true },
-  { pattern: '/admin/server', render: () => <ServerOverview />, admin: true },
-  { pattern: '/admin/settings', render: () => <ServerSettings />, admin: true },
-  { pattern: '/admin/users', render: () => <ServerUsers />, admin: true },
-  { pattern: '/admin/users/:id', render: (p) => <ServerUserEdit id={p.id} />, admin: true },
-  { pattern: '/admin/libraries', render: () => <ServerLibraries />, admin: true },
-  { pattern: '/admin/playback', render: () => <ServerPlayback />, admin: true },
-  { pattern: '/admin/networking', render: () => <ServerNetworking />, admin: true },
-  { pattern: '/admin/livetv', render: () => <ServerLiveTV />, admin: true },
-  { pattern: '/admin/devices', render: () => <ServerDevices />, admin: true },
-  { pattern: '/admin/activity', render: () => <ServerActivity />, admin: true },
-  { pattern: '/admin/plugins', render: () => <ServerPlugins />, admin: true },
-  { pattern: '/admin/tasks', render: () => <ServerTasks />, admin: true },
-  { pattern: '/admin/backups', render: () => <ServerBackups />, admin: true },
-  { pattern: '/admin/logs', render: () => <ServerLogs />, admin: true },
-  { pattern: '/admin/apikeys', render: () => <ServerApiKeys />, admin: true }
+  { pattern: '/admin', render: () => <Admin render={(m) => <m.AdminGeneral />} />, admin: true },
+  { pattern: '/admin/home', render: () => <Admin render={(m) => <m.AdminHome />} />, admin: true },
+  { pattern: '/admin/requests', render: () => <Admin render={(m) => <m.AdminRequests />} />, admin: true },
+  { pattern: '/admin/media-requests', render: () => <Admin render={(m) => <m.AdminMediaRequests />} />, admin: true },
+  { pattern: '/admin/statistics', render: () => <Admin render={(m) => <m.AdminStatistics />} />, admin: true },
+  { pattern: '/admin/statistics/:date', render: (p) => <Admin render={(m) => <m.AdminStatisticsDay date={p.date} />} />, admin: true },
+  { pattern: '/admin/playlog', render: () => <Admin render={(m) => <m.AdminPlayLog />} />, admin: true },
+  { pattern: '/admin/server', render: () => <Admin render={(m) => <m.ServerOverview />} />, admin: true },
+  { pattern: '/admin/settings', render: () => <Admin render={(m) => <m.ServerSettings />} />, admin: true },
+  { pattern: '/admin/users', render: () => <Admin render={(m) => <m.ServerUsers />} />, admin: true },
+  { pattern: '/admin/users/:id', render: (p) => <Admin render={(m) => <m.ServerUserEdit id={p.id} />} />, admin: true },
+  { pattern: '/admin/libraries', render: () => <Admin render={(m) => <m.ServerLibraries />} />, admin: true },
+  { pattern: '/admin/playback', render: () => <Admin render={(m) => <m.ServerPlayback />} />, admin: true },
+  { pattern: '/admin/networking', render: () => <Admin render={(m) => <m.ServerNetworking />} />, admin: true },
+  { pattern: '/admin/livetv', render: () => <Admin render={(m) => <m.ServerLiveTV />} />, admin: true },
+  { pattern: '/admin/devices', render: () => <Admin render={(m) => <m.ServerDevices />} />, admin: true },
+  { pattern: '/admin/activity', render: () => <Admin render={(m) => <m.ServerActivity />} />, admin: true },
+  { pattern: '/admin/plugins', render: () => <Admin render={(m) => <m.ServerPlugins />} />, admin: true },
+  { pattern: '/admin/tasks', render: () => <Admin render={(m) => <m.ServerTasks />} />, admin: true },
+  { pattern: '/admin/backups', render: () => <Admin render={(m) => <m.ServerBackups />} />, admin: true },
+  { pattern: '/admin/logs', render: () => <Admin render={(m) => <m.ServerLogs />} />, admin: true },
+  { pattern: '/admin/apikeys', render: () => <Admin render={(m) => <m.ServerApiKeys />} />, admin: true }
 ];
 
 export function App() {
