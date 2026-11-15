@@ -238,10 +238,9 @@ public sealed class SeerrService
     {
         var c = ConfigMapper.Current;
         var saved = string.IsNullOrWhiteSpace(url) && string.IsNullOrWhiteSpace(apiKey);
-        var address = (string.IsNullOrWhiteSpace(url) ? c.SeerrUrl : url!).Trim().TrimEnd('/');
-        var key = string.IsNullOrWhiteSpace(apiKey) ? c.SeerrApiKey : apiKey!.Trim();
+        var (address, key) = ServiceHttp.TestTarget(url, apiKey, c.SeerrUrl, c.SeerrApiKey);
         var result = new SeerrTestResultDto();
-        if (string.IsNullOrEmpty(address) || !Uri.TryCreate(address, UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
+        if (!ServiceHttp.IsHttpUrl(address))
         {
             result.Message = "Add Seerr's address, such as http://seerr:5055.";
         }

@@ -65,6 +65,30 @@ public sealed class ServiceHttp
         _logger = logger;
     }
 
+    /// <summary>The address and key a connection test uses: the given ones, else the saved ones.</summary>
+    /// <param name="url">Address to test.</param>
+    /// <param name="key">Key to test.</param>
+    /// <param name="savedUrl">Saved address.</param>
+    /// <param name="savedKey">Saved key (used as stored).</param>
+    /// <returns>The address without a trailing slash, and the key.</returns>
+    public static (string Address, string Key) TestTarget(string? url, string? key, string savedUrl, string savedKey)
+        => ((string.IsNullOrWhiteSpace(url) ? savedUrl : url!).Trim().TrimEnd('/'), string.IsNullOrWhiteSpace(key) ? savedKey : key!.Trim());
+
+    /// <summary>Gets whether an address is an absolute http or https URL.</summary>
+    /// <param name="address">Address.</param>
+    /// <returns>True when it is.</returns>
+    public static bool IsHttpUrl(string address)
+        => Uri.TryCreate(address, UriKind.Absolute, out var uri) && (uri.Scheme == "http" || uri.Scheme == "https");
+
+    /// <summary>What a failed connection test tells the admin.</summary>
+    /// <param name="ex">The failure.</param>
+    /// <param name="refused">Text for a refused key.</param>
+    /// <param name="who">The app, as the text names it.</param>
+    /// <param name="address">The address tested.</param>
+    /// <returns>Message.</returns>
+    public static string TestError(MediaServiceException ex, string refused, string who, string address)
+        => ex.Status == HttpStatusCode.Forbidden ? refused : ex.Unreachable ? $"Couldn't reach {who} at {address}." : ex.Message;
+
     /// <summary>Forgets cached answers and pauses for one app (after its address or key changes).</summary>
     /// <param name="service">The app's name.</param>
     public void Reset(string service)

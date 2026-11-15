@@ -78,10 +78,9 @@ public sealed class ShelfarrClient
     public async Task<MediaTestResultDto> TestAsync(string? url, string? token, CancellationToken ct)
     {
         var c = ConfigMapper.Current;
-        var address = (string.IsNullOrWhiteSpace(url) ? c.ShelfarrUrl : url!).Trim().TrimEnd('/');
-        var key = string.IsNullOrWhiteSpace(token) ? c.ShelfarrToken : token!.Trim();
+        var (address, key) = ServiceHttp.TestTarget(url, token, c.ShelfarrUrl, c.ShelfarrToken);
         var result = new MediaTestResultDto { Service = "shelfarr" };
-        if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
+        if (!ServiceHttp.IsHttpUrl(address))
         {
             result.Message = "Add Shelfarr's address, such as http://shelfarr:5056.";
             return result;
@@ -110,9 +109,8 @@ public sealed class ShelfarrClient
         }
         catch (MediaServiceException ex)
         {
-            result.Message = ex.Status == HttpStatusCode.Forbidden
-                ? (ex.Message.Contains("scope", StringComparison.OrdinalIgnoreCase) ? "The token needs the requests scope." : "Shelfarr refused the token.")
-                : ex.Unreachable ? $"Couldn't reach Shelfarr at {address}." : ex.Message;
+            var refused = ex.Message.Contains("scope", StringComparison.OrdinalIgnoreCase) ? "The token needs the requests scope." : "Shelfarr refused the token.";
+            result.Message = ServiceHttp.TestError(ex, refused, Name, address);
         }
 
         return result;
@@ -238,10 +236,9 @@ public sealed class LibrarrClient
     public async Task<MediaTestResultDto> TestAsync(string? url, string? apiKey, CancellationToken ct)
     {
         var c = ConfigMapper.Current;
-        var address = (string.IsNullOrWhiteSpace(url) ? c.LibrarrUrl : url!).Trim().TrimEnd('/');
-        var key = string.IsNullOrWhiteSpace(apiKey) ? c.LibrarrApiKey : apiKey!.Trim();
+        var (address, key) = ServiceHttp.TestTarget(url, apiKey, c.LibrarrUrl, c.LibrarrApiKey);
         var result = new MediaTestResultDto { Service = "librarr" };
-        if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
+        if (!ServiceHttp.IsHttpUrl(address))
         {
             result.Message = "Add Librarr's address, such as http://librarr:5050.";
             return result;
@@ -273,7 +270,7 @@ public sealed class LibrarrClient
         }
         catch (MediaServiceException ex)
         {
-            result.Message = ex.Status == HttpStatusCode.Forbidden ? "Librarr refused the API key." : ex.Unreachable ? $"Couldn't reach Librarr at {address}." : ex.Message;
+            result.Message = ServiceHttp.TestError(ex, "Librarr refused the API key.", Name, address);
         }
 
         return result;
@@ -364,10 +361,9 @@ public sealed class ReadarrClient
     public async Task<MediaTestResultDto> TestAsync(string? url, string? apiKey, CancellationToken ct)
     {
         var c = ConfigMapper.Current;
-        var address = (string.IsNullOrWhiteSpace(url) ? c.ReadarrUrl : url!).Trim().TrimEnd('/');
-        var key = string.IsNullOrWhiteSpace(apiKey) ? c.ReadarrApiKey : apiKey!.Trim();
+        var (address, key) = ServiceHttp.TestTarget(url, apiKey, c.ReadarrUrl, c.ReadarrApiKey);
         var result = new MediaTestResultDto { Service = "readarr" };
-        if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
+        if (!ServiceHttp.IsHttpUrl(address))
         {
             result.Message = "Add the app's address, such as http://bookshelf:8787.";
             return result;
@@ -393,7 +389,7 @@ public sealed class ReadarrClient
         }
         catch (MediaServiceException ex)
         {
-            result.Message = ex.Status == HttpStatusCode.Forbidden ? "The app refused the API key." : ex.Unreachable ? $"Couldn't reach the app at {address}." : ex.Message;
+            result.Message = ServiceHttp.TestError(ex, "The app refused the API key.", "the app", address);
         }
 
         return result;

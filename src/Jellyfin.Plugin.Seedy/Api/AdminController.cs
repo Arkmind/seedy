@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.Seedy.Data;
 using Jellyfin.Plugin.Seedy.Services;
+using Jellyfin.Plugin.Seedy.Services.Media;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Common.Updates;
 using MediaBrowser.Controller;
@@ -88,7 +89,7 @@ public class AdminController : ControllerBase
             _seerr.Reset();
         }
 
-        foreach (var (name, was, now) in new[] { ("Lidarr", oldApps.LidarrUrl, c.LidarrUrl), ("Shelfarr", oldApps.ShelfarrUrl, c.ShelfarrUrl), ("Librarr", oldApps.LibrarrUrl, c.LibrarrUrl), ("Readarr", oldApps.ReadarrUrl, c.ReadarrUrl) })
+        foreach (var (name, was, now) in new[] { (LidarrClient.Name, oldApps.LidarrUrl, c.LidarrUrl), (ShelfarrClient.Name, oldApps.ShelfarrUrl, c.ShelfarrUrl), (LibrarrClient.Name, oldApps.LibrarrUrl, c.LibrarrUrl), (ReadarrClient.Name, oldApps.ReadarrUrl, c.ReadarrUrl) })
         {
             if (!string.Equals(was, now, StringComparison.Ordinal))
             {

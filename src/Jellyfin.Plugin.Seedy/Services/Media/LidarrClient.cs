@@ -67,10 +67,9 @@ public sealed class LidarrClient
     public async Task<MediaTestResultDto> TestAsync(string? url, string? key, CancellationToken ct)
     {
         var c = ConfigMapper.Current;
-        var address = (string.IsNullOrWhiteSpace(url) ? c.LidarrUrl : url!).Trim().TrimEnd('/');
-        var apiKey = string.IsNullOrWhiteSpace(key) ? c.LidarrApiKey : key!.Trim();
+        var (address, apiKey) = ServiceHttp.TestTarget(url, key, c.LidarrUrl, c.LidarrApiKey);
         var result = new MediaTestResultDto { Service = "lidarr" };
-        if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
+        if (!ServiceHttp.IsHttpUrl(address))
         {
             result.Message = "Add Lidarr's address, such as http://lidarr:8686.";
             return result;
@@ -103,7 +102,7 @@ public sealed class LidarrClient
         }
         catch (MediaServiceException ex)
         {
-            result.Message = ex.Status == HttpStatusCode.Forbidden ? "Lidarr refused the API key." : ex.Unreachable ? $"Couldn't reach Lidarr at {address}." : ex.Message;
+            result.Message = ServiceHttp.TestError(ex, "Lidarr refused the API key.", Name, address);
         }
 
         return result;

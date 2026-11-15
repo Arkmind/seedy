@@ -144,10 +144,10 @@ public sealed class MediaRequestService
     /// <returns>Name.</returns>
     public static string ServiceName(string service) => service switch
     {
-        "lidarr" => "Lidarr",
-        "shelfarr" => "Shelfarr",
-        "librarr" => "Librarr",
-        "readarr" => "Readarr",
+        "lidarr" => LidarrClient.Name,
+        "shelfarr" => ShelfarrClient.Name,
+        "librarr" => LibrarrClient.Name,
+        "readarr" => ReadarrClient.Name,
         _ => service
     };
 
@@ -588,7 +588,7 @@ public sealed class MediaRequestService
         }
 
         var lower = await _lidarr.LowerQualityAsync(J.Int(artist["qualityProfileId"]) ?? 0, ct).ConfigureAwait(false)
-            ?? throw new MediaServiceException("Lidarr", "Lidarr has no lesser quality profile to fall back on.", HttpStatusCode.BadRequest);
+            ?? throw new MediaServiceException(LidarrClient.Name, "Lidarr has no lesser quality profile to fall back on.", HttpStatusCode.BadRequest);
         artist["qualityProfileId"] = lower.Id;
         await _lidarr.UpdateArtistAsync(artist, ct).ConfigureAwait(false);
         data.AcceptedQualityId = lower.Id;
