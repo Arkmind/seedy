@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Seedy.Data;
+using Jellyfin.Plugin.Seedy.Services;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -40,7 +41,7 @@ public sealed class PlayLogCleanupTask : IScheduledTask
     /// <inheritdoc />
     public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
-        var days = Plugin.Instance?.Configuration.PlayLogRetentionDays ?? 365;
+        var days = ConfigMapper.Current.PlayLogRetentionDays;
         if (days > 0)
         {
             var removed = _db.DeletePlaysBefore(DateTime.UtcNow.AddDays(-days));

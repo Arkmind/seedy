@@ -41,7 +41,7 @@ public sealed class RootRedirectStartupFilter : IStartupFilter
     }
 
     /// <summary>Gets a value indicating whether Seedy is served at the server address.</summary>
-    public static bool AtRoot => Plugin.Instance?.Configuration.OpensAt != "alongside";
+    public static bool AtRoot => ConfigMapper.Current.OpensAt != "alongside";
 
     private static Task Route(HttpContext context, Func<Task> next)
     {

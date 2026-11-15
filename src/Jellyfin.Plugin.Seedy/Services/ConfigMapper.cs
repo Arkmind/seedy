@@ -146,7 +146,7 @@ public static partial class ConfigMapper
         Requests = new AdminRequestsDto
         {
             Url = c.SeerrUrl,
-            ApiKeyHint = string.IsNullOrEmpty(c.SeerrApiKey) ? null : c.SeerrApiKey[^Math.Min(4, c.SeerrApiKey.Length)..],
+            ApiKeyHint = Hint(c.SeerrApiKey),
             ShowDiscover = c.ShowDiscover,
             ShowUpcomingMovies = c.ShowUpcomingMovies,
             ShowRequestButtons = c.ShowRequestButtons,
@@ -206,7 +206,7 @@ public static partial class ConfigMapper
         c.FeaturedMode = a.Home.Featured.Mode is "auto" or "picks" ? a.Home.Featured.Mode : "both";
         c.FeaturedPicks = (a.Home.Featured.Picks ?? []).Where(p => Guid.TryParse(p, out _)).Distinct().Take(30).ToArray();
 
-        c.SeerrUrl = (a.Requests.Url ?? string.Empty).Trim().TrimEnd('/');
+        c.SeerrUrl = CleanUrl(a.Requests.Url);
         c.ShowDiscover = a.Requests.ShowDiscover;
         c.ShowUpcomingMovies = a.Requests.ShowUpcomingMovies;
         c.ShowRequestButtons = a.Requests.ShowRequestButtons;
@@ -233,32 +233,39 @@ public static partial class ConfigMapper
     /// <param name="userId">User id ("N").</param>
     /// <returns>Switches.</returns>
     public static PlayLogProfile PlayLogProfile(PluginConfiguration c, string userId)
-        => (c.PlayLogProfiles ?? []).FirstOrDefault(p => string.Equals(p.UserId, userId, StringComparison.OrdinalIgnoreCase)) ?? new PlayLogProfile { UserId = userId };
+        => FindProfile(c.PlayLogProfiles, userId) ?? new PlayLogProfile { UserId = userId };
 
     /// <summary>Gets (or creates) a profile's Seerr link.</summary>
     /// <param name="c">Configuration.</param>
     /// <param name="userId">User id ("N").</param>
     /// <returns>Link.</returns>
     public static SeerrProfile SeerrProfile(PluginConfiguration c, string userId)
-        => (c.SeerrProfiles ?? []).FirstOrDefault(p => string.Equals(p.UserId, userId, StringComparison.OrdinalIgnoreCase)) ?? new SeerrProfile { UserId = userId };
+        => FindProfile(c.SeerrProfiles, userId) ?? new SeerrProfile { UserId = userId };
 
     /// <summary>Stores a profile's play log switches.</summary>
     /// <param name="c">Configuration.</param>
     /// <param name="profile">Switches.</param>
-    public static void Upsert(PluginConfiguration c, PlayLogProfile profile)
-    {
-        var list = (c.PlayLogProfiles ?? []).Where(p => !string.Equals(p.UserId, profile.UserId, StringComparison.OrdinalIgnoreCase)).ToList();
-        list.Add(profile);
-        c.PlayLogProfiles = list.ToArray();
-    }
+    public static void Upsert(PluginConfiguration c, PlayLogProfile profile) => c.PlayLogProfiles = ReplaceProfile(c.PlayLogProfiles, profile);
 
     /// <summary>Stores a profile's Seerr link.</summary>
     /// <param name="c">Configuration.</param>
     /// <param name="profile">Link.</param>
-    public static void Upsert(PluginConfiguration c, SeerrProfile profile)
+    public static void Upsert(PluginConfiguration c, SeerrProfile profile) => c.SeerrProfiles = ReplaceProfile(c.SeerrProfiles, profile);
+
+    /// <summary>Finds a profile's entry in one of the per-profile lists.</summary>
+    /// <typeparam name="T">Entry type.</typeparam>
+    /// <param name="list">The stored list.</param>
+    /// <param name="userId">User id ("N").</param>
+    /// <returns>The entry, if any.</returns>
+    internal static T? FindProfile<T>(T[]? list, string userId)
+        where T : class, IUserProfile
+        => (list ?? []).FirstOrDefault(p => string.Equals(p.UserId, userId, StringComparison.OrdinalIgnoreCase));
+
+    private static T[] ReplaceProfile<T>(T[]? list, T profile)
+        where T : IUserProfile
     {
-        var list = (c.SeerrProfiles ?? []).Where(p => !string.Equals(p.UserId, profile.UserId, StringComparison.OrdinalIgnoreCase)).ToList();
-        list.Add(profile);
-        c.SeerrProfiles = list.ToArray();
+        var rest = (list ?? []).Where(p => !string.Equals(p.UserId, profile.UserId, StringComparison.OrdinalIgnoreCase)).ToList();
+        rest.Add(profile);
+        return rest.ToArray();
     }
 }

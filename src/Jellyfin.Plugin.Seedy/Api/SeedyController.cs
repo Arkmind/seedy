@@ -65,6 +65,8 @@ public class SeedyController : ControllerBase
         _recorder = recorder;
     }
 
+    private static string VersionString => Plugin.Instance?.VersionString ?? "0.1.0";
+
     // ── Public: what the sign-in page needs ──
 
     /// <summary>Branding for the sign-in page and header. The Android apps also read it to find out whether a server
@@ -75,7 +77,7 @@ public class SeedyController : ControllerBase
     public ActionResult<BrandingDto> GetClient()
     {
         var branding = ConfigMapper.Branding(ConfigMapper.Current);
-        branding.Version = Plugin.Instance?.VersionString ?? "0.1.0";
+        branding.Version = VersionString;
         branding.Api = ConfigMapper.ApiLevel;
         return branding;
     }
@@ -280,7 +282,7 @@ public class SeedyController : ControllerBase
                 },
                 Count = r.Count > 0 ? r.Count : null
             }).ToList(),
-            PluginVersion = Plugin.Instance?.VersionString ?? "0.1.0"
+            PluginVersion = VersionString
         };
     }
 

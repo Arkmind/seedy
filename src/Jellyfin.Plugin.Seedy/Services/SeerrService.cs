@@ -428,7 +428,7 @@ public sealed class SeerrService
         }
 
         var uid = user.Id.ToString("N");
-        var stored = (c.SeerrProfiles ?? []).FirstOrDefault(p => string.Equals(p.UserId, uid, StringComparison.OrdinalIgnoreCase));
+        var stored = ConfigMapper.FindProfile(c.SeerrProfiles, uid);
         return c.RequestWho == "selected" ? stored?.CanRequest == true : stored?.CanRequest ?? true;
     }
 

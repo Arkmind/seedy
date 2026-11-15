@@ -160,7 +160,7 @@ public sealed class PlaybackRecorder : IHostedService
     /// <param name="finished">Whether it was read to the end.</param>
     public void NoteReading(User user, BaseItem book, string? deviceName, string? client, double percent, bool finished)
     {
-        if (!(Plugin.Instance?.Configuration.PlayLogEnabled ?? true))
+        if (!ConfigMapper.Current.PlayLogEnabled)
         {
             return;
         }
@@ -216,7 +216,7 @@ public sealed class PlaybackRecorder : IHostedService
 
     private void OnStart(object? sender, PlaybackProgressEventArgs e)
     {
-        if (!(Plugin.Instance?.Configuration.PlayLogEnabled ?? true) || !Recordable(e.Item) || e.Users is null)
+        if (!ConfigMapper.Current.PlayLogEnabled || !Recordable(e.Item) || e.Users is null)
         {
             return;
         }
@@ -384,7 +384,10 @@ public sealed class PlaybackRecorder : IHostedService
         }
     }
 
-    private static int Weight(string? method) => method switch
+    /// <summary>Ranks play methods by how much work they take the server, so the heaviest one can be kept.</summary>
+    /// <param name="method">Play method.</param>
+    /// <returns>3 for a transcode down to 0 for unknown.</returns>
+    internal static int MethodWeight(string? method) => method switch
     {
         "Transcode" => 3,
         "DirectStream" => 2,
@@ -418,7 +421,7 @@ public sealed class PlaybackRecorder : IHostedService
             a.TranscodePending = true;
         }
 
-        if (method is not null && Weight(method) >= Weight(p.PlayMethod))
+        if (method is not null && MethodWeight(method) >= MethodWeight(p.PlayMethod))
         {
             p.PlayMethod = method;
         }
@@ -468,7 +471,7 @@ public sealed class PlaybackRecorder : IHostedService
 
     private void OnProgress(object? sender, PlaybackProgressEventArgs e)
     {
-        if (!(Plugin.Instance?.Configuration.PlayLogEnabled ?? true) || !Recordable(e.Item) || e.Users is null)
+        if (!ConfigMapper.Current.PlayLogEnabled || !Recordable(e.Item) || e.Users is null)
         {
             return;
         }

@@ -110,7 +110,7 @@ public class BooksController : ControllerBase
             return Unauthorized();
         }
 
-        return _db.ListReading(user.Id.N(), finished, Math.Clamp(limit, 1, 200))
+        return _db.ListReading(user.Id.ToString("N"), finished, Math.Clamp(limit, 1, 200))
             .Where(r => Guid.TryParse(r.ItemId, out var gid) && _library.GetItemById(gid) is { } item && item.IsVisible(user))
             .Select(ReadingDto.From)
             .ToList();
@@ -127,7 +127,7 @@ public class BooksController : ControllerBase
             return Unauthorized();
         }
 
-        return _db.GetReading(user.Id.N(), id.N()) is { } rec ? ReadingDto.From(rec) : NoContent();
+        return _db.GetReading(user.Id.ToString("N"), id.ToString("N")) is { } rec ? ReadingDto.From(rec) : NoContent();
     }
 
     /// <summary>Saves this profile's place in a book, and marks it played in Jellyfin when finished.</summary>
@@ -150,16 +150,16 @@ public class BooksController : ControllerBase
 
         var rec = new ReadingRecord
         {
-            ItemId = id.N(),
+            ItemId = id.ToString("N"),
             Locator = body.Locator ?? string.Empty,
             Percent = body.Percent,
             Chapter = body.Chapter,
             ChapterIndex = body.ChapterIndex,
             ChapterCount = body.ChapterCount,
             Finished = body.Finished,
-            Settings = body.Settings is { ValueKind: JsonValueKind.Object } s ? s.GetRawText() : _db.GetReading(user.Id.N(), id.N())?.Settings
+            Settings = body.Settings is { ValueKind: JsonValueKind.Object } s ? s.GetRawText() : _db.GetReading(user.Id.ToString("N"), id.ToString("N"))?.Settings
         };
-        _db.SaveReading(user.Id.N(), rec);
+        _db.SaveReading(user.Id.ToString("N"), rec);
         MarkPlayed(user, item, rec.Finished, ct);
         if (item is MediaBrowser.Controller.Entities.Book)
         {
@@ -167,7 +167,7 @@ public class BooksController : ControllerBase
             _recorder.NoteReading(user, item, User.GetDeviceName(), User.GetClientName(), rec.Percent, rec.Finished);
         }
 
-        return ReadingDto.From(_db.GetReading(user.Id.N(), id.N()) ?? rec);
+        return ReadingDto.From(_db.GetReading(user.Id.ToString("N"), id.ToString("N")) ?? rec);
     }
 
     /// <summary>Forgets this profile's place in a book and marks it unplayed.</summary>
@@ -182,7 +182,7 @@ public class BooksController : ControllerBase
             return Unauthorized();
         }
 
-        _db.DeleteReading(user.Id.N(), id.N());
+        _db.DeleteReading(user.Id.ToString("N"), id.ToString("N"));
         if (_library.GetItemById(id) is { } item && item.IsVisible(user))
         {
             MarkPlayed(user, item, false, ct);

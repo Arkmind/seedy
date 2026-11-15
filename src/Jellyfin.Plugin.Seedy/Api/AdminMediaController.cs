@@ -53,8 +53,6 @@ public class AdminMediaController : ControllerBase
         _library = library;
     }
 
-    private static Plugin PluginInstance => Plugin.Instance ?? throw new InvalidOperationException("Seedy isn't loaded.");
-
     /// <summary>Lidarr's profiles and folders (with the library each folder matches) and where each book format lands.</summary>
     /// <param name="ct">Cancellation.</param>
     /// <returns>Info.</returns>
@@ -108,7 +106,7 @@ public class AdminMediaController : ControllerBase
     [HttpPost("Key")]
     public ActionResult<AdminConfigDto> SetKey([FromBody] MediaKeyBody body)
     {
-        var c = PluginInstance.Configuration;
+        var c = Plugin.Required.Configuration;
         var key = (body.ApiKey ?? string.Empty).Trim();
         switch (body.Service)
         {
@@ -128,7 +126,7 @@ public class AdminMediaController : ControllerBase
                 return NotFound();
         }
 
-        PluginInstance.Save(c);
+        Plugin.Required.Save(c);
         _http.Reset(MediaRequestService.ServiceName(body.Service));
         return ConfigMapper.ToAdmin(c);
     }
@@ -150,7 +148,7 @@ public class AdminMediaController : ControllerBase
             return NotFound();
         }
 
-        var c = PluginInstance.Configuration;
+        var c = Plugin.Required.Configuration;
         var current = ConfigMapper.MediaProfile(c, user);
         var profile = new Configuration.MediaRequestProfile
         {
@@ -160,17 +158,15 @@ public class AdminMediaController : ControllerBase
             AutoApprove = body.AutoApprove ?? current.AutoApprove
         };
         ConfigMapper.Upsert(c, profile);
-        PluginInstance.Save(c);
+        Plugin.Required.Save(c);
         return List();
     }
 
     private List<AdminMediaProfileDto> List()
     {
-        var c = PluginInstance.Configuration;
+        var c = Plugin.Required.Configuration;
         var ratings = _localization.GetParentalRatings();
-        return _users.GetUsers()
-            .OrderBy(u => !u.IsAdmin())
-            .ThenBy(u => u.Username, StringComparer.OrdinalIgnoreCase)
+        return _users.InAdminOrder()
             .Select(u =>
             {
                 var p = ConfigMapper.MediaProfile(c, u);

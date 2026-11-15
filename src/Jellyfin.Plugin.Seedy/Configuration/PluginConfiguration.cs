@@ -292,7 +292,7 @@ public class HomeRowSetting
 }
 
 /// <summary>A profile's Seerr account link.</summary>
-public class SeerrProfile
+public class SeerrProfile : IUserProfile
 {
     /// <summary>Gets or sets the Jellyfin user id ("N" format).</summary>
     public string UserId { get; set; } = string.Empty;
@@ -308,7 +308,7 @@ public class SeerrProfile
 }
 
 /// <summary>A profile's play log switches.</summary>
-public class PlayLogProfile
+public class PlayLogProfile : IUserProfile
 {
     /// <summary>Gets or sets the Jellyfin user id ("N" format).</summary>
     public string UserId { get; set; } = string.Empty;
@@ -321,7 +321,7 @@ public class PlayLogProfile
 }
 
 /// <summary>A profile's music and book request limits.</summary>
-public class MediaRequestProfile
+public class MediaRequestProfile : IUserProfile
 {
     /// <summary>Gets or sets the Jellyfin user id ("N" format).</summary>
     public string UserId { get; set; } = string.Empty;
