@@ -53,6 +53,7 @@ import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.ParentDataModifierNode
 import androidx.compose.ui.node.invalidateMeasurement
+import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -121,6 +122,11 @@ private data class CssTextElement(val size: Int, val ratio: Float) : ModifierNod
         node.size = size
         node.ratio = ratio
         node.invalidateMeasurement()
+    }
+    override fun InspectorInfo.inspectableProperties() {
+        name = "cssText"
+        properties["size"] = size
+        properties["ratio"] = ratio
     }
 }
 
@@ -398,6 +404,10 @@ private class CssRowElement(val label: CssBox, val min: Dp) : ModifierNodeElemen
     }
     override fun equals(other: Any?) = other is CssRowElement && other.label === label && other.min == min
     override fun hashCode() = System.identityHashCode(label) * 31 + min.hashCode()
+    override fun InspectorInfo.inspectableProperties() {
+        name = "cssRow"
+        properties["min"] = min
+    }
 }
 
 /** A row is at least 44 px; past that, it's as tall as CSS makes its label (and what's under it). */
