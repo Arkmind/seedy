@@ -32,9 +32,7 @@ export type PhotoItem = BaseItem & {
 
 export const PHOTO_FIELDS = ['DateCreated', 'PrimaryImageAspectRatio', 'Path', 'ParentId', 'MediaSources', 'Width', 'Height'];
 
-
 export const isVideo = (it: BaseItem) => it.Type === 'Video' || it.MediaType === 'Video' || it.Type === 'Movie' || it.Type === 'MusicVideo';
-export const isFolder = (it: BaseItem) => it.Type === 'PhotoAlbum' || it.Type === 'Folder';
 
 /* Width over height; photos say so in Width/Height, videos in their video stream. */
 export function ratioOf(it: BaseItem): number {
@@ -174,7 +172,6 @@ export function coordsLabel(lat: number, lon: number): string {
 }
 
 export const fileName = (it: PhotoItem) => (it.Path ? it.Path.split(/[\\/]/).pop() ?? it.Name : it.Name);
-export const folderOf = (it: PhotoItem) => (it.Path ? it.Path.split(/[\\/]/).slice(0, -1).join('/') : '');
 
 export function formatName(it: PhotoItem, type?: string): string {
   const ext = (it.Path?.split('.').pop() ?? '').toLowerCase();

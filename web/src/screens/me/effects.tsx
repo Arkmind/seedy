@@ -264,7 +264,7 @@ export function moveFocusFrom(dir: Dir): boolean {
 
 /* ── The "?" overlay ── */
 
-export const shortcutsOpen = createStore(false);
+const shortcutsOpen = createStore(false);
 
 function onKeyDown(e: KeyboardEvent) {
   if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;

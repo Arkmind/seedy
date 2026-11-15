@@ -4,7 +4,7 @@ import { pct } from '../../../lib/format';
 import { t } from '../../../lib/i18n';
 import { tc } from '../parts';
 import {
-  COLUMN, SIZE_MAX, SIZE_MIN, THEMES, type ComicSettings, type EpubSettings, type Fit, type FontChoice, type Layout, type Margins,
+  SIZE_MAX, SIZE_MIN, THEMES, type ComicSettings, type EpubSettings, type Fit, type FontChoice, type Layout, type Margins,
   type PageTheme, type Spacing, type Direction
 } from './settings';
 
@@ -236,7 +236,6 @@ export function ComicSettingsPanel({ value, onChange, onClose }: { value: ComicS
   );
 }
 
-export { COLUMN };
 
 /* A side panel under the top bar (Contents, Search). */
 export function SidePanel({ title, onClose, children, anchorId, label }: { title: ComponentChildren; label: string; onClose: () => void; children: ComponentChildren; anchorId: string }) {

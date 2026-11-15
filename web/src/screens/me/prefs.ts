@@ -30,7 +30,7 @@ export const CUSTOM = {
   dismissedMediaArrivals: 'home.dismissedMediaArrivals'
 } as const;
 
-export const CUSTOM_DEFAULTS = {
+const CUSTOM_DEFAULTS = {
   [CUSTOM.accent]: null as string | null,
   [CUSTOM.disco]: null as string | null,
   [CUSTOM.language]: 'auto',
@@ -257,7 +257,7 @@ export function saveUserConfig(patch: Partial<FullUserConfig>, opts: { refreshVi
 }
 
 /* The header tabs and My media follow Jellyfin's view order and exclusions. */
-export async function reloadViews() {
+async function reloadViews() {
   try { viewsStore.set((await getUserViews()).Items); } catch { /* keep the old list */ }
 }
 
@@ -277,7 +277,7 @@ export interface DevicePrefs {
   smoothScrolling: boolean;
 }
 
-export const DEVICE_DEFAULTS: DevicePrefs = {
+const DEVICE_DEFAULTS: DevicePrefs = {
   softPlaceholders: true,
   fastAnimations: false,
   screensaver: 'off',

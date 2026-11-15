@@ -120,7 +120,7 @@ export function PinIcon({ size = 11 }: { size?: number }) {
 
 /* ── Drag to reorder: grab the grip (pointer), or focus it and use ↑ / ↓ / Home / End ── */
 
-export interface SortDrag { id: string; from: number; to: number; dy: number; top: number; height: number }
+interface SortDrag { id: string; from: number; to: number; dy: number; top: number; height: number }
 
 export function useSortable({ ids, listRef, itemSelector, onMove, name }: {
   ids: string[];

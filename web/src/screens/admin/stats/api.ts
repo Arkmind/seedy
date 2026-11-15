@@ -9,7 +9,7 @@ export type Range = '7d' | '30d' | '12m' | 'all';
 export type Kind = 'show' | 'movie' | 'music' | 'livetv' | 'book' | 'other';
 export type Method = 'DirectPlay' | 'DirectStream' | 'Transcode';
 
-export interface StatsPeak { streams: number; at: string; bitrate?: number | null }
+interface StatsPeak { streams: number; at: string; bitrate?: number | null }
 
 export interface Stats {
   range: Range;
@@ -39,7 +39,7 @@ export interface Stats {
   filters: { users: { id: string; name: string }[]; libraries: { id: string; name: string }[]; devices: string[] };
 }
 
-export interface StatsViewer {
+interface StatsViewer {
   userId: string; name: string; imageTag?: string | null; index: number;
   watchMs: number; plays: number; device?: string | null; deviceCount: number; enabled: boolean;
 }
@@ -60,7 +60,7 @@ export interface StatsDay {
 
 export interface StatsFilters { range: Range; userId?: string; libraryId?: string; device?: string }
 
-export const timeZone = () => {
+const timeZone = () => {
   try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; }
 };
 

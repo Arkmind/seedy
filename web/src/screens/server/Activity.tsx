@@ -39,7 +39,7 @@ interface Row {
 const ipOf = (e?: ActivityEntry | null) => /IP address: (.+)$/.exec(e?.ShortOverview ?? '')?.[1]?.trim();
 const cleanIp = (ip: string) => ip.replace(/^::ffff:/i, '').replace(/^\[|\]$/g, '').replace(/:\d+$/, (m) => (ip.includes('.') ? '' : m));
 
-export function isPrivateIp(raw: string): boolean {
+function isPrivateIp(raw: string): boolean {
   const ip = cleanIp(raw);
   const v4 = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(ip);
   if (v4) {

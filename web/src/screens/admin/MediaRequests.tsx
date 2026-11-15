@@ -24,7 +24,7 @@ import '../requests/media.css';
 type Media = AdminMedia;
 type BookApp = 'shelfarr' | 'librarr' | 'readarr';
 
-export const DEF_MEDIA: Media = {
+const DEF_MEDIA: Media = {
   lidarr: { url: '', qualityProfileId: 0, metadataProfileId: 0, rootFolder: '', wholeArtist: 'all', searchOnApprove: true },
   shelfarr: { enabled: false, url: '' },
   librarr: { enabled: false, url: '' },

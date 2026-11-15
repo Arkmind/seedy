@@ -30,7 +30,7 @@ function readFilters(q: URLSearchParams): StatsFilters {
 }
 
 /* A link back to this page with one filter changed. */
-export function statsLink(f: StatsFilters, patch: Partial<StatsFilters>): string {
+function statsLink(f: StatsFilters, patch: Partial<StatsFilters>): string {
   const next = { ...f, ...patch };
   const q = new URLSearchParams();
   if (next.range !== '30d') q.set('range', next.range);

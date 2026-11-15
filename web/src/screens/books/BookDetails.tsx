@@ -420,5 +420,3 @@ function useCoverGlow(item: BaseItem): string {
   }, [src]);
   return glow;
 }
-
-export { BookIcon };

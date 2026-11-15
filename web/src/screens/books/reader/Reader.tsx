@@ -6,7 +6,7 @@ import { canDownload, userStore } from '../../../lib/app-state';
 import { t } from '../../../lib/i18n';
 import { back, navigate } from '../../../lib/router';
 import { useAsync, useStore } from '../../../lib/store';
-import { downloadUrl, formatOf, getBookFile, getBookInfo, getReading, isAudioBook, saveReading, type BookInfo, type Reading } from '../api';
+import { downloadUrl, formatOf, getBookFile, getBookInfo, getReading, isAudioBook, saveReading, type Reading } from '../api';
 import { BarButton, ReaderMessage, RdIcon, TopBar, useFullscreen } from './chrome';
 import { ComicReader, NoPages } from './comic';
 import { EpubReader } from './epub';
@@ -38,12 +38,12 @@ export function Reader({ id }: { id: string }) {
   const format = info.data?.Format && info.data.Format !== 'other' ? info.data.Format : formatOf(it);
   if (format === 'epub') return <EpubReader item={it} info={info.data} reading={reading.data} />;
   if (format === 'cbz') return info.data?.Pages ? <ComicReader item={it} info={info.data} reading={reading.data} /> : <NoPages item={it} />;
-  if (format === 'pdf') return <PdfReader item={it} info={info.data} reading={reading.data} />;
+  if (format === 'pdf') return <PdfReader item={it} reading={reading.data} />;
   return <Unsupported item={it} />;
 }
 
 /* PDF: the browser's viewer in a frame, from a copy of the file (the file endpoint asks browsers to save it). */
-function PdfReader({ item, reading }: { item: BaseItem; info?: BookInfo; reading?: Reading }) {
+function PdfReader({ item, reading }: { item: BaseItem; reading?: Reading }) {
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [full, toggleFull] = useFullscreen();

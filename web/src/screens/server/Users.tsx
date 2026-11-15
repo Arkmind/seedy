@@ -57,7 +57,7 @@ export function presence(u: FullUser, data: Pick<UsersData, 'sessions' | 'device
 
 /* The rating name for a maximum score: "TV-PG", "PG-13". Same choice as the Seedy plugin's admin pages: a named rating
    (TV ratings first) over a bare age, then the US name metadata mostly carries when the server's country has none. */
-export function ratingName(score: number | null | undefined, ratings: ParentalRating[]): string | undefined {
+function ratingName(score: number | null | undefined, ratings: ParentalRating[]): string | undefined {
   if (score === null || score === undefined) return undefined;
   const names = ratings.filter((r) => (r.RatingScore?.score ?? r.Value) === score && r.Name !== 'Unrated' && !/^\d+\+?$/.test(r.Name)).map((r) => r.Name);
   const named = names.find((n) => n.startsWith('TV-')) ?? names[0];

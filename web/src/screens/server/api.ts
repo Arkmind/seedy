@@ -310,7 +310,7 @@ export const resetUserPassword = (id: string) => post<void>('/Users/Password', {
 
 /* ── Libraries ── */
 
-export interface MediaPathInfo { Path: string; NetworkPath?: string }
+interface MediaPathInfo { Path: string; NetworkPath?: string }
 export interface TypeOptions {
   Type: string;
   MetadataFetchers: string[];
@@ -409,7 +409,7 @@ export const getItemCounts = (signal?: AbortSignal) => get<ItemCounts>('/Items/C
 /* ── Playback: EncodingOptions (/System/Configuration/encoding) ── */
 
 export type HwAccel = 'none' | 'amf' | 'qsv' | 'nvenc' | 'v4l2m2m' | 'vaapi' | 'videotoolbox' | 'rkmpp';
-export type TonemapAlgorithm = 'none' | 'clip' | 'linear' | 'gamma' | 'reinhard' | 'hable' | 'mobius' | 'bt2390';
+type TonemapAlgorithm = 'none' | 'clip' | 'linear' | 'gamma' | 'reinhard' | 'hable' | 'mobius' | 'bt2390';
 export type EncoderPreset = 'auto' | 'placebo' | 'veryslow' | 'slower' | 'slow' | 'medium' | 'fast' | 'faster' | 'veryfast' | 'superfast' | 'ultrafast';
 
 export interface EncodingOptions extends Rest {
@@ -795,7 +795,7 @@ export const configPageUrl = (name: string) => JELLYFIN_WEB + '#/configurationpa
 
 /* ── Scheduled tasks ── */
 
-export type TriggerType = 'DailyTrigger' | 'WeeklyTrigger' | 'IntervalTrigger' | 'StartupTrigger';
+type TriggerType = 'DailyTrigger' | 'WeeklyTrigger' | 'IntervalTrigger' | 'StartupTrigger';
 export type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
 
 export interface TaskTrigger {

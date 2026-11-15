@@ -121,7 +121,7 @@ function oneEach(items: BaseItem[]): BaseItem[] {
 
 export function useBooksData(viewId: string) {
   const [fresh, setFresh] = useState(0);
-  const items = useAsync((signal) => (viewId ? libraryItems(viewId, fresh > 0, signal) : Promise.resolve(undefined)), [viewId, fresh]);
+  const items = useAsync(() => (viewId ? libraryItems(viewId, fresh > 0) : Promise.resolve(undefined)), [viewId, fresh]);
   const reading = useAsync(() => (viewId ? listReading(true, 200).catch(() => [] as Reading[]) : Promise.resolve([] as Reading[])), [viewId, fresh]);
   const data = useMemo<BooksData | undefined>(() => {
     if (!items.data) return undefined;
@@ -142,13 +142,12 @@ export function useBooksData(viewId: string) {
 
 /* The library's items stay for a minute, so going from the library to a book and back doesn't load them again. */
 const itemsCache = new Map<string, { at: number; items: Promise<BaseItem[]> }>();
-function libraryItems(viewId: string, force: boolean, signal: AbortSignal): Promise<BaseItem[]> {
+function libraryItems(viewId: string, force: boolean): Promise<BaseItem[]> {
   const hit = itemsCache.get(viewId);
   if (hit && !force && Date.now() - hit.at < 60_000) return hit.items;
   const items = loadLibraryItems(viewId);
   itemsCache.set(viewId, { at: Date.now(), items });
   items.catch(() => itemsCache.delete(viewId));
-  void signal;
   return items;
 }
 
@@ -600,5 +599,3 @@ export function VolumeCard({ item, reading, current }: { item: BaseItem; reading
     />
   );
 }
-
-export { sortItems, groupSeries };

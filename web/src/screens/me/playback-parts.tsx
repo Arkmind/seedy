@@ -141,7 +141,7 @@ export function useFreshUser() {
 interface Culture { DisplayName: string; Name: string; ThreeLetterISOLanguageName: string }
 let culturesCache: Promise<PickOption<string>[]> | null = null;
 
-export function loadLanguages(): Promise<PickOption<string>[]> {
+function loadLanguages(): Promise<PickOption<string>[]> {
   culturesCache ??= get<Culture[]>('/Localization/Cultures').then((list) => {
     const seen = new Set<string>();
     return (list ?? [])
@@ -176,7 +176,7 @@ export function useLanguages(): PickOption<string>[] {
 }
 
 /* A language code's name before the culture list has loaded. */
-export function languageName(code: string): string {
+function languageName(code: string): string {
   if (getLang() !== 'en') return localName(code, code);
   return displayLanguage(code, 'en') ?? code;
 }

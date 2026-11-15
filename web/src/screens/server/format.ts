@@ -267,7 +267,7 @@ const REASONS: Record<string, (src: { video: string; audio: string }) => string>
   DirectPlayError: () => t('direct play failed')
 };
 
-export type PlayMethodKind = 'direct' | 'stream' | 'transcode';
+type PlayMethodKind = 'direct' | 'stream' | 'transcode';
 
 export function playMethod(s: Session): PlayMethodKind {
   const m = s.PlayState?.PlayMethod;

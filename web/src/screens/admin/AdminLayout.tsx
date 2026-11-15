@@ -10,7 +10,7 @@ import { canLeave, hasUnsavedChanges } from './config';
 import { t, tn } from '../../lib/i18n';
 import './admin.css';
 
-export type AdminPage =
+type AdminPage =
   | 'general' | 'home' | 'requests' | 'mediaRequests' | 'statistics' | 'playlog'
   | 'overview' | 'settings' | 'users' | 'libraries' | 'playback' | 'networking' | 'livetv'
   | 'devices' | 'activity'
@@ -19,7 +19,7 @@ export type AdminPage =
 interface NavItem { id: AdminPage; path: string; label: string }
 
 /* The admin's sections, grouped as on the boards. Seedy's own settings first, then Jellyfin's server dashboard. */
-export const ADMIN_NAV: { label: string; items: NavItem[] }[] = [
+const ADMIN_NAV: { label: string; items: NavItem[] }[] = [
   {
     label: 'Seedy',
     items: [

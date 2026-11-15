@@ -6,11 +6,11 @@ import { useStore } from '../../lib/store';
 import { Header } from '../../ui/navbar/Header';
 import './me.css';
 
-export type MePage = 'profile' | 'home' | 'playback' | 'subtitles' | 'display' | 'controls';
+type MePage = 'profile' | 'home' | 'playback' | 'subtitles' | 'display' | 'controls';
 
 /* Personal settings, grouped as on the Settings boards. They follow the profile to every device unless a row
    carries the "This device" tag. */
-export const ME_NAV: { label: string; items: { id: MePage; path: string; label: string }[] }[] = [
+const ME_NAV: { label: string; items: { id: MePage; path: string; label: string }[] }[] = [
   { label: 'Account', items: [{ id: 'profile', path: '/settings', label: 'Profile and sign-in' }] },
   {
     label: 'Watching',

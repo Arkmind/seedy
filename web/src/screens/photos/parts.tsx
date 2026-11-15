@@ -11,7 +11,7 @@ import {
   countsLabel, daySub, folderInfo, isVideo, monthYear, ratioOf, thumbUrl, type Day, type FolderInfo, type Memory, type Month, type PhotoItem,
   yearsAgo
 } from './api';
-import { PIcon, type PIconName } from './icons';
+import { PIcon } from './icons';
 import { fmtMonthYear, fmtWeekdayDate } from '../../lib/format';
 
 /* Pieces shared by the photos library, folder and viewer (Photos boards). Prefix ph-. */
@@ -38,16 +38,6 @@ export function SizeSwitch({ size, onChange }: { size: TileSize; onChange: (s: T
         <button key={o.id} type="button" class="ph-seg-btn" aria-pressed={o.id === size ? 'true' : 'false'} onClick={() => onChange(o.id)}>{o.label}</button>
       ))}
     </div>
-  );
-}
-
-/* ───────── Buttons ───────── */
-
-export function PhButton({ icon, label, primary, onClick, disabled, busy }: { icon: PIconName; label: string; primary?: boolean; onClick?: () => void; disabled?: boolean; busy?: boolean }) {
-  return (
-    <button type="button" class={'ph-btn' + (primary ? ' is-primary' : '')} disabled={disabled || busy} onClick={onClick}>
-      <PIcon name={icon} size={18} />{label}
-    </button>
   );
 }
 
@@ -133,9 +123,9 @@ export function clockOf(secs: number): string {
 }
 
 /* One day: "Sat 17 Oct  14 photos · Home", then its photos in justified rows. */
-export function DaySection({ day, row, offset, select, own, onOpen, id }: { day: Day; row: number; offset: number; select?: GridSelect; own?: string; onOpen: (item: PhotoItem) => void; id?: string }) {
+export function DaySection({ day, row, offset, select, own, onOpen }: { day: Day; row: number; offset: number; select?: GridSelect; own?: string; onOpen: (item: PhotoItem) => void }) {
   return (
-    <section class="ph-day" aria-label={fmtWeekdayDate(day.date)} id={id}>
+    <section class="ph-day" aria-label={fmtWeekdayDate(day.date)}>
       <div class="ph-day-head"><h3>{fmtWeekdayDate(day.date)}</h3><span>{daySub(day, own)}</span></div>
       <JustifiedRows items={day.items} row={row} offset={offset} select={select} onOpen={onOpen} />
     </section>
@@ -226,5 +216,3 @@ export function rowFor(size: TileSize): number {
   const phone = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 720px)').matches;
   return Math.round(ROW[size] * (phone ? 0.6 : 1));
 }
-
-export { ROW };

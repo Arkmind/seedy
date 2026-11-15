@@ -5,7 +5,7 @@ import { duration, itemYear, pct, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { playAudiobook } from '../../audio/engine';
-import { authorLine, isAudioBook, isComic, seriesOf, type Reading } from './api';
+import { authorLine, isAudioBook, seriesOf, type Reading } from './api';
 import { AudioCover, BookCover } from './covers';
 import '@fontsource-variable/noto-serif/wght.css';
 
@@ -224,4 +224,3 @@ export function ContinueCard({ entry }: { entry: ContinueEntry }) {
   );
 }
 
-export const comicOrBook = (item: BaseItem) => (isAudioBook(item) ? 'audio' : isComic(item) ? 'comic' : 'book');

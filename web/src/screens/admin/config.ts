@@ -13,14 +13,14 @@ import { t } from '../../lib/i18n';
 
 export type SaveState = 'saved' | 'saving' | 'error';
 
-export const configStore = createStore<AdminConfig | null>(null);
+const configStore = createStore<AdminConfig | null>(null);
 const loadErrorStore = createStore<Error | null>(null);
-export const saveStateStore = createStore<SaveState>('saved');
+const saveStateStore = createStore<SaveState>('saved');
 
 /* ── Defaults and normalising ── */
 
 export const LOCKED_ROWS = new Set<RowKind>(['featured', 'continue']);
-export const ROW_KINDS: RowKind[] = [
+const ROW_KINDS: RowKind[] = [
   'featured', 'continue', 'nextup', 'top10', 'because', 'genres', 'mymedia', 'latest',
   'discover', 'upcomingMovies', 'upcomingShows', 'collections'
 ];
@@ -53,7 +53,7 @@ const DEF_REQUESTS: AdminConfig['requests'] = {
 };
 const DEF_PLAYLOG: AdminConfig['playLog'] = { enabled: true, retentionDays: 365, useTop10: true, useHistory: true, useRowOrder: true, useGenres: true };
 
-export function normaliseConfig(c: AdminConfig): AdminConfig {
+function normaliseConfig(c: AdminConfig): AdminConfig {
   const h: Partial<AdminConfig['home']> = c.home ?? {};
   return {
     ...c,
@@ -77,7 +77,7 @@ export function normaliseConfig(c: AdminConfig): AdminConfig {
 
 let loading: Promise<void> | null = null;
 
-export function loadConfig(force = false): Promise<void> {
+function loadConfig(force = false): Promise<void> {
   if (loading) return loading;
   if (configStore.get() && !force) return Promise.resolve();
   loadErrorStore.set(null);
@@ -178,7 +178,7 @@ if (typeof window !== 'undefined') {
 
 export const statusStore = createStore<{ data?: AdminStatus; error?: Error; at: number }>({ at: 0 });
 
-export interface SeerrTestState { state: 'idle' | 'testing' | 'done'; result?: SeerrTestResult; error?: string; at: number }
+interface SeerrTestState { state: 'idle' | 'testing' | 'done'; result?: SeerrTestResult; error?: string; at: number }
 export const seerrTestStore = createStore<SeerrTestState>({ state: 'idle', at: 0 });
 
 // A slow test started earlier must not overwrite the result of a newer one.
