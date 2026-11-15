@@ -76,22 +76,6 @@ object Choices {
     /** TV: one row for both directions. */
     val SeekPairs = listOf(5 to 10, 10 to 10, 10 to 30, 15 to 30, 15 to 60, 30 to 30, 30 to 60)
 
-    /** "Are you still watching?": episodes and minutes (the web's prefs.custom playback.stillWatching), or "off". */
-    val StillWatching = listOf("off", "2:60", "3:90", "4:120", "6:180")
-
-    fun stillWatching(value: String, short: Boolean): String {
-        if (value == "off") return t("Never")
-        val (e, m) = value.split(':').map { it.toIntOrNull() ?: 0 }
-        if (short) return t("After {n} episodes", "n" to e)
-        return when (m) {
-            60 -> t("After 2 episodes or 60 min")
-            90 -> if (e == 3) t("After 3 episodes or 90 min") else t("After {episodes} episodes or {minutes} min", "episodes" to e, "minutes" to m)
-            120 -> t("After 4 episodes or 2 hours")
-            180 -> t("After 6 episodes or 3 hours")
-            else -> t("After {episodes} episodes or {minutes} min", "episodes" to e, "minutes" to m)
-        }
-    }
-
     /** Jellyfin's subtitle modes, in the boards' order and words. */
     data class Mode(val value: String, val name: String, val help: String)
 

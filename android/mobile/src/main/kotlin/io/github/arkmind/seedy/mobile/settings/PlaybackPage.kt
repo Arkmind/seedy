@@ -1,11 +1,36 @@
 package io.github.arkmind.seedy.mobile.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import io.github.arkmind.seedy.mobile.parts.tap
+import io.github.arkmind.seedy.ui.icons.SIcon
+import io.github.arkmind.seedy.ui.icons.WebIcons
+import io.github.arkmind.seedy.ui.theme.LocalAccent
+import io.github.arkmind.seedy.ui.theme.SText
+import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.settings.Choice
 import io.github.arkmind.seedy.core.settings.Choices
 import io.github.arkmind.seedy.core.settings.SettingsActions
 import io.github.arkmind.seedy.core.settings.SettingsState
+import io.github.arkmind.seedy.core.settings.StillWatchingRules
 import io.github.arkmind.seedy.core.data.DeviceSettings
 
 /** Board "Android · Settings · Playback". Quality is per device; Jellyfin's own options go to its UserConfiguration. */
@@ -73,13 +98,7 @@ fun PlaybackPage(state: SettingsState, actions: SettingsActions, nav: SettingsNa
                         sheet.open(t("Up next countdown"), options, pb.upNextSeconds) { v -> actions.setPlayback { it.copy(upNextSeconds = v) } }
                     }
                 }
-                row {
-                    val value = state.stillWatching
-                    val options = (Choices.StillWatching + value).distinct().map { Choice(it, Choices.stillWatching(it, short = false)) }
-                    PickRow(t("Ask “Are you still watching?”"), t("Pauses auto-play when nobody’s there"), Choices.stillWatching(value, short = true)) {
-                        sheet.open(t("Ask “Are you still watching?”"), options, value, actions::setStillWatching)
-                    }
-                }
+                row { StillWatchingRow(state.stillWatching, actions::setStillWatching) }
             }
             row {
                 val c = state.config
@@ -126,6 +145,71 @@ fun PlaybackPage(state: SettingsState, actions: SettingsActions, nav: SettingsNa
             }
         }
         SaveLine(state.saving, state.error)
+    }
+}
+
+/**
+ * "Ask “Are you still watching?”": three rules to tick, each a card with its checkbox and a segmented count (dimmed
+ * while unticked; picking a count ticks the rule, as on the web).
+ */
+@Composable
+private fun StillWatchingRow(rules: StillWatchingRules, onChange: (StillWatchingRules) -> Unit) {
+    StackRow(t("Ask “Are you still watching?”"), t("Seedy asks when any rule you tick is met. Touching the screen or the volume starts the count again.")) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            RuleCard(
+                t("After episodes in a row"), t("Shows only"), rules.episodesOn,
+                choices(withValue(StillWatchingRules.Episodes, rules.episodes), StillWatchingRules::episodesLabel), rules.episodes,
+                onTick = { onChange(rules.copy(episodesOn = it)) }, onCount = { onChange(rules.copy(episodes = it, episodesOn = true)) },
+            )
+            RuleCard(
+                t("After watching for a while"), t("Shows and movies, without a break"), rules.minutesOn,
+                choices(withValue(StillWatchingRules.Minutes, rules.minutes), StillWatchingRules::minutesLabel), rules.minutes,
+                onTick = { onChange(rules.copy(minutesOn = it)) }, onCount = { onChange(rules.copy(minutes = it, minutesOn = true)) },
+            )
+            RuleCard(
+                t("After movies in a row"), t("Before end-of-movie picks or the next film start"), rules.moviesOn,
+                choices(withValue(StillWatchingRules.Movies, rules.movies), StillWatchingRules::moviesLabel), rules.movies,
+                onTick = { onChange(rules.copy(moviesOn = it)) }, onCount = { onChange(rules.copy(movies = it, moviesOn = true)) },
+            )
+        }
+    }
+}
+
+/** One rule: a 12 px card on #1a1a1a, the checkbox and its words over the counts (34 px options in a #242424 well). */
+@Composable
+private fun RuleCard(name: String, help: String, on: Boolean, options: List<Choice<Int>>, value: Int, onTick: (Boolean) -> Unit, onCount: (Int) -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(SeedyColors.Row).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().tap(role = Role.Checkbox) { onTick(!on) },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            RuleCheck(on)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                SText(name, size = 13.sp, weight = 700, color = if (on) SeedyColors.White else SeedyColors.TextHero)
+                SText(help, Modifier.cssText(11, 1.35f), size = 11.sp, lineHeight = 1.35f, color = SeedyColors.Text3)
+            }
+        }
+        Segmented(
+            options, value, onCount, Modifier.alpha(if (on) 1f else .4f),
+            height = 34.dp, well = Color(0xFF242424), wellRadius = 12.dp, radius = 9.dp,
+        )
+    }
+}
+
+/** The 22 px checkbox: the accent with a dark tick when on, a 2 px #5a5a5a ring when off. */
+@Composable
+private fun RuleCheck(on: Boolean) {
+    val shape = RoundedCornerShape(7.dp)
+    Box(
+        Modifier.size(22.dp).clip(shape)
+            .then(if (on) Modifier.background(LocalAccent.current) else Modifier.border(2.dp, Color(0xFF5A5A5A), shape)),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (on) SIcon(WebIcons.Check, size = 14.dp, color = SeedyColors.InkInverse, stroke = 3.2f)
     }
 }
 

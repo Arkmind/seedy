@@ -5,6 +5,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import io.github.arkmind.seedy.ui.components.LocalOverlayHost
+import io.github.arkmind.seedy.ui.components.OverlayHost
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalInputModeManager
@@ -27,6 +33,7 @@ import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.SeedyTheme
 import io.github.arkmind.seedy.ui.theme.Viewer
 import org.jellyfin.sdk.model.api.SubtitlePlaybackMode
+import io.github.arkmind.seedy.core.settings.StillWatchingRules
 import org.jellyfin.sdk.model.api.UserConfiguration
 import org.junit.Rule
 import org.junit.Test
@@ -72,6 +79,29 @@ class TvSettingsShots {
         TvSettingsScreen(TvSettingsSamples.state, actions, "1.0", onLeave = {}, start = TvSection.Playback, focusRow = "quality")
     }
 
+    /** No board: OK on "Ask “Are you still watching?”" opens its rules, the remote on the first one. */
+    @Test
+    fun stillWatching() {
+        compose.setContent {
+            val inputMode = LocalInputModeManager.current
+            SideEffect { inputMode.requestInputMode(InputMode.Keyboard) }
+            val overlay = remember { OverlayHost() }
+            SeedyTheme {
+                CompositionLocalProvider(LocalViewer provides Viewer(name = "Arky", requests = true), LocalOverlayHost provides overlay) {
+                    Box(Modifier.fillMaxSize()) {
+                        TvSettingsScreen(TvSettingsSamples.state, actions, "1.0", onLeave = {}, start = TvSection.Playback, focusRow = "stillWatching")
+                        TvRail(TvPlace.entries, current = null, onPlace = {}, onProfile = {}, onSettings = {}, settingsCurrent = true)
+                        overlay.content?.invoke()
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("src/test/screenshots/TVSettingsStillWatching.png")
+    }
+
     @Test
     fun subtitles() = shot("TVSettingsSubtitles") {
         TvSettingsScreen(TvSettingsSamples.state, actions, "1.0", onLeave = {}, start = TvSection.Subtitles, focusRow = "size")
@@ -89,6 +119,8 @@ object TvSettingsSamples {
             rows = kinds.map { k ->
                 HomeRowPref(k, enabled = k != "livetv" && k != "collections", count = mapOf("because" to 6, "genres" to 2)[k], pinned = k == "nextup")
             },
+            // The board's "3 episodes or 90 min".
+            custom = mapOf("playback.stillWatching" to StillWatchingRules(episodes = 3, minutes = 90, minutesOn = true, movies = 2, moviesOn = false).toJson()),
         ),
         adminRows = kinds.map { HomeRowSetting(it) },
         config = UserConfiguration(
