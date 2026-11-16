@@ -2,4 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- "Tell me when a request is ready": asked for when it's useful (Settings, Requests), never at launch. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application>
+        <!-- The APK updater's new version telling it's installed (UpdatedNotice). -->
+        <receiver android:name="io.github.arkmind.seedy.mobile.update.UpdatedReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
 </manifest>

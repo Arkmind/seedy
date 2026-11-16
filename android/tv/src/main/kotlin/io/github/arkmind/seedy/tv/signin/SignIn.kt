@@ -92,7 +92,7 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 
 /** The TV boards' header mark: 50 px square, 36 px name. */
 @Composable
-private fun TvBrand(name: String, modifier: Modifier = Modifier) {
+internal fun TvBrand(name: String, modifier: Modifier = Modifier) {
     BrandMark(name, modifier, markSize = 50.bp, radius = 14.bp, letterSize = 26.bsp, wordSize = 36.bsp, gap = 16.bp)
 }
 

@@ -29,6 +29,10 @@ val appVersionCode = (findProperty("appVersionCode") as String?)?.toInt() ?: run
     ((major * 100 + minor) * 100 + patch) * 100 + stage
 }
 
+// The app bundle for Google Play is built with -Pstore=play: it leaves out the APK updater's permission (Play forbids
+// apps that update themselves; Play updates them). The APK attached to GitHub releases keeps it.
+val forPlay = findProperty("store") == "play"
+
 android {
     namespace = "io.github.arkmind.seedy"
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -52,6 +56,8 @@ android {
             }
         }
     }
+
+    if (forPlay) sourceSets.getByName("release").manifest.srcFile("src/play/AndroidManifest.xml")
 
     buildTypes {
         release {

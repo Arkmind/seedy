@@ -19,6 +19,7 @@ coil = "3.6.3"
 media3 = "1.11.1"
 work = "2.10.1"
 splashscreen = "1.2.0"
+play-app-update = "2.1.0"
 junit = "4.13.2"
 robolectric = "4.17"
 roborazzi = "1.76.0"
@@ -56,6 +57,7 @@ media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", versio
 media3-ui-compose = { module = "androidx.media3:media3-ui-compose", version.ref = "media3" }
 media3-session = { module = "androidx.media3:media3-session", version.ref = "media3" }
 androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+play-app-update = { module = "com.google.android.play:app-update-ktx", version.ref = "play-app-update" }
 junit = { module = "junit:junit", version.ref = "junit" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }

@@ -20,6 +20,9 @@ class Bubble(val left: Float, val bottom: Float, val size: Float, val duration: 
 /** A fish crossing the screen, facing back the other way when [back]. */
 class Fish(val top: Float, val width: Float, val height: Float, val color: Color, val duration: Double, val delay: Double, val back: Boolean)
 
+/** A CSS `radial-gradient(ellipse rx ry at x y, …)` of the accent, all as fractions of the page. */
+class Glow(val x: Float, val y: Float, val rx: Float, val ry: Float)
+
 /**
  * One board's water, in its pixels ([width] × [height]: 390 × 844 on the phone, 1920 × 1080 on the TV). [lowGlow] is
  * the screensaver's second, lower light.
@@ -32,6 +35,10 @@ class DeepScene(
     val bubbles: List<Bubble>,
     val fish: List<Fish>,
     val lowGlow: Boolean = false,
+    /** The sea floor and its weed along the bottom. */
+    val floor: Boolean = true,
+    /** The accent's light in the water (the update screens). */
+    val glow: Glow? = null,
 )
 
 /** The boards' own scenes, so each page's water matches its board. */
@@ -62,6 +69,88 @@ object DeepScenes {
         bubbles = listOf(Bubble(48f, 88f, 9f, 9.8, -4.9), Bubble(153f, 48f, 9f, 11.2, -8.0), Bubble(173f, 98f, 11f, 8.5, -6.1), Bubble(306f, 76f, 9f, 10.3, -0.5)),
         fish = listOf(
         ),
+    )
+    /** Board "Android · Update ready": rays and snow only, the buttons sit where the floor would. */
+    val PhoneUpdate = DeepScene(
+        390f, 844f,
+        rays = listOf(Ray(21f, 31f, -1.5), Ray(228f, 43f, -6.2), Ray(363f, 36f, -6.6)),
+        snow = listOf(
+            Snow(258f, 566f, 2.8f, 0.24f, 22.1, -3.4),
+            Snow(65f, 442f, 2.7f, 0.28f, 16.1, -1.0),
+            Snow(338f, 567f, 1.6f, 0.19f, 25.0, -18.1),
+            Snow(261f, 83f, 1.7f, 0.34f, 24.3, -16.7),
+            Snow(123f, 418f, 1.6f, 0.27f, 27.7, -5.0),
+            Snow(117f, 98f, 2.9f, 0.29f, 26.4, -10.8),
+            Snow(153f, 14f, 2.3f, 0.17f, 23.3, -10.7),
+            Snow(290f, 364f, 2.2f, 0.33f, 24.2, -15.9),
+            Snow(25f, 26f, 1.7f, 0.33f, 18.5, -16.2),
+            Snow(257f, 86f, 1.7f, 0.34f, 24.5, -16.1),
+            Snow(163f, 572f, 2.5f, 0.35f, 24.5, -5.9),
+            Snow(265f, 277f, 2.7f, 0.24f, 20.1, -19.5),
+            Snow(267f, 187f, 1.9f, 0.34f, 17.9, -5.8),
+            Snow(345f, 507f, 2.1f, 0.3f, 26.9, -5.8),
+            Snow(70f, 450f, 1.6f, 0.15f, 16.3, -3.9),
+            Snow(128f, 154f, 1.8f, 0.29f, 21.9, -2.6),
+        ),
+        bubbles = emptyList(),
+        fish = emptyList(),
+        floor = false,
+        glow = Glow(.5f, .18f, .9f, .45f),
+    )
+
+    /** Board "Android TV · Update ready": the accent's light behind Medu, on the left; no floor. */
+    val TvUpdate = DeepScene(
+        1920f, 1080f,
+        rays = listOf(Ray(116f, 235f, -1.3), Ray(553f, 231f, -7.1), Ray(956f, 201f, -0.2), Ray(1357f, 179f, -7.7), Ray(1770f, 245f, -3.9)),
+        snow = listOf(
+            Snow(1574f, 324f, 4.7f, 0.16f, 16.5, -8.4),
+            Snow(1146f, 437f, 4.5f, 0.27f, 20.9, -7.9),
+            Snow(1808f, 724f, 2.6f, 0.21f, 14.7, -13.1),
+            Snow(1642f, 504f, 2.7f, 0.35f, 21.3, -14.5),
+            Snow(1510f, 776f, 4.1f, 0.21f, 15.3, -8.1),
+            Snow(1628f, 674f, 2.9f, 0.15f, 23.8, -14.1),
+            Snow(1160f, 837f, 2.9f, 0.26f, 19.2, -2.2),
+            Snow(1834f, 617f, 4.5f, 0.15f, 20.9, -20.2),
+            Snow(244f, 74f, 2.6f, 0.29f, 22.4, -3.5),
+            Snow(1027f, 382f, 2.7f, 0.15f, 25.3, -0.1),
+            Snow(238f, 634f, 5.1f, 0.36f, 26.6, -24.1),
+            Snow(1377f, 430f, 3.3f, 0.35f, 26.4, -18.6),
+            Snow(740f, 615f, 4.7f, 0.16f, 25.8, -5.3),
+            Snow(1315f, 497f, 3.5f, 0.2f, 27.1, -15.9),
+            Snow(666f, 160f, 3.3f, 0.18f, 26.8, -22.2),
+            Snow(1285f, 828f, 5f, 0.19f, 23.9, -4.5),
+            Snow(1900f, 194f, 3.4f, 0.24f, 17.0, -1.0),
+            Snow(1177f, 441f, 3.9f, 0.34f, 14.4, -12.4),
+            Snow(505f, 112f, 4f, 0.31f, 27.3, -4.2),
+            Snow(239f, 537f, 4.3f, 0.18f, 14.1, -6.0),
+            Snow(630f, 225f, 3.4f, 0.17f, 14.2, -8.2),
+            Snow(84f, 231f, 2.9f, 0.29f, 23.7, -6.5),
+            Snow(1350f, 122f, 2.6f, 0.19f, 23.1, -16.8),
+            Snow(549f, 577f, 4.1f, 0.21f, 20.7, -9.9),
+            Snow(1444f, 473f, 4.9f, 0.33f, 20.2, -12.3),
+            Snow(1104f, 184f, 3.8f, 0.34f, 24.1, -15.4),
+            Snow(47f, 93f, 4f, 0.33f, 25.5, -17.8),
+            Snow(444f, 851f, 4.8f, 0.27f, 26.7, -19.5),
+            Snow(933f, 399f, 3.1f, 0.21f, 21.2, -7.3),
+            Snow(267f, 694f, 3.1f, 0.22f, 20.2, -7.4),
+            Snow(859f, 267f, 4.3f, 0.32f, 25.0, -5.9),
+            Snow(1910f, 207f, 3.4f, 0.27f, 20.5, -10.8),
+            Snow(1700f, 681f, 2.9f, 0.19f, 14.7, -2.6),
+            Snow(1375f, 783f, 4f, 0.2f, 27.1, -13.6),
+            Snow(489f, 761f, 2.9f, 0.33f, 26.8, -13.8),
+            Snow(592f, 654f, 4.7f, 0.2f, 15.9, -2.4),
+            Snow(722f, 379f, 3.5f, 0.24f, 23.7, -11.2),
+            Snow(1296f, 420f, 2.7f, 0.32f, 23.1, -6.6),
+            Snow(1342f, 588f, 3f, 0.26f, 23.3, -11.2),
+            Snow(158f, 286f, 3.4f, 0.15f, 27.3, -24.3),
+        ),
+        bubbles = emptyList(),
+        fish = listOf(
+            Fish(373f, 88f, 44f, Color(0xFF1B2029), 40.0, -13.0, back = false),
+            Fish(539f, 53f, 26f, Color(0xFF1F2530), 41.0, -3.0, back = true),
+        ),
+        floor = false,
+        glow = Glow(.27f, .5f, .34f, .52f),
     )
     val PhoneUnreachable = DeepScene(
         390f, 844f,

@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.nativePaint
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.arkmind.seedy.ui.theme.LocalAccent
 import kotlin.math.floor
 import kotlin.math.tan
 
@@ -50,18 +51,19 @@ private fun alternate(t: Double, dur: Double, delay: Double, ease: Easing = Ease
 
 /**
  * The boards' deep water behind a page (see [DeepScenes]), filling it: put it first in a Box. Board pixels follow the
- * page's width (and height for where things are); with motion off it's a still frame.
+ * page's width (and height for where things are); with motion off it's a still frame. A scene with a [DeepScene.glow]
+ * lights the water there in [accent] (the update screens).
  */
 @Composable
-fun DeepSea(scene: DeepScene, modifier: Modifier = Modifier) {
+fun DeepSea(scene: DeepScene, modifier: Modifier = Modifier, accent: Color = LocalAccent.current) {
     val clock = rememberLoopClock()
     BoxWithConstraints(modifier.fillMaxSize()) {
         val kx = maxWidth.value / scene.width
         val ky = maxHeight.value / scene.height
-        Canvas(Modifier.fillMaxSize()) { drawWater(scene) }
+        Canvas(Modifier.fillMaxSize()) { drawWater(scene, accent) }
         for (ray in scene.rays) RayLayer(ray, scene, kx, ky, clock)
         Canvas(Modifier.fillMaxSize()) { drawLife(scene, clock.seconds() ?: 0.0) }
-        Canvas(Modifier.fillMaxSize()) { drawFloor(scene, clock.seconds() ?: 0.0) }
+        if (scene.floor) Canvas(Modifier.fillMaxSize()) { drawFloor(scene, clock.seconds() ?: 0.0) }
     }
 }
 
@@ -102,12 +104,14 @@ private fun RayLayer(ray: Ray, scene: DeepScene, kx: Float, ky: Float, clock: Mu
     )
 }
 
-private fun DrawScope.drawWater(scene: DeepScene) {
+private fun DrawScope.drawWater(scene: DeepScene, accent: Color) {
     drawRect(Brush.verticalGradient(0f to Color(0xFF0E0E0E), .52f to Color(0xFF0D1016), 1f to Color(0xFF0B0D12)))
     // radial-gradient(ellipse 70% 55% at 50% 0%, rgba(159,200,255,.07), transparent 70%)
     glow(Offset(size.width / 2f, 0f), .7f * size.width, .55f * size.height, Color(0xFF9FC8FF).copy(alpha = .07f))
     // The screensaver's: ellipse 55% 50% at 78% 72%, rgba(201,214,227,.07).
     if (scene.lowGlow) glow(Offset(.78f * size.width, .72f * size.height), .55f * size.width, .5f * size.height, Color(0xFFC9D6E3).copy(alpha = .07f))
+    // The update screens': the accent at .12 (drawn last, it's the CSS background's first layer).
+    scene.glow?.let { g -> glow(Offset(g.x * size.width, g.y * size.height), g.rx * size.width, g.ry * size.height, accent.copy(alpha = .12f)) }
 }
 
 /** An elliptical CSS radial gradient, [color] fading out at 70% of its radii. */

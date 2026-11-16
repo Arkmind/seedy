@@ -7,8 +7,10 @@ import androidx.compose.animation.core.Ease
 import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.EaseOut
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +29,8 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.ImageBitmap
@@ -48,6 +52,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.withInfiniteAnimationFrameNanos
 import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
@@ -150,6 +155,31 @@ fun Medu(
 }
 
 private class MeduTexts(val question: TextLayoutResult, val z: List<TextLayoutResult>)
+
+private val HopEase = CubicBezierEasing(.3f, 0f, .3f, 1f)
+private val HopAt = floatArrayOf(0f, .18f, .45f, .7f, .82f, 1f)
+private val HopY = floatArrayOf(0f, 0f, -22f, 0f, -6f, 0f)
+private val HopX = floatArrayOf(1f, 1.06f, .97f, 1.04f, 1f, 1f)
+private val HopH = floatArrayOf(1f, .92f, 1.04f, .95f, 1f, 1f)
+
+/**
+ * The update screen's hop around [content] (CSS `up-hop`, 1.4 s): a squash, a 22 px jump, a landing and a small
+ * bounce, from the bottom centre. Still with motion off.
+ */
+@Composable
+fun Hop(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val clock = rememberLoopClock()
+    Box(
+        modifier.graphicsLayer {
+            val t = clock.seconds() ?: return@graphicsLayer
+            val p = loop(t, 1.4)
+            transformOrigin = TransformOrigin(.5f, 1f)
+            translationY = track(p, HopAt, HopY, HopEase).dp.toPx()
+            scaleX = track(p, HopAt, HopX, HopEase)
+            scaleY = track(p, HopAt, HopH, HopEase)
+        },
+    ) { content() }
+}
 
 /**
  * Medu in its rest pose as a bitmap of [width] × [height] pixels, for where Compose doesn't draw (a notification's

@@ -49,6 +49,34 @@ in its plugin catalogue.
 Once, after the first release: in the repository's **Settings › Pages**, choose **Deploy from a branch**, branch
 `gh-pages`, folder `/`. The repository address is then `https://arkmind.github.io/seedy/manifest.json`.
 
+### Release notes
+
+The Android app reads the release notes: its update screen lists the "What's Changed" items, each with an icon, and
+Google Play's "What's new" is made from the same items. Write them like this:
+
+```markdown
+# What's Changed
+- <!-- icon:play_button --> Your own “Still watching?” rules
+  2–4 episodes, 90 min–3 h, or 1–3 movies
+  <!-- fr: Vos propres règles « Toujours là ? » | 2 à 4 épisodes, 90 min à 3 h, ou 1 à 3 films -->
+- <!-- icon:mobile --> See where you’re signed in
+  Sign out a phone or TV you no longer use
+
+**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.6...v0.4.7
+```
+
+- One item per change worth telling people about, three or four in all: a title of up to 34 characters (one line on a
+  phone), then an indented line saying what it means for them.
+- `<!-- icon:… -->` picks the item's icon. The keys are in
+  [`ReleaseIcons.kt`](android/ui/src/main/kotlin/io/github/arkmind/seedy/ui/icons/ReleaseIcons.kt) (`play_button`,
+  `mobile`, `tv`, `sparkles`, `music`, `book`, …); an unknown key shows sparkles.
+- `<!-- fr: title | line -->` is optional: the French the app shows instead in French.
+- The comments don't show on GitHub, and they're removed from the changelog in Jellyfin's plugin catalogue. Other
+  sections after the list (fixes, upgrade notes) only show on GitHub.
+
+Check a draft before publishing: `python3 scripts/release-notes.py check < notes.md` prints the items as the app shows
+them, Google Play's text (500 characters at most), and anything wrong.
+
 ## License
 
 By contributing, you agree that your contributions are licensed under the [GPL-3.0-or-later](LICENSE).

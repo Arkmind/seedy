@@ -1,0 +1,22 @@
+{
+ "A fresh Seedy is here": "Un Seedy tout neuf est là",
+ "Android couldn’t install the update.": "Android n’a pas pu installer la mise à jour.",
+ "Couldn’t download the update. Check your connection, then try again.": "Impossible de télécharger la mise à jour. Vérifiez votre connexion, puis réessayez.",
+ "Downloading…": "Téléchargement…",
+ "Downloading… {n}%": "Téléchargement… {n} %",
+ "See everything that changed": "Voir tout ce qui a changé",
+ "Seedy is up to date": "Seedy est à jour",
+ "Seedy reopens right where you were.": "Seedy se rouvre là où vous en étiez.",
+ "Update ready": "Mise à jour prête",
+ "Updates": "Mises à jour",
+ "Version {version} brings a few things Medu is very excited about.": "La version {version} apporte quelques nouveautés qui enchantent Medu.",
+ "Version {version} is installed. Tap to open it.": "La version {version} est installée. Touchez pour l’ouvrir.",
+ "about a minute": "environ une minute",
+ "about a minute on Wi‑Fi": "environ une minute en Wi‑Fi",
+ "about {n} minutes": "environ {n} minutes",
+ "about {n} minutes on Wi‑Fi": "environ {n} minutes en Wi‑Fi",
+ "about {n} seconds": "environ {n} secondes",
+ "about {n} seconds on Wi‑Fi": "environ {n} secondes en Wi‑Fi",
+ "from GitHub": "depuis GitHub",
+ "from Google Play": "depuis Google Play"
+}

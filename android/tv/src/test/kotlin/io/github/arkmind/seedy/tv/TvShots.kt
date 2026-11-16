@@ -20,6 +20,9 @@ import io.github.arkmind.seedy.tv.shell.TvRail
 import io.github.arkmind.seedy.tv.signin.TvProfilesScreen
 import io.github.arkmind.seedy.tv.signin.TvAddServerScreen
 import io.github.arkmind.seedy.tv.signin.TvUnreachableScreen
+import io.github.arkmind.seedy.tv.update.TvUpdateScreen
+import io.github.arkmind.seedy.core.update.ReleaseNotes
+import io.github.arkmind.seedy.core.update.UpdateOffer
 import io.github.arkmind.seedy.tv.player.TvScreensaver
 import io.github.arkmind.seedy.core.data.SavedServer
 import io.github.arkmind.seedy.core.feature.AddServerViewModel
@@ -81,6 +84,22 @@ class TvShots {
     @Test
     fun serverUnreachable() = shot("TVServerUnreachable") {
         TvUnreachableScreen(arky, retryIn = 12, onRetry = {}, onChooseServer = {})
+    }
+
+    private val release = """
+        # What's Changed
+        - <!-- icon:play_button --> Your own “Still watching?” rules
+          2–4 episodes, 90 min–3 h, or 1–3 movies
+        - <!-- icon:mobile --> See where you’re signed in
+          Sign out a phone or TV you no longer use
+        - <!-- icon:sparkles --> Medu moved in
+          A little jellyfish for the quiet moments
+    """.trimIndent()
+
+    @Test
+    fun updateReady() = shot("TVUpdate") {
+        val offer = UpdateOffer("1.7", 1_070_099, ReleaseNotes.parse(release), bytes = 18_400_000, fromPlay = true)
+        TvUpdateScreen(offer, installed = "1.6", brand = "Seedy", onUpdate = {}, onLater = {})
     }
 
     @Test
