@@ -33,6 +33,8 @@ export function StillWatching({ item, next, count, movies, minutes, byTime, frac
   const [now, setNow] = useState(() => Date.now());
   const leave = useRef(onLeave);
   leave.current = onLeave;
+  // Keep watching: Medu wakes up and grabs the popcorn (Sleepy → Popcorn), then the next one plays.
+  const [waking, setWaking] = useState(false);
   useEffect(() => { playRef.current?.focus({ preventScroll: true }); }, []);
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -69,7 +71,9 @@ export function StillWatching({ item, next, count, movies, minutes, byTime, frac
         <span class="pl-sw-kicker">{kicker.filter(Boolean).join(' · ')}</span>
         <div class="pl-sw-head">
           <h1 id="pl-sw-title" class="pl-sw-title">{t('Still watching?')}</h1>
-          <span class="pl-sw-medu"><Medu mood="sleepy" size={96} /></span>
+          <span class="pl-sw-medu">
+            <Medu mood={waking ? 'popcorn' : 'sleepy'} size={96} onSettled={(mood) => { if (mood === 'popcorn') onContinue(); }} />
+          </span>
         </div>
         <p id="pl-sw-text" class="pl-sw-text">{why}</p>
         <div class="pl-sw-next">
@@ -81,11 +85,11 @@ export function StillWatching({ item, next, count, movies, minutes, byTime, frac
           </span>
         </div>
         <div class="pl-sw-actions">
-          <button ref={playRef} type="button" class="pl-sw-btn is-primary" onClick={onContinue}>
+          <button ref={playRef} type="button" class="pl-sw-btn is-primary" onClick={() => setWaking(true)}>
             <Icon name="play" size={18} />
             {t('Keep watching')}
           </button>
-          <button type="button" class="pl-sw-btn" onClick={onLeave}>{t('I’m done for now')}</button>
+          <button type="button" class="pl-sw-btn" disabled={waking} onClick={onLeave}>{t('I’m done for now')}</button>
         </div>
         <a class="pl-sw-link" href="settings/playback" onClick={(e) => { e.preventDefault(); onSettings(); }}>{t('Change when Seedy asks')}</a>
       </div>

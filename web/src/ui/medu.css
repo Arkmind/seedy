@@ -1,4 +1,5 @@
-/* Medu's motion (Brand · Mascot board: float 3.2 s, pulse in step, tentacles 2.4 s ±5°, blink every 5 s, one loop per mood). */
+/* Medu's motion (Brand · Mascot board: float 3.2 s, pulse in step, tentacles 2.4 s ±5°, blink every 5 s, one loop per mood).
+   Bridges between moods run from medu.tsx (Web Animations) on the parts' <g data-p> wrappers. */
 .medu { display: block; flex: none; overflow: visible; }
 .medu .m-float{animation:medu-bob 3.2s ease-in-out infinite}
 .medu .m-bell{transform-box:fill-box;transform-origin:50% 100%;animation:medu-pulse 3.2s ease-in-out infinite}
@@ -12,7 +13,11 @@
 .medu .m-spark{transform-box:fill-box;transform-origin:50% 50%;animation:medu-spark 1.5s ease-in-out infinite}
 .medu .m-dot{animation:medu-dot 1.2s ease-in-out infinite}
 .medu .m-beam{transform-box:fill-box;transform-origin:0% 50%;animation:medu-sweep 6s ease-in-out infinite}
-.medu .m-plug{transform-box:fill-box;transform-origin:50% 0%;animation:medu-swing 2.6s ease-in-out infinite}
+.medu .m-plug{transform-box:view-box;transform-origin:163.5px 112px;animation:medu-swing 2.6s ease-in-out infinite}
+.medu .m-heart{transform-box:fill-box;transform-origin:50% 50%;animation:medu-heart 2.6s ease-out infinite}
+.medu .m-chew{transform-box:fill-box;transform-origin:50% 50%;animation:medu-chew .55s ease-in-out infinite}
+.medu .m-pop{transform-box:fill-box;transform-origin:50% 100%;animation:medu-pop 1.8s ease-out infinite}
+.medu .m-tear{transform-box:fill-box;transform-origin:50% 0;animation:medu-tear 2.4s ease-in infinite}
 .medu.m-slow .m-float,.medu.m-slow .m-bell{animation-duration:5.5s}
 .medu.m-slow .m-t{animation-duration:4s}
 .medu.m-fast .m-float,.medu.m-fast .m-bell{animation-duration:1.6s}
@@ -29,6 +34,10 @@
 @keyframes medu-dot{0%,100%{transform:translateY(0);opacity:.35}35%{transform:translateY(-7px);opacity:1}}
 @keyframes medu-sweep{0%,100%{transform:rotate(-16deg)}50%{transform:rotate(14deg)}}
 @keyframes medu-swing{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+@keyframes medu-heart{0%{transform:translateY(8px) scale(.5);opacity:0}25%{opacity:1}100%{transform:translateY(-30px) scale(1.1);opacity:0}}
+@keyframes medu-chew{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.35)}}
+@keyframes medu-pop{0%,55%{transform:translate(0,0);opacity:0}60%{opacity:1}75%{transform:translate(6px,-26px)}90%{transform:translate(10px,-8px);opacity:1}100%{transform:translate(12px,4px);opacity:0}}
+@keyframes medu-tear{0%,20%{transform:translateY(0) scale(.4);opacity:0}35%{transform:translateY(0) scale(1);opacity:1}100%{transform:translateY(34px) scale(.9);opacity:0}}
 @media (prefers-reduced-motion: reduce) { .medu * { animation: none !important; } }
 
 /* ── Medu with a message (Empty pages, My requests empty) ── */

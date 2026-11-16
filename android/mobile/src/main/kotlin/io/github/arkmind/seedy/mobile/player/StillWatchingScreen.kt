@@ -18,6 +18,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,7 +65,8 @@ internal val StillClock = IconDef(2.2f, "M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18z", 
 /**
  * Board "Android · Still watching?": [item] ended after a run of episodes (or a long stretch) without a tap, so the
  * player stopped before [next]. Its backdrop behind, sleepy Medu, the next episode, Keep watching or I'm done for now,
- * and the stream's last [secondsLeft] counting down; [fraction] is how far the edge bar goes.
+ * and the stream's last [secondsLeft] counting down; [fraction] is how far the edge bar goes. Keep watching wakes Medu
+ * up for a snack (Sleepy → Popcorn) and [onKeep] runs once it settles (at once with motion off).
  */
 @Composable
 fun StillWatchingScreen(
@@ -76,6 +82,9 @@ fun StillWatchingScreen(
     backdrop: @Composable () -> Unit = { NextBackdrop(next) },
     thumb: @Composable BoxScope.() -> Unit = { NextThumb(next) },
 ) {
+    // Keep watching was pressed: Medu is on its way to the popcorn, and the buttons wait with it.
+    var keeping by remember { mutableStateOf(false) }
+    val keep by rememberUpdatedState(onKeep)
     Box(Modifier.fillMaxSize().blockTaps()) {
         PauseBackdrop(backdrop)
         Column(Modifier.align(Alignment.CenterStart).padding(start = 32.dp).width(420.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -83,7 +92,12 @@ fun StillWatchingScreen(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 SText(t("Still watching?"), size = 28.sp, weight = 900, lineHeight = 1f, tracking = -.02f, color = SeedyColors.White, maxLines = 1)
                 // margin: -14px 0 -10px: Medu reaches above and below the title's row.
-                Box(Modifier.margins(top = 14, bottom = 10)) { Medu(MeduMood.Sleepy, 58.dp, height = 77.dp, glow = false) }
+                Box(Modifier.margins(top = 14, bottom = 10)) {
+                    Medu(
+                        if (keeping) MeduMood.Popcorn else MeduMood.Sleepy, 58.dp, height = 77.dp, glow = false,
+                        onSettled = { if (it == MeduMood.Popcorn) keep() },
+                    )
+                }
             }
             SText(askReason(ask, short = true), Modifier.widthIn(max = 400.dp).cssText(13, 1.5f), size = 13.sp, lineHeight = 1.5f, color = SeedyColors.TextHero)
             Row(
@@ -102,8 +116,8 @@ fun StillWatchingScreen(
             }
             Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 // The board's Keep watching carries the browser's focus ring (it has the focus when the screen opens).
-                AskButton(t("Keep watching"), onKeep, primary = true)
-                AskButton(t("I’m done for now"), onDone, primary = false)
+                AskButton(t("Keep watching"), { keeping = true }, primary = true)
+                AskButton(t("I’m done for now"), { if (!keeping) onDone() }, primary = false)
             }
         }
         Row(

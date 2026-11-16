@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { getItems, getSimilar } from '../api/jellyfin';
 import type { BaseItem } from '../api/types';
 import { isAdmin } from '../lib/app-state';
@@ -6,7 +6,7 @@ import { t } from '../lib/i18n';
 import { Link, useLocation } from '../lib/router';
 import { ItemCard } from '../ui/cards';
 import { Icon } from '../ui/icons';
-import { Medu } from '../ui/medu';
+import { Medu, type MeduMood } from '../ui/medu';
 import { Header } from '../ui/navbar/Header';
 import { toast } from '../ui/overlay';
 import { openSearch } from '../ui/search/open';
@@ -76,6 +76,54 @@ function usePicks() {
   return picks;
 }
 
+/* Medu on the 404 (board "Moving between moods"): lost with its torch, found (Yay) while pointed at or focused, and
+   after two minutes with nobody touching anything it dozes off (Lost → Sleepy); the next touch startles it awake. */
+const DOZE_MS = 120_000;
+const WAKE_ON = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'] as const;
+
+function PokeMedu() {
+  const [asleep, setAsleep] = useState(false);
+  const [found, setFound] = useState(false);
+  const [settled, setSettled] = useState<MeduMood>('search');
+  const tap = useRef(0);
+  useEffect(() => {
+    let timer = window.setTimeout(() => setAsleep(true), DOZE_MS);
+    const wake = () => {
+      setAsleep(false);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setAsleep(true), DOZE_MS);
+    };
+    WAKE_ON.forEach((type) => document.addEventListener(type, wake, { capture: true, passive: true }));
+    return () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(tap.current);
+      WAKE_ON.forEach((type) => document.removeEventListener(type, wake, { capture: true }));
+    };
+  }, []);
+  // Waking up comes first: Medu is found once it's back on its feet.
+  const mood: MeduMood = asleep ? 'sleepy' : found && settled !== 'sleepy' ? 'yay' : 'search';
+  return (
+    <button
+      type="button"
+      class={'nf-poke' + (mood === 'yay' ? ' is-found' : '')}
+      aria-label={t('Poke Medu')}
+      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setFound(true); }}
+      onPointerLeave={(e) => { if (e.pointerType === 'mouse') setFound(false); }}
+      onPointerDown={(e) => {
+        if (e.pointerType === 'mouse') return;
+        setFound(true);
+        window.clearTimeout(tap.current);
+        tap.current = window.setTimeout(() => setFound(false), 2500);
+      }}
+      onFocus={(e) => { if (e.currentTarget.matches(':focus-visible')) setFound(true); }}
+      onBlur={() => setFound(false)}
+    >
+      <Medu mood={mood} size={250} torch class="nf-main" onSettled={setSettled} />
+      <span class="nf-found" aria-hidden="true">{t('Well, you found Medu')}</span>
+    </button>
+  );
+}
+
 const pickMeta = (item: BaseItem) =>
   item.Type === 'Series' ? [t('Series'), seasonsLabel(item)].filter(Boolean).join(' · ')
     : [item.Type === 'Movie' ? t('Movie') : '', item.ProductionYear].filter(Boolean).join(' · ');
@@ -104,11 +152,7 @@ export function NotFound({ title = false }: {
           <div class="nf-404" role="img" aria-label={t('Error 404')}>
             <span class="nf-digit" aria-hidden="true">4</span>
             <div class="nf-medu">
-              <button type="button" class="nf-poke" aria-label={t('Poke Medu')}>
-                <Medu mood="search" size={250} torch class="nf-main" />
-                <Medu mood="yay" size={250} class="nf-alt" />
-                <span class="nf-found" aria-hidden="true">{t('Well, you found Medu')}</span>
-              </button>
+              <PokeMedu />
             </div>
             <span class="nf-digit" aria-hidden="true">4</span>
           </div>
