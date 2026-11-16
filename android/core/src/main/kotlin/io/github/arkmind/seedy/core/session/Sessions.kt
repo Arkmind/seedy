@@ -108,8 +108,12 @@ class Sessions(context: Context, private val jellyfin: Jellyfin, private val sto
     fun tokenFor(server: SavedServer, account: SavedAccount): String? =
         account.token ?: memoryTokens[key(server, account.userId)]
 
-    /** On launch: reopens the last profile's session on the last server, or shows where to start. */
-    suspend fun start() {
+    /**
+     * On launch: reopens the last profile's session on the last server, or shows where to start. [answered] runs once
+     * the server has answered, just before the session opens: "Server unreachable" holds the hand-over there while
+     * Medu says it's back online.
+     */
+    suspend fun start(answered: suspend () -> Unit = {}) {
         val server = store.current().currentServer ?: return set(SessionState.NoServer)
         val account = server.account(server.lastUserId)
         val token = account?.let { tokenFor(server, it) }
@@ -117,7 +121,7 @@ class Sessions(context: Context, private val jellyfin: Jellyfin, private val sto
             set(SessionState.SignedOut(server))
             recheck(server)
         } else {
-            resume(server, account, token)
+            resume(server, account, token, answered)
         }
     }
 
@@ -130,12 +134,15 @@ class Sessions(context: Context, private val jellyfin: Jellyfin, private val sto
         if (now is SessionState.SignedOut && now.server.id == server.id) set(SessionState.SignedOut(now.server.copy(seedy = seedy)))
     }
 
-    /** Opens a saved session. False when it can't: the token was revoked (sign in again) or the server is away. */
-    suspend fun resume(server: SavedServer, account: SavedAccount, token: String): Boolean = withContext(Dispatchers.IO) {
+    /**
+     * Opens a saved session. False when it can't: the token was revoked (sign in again) or the server is away.
+     * [answered] runs once the server has answered, just before the session opens.
+     */
+    suspend fun resume(server: SavedServer, account: SavedAccount, token: String, answered: suspend () -> Unit = {}): Boolean = withContext(Dispatchers.IO) {
         val api = apiFor(server, account.deviceId, token)
         try {
             val user = api.userApi.getCurrentUser().content
-            open(server, account, api, user)
+            open(server, account, api, user, answered)
             true
         } catch (e: InvalidStatusException) {
             if (e.status == 401) forget(server, account.userId)
@@ -187,10 +194,11 @@ class Sessions(context: Context, private val jellyfin: Jellyfin, private val sto
         start()
     }
 
-    private suspend fun open(server: SavedServer, account: SavedAccount, api: ApiClient, user: UserDto) {
+    private suspend fun open(server: SavedServer, account: SavedAccount, api: ApiClient, user: UserDto, answered: suspend () -> Unit = {}) {
         // Asked again each time: the plugin may have been installed, updated or removed since the server was added.
         val seedy = withContext(Dispatchers.IO) { SeedyApi.probe(api, unanswered = server.seedy) }
         val me = if (seedy != null) withContext(Dispatchers.IO) { runCatching { SeedyApi(api).me() }.getOrNull() } else null
+        answered()
         store.update { d ->
             d.copy(
                 currentServerId = server.id,
