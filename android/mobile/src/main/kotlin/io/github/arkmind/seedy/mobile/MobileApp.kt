@@ -1,5 +1,8 @@
 package io.github.arkmind.seedy.mobile
 
+import io.github.arkmind.seedy.core.remote.RemoteControl
+import io.github.arkmind.seedy.mobile.remote.ControlScreenPicker
+import io.github.arkmind.seedy.mobile.remote.RemoteRoute
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -249,10 +252,20 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
     val tabs = if (viewer.requests) Tab.entries else Tab.entries - Tab.Requests
     // Settings · Playback › Ask before using mobile data: a video asks for its quality first (board "Android · Mobile data prompt").
     var asking by remember { mutableStateOf<Route.Player?>(null) }
+    // "Browse here, watch there": while the phone is a remote, a video starts on the screen it controls.
+    val remote = remember(session) { RemoteControl.of(session) }
+    val remoteState by remote.state.collectAsStateWithLifecycle()
+    var picking by remember { mutableStateOf(false) }
     nav.beforePlay = { r ->
-        val ask = r.maxBitrate == null && core.device.current.askMobileData && Network.onMobileData(context)
-        if (ask) asking = r
-        ask
+        val there = remote.state.value.takeIf { it.controlling }?.activeScreen?.let { remote.play(listOf(r.id), r.startTicks) }
+        if (there != null) {
+            nav.showRemote()
+            true
+        } else {
+            val ask = r.maxBitrate == null && core.device.current.askMobileData && Network.onMobileData(context)
+            if (ask) asking = r
+            ask
+        }
     }
     val account = AccountActions(
         onSwitchProfile = { scope.launch { core.sessions.switchProfile() } },
@@ -306,7 +319,10 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                                                 bottomPadding = tabBarHeight(),
                                                 onFinish = vm::finishWatching,
                                                 onRefresh = vm::refresh,
+                                                onCast = { if (remoteState.controlling) nav.showRemote() else picking = true },
+                                                controlling = remoteState.controlling,
                                             )
+                                            if (picking) ControlScreenPicker(onControl = { picking = false; nav.showRemote() }, onDismiss = { picking = false })
                                         }
                                         Tab.Libraries -> LibrariesTab()
                                         Tab.Favorites -> FavoritesTab()
@@ -343,6 +359,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                         entry<Route.MediaRequestsSearch> { WithTabBar(tabs, tab, nav, reserve = true) { MediaSearchRoute(it.music) } }
                         entry<Route.MediaRequestsRow> { WithTabBar(tabs, tab, nav, reserve = true) { MediaRowRoute(it.music, it.row) } }
                         entry<Route.Admin> { WithOverlay { AdminRoute(it.page, it.id) } }
+                        entry<Route.Remote> { RemoteRoute() }
                     },
                 )
                 asking?.let { r ->

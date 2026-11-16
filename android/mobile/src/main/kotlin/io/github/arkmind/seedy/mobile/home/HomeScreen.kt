@@ -95,6 +95,9 @@ import io.github.arkmind.seedy.ui.theme.SeedyMotion
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 
+/** Board "Android · Control a screen": the header's Cast button. */
+private val CastIcon = io.github.arkmind.seedy.ui.icons.IconDef(2f, "M3 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6", "M3 12a8 8 0 0 1 8 8", "M3 16a4 4 0 0 1 4 4", "M3 20h.01")
+
 /** What the header's account menu offers. */
 data class AccountActions(val onSwitchProfile: () -> Unit, val onSignOut: () -> Unit, val onSettings: () -> Unit = {})
 
@@ -116,6 +119,9 @@ fun HomeScreen(
     /** Pull to refresh (board "Android · Pull to refresh"); null turns it off. */
     onRefresh: (() -> Unit)? = null,
     pull: PullToRefreshState = rememberPullToRefreshState(),
+    /** The header's Cast: "Control a screen" (null hides it); [controlling] lights it while the phone is a remote. */
+    onCast: (() -> Unit)? = null,
+    controlling: Boolean = false,
 ) {
     var menuFor by remember { mutableStateOf<BaseItemDto?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -147,7 +153,7 @@ fun HomeScreen(
         }
         // The header stays put (as the web's): clear over the banner, on the page's colour once the page moves.
         val stuck by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 } }
-        Header(account, onSearch, stuck)
+        Header(account, onSearch, stuck, onCast, controlling)
         }
         menuFor?.let { item ->
             ItemMenuSheet(item.cardTitle, continueEntries { watched ->
@@ -204,7 +210,7 @@ private fun continueEntries(finish: (Boolean) -> Unit): List<MenuEntry> = listOf
 )
 
 @Composable
-private fun Header(account: AccountActions, onSearch: () -> Unit, stuck: Boolean) {
+private fun Header(account: AccountActions, onSearch: () -> Unit, stuck: Boolean, onCast: (() -> Unit)?, controlling: Boolean) {
     val viewer = LocalViewer.current
     val top = topInset()
     // The web blurs what's under its 85 % scrim; without a blur, anything see-through shows the artwork, so it's solid.
@@ -219,6 +225,7 @@ private fun Header(account: AccountActions, onSearch: () -> Unit, stuck: Boolean
     ) {
         BrandMark(viewer.brand, Modifier.weight(1f))
         HeaderButton(WebIcons.Search, onSearch, stroke = 2.2f)
+        if (onCast != null) HeaderButton(CastIcon, onCast, stroke = 2f, color = if (controlling) LocalAccent.current else SeedyColors.White)
         AccountButton(account)
     }
 }

@@ -62,6 +62,8 @@ sealed interface Route {
     data class MediaRequestsSearch(val music: Boolean) : Route
     /** A music or books Discover row's "See all" (a [MusicRow] or BookRow key). */
     data class MediaRequestsRow(val music: Boolean, val row: String) : Route
+    /** The phone as a remote for the screens picked in "Control a screen" (boards "Android · Remote for a TV / computer"). */
+    data object Remote : Route
 }
 
 /** Moves between pages; every screen reaches it through [LocalMobileNav]. */
@@ -82,6 +84,11 @@ class MobileNav(private val stack: SnapshotStateList<Any>, private val selectTab
 
     fun back() {
         if (stack.size > 1) stack.removeAt(stack.lastIndex)
+    }
+
+    /** The remote, on top (once). */
+    fun showRemote() {
+        if (stack.lastOrNull() != Route.Remote) stack.add(Route.Remote)
     }
 
     /**
