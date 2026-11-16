@@ -26,7 +26,10 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,7 +78,8 @@ private val StillClock = IconDef(2.2f, "M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18z", "
  * Board "Android TV · Still watching?": [item] ended after a run of episodes (or a long stretch) without a key
  * pressed, so the player stopped before [next]. Its backdrop behind, sleepy Medu, the next episode, Keep watching
  * (where the remote lands) or I'm done for now, the stream's last [secondsLeft] counting down and the keys' hints;
- * [fraction] is how far the edge bar goes. Back (the route's) leaves the player.
+ * [fraction] is how far the edge bar goes. Back (the route's) leaves the player. Keep watching wakes Medu up for a
+ * snack (Sleepy → Popcorn) and [onKeep] runs once it settles (at once with motion off).
  */
 @Composable
 fun TvStillWatching(
@@ -92,6 +96,9 @@ fun TvStillWatching(
     thumb: @Composable BoxScope.() -> Unit = { NextThumb(next) },
 ) {
     val keep = remember { FocusRequester() }
+    // Keep watching was pressed: Medu is on its way to the popcorn, and the buttons wait with it.
+    var keeping by remember { mutableStateOf(false) }
+    val keepOn by rememberUpdatedState(onKeep)
     Box(Modifier.fillMaxSize()) {
         PauseBackdrop(backdrop)
         Column(Modifier.align(Alignment.CenterStart).padding(start = 160.bp).width(853.bp), verticalArrangement = Arrangement.spacedBy(21.bp)) {
@@ -99,7 +106,12 @@ fun TvStillWatching(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.bp)) {
                 SText(t("Still watching?"), size = 83.bsp, weight = 900, lineHeight = 1f, tracking = -.02f, color = SeedyColors.White, maxLines = 1)
                 // margin: -35px 0 -24px: Medu reaches above and below the title's row.
-                Box(Modifier.margins(top = 35.bp, bottom = 24.bp)) { Medu(MeduMood.Sleepy, 128.bp, height = 169.bp, glow = false) }
+                Box(Modifier.margins(top = 35.bp, bottom = 24.bp)) {
+                    Medu(
+                        if (keeping) MeduMood.Popcorn else MeduMood.Sleepy, 128.bp, height = 169.bp, glow = false,
+                        onSettled = { if (it == MeduMood.Popcorn) keepOn() },
+                    )
+                }
             }
             SText(askReason(ask, short = false), Modifier.widthIn(max = 746.bp), size = 24.bsp, lineHeight = 1.5f, color = SeedyColors.TextHero)
             Row(
@@ -122,8 +134,8 @@ fun TvStillWatching(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.bp),
             ) {
-                AskButton(t("Keep watching"), onKeep, Modifier.focusRequester(keep), icon = WebIcons.Play)
-                AskButton(t("I’m done for now"), onDone)
+                AskButton(t("Keep watching"), { keeping = true }, Modifier.focusRequester(keep), icon = WebIcons.Play)
+                AskButton(t("I’m done for now"), { if (!keeping) onDone() })
             }
         }
         Row(
