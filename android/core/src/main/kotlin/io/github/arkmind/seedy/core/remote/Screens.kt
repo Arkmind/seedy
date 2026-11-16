@@ -65,6 +65,8 @@ data class RemoteScreen(
     val fullscreen: Boolean = false,
     val miniPlayer: Boolean = false,
     val commands: Set<GeneralCommandType> = emptySet(),
+    /** Someone named it in Jellyfin's Devices ("MacBook"): "the MacBook" reads right, "the Chrome on Linux" doesn't. */
+    val named: Boolean = true,
 ) {
     /** The TV remote (touchpad, Back, Home, Type) or the computer's (what plays, its transport). */
     val isTv: Boolean get() = kind == DeviceKind.Tv
@@ -190,6 +192,7 @@ fun remoteScreen(s: SessionInfoDto, state: ScreenState?, now: Long): RemoteScree
         fullscreen = state?.fullscreen == true,
         miniPlayer = state?.miniPlayer == true,
         commands = s.supportedCommands.orEmpty().toSet(),
+        named = s.hasCustomDeviceName,
     )
 }
 

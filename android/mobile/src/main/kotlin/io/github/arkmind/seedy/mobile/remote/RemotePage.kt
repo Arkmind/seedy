@@ -331,7 +331,12 @@ private fun Art(screen: RemoteScreen, n: NowOn?) {
             ) {
                 SIcon(kindIcon(screen.kind), size = 14.dp, color = SeedyColors.Text)
                 SText(
-                    if (n.paused) t("Paused on the {device}", "device" to screen.name) else t("Playing on the {device}", "device" to screen.name),
+                    when {
+                        screen.named && n.paused -> t("Paused on the {device}", "device" to screen.name)
+                        screen.named -> t("Playing on the {device}", "device" to screen.name)
+                        n.paused -> t("Paused on {device}", "device" to screen.name)
+                        else -> t("Playing on {device}", "device" to screen.name)
+                    },
                     size = 12.sp, weight = 700, color = SeedyColors.Text, maxLines = 1,
                 )
             }
@@ -436,7 +441,7 @@ private fun Idle(screen: RemoteScreen) {
     Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(18.dp)).background(RemoteColors.Tile), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SIcon(kindIcon(screen.kind), size = 34.dp, color = SeedyColors.Text3)
-            SText(t("Nothing playing on the {device}", "device" to screen.name), size = 15.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
+            SText(if (screen.named) t("Nothing playing on the {device}", "device" to screen.name) else t("Nothing playing on {device}", "device" to screen.name), size = 15.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
             if (screen.chip.isNotEmpty()) SText(screen.chip, size = 12.sp, color = SeedyColors.Text3, maxLines = 1)
         }
     }
@@ -452,7 +457,8 @@ private fun Hint(screen: RemoteScreen) {
     ) {
         SIcon(kindIcon(screen.kind), size = 22.dp, color = accent)
         val bold = t("Browse here, watch there.")
-        val rest = t("Anything you play on this phone goes to the {device} while it’s selected.", "device" to screen.name)
+        val rest = if (screen.named) t("Anything you play on this phone goes to the {device} while it’s selected.", "device" to screen.name)
+        else t("Anything you play on this phone goes to {device} while it’s selected.", "device" to screen.name)
         BasicText(
             buildAnnotatedString {
                 withStyle(SpanStyle(color = SeedyColors.White, fontWeight = FontWeight.ExtraBold)) { append(bold) }

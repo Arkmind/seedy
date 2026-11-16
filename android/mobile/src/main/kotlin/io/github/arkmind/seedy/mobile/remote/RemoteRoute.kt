@@ -174,5 +174,7 @@ private fun TracksSheet(n: NowOn, subtitles: Boolean, onPick: (Int) -> Unit, onD
             for (a in n.audio) add(MenuEntry(if (a.index == n.audioIndex) RemoteIcons.Check else Blank, trackName(a), run = { onPick(a.index) }))
         }
     }
-    ItemMenuSheet(if (subtitles) t("Subtitles") else t("Audio"), entries.ifEmpty { listOf(MenuEntry(Blank, t("Nothing to choose here"), run = {})) }, onDismiss)
+    // no-op: "Nothing to choose here" only says so; a tap closes the sheet.
+    val none = MenuEntry(Blank, t("Nothing to choose here"), run = {})
+    ItemMenuSheet(if (subtitles) t("Subtitles") else t("Audio"), entries.ifEmpty { listOf(none) }, onDismiss)
 }
