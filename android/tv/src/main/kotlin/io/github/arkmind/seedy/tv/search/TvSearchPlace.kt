@@ -1,5 +1,8 @@
 package io.github.arkmind.seedy.tv.search
 
+import io.github.arkmind.seedy.tv.remote.AskingForText
+import io.github.arkmind.seedy.tv.remote.LocalTvScreen
+import kotlinx.coroutines.flow.filterNotNull
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -111,6 +114,14 @@ fun TvSearchPlace() {
     val nav = LocalTvNav.current
     val vm = viewModel { SearchViewModel(session, channels = true) }
     val state by vm.state.collectAsStateWithLifecycle()
+    // A phone typing on the TV (its "Remote · typing on the TV"): what it typed fills the search, and the phone sees
+    // that Search asks for text, what's typed and the title focused here.
+    val screen = LocalTvScreen.current
+    var focused by remember { mutableStateOf<BaseItemDto?>(null) }
+    if (screen != null) {
+        LaunchedEffect(screen) { screen.text.filterNotNull().collect { vm.setText(it); screen.text.value = null } }
+        AskingForText(state.text, focused?.id?.toString())
+    }
     // The mic button: Android's speech recognizer, when the TV has one.
     val voice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
         if (r.resultCode == Activity.RESULT_OK) r.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.let(vm::setText)
@@ -130,6 +141,7 @@ fun TvSearchPlace() {
                 }
             },
             onOpen = { vm.remember(); nav.open(it) },
+            onFocus = { focused = it },
             onSeerr = vm::askSeerr,
             onSeerrTitle = { s -> vm.remember(); nav.openSeerr(s.mediaType, s.tmdbId, s.jellyfinItemId) },
         ),
@@ -140,6 +152,8 @@ class TvSearchActions(
     val onText: (String) -> Unit = {},
     val onMic: () -> Unit = {},
     val onOpen: (BaseItemDto) -> Unit = {},
+    /** A result got the remote's focus. */
+    val onFocus: (BaseItemDto) -> Unit = {},
     val onSeerr: () -> Unit = {},
     val onSeerrTitle: (SeerrItem) -> Unit = {},
 )
@@ -287,6 +301,7 @@ private fun TopHit(hit: Hit, top: SearchViewModel.TopPlay?, actions: TvSearchAct
     val viewer = LocalViewer.current
     val item = hit.item
     TvPressable({ actions.onOpen(item) }, Modifier.width(560.bp)) { focused ->
+        LaunchedEffect(focused) { if (focused) actions.onFocus(item) }
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).focusRing(focused, radius = 22.bp, gap = 4.bp, ring = 5.bp).clip(RoundedCornerShape(22.bp)).background(Color(0xFF1A232E))) {
             viewer.images?.backdrop(item, 1280)?.let { AsyncImage(it, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop) }
             Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.35f to Color.Transparent, 1f to SeedyColors.Bg.copy(alpha = 0.92f))))
@@ -334,6 +349,7 @@ private fun SideRow(hit: Hit, state: SearchViewModel.State, actions: TvSearchAct
     val viewer = LocalViewer.current
     val item = hit.item
     TvPressable({ actions.onOpen(item) }) { focused ->
+        LaunchedEffect(focused) { if (focused && hit.kind != HitKind.Person) actions.onFocus(item) }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.bp)) {
             val person = hit.kind == HitKind.Person
             Box(
@@ -359,6 +375,7 @@ private fun SmallCard(hit: Hit, actions: TvSearchActions) {
     val item = hit.item
     val channel = hit.kind == HitKind.Channel
     TvPressable({ actions.onOpen(item) }, Modifier.width(280.bp)) { focused ->
+        LaunchedEffect(focused) { if (focused) actions.onFocus(item) }
         Column(verticalArrangement = Arrangement.spacedBy(10.bp)) {
             Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).focusRing(focused, radius = 18.bp, gap = 4.bp, ring = 4.bp).clip(RoundedCornerShape(18.bp)).background(if (channel) Color(0xFF2F4A7A) else Color(0xFF1F3A3C))) {
                 val url = if (channel) viewer.images?.primary(item, 320) else viewer.images?.landscape(item, 480, viewer.episodeImages)
