@@ -70,13 +70,13 @@ class ReleaseNotesTest {
         val json = """[
           {"tag_name":"v0.5.0-beta.1","prerelease":true,"draft":false,"body":"","html_url":"u3","assets":[{"name":"seedy-android-0.5.0-beta.1.apk","size":1,"browser_download_url":"a3"}]},
           {"tag_name":"v0.4.8","prerelease":false,"draft":false,"body":"","html_url":"u2","assets":[]},
-          {"tag_name":"v0.4.7","prerelease":false,"draft":false,"body":"- <!-- icon:tv --> TV","html_url":"u1","assets":[{"name":"seedy_0.4.7.0.zip","size":5},{"name":"seedy-android-0.4.7.apk","size":18400000,"browser_download_url":"a1"}]},
+          {"tag_name":"v0.4.7","prerelease":false,"draft":false,"body":"- <!-- icon:tv --> TV","html_url":"u1","assets":[{"name":"seedy_0.4.7.0.zip","size":5},{"name":"seedy-android-0.4.7.apk","size":18400000,"browser_download_url":"a1","digest":"sha256:abc123"}]},
           {"tag_name":"v0.4.9","draft":true,"assets":[]}
         ]"""
         val releases = Releases.parse(json)
         assertEquals(listOf("0.5.0-beta.1", "0.4.8", "0.4.7"), releases.map { it.version })
         val offer = Releases.newest(releases, versionCodeOf("0.4.6")!!)!!.offer()
-        assertEquals(UpdateOffer("0.4.7", 40799, listOf(ReleaseItem("tv", "TV")), "u1", 18_400_000, false, "a1"), offer)
+        assertEquals(UpdateOffer("0.4.7", 40799, listOf(ReleaseItem("tv", "TV")), "u1", 18_400_000, false, "a1", "abc123"), offer)
         // Someone on a pre-release is offered the next one.
         assertEquals("0.5.0-beta.1", Releases.newest(releases, versionCodeOf("0.5.0-beta.0")!!)?.version)
         assertNull(Releases.newest(releases, versionCodeOf("0.4.7")!!))

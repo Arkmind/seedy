@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- The APK updater's install results (ApkInstaller), sent only by Android's package installer. -->
+        <receiver android:name="io.github.arkmind.seedy.core.update.InstallStatusReceiver" android:exported="false" />
+    </application>
+</manifest>

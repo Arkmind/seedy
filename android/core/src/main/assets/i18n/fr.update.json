@@ -1,5 +1,9 @@
 {
  "A fresh Seedy is here": "Un Seedy tout neuf est là",
+ "Android couldn’t install the update.": "Android n’a pas pu installer la mise à jour.",
+ "Couldn’t download the update. Check your connection, then try again.": "Impossible de télécharger la mise à jour. Vérifiez votre connexion, puis réessayez.",
+ "Downloading…": "Téléchargement…",
+ "Downloading… {n}%": "Téléchargement… {n} %",
  "See everything that changed": "Voir tout ce qui a changé",
  "Update ready": "Mise à jour prête",
  "Version {version} brings a few things Medu is very excited about.": "La version {version} apporte quelques nouveautés qui enchantent Medu.",

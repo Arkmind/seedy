@@ -3,6 +3,7 @@ package io.github.arkmind.seedy.mobile
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.arkmind.seedy.core.update.InstallState
 import io.github.arkmind.seedy.core.update.ReleaseNotes
 import io.github.arkmind.seedy.core.update.UpdateOffer
 import io.github.arkmind.seedy.mobile.update.UpdateScreen
@@ -38,5 +39,17 @@ class UpdateShots {
         val offer = UpdateOffer("1.7", 1_070_099, ReleaseNotes.parse(body), bytes = 18_400_000, fromPlay = true)
         compose.setContent { SeedyTheme { UpdateScreen(offer, installed = "1.6", onUpdate = {}, onLater = {}, onChanges = {}) } }
         compose.onRoot().captureRoboImage("src/test/screenshots/AndroidUpdate.png")
+    }
+
+    /** No board: the APK downloading in the app (outside Google Play), its progress along the button. */
+    @Test
+    fun downloading() {
+        val offer = UpdateOffer("1.7", 1_070_099, ReleaseNotes.parse(body), bytes = 18_400_000, apkUrl = "https://example.org/seedy.apk")
+        compose.setContent {
+            SeedyTheme {
+                UpdateScreen(offer, installed = "1.6", onUpdate = {}, onLater = {}, onChanges = {}, install = InstallState.Downloading(.42f))
+            }
+        }
+        compose.onRoot().captureRoboImage("src/test/screenshots/AndroidUpdateDownloading.png")
     }
 }

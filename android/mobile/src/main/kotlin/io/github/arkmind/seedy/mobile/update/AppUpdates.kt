@@ -7,6 +7,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -18,6 +19,7 @@ import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.UpdateAvailability
 import com.google.android.play.core.ktx.requestAppUpdateInfo
 import io.github.arkmind.seedy.core.data.io
+import io.github.arkmind.seedy.core.update.ApkInstaller
 import io.github.arkmind.seedy.core.update.Releases
 import io.github.arkmind.seedy.core.update.UpdateOffer
 import io.github.arkmind.seedy.core.update.UpdateStore
@@ -25,6 +27,7 @@ import io.github.arkmind.seedy.core.update.versionNameOf
 import io.github.arkmind.seedy.ui.components.openUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
@@ -44,6 +47,7 @@ object AppUpdates {
 
     private var started = false
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var download: Job? = null
 
     fun start(context: Context) {
         if (started) return
@@ -80,8 +84,17 @@ object AppUpdates {
             .copy(bytes = info.totalBytesToDownload().takeIf { it > 0 }, fromPlay = true, apkUrl = null)
     }
 
-    /** "Later": not offered again for a week (unless a newer version comes out). */
+    /** Outside Google Play: downloads the APK here and hands it to Android's installer ([ApkInstaller.state]). */
+    fun install(context: Context, offer: UpdateOffer) {
+        val url = offer.apkUrl ?: return
+        if (download?.isActive == true) return
+        val app = context.applicationContext
+        download = scope.launch { ApkInstaller.install(app, url, offer.bytes, offer.apkSha256) }
+    }
+
+    /** "Later": stops a download, and isn't offered again for a week (unless a newer version comes out). */
     fun later(context: Context) {
+        download?.cancel()
         offer?.let { UpdateStore(context).later(it.code, System.currentTimeMillis()) }
         offer = null
     }
@@ -106,7 +119,8 @@ object AppUpdates {
 
 /**
  * The update screen over the phone's tabs while there's an update to offer ([visible]: only at the top of the tabs,
- * never over the player or a book). Update starts Google Play's own update screen, or downloads the APK from GitHub.
+ * never over the player or a book). Update starts Google Play's own update screen; outside Play, the APK downloads and
+ * installs from here (the browser takes it on a build without the updater).
  */
 @Composable
 fun UpdatePrompt(visible: Boolean) {
@@ -116,6 +130,7 @@ fun UpdatePrompt(visible: Boolean) {
     val scope = rememberCoroutineScope()
     // A finished update restarts the app; a cancelled one comes back to this screen as it was.
     val play = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { }
+    val install by ApkInstaller.state.collectAsState()
     UpdateScreen(
         offer = offer,
         installed = AppUpdates.installed,
@@ -130,6 +145,8 @@ fun UpdatePrompt(visible: Boolean) {
                     }.getOrDefault(false)
                     if (!started) context.openUrl("market://details?id=${context.packageName}")
                 }
+            } else if (offer.apkUrl != null && ApkInstaller.available(context)) {
+                AppUpdates.install(context, offer)
             } else {
                 context.openUrl(offer.apkUrl ?: offer.url)
                 AppUpdates.done()
@@ -137,5 +154,6 @@ fun UpdatePrompt(visible: Boolean) {
         },
         onLater = { AppUpdates.later(context) },
         onChanges = { context.openUrl(offer.url) },
+        install = install,
     )
 }

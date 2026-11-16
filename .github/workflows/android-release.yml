@@ -53,9 +53,14 @@ jobs:
           SEEDY_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           SEEDY_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           SEEDY_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        # The APK updates itself from GitHub releases; the bundle for Google Play is built without that (-Pstore=play).
         run: |
-          ./gradlew :app:assembleRelease :app:bundleRelease -PappVersion="$VERSION"
+          ./gradlew :app:assembleRelease -PappVersion="$VERSION"
           cp app/build/outputs/apk/release/app-release.apk "seedy-android-$VERSION.apk"
+          ./gradlew :app:bundleRelease -PappVersion="$VERSION" -Pstore=play
+          if unzip -p app/build/outputs/bundle/release/app-release.aab base/manifest/AndroidManifest.xml | grep -aq REQUEST_INSTALL_PACKAGES; then
+            echo "::error::The Google Play bundle asks for REQUEST_INSTALL_PACKAGES"; exit 1
+          fi
 
       - name: Keep the app bundle
         uses: actions/upload-artifact@v4

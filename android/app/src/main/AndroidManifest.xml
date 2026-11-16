@@ -4,6 +4,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- The APK's own updater (the update screen's Update). Google Play builds leave it out: see src/play. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- One APK for phones and Android TV: neither touch nor the TV launcher is required. -->
     <uses-feature android:name="android.software.leanback" android:required="false" />

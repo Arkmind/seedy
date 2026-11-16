@@ -56,8 +56,9 @@ data class UpdateOffer(
     /** The download's size, when known. */
     val bytes: Long? = null,
     val fromPlay: Boolean = false,
-    /** The APK to download, outside Google Play. */
+    /** The APK to download, outside Google Play, and its SHA-256 (hex) when GitHub gives it. */
     val apkUrl: String? = null,
+    val apkSha256: String? = null,
 )
 
 /** A published release of the app on GitHub. */
@@ -69,9 +70,9 @@ data class Release(
     val url: String,
     val apkUrl: String?,
     val apkBytes: Long?,
+    val apkSha256: String? = null,
 ) {
-    fun offer(bytes: Long? = apkBytes, fromPlay: Boolean = false) =
-        UpdateOffer(version, code, ReleaseNotes.parse(body), url, bytes, fromPlay, apkUrl.takeUnless { fromPlay })
+    fun offer() = UpdateOffer(version, code, ReleaseNotes.parse(body), url, apkBytes, false, apkUrl, apkSha256)
 }
 
 object Releases {
@@ -103,6 +104,7 @@ object Releases {
                 url = r.str("html_url") ?: ReleasesPage,
                 apkUrl = apk?.str("browser_download_url"),
                 apkBytes = apk?.long("size")?.takeIf { it > 0 },
+                apkSha256 = apk?.str("digest")?.takeIf { it.startsWith("sha256:") }?.removePrefix("sha256:"),
             )
         }.sortedByDescending { it.code }
 
