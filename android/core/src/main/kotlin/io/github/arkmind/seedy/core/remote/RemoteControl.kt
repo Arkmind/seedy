@@ -210,7 +210,7 @@ class RemoteControl private constructor(private val session: UserSession) {
     private fun send(s: RemoteScreen, block: suspend () -> Unit) {
         scope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { block() }.isSuccess }
-            if (!ok) _state.update { it.copy(message = t("Couldn’t reach {device}", "device" to s.name)) }
+            if (!ok) _state.update { it.copy(message = t("Couldn't reach {device}", "device" to s.name)) }
         }
     }
 

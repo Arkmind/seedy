@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.i18n.tc
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.icons.IconDef
 import io.github.arkmind.seedy.ui.icons.SIcon
@@ -266,10 +267,10 @@ private fun Buttons(actions: PadActions) {
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.align(Alignment.Center).offset(y = (-14).dp).size(236.dp).clip(CircleShape).background(SeedyColors.Row).border(1.dp, Color(0x0FFFFFFF), CircleShape)) {
             val press: (Dir) -> Unit = { d -> haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); actions.onMove(d) }
-            PadKey(RemoteIcons.Up, t("Up"), Modifier.align(Alignment.TopCenter)) { press(Dir.Up) }
-            PadKey(RemoteIcons.Down, t("Down"), Modifier.align(Alignment.BottomCenter)) { press(Dir.Down) }
-            PadKey(RemoteIcons.Left, t("Left"), Modifier.align(Alignment.CenterStart)) { press(Dir.Left) }
-            PadKey(RemoteIcons.Right, t("Right"), Modifier.align(Alignment.CenterEnd)) { press(Dir.Right) }
+            PadKey(RemoteIcons.Up, tc("Up", "direction"), Modifier.align(Alignment.TopCenter)) { press(Dir.Up) }
+            PadKey(RemoteIcons.Down, tc("Down", "direction"), Modifier.align(Alignment.BottomCenter)) { press(Dir.Down) }
+            PadKey(RemoteIcons.Left, tc("Left", "direction"), Modifier.align(Alignment.CenterStart)) { press(Dir.Left) }
+            PadKey(RemoteIcons.Right, tc("Right", "direction"), Modifier.align(Alignment.CenterEnd)) { press(Dir.Right) }
             Box(
                 Modifier.align(Alignment.Center).size(96.dp).clip(CircleShape).background(RemoteColors.Raised)
                     .pointerInput(Unit) {

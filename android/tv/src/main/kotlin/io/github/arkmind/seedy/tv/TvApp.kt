@@ -70,6 +70,8 @@ import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.LocalActivity
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -201,6 +203,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
     // Phones can control the TV while Seedy is in front (the phone's "Remote for a TV").
     val context = LocalContext.current
     val activity = LocalActivity.current
+    val focusManager = LocalFocusManager.current
     val screen = remember(session) { TvScreen(ScreenReceiver(context, session)) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(screen) { lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { screen.receiver.run() } }
@@ -209,7 +212,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
             // Back to the rail's places: Home, Search and typing land there.
             val toPlaces = { while (stack.size > 1) stack.removeAt(stack.lastIndex) }
             when (c) {
-                is ScreenCommand.Key -> activity?.let { press(it, c.code) }
+                is ScreenCommand.Key -> (activity as? ComponentActivity)?.let { press(it, c.code, focusManager::moveFocus) }
                 ScreenCommand.Home -> { toPlaces(); place = TvPlace.Home }
                 ScreenCommand.Search -> { toPlaces(); place = TvPlace.Search }
                 is ScreenCommand.Text -> {

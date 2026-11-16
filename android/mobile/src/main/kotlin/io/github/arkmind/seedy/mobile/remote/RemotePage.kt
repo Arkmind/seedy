@@ -65,6 +65,8 @@ import coil3.compose.AsyncImage
 import io.github.arkmind.seedy.core.format.clock
 import io.github.arkmind.seedy.core.format.timeLeft
 import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.i18n.tc
+import io.github.arkmind.seedy.core.i18n.tn
 import io.github.arkmind.seedy.core.remote.NowOn
 import io.github.arkmind.seedy.core.remote.RemoteScreen
 import io.github.arkmind.seedy.core.remote.RemoteState
@@ -215,7 +217,7 @@ private fun ColumnScope.TvBody(screen: RemoteScreen, now: Long, mode: PadMode, a
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         KeyTile(RemoteIcons.Back, t("Back"), actions.onBack)
         KeyTile(RemoteIcons.Home, t("Home"), actions.onHome)
-        KeyTile(RemoteIcons.Keyboard, t("Type"), actions.onType)
+        KeyTile(RemoteIcons.Keyboard, tc("Type", "keyboard"), actions.onType)
         KeyTile(RemoteIcons.Options, t("Options"), actions.onOptions)
     }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -514,7 +516,7 @@ private fun ColumnScope.TypingBody(screen: RemoteScreen, typing: TypingUi, actio
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, bottom = 4.dp)) {
                 SText(
-                    t("On the TV · {n} results", "n" to results.size).let { if (results.size == 1) t("On the TV · 1 result") else it },
+                    tn(results.size, "On the TV · {n} result", "On the TV · {n} results"),
                     Modifier.weight(1f), size = 11.sp, weight = 800, tracking = 0.1f, color = SeedyColors.Text3, uppercase = true, maxLines = 1,
                 )
                 SText(t("Tap one to open it there"), size = 11.sp, weight = 600, color = SeedyColors.Text3, maxLines = 1)
