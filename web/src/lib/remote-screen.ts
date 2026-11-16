@@ -1,4 +1,4 @@
-import { post } from '../api/client';
+import { getSession, post } from '../api/client';
 import { toast } from '../ui/overlay';
 import { on } from './remote';
 
@@ -8,6 +8,7 @@ import { on } from './remote';
 let last = '';
 
 export function reportScreen() {
+  if (!getSession()) return;
   const state = { fullscreen: !!document.fullscreenElement, miniPlayer: !!document.pictureInPictureElement };
   const key = JSON.stringify(state);
   if (key === last) return;
@@ -24,6 +25,9 @@ export function startScreenReports() {
   // Picture in picture's events fire on the video and don't bubble.
   document.addEventListener('enterpictureinpicture', reportScreen, true);
   document.addEventListener('leavepictureinpicture', reportScreen, true);
+  // The experimental player's picture in picture is a video outside the page, whose events never reach it: a look
+  // every 2 s catches it (only a change is sent).
+  window.setInterval(reportScreen, 2000);
   on('open', () => { last = ''; reportScreen(); });
 }
 
