@@ -751,3 +751,23 @@ public sealed class PlayLogProfileBody
 }
 
 #pragma warning restore SA1402, SA1649, CA1002, CA2227, SA1600
+
+public sealed class RemoteStateBody
+{
+    [JsonPropertyName("asking")] public string? Asking { get; set; }
+    [JsonPropertyName("text")] public string? Text { get; set; }
+    [JsonPropertyName("itemId")] public string? ItemId { get; set; }
+    [JsonPropertyName("fullscreen")] public bool Fullscreen { get; set; }
+    [JsonPropertyName("miniPlayer")] public bool MiniPlayer { get; set; }
+}
+
+public sealed class RemoteStateDto
+{
+    [JsonPropertyName("deviceId")] public string DeviceId { get; set; } = string.Empty;
+    [JsonPropertyName("asking")] public string? Asking { get; set; }
+    [JsonPropertyName("text")] public string? Text { get; set; }
+    [JsonPropertyName("itemId")] public string? ItemId { get; set; }
+    [JsonPropertyName("fullscreen")] public bool Fullscreen { get; set; }
+    [JsonPropertyName("miniPlayer")] public bool MiniPlayer { get; set; }
+    [JsonPropertyName("at")] public DateTime At { get; set; }
+}

@@ -69,6 +69,18 @@ import io.github.arkmind.seedy.ui.theme.rememberViewer
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.LocalActivity
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import io.github.arkmind.seedy.core.remote.ScreenCommand
+import io.github.arkmind.seedy.core.remote.ScreenReceiver
+import io.github.arkmind.seedy.tv.remote.LocalTvScreen
+import io.github.arkmind.seedy.tv.remote.TvScreen
+import io.github.arkmind.seedy.tv.remote.press
+import io.github.arkmind.seedy.tv.remote.showMessage
 import io.github.arkmind.seedy.tv.update.TvUpdatePrompt
 import io.github.arkmind.seedy.ui.update.AppUpdates
 import kotlinx.coroutines.CompletableDeferred
@@ -188,7 +200,37 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
     val stack = remember(session) { mutableStateListOf<Any>(PlacesKey) }
     val nav = remember(stack) { TvNav(stack) }
     val home = viewModel { HomeViewModel(session) }
-    CompositionLocalProvider(LocalViewer provides viewer, LocalSession provides session, LocalCore provides core, LocalTvNav provides nav) {
+    // Phones can control the TV while Seedy is in front (the phone's "Remote for a TV").
+    val context = LocalContext.current
+    val activity = LocalActivity.current
+    val focusManager = LocalFocusManager.current
+    val screen = remember(session) { TvScreen(ScreenReceiver(context, session)) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(screen) { lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { screen.receiver.run() } }
+    LaunchedEffect(screen) {
+        screen.receiver.commands.collect { c ->
+            // Back to the rail's places: Home, Search and typing land there.
+            val toPlaces = { while (stack.size > 1) stack.removeAt(stack.lastIndex) }
+            when (c) {
+                is ScreenCommand.Key -> (activity as? ComponentActivity)?.let { press(it, c.code, focusManager::moveFocus) }
+                ScreenCommand.Home -> { toPlaces(); place = TvPlace.Home }
+                ScreenCommand.Search -> { toPlaces(); place = TvPlace.Search }
+                is ScreenCommand.Text -> {
+                    if (stack.size > 1 || place != TvPlace.Search) { toPlaces(); place = TvPlace.Search }
+                    screen.text.value = c.text
+                }
+                is ScreenCommand.Show -> nav.go(TvRoute.Details(c.id))
+                is ScreenCommand.Play -> {
+                    // A new title replaces the one playing.
+                    if (stack.lastOrNull() is TvRoute.Player) stack.removeAt(stack.lastIndex)
+                    nav.go(TvRoute.Player(c.ids.first(), c.startTicks))
+                }
+                is ScreenCommand.Message -> activity?.let { showMessage(it, c.text) }
+                else -> screen.player?.invoke(c)
+            }
+        }
+    }
+    CompositionLocalProvider(LocalViewer provides viewer, LocalSession provides session, LocalCore provides core, LocalTvNav provides nav, LocalTvScreen provides screen) {
         Box(Modifier.fillMaxSize()) {
             NavDisplay(
                 backStack = stack,
@@ -230,7 +272,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                     }
                     entry<TvRoute.Details> { TvDetailsRoute(it.id) }
                     entry<TvRoute.Library> { TvLibraryRoute(it.id) }
-                    entry<TvRoute.Player> { TvPlayerRoute(it.id) }
+                    entry<TvRoute.Player> { TvPlayerRoute(it.id, it.startTicks) }
                     entry<TvRoute.Settings> { TvSettingsRoute(appVersion, onPlace = { place = it; nav.back() }) }
                     entry<TvRoute.SeerrTitle> { TvSeerrTitleRoute(it.mediaType, it.tmdbId) }
                 },

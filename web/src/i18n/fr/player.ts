@@ -80,6 +80,8 @@ const fr: Record<string, string> = {
   "Couldn't start playback": 'Impossible de lancer la lecture',
   "Couldn't load those subtitles": 'Impossible de charger ces sous-titres',
   "Picture in picture isn't available": 'L’image dans l’image n’est pas disponible',
+  'Click anywhere on this page to go full screen': 'Cliquez n’importe où sur cette page pour passer en plein écran',
+  'Click anywhere on this page to open the mini player': 'Cliquez n’importe où sur cette page pour ouvrir le mini lecteur',
 
   // Tracks panel
   'Subtitle settings': 'Réglages des sous-titres',

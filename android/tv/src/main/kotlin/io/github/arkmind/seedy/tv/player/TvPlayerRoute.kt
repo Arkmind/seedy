@@ -1,5 +1,9 @@
 package io.github.arkmind.seedy.tv.player
 
+import io.github.arkmind.seedy.core.remote.ScreenCommand
+import io.github.arkmind.seedy.tv.remote.LocalTvScreen
+import org.jellyfin.sdk.model.api.PlaystateCommand
+import androidx.compose.runtime.rememberUpdatedState
 import android.os.SystemClock
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
@@ -64,11 +68,11 @@ import java.util.UUID
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun TvPlayerRoute(id: UUID) {
+fun TvPlayerRoute(id: UUID, startTicks: Long? = null) {
     val session = currentSession()
     val context = LocalContext.current
     val nav = LocalTvNav.current
-    val vm = viewModel { PlayerViewModel(context, session, id) }
+    val vm = viewModel { PlayerViewModel(context, session, id, startTicks) }
     val player = vm.controller
     val state by player.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -147,6 +151,34 @@ fun TvPlayerRoute(id: UUID) {
         }
     }
 
+    // A phone controlling the TV: play, pause, seek, the next episode and the tracks.
+    val screen = LocalTvScreen.current
+    val remote = rememberUpdatedState<(ScreenCommand) -> Unit> { c ->
+        touched++
+        player.touched()
+        when (c) {
+            is ScreenCommand.Playback -> when (c.command) {
+                PlaystateCommand.PAUSE -> if (state.playing) player.playPause()
+                PlaystateCommand.UNPAUSE -> if (!state.playing) player.playPause()
+                PlaystateCommand.PLAY_PAUSE -> player.playPause()
+                PlaystateCommand.STOP -> leave()
+                PlaystateCommand.SEEK -> c.seekTicks?.let { player.seekTo(it / 10_000) }
+                PlaystateCommand.NEXT_TRACK -> player.playNext()
+                PlaystateCommand.PREVIOUS_TRACK -> player.seekTo(0)
+                PlaystateCommand.FAST_FORWARD -> player.seekBy(player.seekForwardSeconds * 1000L)
+                PlaystateCommand.REWIND -> player.seekBy(-player.seekBackSeconds * 1000L)
+            }
+            is ScreenCommand.Audio -> player.selectAudio(c.index)
+            is ScreenCommand.Subtitle -> player.selectSubtitle(c.index)
+            else -> Unit
+        }
+    }
+    DisposableEffect(screen) {
+        val handler: (ScreenCommand) -> Unit = { remote.value(it) }
+        screen?.player = handler
+        onDispose { if (screen?.player === handler) screen.player = null }
+    }
+
     val subtitleSize = when (session.seedy?.prefs?.subtitles?.size) {
         "S" -> 32.bsp
         "L" -> 48.bsp
@@ -175,6 +207,13 @@ fun TvPlayerRoute(id: UUID) {
                     Key.MediaFastForward -> { player.seekBy(player.seekForwardSeconds * 1000L); return@onPreviewKeyEvent true }
                     Key.MediaRewind -> { player.seekBy(-player.seekBackSeconds * 1000L); return@onPreviewKeyEvent true }
                     Key.MediaNext -> { player.playNext(); return@onPreviewKeyEvent true }
+                }
+                // Menu (the phone remote's Options): the player's settings.
+                if (e.key == Key.Menu && tool == null) {
+                    page = SettingsPage.Main
+                    opener = TvTool.Settings
+                    tool = TvTool.Settings
+                    return@onPreviewKeyEvent true
                 }
                 if (controls || tool != null) return@onPreviewKeyEvent false
                 when (e.key) {

@@ -34,7 +34,8 @@ export function send(MessageType: string, Data?: unknown) {
 
 const SUPPORTED_COMMANDS = [
   'Play', 'Playstate', 'PlayNext', 'PlayMediaSource', 'SetAudioStreamIndex', 'SetSubtitleStreamIndex', 'SetVolume', 'Mute', 'Unmute',
-  'ToggleMute', 'VolumeUp', 'VolumeDown', 'ToggleFullscreen', 'DisplayMessage', 'GoHome', 'GoToSearch', 'SetMaxStreamingBitrate', 'SetPlaybackOrder'
+  'ToggleMute', 'VolumeUp', 'VolumeDown', 'ToggleFullscreen', 'DisplayMessage', 'GoHome', 'GoToSearch', 'SetMaxStreamingBitrate', 'SetPlaybackOrder',
+  'SendKey'
 ];
 
 function connect() {
@@ -104,6 +105,7 @@ function connect() {
 export function startRemoteControl() {
   if (started) return;
   started = true;
+  void import('./remote-screen').then((m) => m.startScreenReports());
   bootState.subscribe((s) => {
     if (s === 'ready' && !socket) connect();
     if (s !== 'ready') {

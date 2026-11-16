@@ -1,5 +1,7 @@
 package io.github.arkmind.seedy
 
+import android.view.KeyEvent
+import io.github.arkmind.seedy.core.remote.VolumeKeys
 import android.app.UiModeManager
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -73,6 +75,19 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /** Phones, while a TV remote is open: the volume keys turn the TV up and down (key repeats too). */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val up = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP
+        if (up || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            val handler = VolumeKeys.handler
+            if (handler != null) {
+                if (event.action == KeyEvent.ACTION_DOWN) handler(up)
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     /** Phones: a request notification tapped while the app is open. */
