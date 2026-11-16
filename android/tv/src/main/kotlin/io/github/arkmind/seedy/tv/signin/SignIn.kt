@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.tv.signin
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.widthIn
@@ -15,6 +16,7 @@ import io.github.arkmind.seedy.ui.components.DeepSea
 import io.github.arkmind.seedy.ui.components.Medu
 import io.github.arkmind.seedy.ui.components.MeduMood
 import io.github.arkmind.seedy.ui.components.Spinner
+import io.github.arkmind.seedy.ui.components.rememberStillMotion
 import io.github.arkmind.seedy.ui.components.boxShadow
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.icons.WebIcons
@@ -53,10 +55,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -89,6 +93,7 @@ import io.github.arkmind.seedy.ui.theme.BaseText
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import kotlinx.coroutines.delay
 
 /** The TV boards' header mark: 50 px square, 36 px name. */
 @Composable
@@ -439,31 +444,51 @@ private fun FoundServer(server: AddServerViewModel.Found, modifier: Modifier, on
 
 /**
  * Board "Android TV · Server unreachable": Medu dropped the cable. Try again (the remote starts there), or pick another
- * server; Seedy tries by itself every few seconds ([retryIn] seconds left, null while a try runs).
+ * server; Seedy tries by itself every few seconds ([retryIn] seconds left, null while a try runs). Once the server has
+ * [answered], Medu picks itself up and waves (Oops → Hello), the page says it's back online, and [onWelcomed] lets the
+ * app open a moment after Medu settles (at once with motion off).
  */
 @Composable
-fun TvUnreachableScreen(server: SavedServer, retryIn: Int?, onRetry: () -> Unit, onChooseServer: () -> Unit) {
+fun TvUnreachableScreen(
+    server: SavedServer,
+    retryIn: Int?,
+    onRetry: () -> Unit,
+    onChooseServer: () -> Unit,
+    answered: Boolean = false,
+    onWelcomed: () -> Unit = {},
+) {
     val retry = remember { FocusRequester() }
+    val still = rememberStillMotion()
+    val welcome by rememberUpdatedState(onWelcomed)
+    var waved by remember { mutableStateOf(false) }
+    LaunchedEffect(waved) {
+        if (!waved) return@LaunchedEffect
+        if (!still) delay(900)
+        welcome()
+    }
+    // Nothing left to try once the server answers: the buttons and the status fade, keeping their room.
+    val actions by animateFloatAsState(if (answered) 0f else 1f, label = "unreachable-actions")
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
         DeepSea(DeepScenes.TvUnreachable)
         TvBrand(server.seedy?.name ?: "Seedy", Modifier.padding(start = 96.bp, top = 64.bp))
         Column(Modifier.fillMaxWidth().padding(top = 150.bp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Medu(MeduMood.Oops, 300.bp, height = 396.bp)
+            Medu(if (answered) MeduMood.Wave else MeduMood.Oops, 300.bp, height = 396.bp, onSettled = { waved = it == MeduMood.Wave })
             SText(
-                t("Can’t reach your server"), Modifier.padding(top = 16.bp),
+                if (answered) t("Back online") else t("Can’t reach your server"), Modifier.padding(top = 16.bp),
                 size = 66.bsp, weight = 900, lineHeight = 1.08f, tracking = -.015f, color = SeedyColors.White, align = TextAlign.Center,
             )
             SText(
-                t("Medu dropped the cable. Check that {server} is switched on and connected, then try again.", "server" to server.name),
+                if (answered) t("{server} is answering again.", "server" to server.name)
+                else t("Medu dropped the cable. Check that {server} is switched on and connected, then try again.", "server" to server.name),
                 Modifier.padding(top = 16.bp).widthIn(max = 900.bp),
                 size = 28.bsp, lineHeight = 1.55f, color = DeepText, align = TextAlign.Center,
             )
-            Row(Modifier.padding(top = 42.bp), horizontalArrangement = Arrangement.spacedBy(24.bp)) {
-                TvBigButton(t("Try again"), onRetry, Modifier.focusRequester(retry), icon = WebIcons.Refetch, primary = true)
-                TvBigButton(t("Choose another server"), onChooseServer)
+            Row(Modifier.padding(top = 42.bp).alpha(actions), horizontalArrangement = Arrangement.spacedBy(24.bp)) {
+                TvBigButton(t("Try again"), { if (!answered) onRetry() }, Modifier.focusRequester(retry), icon = WebIcons.Refetch, primary = true)
+                TvBigButton(t("Choose another server"), { if (!answered) onChooseServer() })
             }
             Row(
-                Modifier.padding(top = 56.bp).clip(CircleShape).background(SeedyColors.Bg.copy(alpha = .7f)).padding(horizontal = 26.bp, vertical = 16.bp),
+                Modifier.padding(top = 56.bp).alpha(actions).clip(CircleShape).background(SeedyColors.Bg.copy(alpha = .7f)).padding(horizontal = 26.bp, vertical = 16.bp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(28.bp),
             ) {

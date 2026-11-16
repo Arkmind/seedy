@@ -71,6 +71,7 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 import androidx.compose.ui.platform.LocalContext
 import io.github.arkmind.seedy.tv.update.TvUpdatePrompt
 import io.github.arkmind.seedy.ui.update.AppUpdates
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 
 /** The Android TV app: the same journey as the phone (server, profile, home), drawn for the remote. */
@@ -160,8 +161,19 @@ private fun Unreachable(core: SeedyCore, server: SavedServer, onFinderQuickConne
         AddServerEntry(core, onFinderQuickConnect)
         return
     }
-    val retry = rememberRetryClock { core.sessions.start() }
-    TvUnreachableScreen(server, retryIn = if (retry.running) null else retry.left, onRetry = retry::now, onChooseServer = { choosing = true })
+    // The server answers again: the session waits to open while the page says so and Medu waves.
+    var answered by remember { mutableStateOf(false) }
+    val welcomed = remember { CompletableDeferred<Unit>() }
+    val retry = rememberRetryClock {
+        core.sessions.start(answered = {
+            answered = true
+            welcomed.await()
+        })
+    }
+    TvUnreachableScreen(
+        server, retryIn = if (retry.running) null else retry.left, onRetry = retry::now, onChooseServer = { choosing = true },
+        answered = answered, onWelcomed = { welcomed.complete(Unit) },
+    )
 }
 
 private data object PlacesKey
