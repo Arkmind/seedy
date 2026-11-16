@@ -6,6 +6,9 @@ name: Android release
 # Pre-releases (tag such as v0.2.0-beta.1, "Set as a pre-release" ticked) build the app the same way; the plugin
 # workflow skips them.
 #
+# Google Play's "What's new" comes from the release's "What's Changed" items (format in CONTRIBUTING.md, "Release
+# notes"), read by scripts/release-notes.py, which the app's update screen also follows.
+#
 # Secrets: ANDROID_KEYSTORE_BASE64 (the upload keystore, base64), ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
 # ANDROID_KEY_PASSWORD, and optionally PLAY_SERVICE_ACCOUNT_JSON (a service account with release rights on the app).
 
@@ -67,6 +70,16 @@ jobs:
           zip -j "seedy-android-$VERSION.zip" "seedy-android-$VERSION.apk"
           gh release upload "$GITHUB_REF_NAME" "seedy-android-$VERSION.apk" "seedy-android-$VERSION.zip" --clobber
 
+      - name: Google Play's "What's new" from the release text
+        id: notes
+        if: env.HAS_PLAY == 'true'
+        env:
+          BODY: ${{ github.event.release.body }}
+        run: |
+          if printf '%s\n' "$BODY" | python3 ../scripts/release-notes.py play --out "$RUNNER_TEMP/whatsnew"; then
+            echo "dir=$RUNNER_TEMP/whatsnew" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Send the bundle to Google Play (internal track)
         if: env.HAS_PLAY == 'true'
         uses: r0adkll/upload-google-play@v1
@@ -76,3 +89,4 @@ jobs:
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           track: internal
           status: completed
+          whatsNewDirectory: ${{ steps.notes.outputs.dir }}
