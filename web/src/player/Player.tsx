@@ -15,6 +15,7 @@ import {
 } from '../lib/format';
 import { sendOrigin } from '../lib/origin';
 import { on } from '../lib/remote';
+import { afterClick } from '../lib/remote-screen';
 import { back, navigate, useLocation } from '../lib/router';
 import { safeLocal, useStore } from '../lib/store';
 import { t as tr } from '../lib/i18n';
@@ -1176,7 +1177,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     general: (d: { Name?: string; Arguments?: Record<string, string> }) => {
       const args = d?.Arguments ?? {};
       switch (d?.Name) {
-        case 'SetVolume': setVolume(Number(args.Volume ?? 100) / 100); break;
+        case 'SetVolume': setVolume(Number(args.Volume ?? 100) / 100); sess()?.report('progress', 'volumechange'); break;
         case 'VolumeUp': setVolume(el().volume + 0.05); break;
         case 'VolumeDown': setVolume(el().volume - 0.05); break;
         case 'ToggleMute': toggleMute(); break;
@@ -1184,7 +1185,21 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
         case 'Unmute': el().muted = false; break;
         case 'SetAudioStreamIndex': setAudio(Number(args.Index)); break;
         case 'SetSubtitleStreamIndex': setSubtitle(Number(args.Index)); break;
-        case 'ToggleFullscreen': toggleFullscreen(); break;
+        case 'ToggleFullscreen': {
+          // A phone's Full screen: the browser may want a click on this page first.
+          const root = document.documentElement;
+          if (document.fullscreenElement || !root.requestFullscreen) { toggleFullscreen(); break; }
+          root.requestFullscreen().catch(() => afterClick(toggleFullscreen, tr('Click anywhere on this page to go full screen')));
+          break;
+        }
+        case 'SendKey': {
+          // A phone's Mini player: picture in picture (Jellyfin has no command for it).
+          if (args.Key !== 'PictureInPicture' || !canPip) break;
+          if (document.pictureInPictureElement) { void document.exitPictureInPicture().catch(() => undefined); break; }
+          const opened = sess()?.pictureInPicture();
+          opened?.catch(() => afterClick(togglePip, tr('Click anywhere on this page to open the mini player')));
+          break;
+        }
         case 'SetMaxStreamingBitrate': {
           const b = Number(args.MaxBitrate);
           const q = b >= 80_000_000 ? '4k' : b >= 20_000_000 ? '1080p' : b >= 8_000_000 ? '720p' : b > 0 ? '480p' : 'auto';
