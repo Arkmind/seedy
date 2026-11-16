@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.4.8.0",
+        "changelog": "# What's Changed\n- Your phone is now a remote\n  Swipe, tap and press Back or Home to drive Seedy on your TV or computer\n- Browse here, watch there\n  Pick something on your phone and it plays on the screen you control\n- Type on your TV from your phone\n  Search with your phone’s keyboard instead of the remote’s\n- Medu has new moods\n  Waves when your server is back, grabs popcorn when you keep watching\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play). Update the TV too: that's what lets your phone control it.\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart the server.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.7...v0.4.8",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.4.8/seedy_0.4.8.0.zip",
+        "checksum": "f56a5af44b7a5953f1412205d6787649",
+        "timestamp": "2026-11-16T10:15:26Z"
+      },
+      {
         "version": "0.4.7.0",
         "changelog": "# What's Changed\n- Seedy updates itself\n  Press Update and the new version installs, no APK to fetch\n- See what’s new in each version\n  Every new version shows you what it brings\n- On your TV too\n  With the remote, no browser or computer needed\n\n## Updating\n- This version still installs by hand: install the new APK over the old one (or update from Google Play). From the next one on, Seedy offers it itself.\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart the server.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.6...v0.4.7",
         "targetAbi": "12.0.0.0",
