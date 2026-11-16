@@ -1160,12 +1160,23 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
 
   /* ── Remote control from other Jellyfin apps ── */
   const remoteRef = useRef<{ playstate: (d: any) => void; general: (d: any) => void }>({ playstate: () => undefined, general: () => undefined });
+  /* What a remote asked for shows on the phone at once: the state goes to the server right after (a media event may
+     not come, or come late), and a play the browser refuses (no click on this page yet) asks for one instead of
+     doing nothing. */
+  const remotePlay = () => {
+    play();
+    window.setTimeout(() => {
+      if (wantPlay.current && el().paused && !inGroup()) afterClick(play, tr('Click anywhere on this page to resume'));
+    }, 1500);
+  };
+  const reportSoon = () => window.setTimeout(() => sess()?.report('progress', 'remote'), 400);
   remoteRef.current = {
     playstate: (d: { Command?: string; SeekPositionTicks?: number }) => {
+      reportSoon();
       switch (d?.Command) {
         case 'Pause': pause(); break;
-        case 'Unpause': play(); break;
-        case 'PlayPause': togglePlay(); break;
+        case 'Unpause': remotePlay(); break;
+        case 'PlayPause': if (el().paused) remotePlay(); else pause(); break;
         case 'Stop': exit(); break;
         case 'Seek': if (d.SeekPositionTicks !== undefined) seekTo(ticksToSeconds(d.SeekPositionTicks)); break;
         case 'NextTrack': goNext(false); break;
@@ -1176,8 +1187,9 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     },
     general: (d: { Name?: string; Arguments?: Record<string, string> }) => {
       const args = d?.Arguments ?? {};
+      reportSoon();
       switch (d?.Name) {
-        case 'SetVolume': setVolume(Number(args.Volume ?? 100) / 100); sess()?.report('progress', 'volumechange'); break;
+        case 'SetVolume': setVolume(Number(args.Volume ?? 100) / 100); break;
         case 'VolumeUp': setVolume(el().volume + 0.05); break;
         case 'VolumeDown': setVolume(el().volume - 0.05); break;
         case 'ToggleMute': toggleMute(); break;

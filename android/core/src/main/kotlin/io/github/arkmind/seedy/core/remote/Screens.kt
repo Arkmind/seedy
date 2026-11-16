@@ -36,6 +36,8 @@ data class NowOn(
     /** The player's own volume, 0–100 (Seedy web's slider), when the screen reports one. */
     val volume: Int? = null,
     val muted: Boolean = false,
+    /** When the screen last reported its playback to the server (changes with every report). */
+    val checkIn: String? = null,
 ) {
     /** Where it is at [now]: still while paused, running on while it plays. */
     fun positionAt(now: Long): Long {
@@ -171,6 +173,7 @@ fun nowOn(s: SessionInfoDto, now: Long): NowOn? {
         subtitleIndex = p?.subtitleStreamIndex,
         volume = p?.volumeLevel,
         muted = p?.isMuted == true,
+        checkIn = s.lastPlaybackCheckIn?.toString(),
     )
 }
 

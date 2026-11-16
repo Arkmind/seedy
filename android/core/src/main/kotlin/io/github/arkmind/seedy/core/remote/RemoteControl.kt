@@ -69,7 +69,15 @@ class RemoteControl private constructor(private val session: UserSession) {
     /** What the phone changed and the screen hasn't reported yet: kept over the polls until then. */
     private val pending = mutableMapOf<String, Pending>()
 
-    private data class Pending(val paused: Boolean? = null, val positionMs: Long? = null, val volume: Int? = null, val until: Long)
+    /** [checkIn]: the screen's last report when the command went; [sentAt]: when it went. */
+    private data class Pending(
+        val paused: Boolean? = null,
+        val positionMs: Long? = null,
+        val volume: Int? = null,
+        val until: Long,
+        val checkIn: String? = null,
+        val sentAt: Long = 0,
+    )
 
     /** Looks at the screens every [everyMs] while someone watches (a picker or a remote is open); call the result to stop. */
     fun watch(everyMs: Long = 1_000): () -> Unit {
@@ -156,7 +164,11 @@ class RemoteControl private constructor(private val session: UserSession) {
     private fun withPending(s: RemoteScreen, now: Long): RemoteScreen {
         val p = pending[s.deviceId] ?: return s
         val n = s.now ?: return s
-        if (now > p.until) {
+        // The screen reported since the command went (half a second for it to arrive): its word is the truth now,
+        // whatever the phone guessed. A guess kept against a screen that didn't do it would make the next press
+        // send the wrong thing.
+        val reported = n.checkIn != null && n.checkIn != p.checkIn && now - p.sentAt > 500
+        if (now > p.until || reported) {
             pending.remove(s.deviceId)
             return s
         }
@@ -223,7 +235,19 @@ class RemoteControl private constructor(private val session: UserSession) {
     private fun send(s: RemoteScreen, block: suspend () -> Unit) {
         scope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { block() }.isSuccess }
-            if (!ok) _state.update { it.copy(message = t("Couldn't reach {device}", "device" to s.name)) }
+            if (!ok) _state.update { it.copy(message = t("Couldn't reach {device}", "device" to s.name)) } else lookSoon()
+        }
+    }
+
+    private var soon: Job? = null
+
+    /** A look shortly after a command, so what the screen did shows without waiting for the next round. */
+    private fun lookSoon() {
+        if (watchers == 0) return
+        soon?.cancel()
+        soon = scope.launch {
+            delay(700)
+            refresh()
         }
     }
 
@@ -266,10 +290,23 @@ class RemoteControl private constructor(private val session: UserSession) {
     }
 
     /* Playback, on what the screen plays. */
-    fun playPause() = together().forEach { s ->
-        val n = s.now ?: return@forEach
-        expect(s, paused = !n.paused)
-        playstate(s, if (n.paused) PlaystateCommand.UNPAUSE else PlaystateCommand.PAUSE)
+    /**
+     * Play/pause: the active screen toggles from its own state (the phone's view of it can lag behind), so a press
+     * always does something; with Play in sync the others are told to do what it should now do.
+     */
+    fun playPause() {
+        val st = _state.value
+        val active = st.activeScreen ?: return
+        val n = active.now ?: return
+        val pause = !n.paused
+        expect(active, paused = pause)
+        playstate(active, PlaystateCommand.PLAY_PAUSE)
+        if (!st.sync) return
+        for (s in st.controlledScreens) {
+            if (s.deviceId == active.deviceId || s.now == null) continue
+            expect(s, paused = pause)
+            playstate(s, if (pause) PlaystateCommand.PAUSE else PlaystateCommand.UNPAUSE)
+        }
     }
 
     /** Jumps by [seconds] (back when negative), from where the screen is now. */
@@ -312,7 +349,10 @@ class RemoteControl private constructor(private val session: UserSession) {
     private fun expect(s: RemoteScreen, paused: Boolean? = null, positionMs: Long? = null, volume: Int? = null) {
         val now = SystemClock.elapsedRealtime()
         val before = pending[s.deviceId]
-        pending[s.deviceId] = Pending(paused ?: before?.paused, positionMs ?: before?.positionMs, volume ?: before?.volume, now + 4_000)
+        pending[s.deviceId] = Pending(
+            paused ?: before?.paused, positionMs ?: before?.positionMs, volume ?: before?.volume, now + 4_000,
+            checkIn = s.now?.checkIn, sentAt = now,
+        )
         if (positionMs != null) pendingSeenAt[s.deviceId] = now
         _state.update { st ->
             st.copy(screens = st.screens?.map { x -> if (x.deviceId == s.deviceId) withPending(x, now) else x })
