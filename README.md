@@ -174,9 +174,9 @@ Google TV. It needs Android 8.0 or newer.
   adb install seedy-android-<version>.apk
   ```
 
-The app finds Jellyfin servers on your network by itself; otherwise type the server's address. On a phone, Seedy
-shows what's new when a newer version is out and installs it for you (the first time, Android asks you to allow Seedy
-to install apps). On a TV, install a newer APK over the old one.
+The app finds Jellyfin servers on your network by itself; otherwise type the server's address. When a newer version
+is out, Seedy shows what's new and installs it for you, on phones and TVs (the first time, Android asks you to allow
+Seedy to install apps).
 
 ### Where the web app opens
 
