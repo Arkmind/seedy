@@ -92,6 +92,8 @@ import io.github.arkmind.seedy.mobile.signin.ProfilesScreen
 import io.github.arkmind.seedy.mobile.signin.QuickConnectSheet
 import io.github.arkmind.seedy.mobile.signin.SignInFor
 import io.github.arkmind.seedy.mobile.signin.UnreachableScreen
+import io.github.arkmind.seedy.mobile.update.AppUpdates
+import io.github.arkmind.seedy.mobile.update.UpdatePrompt
 import io.github.arkmind.seedy.player.Network
 import io.github.arkmind.seedy.player.audio.AudioEngine
 import io.github.arkmind.seedy.ui.components.LocalOverlayHost
@@ -113,6 +115,8 @@ fun MobileApp(core: SeedyCore, appVersion: String = "") {
     // The server finder's "Sign in with Quick Connect": the server's sign-in opens on Quick Connect's code.
     var quickConnectNext by rememberSaveable { mutableStateOf(false) }
     val finderQuickConnect = { quickConnectNext = true }
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { AppUpdates.start(context) }
     SessionTheme(state) {
         when (val s = state) {
             SessionState.Starting -> Unit
@@ -337,6 +341,8 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                         onWait = { asking = null },
                     )
                 }
+                // Board "Android · Update ready": a newer Seedy, offered from the top of the tabs.
+                UpdatePrompt(visible = stack.size == 1)
             }
         }
     }

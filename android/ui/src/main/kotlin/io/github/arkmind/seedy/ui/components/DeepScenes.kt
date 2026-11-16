@@ -32,6 +32,8 @@ class DeepScene(
     val bubbles: List<Bubble>,
     val fish: List<Fish>,
     val lowGlow: Boolean = false,
+    /** The sea floor and its weed along the bottom. */
+    val floor: Boolean = true,
 )
 
 /** The boards' own scenes, so each page's water matches its board. */
@@ -62,6 +64,32 @@ object DeepScenes {
         bubbles = listOf(Bubble(48f, 88f, 9f, 9.8, -4.9), Bubble(153f, 48f, 9f, 11.2, -8.0), Bubble(173f, 98f, 11f, 8.5, -6.1), Bubble(306f, 76f, 9f, 10.3, -0.5)),
         fish = listOf(
         ),
+    )
+    /** Board "Android · Update ready": rays and snow only, the buttons sit where the floor would. */
+    val PhoneUpdate = DeepScene(
+        390f, 844f,
+        rays = listOf(Ray(21f, 31f, -1.5), Ray(228f, 43f, -6.2), Ray(363f, 36f, -6.6)),
+        snow = listOf(
+            Snow(258f, 566f, 2.8f, 0.24f, 22.1, -3.4),
+            Snow(65f, 442f, 2.7f, 0.28f, 16.1, -1.0),
+            Snow(338f, 567f, 1.6f, 0.19f, 25.0, -18.1),
+            Snow(261f, 83f, 1.7f, 0.34f, 24.3, -16.7),
+            Snow(123f, 418f, 1.6f, 0.27f, 27.7, -5.0),
+            Snow(117f, 98f, 2.9f, 0.29f, 26.4, -10.8),
+            Snow(153f, 14f, 2.3f, 0.17f, 23.3, -10.7),
+            Snow(290f, 364f, 2.2f, 0.33f, 24.2, -15.9),
+            Snow(25f, 26f, 1.7f, 0.33f, 18.5, -16.2),
+            Snow(257f, 86f, 1.7f, 0.34f, 24.5, -16.1),
+            Snow(163f, 572f, 2.5f, 0.35f, 24.5, -5.9),
+            Snow(265f, 277f, 2.7f, 0.24f, 20.1, -19.5),
+            Snow(267f, 187f, 1.9f, 0.34f, 17.9, -5.8),
+            Snow(345f, 507f, 2.1f, 0.3f, 26.9, -5.8),
+            Snow(70f, 450f, 1.6f, 0.15f, 16.3, -3.9),
+            Snow(128f, 154f, 1.8f, 0.29f, 21.9, -2.6),
+        ),
+        bubbles = emptyList(),
+        fish = emptyList(),
+        floor = false,
     )
     val PhoneUnreachable = DeepScene(
         390f, 844f,

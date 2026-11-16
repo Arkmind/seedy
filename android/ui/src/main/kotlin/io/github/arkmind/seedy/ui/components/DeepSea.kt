@@ -50,18 +50,19 @@ private fun alternate(t: Double, dur: Double, delay: Double, ease: Easing = Ease
 
 /**
  * The boards' deep water behind a page (see [DeepScenes]), filling it: put it first in a Box. Board pixels follow the
- * page's width (and height for where things are); with motion off it's a still frame.
+ * page's width (and height for where things are); with motion off it's a still frame. [glow] lights the water from
+ * above in that colour (the update screen's accent).
  */
 @Composable
-fun DeepSea(scene: DeepScene, modifier: Modifier = Modifier) {
+fun DeepSea(scene: DeepScene, modifier: Modifier = Modifier, glow: Color? = null) {
     val clock = rememberLoopClock()
     BoxWithConstraints(modifier.fillMaxSize()) {
         val kx = maxWidth.value / scene.width
         val ky = maxHeight.value / scene.height
-        Canvas(Modifier.fillMaxSize()) { drawWater(scene) }
+        Canvas(Modifier.fillMaxSize()) { drawWater(scene, glow) }
         for (ray in scene.rays) RayLayer(ray, scene, kx, ky, clock)
         Canvas(Modifier.fillMaxSize()) { drawLife(scene, clock.seconds() ?: 0.0) }
-        Canvas(Modifier.fillMaxSize()) { drawFloor(scene, clock.seconds() ?: 0.0) }
+        if (scene.floor) Canvas(Modifier.fillMaxSize()) { drawFloor(scene, clock.seconds() ?: 0.0) }
     }
 }
 
@@ -102,12 +103,14 @@ private fun RayLayer(ray: Ray, scene: DeepScene, kx: Float, ky: Float, clock: Mu
     )
 }
 
-private fun DrawScope.drawWater(scene: DeepScene) {
+private fun DrawScope.drawWater(scene: DeepScene, top: Color?) {
     drawRect(Brush.verticalGradient(0f to Color(0xFF0E0E0E), .52f to Color(0xFF0D1016), 1f to Color(0xFF0B0D12)))
     // radial-gradient(ellipse 70% 55% at 50% 0%, rgba(159,200,255,.07), transparent 70%)
     glow(Offset(size.width / 2f, 0f), .7f * size.width, .55f * size.height, Color(0xFF9FC8FF).copy(alpha = .07f))
     // The screensaver's: ellipse 55% 50% at 78% 72%, rgba(201,214,227,.07).
     if (scene.lowGlow) glow(Offset(.78f * size.width, .72f * size.height), .55f * size.width, .5f * size.height, Color(0xFFC9D6E3).copy(alpha = .07f))
+    // The update screen's: ellipse 90% 45% at 50% 18%, the accent at .12.
+    if (top != null) glow(Offset(size.width / 2f, .18f * size.height), .9f * size.width, .45f * size.height, top.copy(alpha = .12f))
 }
 
 /** An elliptical CSS radial gradient, [color] fading out at 70% of its radii. */
