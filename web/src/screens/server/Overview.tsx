@@ -111,6 +111,19 @@ export function ServerOverview() {
 
   // Jellyfin lists sessions by latest activity, which reshuffles the cards on every progress report: keep them by person.
   const playing = (sessions.data ?? []).filter((s) => s.NowPlayingItem).sort(byPerson);
+  // Someone presses play while Medu naps: it wakes up and grabs the popcorn (Sleepy → Popcorn), then the cards show.
+  // Decided while rendering, so the cards never flash in first (that would also take Medu away mid-bridge).
+  const quiet = sessions.data ? playing.length === 0 : null;
+  const wasQuiet = useRef<boolean | null>(null);
+  const wake = useRef(false);
+  const [, rerender] = useState(0);
+  if (quiet !== null) {
+    if (wasQuiet.current && !quiet) wake.current = true;
+    if (quiet) wake.current = false;
+    wasQuiet.current = quiet;
+  }
+  const waking = wake.current;
+  const woke = () => window.setTimeout(() => { wake.current = false; rerender((n) => n + 1); }, 1200);
 
   return (
     <AdminLayout
@@ -141,12 +154,12 @@ export function ServerOverview() {
           <InlineError text={t('Couldn’t load what’s playing.')} onRetry={sessions.reload} />
         ) : !sessions.data ? (
           <div class="srv-now-grid" aria-busy="true">{[0, 1, 2].map((i) => <div key={i} class="srv-now-card"><span class="skel srv-now-art" /><span class="skel skel-line" style={{ width: '70%' }} /><span class="skel skel-line" style={{ width: '45%' }} /></div>)}</div>
-        ) : playing.length === 0 ? (
+        ) : playing.length === 0 || waking ? (
           <div class="srv-quiet">
-            <Medu mood="sleepy" size={96} />
+            <Medu mood={waking ? 'popcorn' : 'sleepy'} size={96} onSettled={(mood) => { if (mood === 'popcorn') woke(); }} />
             <div class="srv-quiet-body">
-              <span class="srv-quiet-title">{t('All quiet')}</span>
-              <span class="srv-quiet-text">{t('Nobody is watching right now. Medu is napping until someone presses play.')}</span>
+              <span class="srv-quiet-title">{waking ? t('Someone pressed play') : t('All quiet')}</span>
+              <span class="srv-quiet-text">{waking ? t('Medu grabbed the popcorn.') : t('Nobody is watching right now. Medu is napping until someone presses play.')}</span>
             </div>
           </div>
         ) : (

@@ -9,17 +9,15 @@
 .nf-medu { position: relative; z-index: 3; margin: 30px -18px 0; }
 .nf-poke { position: relative; display: block; padding: 0; border: 0; background: none; font-family: inherit; cursor: pointer; border-radius: 40px; }
 .nf-poke:focus-visible { outline: 3px solid var(--seedy-accent); outline-offset: 6px; }
-.nf-poke .nf-main, .nf-poke .nf-alt, .nf-found { transition: opacity 0.25s; }
-.nf-poke .nf-alt { position: absolute; left: 0; top: 0; opacity: 0; }
 .nf-found {
   position: absolute; left: 50%; top: -14px; transform: translateX(-50%); white-space: nowrap; padding: 6px 12px; border-radius: 10px;
   background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-size: 13px; font-weight: 800; pointer-events: none; opacity: 0;
+  transition: opacity 0.25s;
 }
-.nf-poke:hover .nf-main, .nf-poke:focus-visible .nf-main { opacity: 0; }
-.nf-poke:hover .nf-alt, .nf-poke:focus-visible .nf-alt, .nf-poke:hover .nf-found, .nf-poke:focus-visible .nf-found { opacity: 1; }
-.nf-poke:active .nf-alt { animation: nf-boop 0.45s ease-out; }
+/* Pointed at or focused, Medu is found (Yay); it moves there itself (ui/medu.tsx), never cross-faded. */
+.nf-poke.is-found .nf-found { opacity: 1; }
+.nf-poke.is-found:active .nf-main { animation: nf-boop 0.45s ease-out; }
 @keyframes nf-boop { 0% { transform: scale(1); } 40% { transform: scale(1.12, 0.88); } 100% { transform: scale(1); } }
-@media (hover: none) { .nf-poke:hover .nf-main { opacity: 1; } .nf-poke:hover .nf-alt, .nf-poke:hover .nf-found { opacity: 0; } }
 
 .nf-copy { position: relative; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 14px; padding: 0 var(--gutter); text-align: center; }
 .nf-title { margin: 0; font-size: 46px; line-height: 1.05; font-weight: 900; letter-spacing: -0.02em; color: #ffffff; }
@@ -87,7 +85,8 @@
 }
 .un-status > span { display: flex; align-items: center; gap: 8px; }
 .un-status-server { white-space: pre; }
-.un-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--seedy-danger); }
+.un-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--seedy-danger); transition: background 0.3s; }
+.un-dot.is-ok { background: var(--seedy-ok); }
 .un-mono { font-family: var(--font-mono); }
 .un-spin { fill: none; stroke: var(--seedy-text); stroke-width: 3; stroke-linecap: round; animation: un-spin 1.1s linear infinite; transform-origin: 50% 50%; }
 @keyframes un-spin { to { transform: rotate(360deg); } }

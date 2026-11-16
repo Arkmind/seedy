@@ -1403,6 +1403,8 @@ const fr: Record<string, string> = {
   // Medu
   "All quiet": "Tout est calme",
   "Nobody is watching right now. Medu is napping until someone presses play.": "Personne ne regarde en ce moment. Medu fait la sieste jusqu’à ce que quelqu’un lance la lecture.",
+  "Someone pressed play": "Quelqu’un a lancé la lecture",
+  "Medu grabbed the popcorn.": "Medu a sorti le pop-corn.",
   "First scan finished": "Première analyse terminée",
   "Medu found {list} in {time}.": "Medu a trouvé {list} en {time}.",
   "Medu went through every library in {time}.": "Medu a parcouru toutes les bibliothèques en {time}.",
