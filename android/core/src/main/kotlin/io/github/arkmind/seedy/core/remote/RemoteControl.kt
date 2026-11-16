@@ -74,24 +74,37 @@ class RemoteControl private constructor(private val session: UserSession) {
     /** Looks at the screens every [everyMs] while someone watches (a picker or a remote is open); call the result to stop. */
     fun watch(everyMs: Long = 1_000): () -> Unit {
         watchers++
-        if (poller?.isActive != true) {
-            poller = scope.launch {
-                while (isActive) {
-                    refresh()
-                    delay(everyMs)
-                }
-            }
-        }
+        intervals += everyMs
+        restart()
         var done = false
         return {
             if (!done) {
                 done = true
                 watchers--
+                intervals.remove(everyMs)
                 if (watchers <= 0) {
                     watchers = 0
                     poller?.cancel()
                     poller = null
+                    pollEvery = 0
                 }
+            }
+        }
+    }
+
+    /** Who watches how often: the quickest one sets the pace (the remote's 1 s over the picker's 2 s). */
+    private val intervals = mutableListOf<Long>()
+    private var pollEvery = 0L
+
+    private fun restart() {
+        val every = intervals.minOrNull() ?: return
+        if (poller?.isActive == true && every == pollEvery) return
+        poller?.cancel()
+        pollEvery = every
+        poller = scope.launch {
+            while (isActive) {
+                refresh()
+                delay(every)
             }
         }
     }
