@@ -47,8 +47,11 @@ object ApkInstaller {
             .requestedPermissions.orEmpty().contains(Manifest.permission.REQUEST_INSTALL_PACKAGES)
     }.getOrDefault(false)
 
-    /** Downloads [url] ([bytes] long, [sha256] in hex when known) and starts installing it. Cancelling stops the download. */
-    suspend fun install(context: Context, url: String, bytes: Long?, sha256: String?) {
+    /**
+     * Downloads [url] ([bytes] long, [sha256] in hex when known), version [code], and starts installing it. Cancelling
+     * stops the download.
+     */
+    suspend fun install(context: Context, url: String, code: Long, bytes: Long?, sha256: String?) {
         val app = context.applicationContext
         val installer = app.packageManager.packageInstaller
         _state.value = InstallState.Downloading(null)
@@ -67,6 +70,7 @@ object ApkInstaller {
             installer.openSession(id).use { session ->
                 io { download(session, url, bytes, sha256) }
                 _state.value = InstallState.Installing
+                UpdateStore(app).installing(code)
                 session.commit(statusIntent(app, id).intentSender)
             }
         } catch (e: CancellationException) {

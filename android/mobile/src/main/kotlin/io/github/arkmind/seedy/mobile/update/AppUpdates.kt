@@ -1,18 +1,24 @@
 package io.github.arkmind.seedy.mobile.update
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
 import com.google.android.play.core.appupdate.AppUpdateOptions
 import com.google.android.play.core.install.model.AppUpdateType
@@ -53,6 +59,7 @@ object AppUpdates {
         if (started) return
         started = true
         val app = context.applicationContext
+        UpdatedNotice.clear(app)
         if (app.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) return
         scope.launch { offer = runCatching { check(app) }.getOrNull() }
     }
@@ -89,7 +96,7 @@ object AppUpdates {
         val url = offer.apkUrl ?: return
         if (download?.isActive == true) return
         val app = context.applicationContext
-        download = scope.launch { ApkInstaller.install(app, url, offer.bytes, offer.apkSha256) }
+        download = scope.launch { ApkInstaller.install(app, url, offer.code, offer.bytes, offer.apkSha256) }
     }
 
     /** "Later": stops a download, and isn't offered again for a week (unless a newer version comes out). */
@@ -131,6 +138,14 @@ fun UpdatePrompt(visible: Boolean) {
     // A finished update restarts the app; a cancelled one comes back to this screen as it was.
     val play = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { }
     val install by ApkInstaller.state.collectAsState()
+    // Back from "Install unknown apps": the download starts once Seedy may install.
+    var allowing by remember { mutableStateOf(false) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (allowing) {
+            allowing = false
+            if (context.packageManager.canRequestPackageInstalls()) AppUpdates.install(context, offer)
+        }
+    }
     UpdateScreen(
         offer = offer,
         installed = AppUpdates.installed,
@@ -146,7 +161,13 @@ fun UpdatePrompt(visible: Boolean) {
                     if (!started) context.openUrl("market://details?id=${context.packageName}")
                 }
             } else if (offer.apkUrl != null && ApkInstaller.available(context)) {
-                AppUpdates.install(context, offer)
+                // Android's "Install unknown apps" first (asked once): going there mid-install would cancel it.
+                if (context.packageManager.canRequestPackageInstalls()) {
+                    AppUpdates.install(context, offer)
+                } else {
+                    allowing = true
+                    runCatching { context.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))) }
+                }
             } else {
                 context.openUrl(offer.apkUrl ?: offer.url)
                 AppUpdates.done()

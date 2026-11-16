@@ -31,6 +31,16 @@ class UpdateStore(context: Context) {
     fun snoozed(code: Long, now: Long): Boolean =
         prefs.getLong("laterCode", 0L) == code && now - prefs.getLong("laterAt", 0L) in 0 until LaterMs
 
+    /** The version the APK updater is installing (so the new version knows it came from there). */
+    fun installing(code: Long) = prefs.edit().putLong("installing", code).apply()
+
+    /** Whether [code] is the version the APK updater installed; asked once. */
+    fun takeInstalled(code: Long): Boolean {
+        val was = prefs.getLong("installing", 0L)
+        if (was != 0L) prefs.edit().remove("installing").apply()
+        return was == code
+    }
+
     companion object {
         const val RecheckMs = 6 * 3_600_000L
         const val LaterMs = 7 * 24 * 3_600_000L
