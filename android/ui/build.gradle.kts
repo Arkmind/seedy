@@ -22,6 +22,9 @@ dependencies {
     api(libs.compose.foundation)
     api(libs.coil.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.activity.compose)
+    // Google Play's in-app updates (the update screens, when Seedy came from Play).
+    implementation(libs.play.app.update)
     implementation(libs.coil.network.okhttp)
     debugImplementation(libs.compose.ui.tooling)
 }

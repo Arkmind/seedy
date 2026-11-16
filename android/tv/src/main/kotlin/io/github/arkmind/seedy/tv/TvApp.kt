@@ -68,6 +68,9 @@ import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.rememberViewer
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
+import androidx.compose.ui.platform.LocalContext
+import io.github.arkmind.seedy.tv.update.TvUpdatePrompt
+import io.github.arkmind.seedy.ui.update.AppUpdates
 import kotlinx.coroutines.launch
 
 /** The Android TV app: the same journey as the phone (server, profile, home), drawn for the remote. */
@@ -77,6 +80,8 @@ fun TvApp(core: SeedyCore, appVersion: String = "") {
     // The server finder's "Use Quick Connect": the server's sign-in opens on Quick Connect's code.
     var quickConnectNext by rememberSaveable { mutableStateOf(false) }
     val finderQuickConnect = { quickConnectNext = true }
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { AppUpdates.start(context) }
     SessionTheme(state) {
         when (val s = state) {
             SessionState.Starting -> Unit
@@ -172,51 +177,55 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
     val nav = remember(stack) { TvNav(stack) }
     val home = viewModel { HomeViewModel(session) }
     CompositionLocalProvider(LocalViewer provides viewer, LocalSession provides session, LocalCore provides core, LocalTvNav provides nav) {
-        NavDisplay(
-            backStack = stack,
-            onBack = { nav.back() },
-            entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
-            entryProvider = entryProvider {
-                entry<PlacesKey> {
-                    // Back on a place other than Home goes Home first.
-                    BackHandler(enabled = place != TvPlace.Home) { place = TvPlace.Home }
-                    // A place's dialogs are drawn over the rail too.
-                    val overlay = remember { OverlayHost() }
-                    Box(Modifier.fillMaxSize()) {
-                        CompositionLocalProvider(LocalOverlayHost provides overlay) {
-                            when (place) {
-                                TvPlace.Home -> {
-                                    val state by home.state.collectAsStateWithLifecycle()
-                                    TvHomeScreen(
-                                        state, onOpen = nav::open, onPlay = nav::play, onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
-                                        onFinish = home::finishWatching,
-                                    )
+        Box(Modifier.fillMaxSize()) {
+            NavDisplay(
+                backStack = stack,
+                onBack = { nav.back() },
+                entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
+                entryProvider = entryProvider {
+                    entry<PlacesKey> {
+                        // Back on a place other than Home goes Home first.
+                        BackHandler(enabled = place != TvPlace.Home) { place = TvPlace.Home }
+                        // A place's dialogs are drawn over the rail too.
+                        val overlay = remember { OverlayHost() }
+                        Box(Modifier.fillMaxSize()) {
+                            CompositionLocalProvider(LocalOverlayHost provides overlay) {
+                                when (place) {
+                                    TvPlace.Home -> {
+                                        val state by home.state.collectAsStateWithLifecycle()
+                                        TvHomeScreen(
+                                            state, onOpen = nav::open, onPlay = nav::play, onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
+                                            onFinish = home::finishWatching,
+                                        )
+                                    }
+                                    TvPlace.Search -> TvSearchPlace()
+                                    TvPlace.Movies -> LibraryPlace(home, CollectionType.MOVIES)
+                                    TvPlace.Shows -> LibraryPlace(home, CollectionType.TVSHOWS)
+                                    TvPlace.LiveTv -> TvLiveTvPlace()
+                                    TvPlace.Favorites -> TvFavoritesPlace()
+                                    TvPlace.Requests -> TvRequestsPlace(onSearch = { place = TvPlace.Search })
                                 }
-                                TvPlace.Search -> TvSearchPlace()
-                                TvPlace.Movies -> LibraryPlace(home, CollectionType.MOVIES)
-                                TvPlace.Shows -> LibraryPlace(home, CollectionType.TVSHOWS)
-                                TvPlace.LiveTv -> TvLiveTvPlace()
-                                TvPlace.Favorites -> TvFavoritesPlace()
-                                TvPlace.Requests -> TvRequestsPlace(onSearch = { place = TvPlace.Search })
                             }
+                            TvRail(
+                                places = places,
+                                current = place,
+                                onPlace = { place = it },
+                                onProfile = { scope.launch { core.sessions.switchProfile() } },
+                                onSettings = { nav.go(TvRoute.Settings) },
+                            )
+                            overlay.content?.invoke()
                         }
-                        TvRail(
-                            places = places,
-                            current = place,
-                            onPlace = { place = it },
-                            onProfile = { scope.launch { core.sessions.switchProfile() } },
-                            onSettings = { nav.go(TvRoute.Settings) },
-                        )
-                        overlay.content?.invoke()
                     }
-                }
-                entry<TvRoute.Details> { TvDetailsRoute(it.id) }
-                entry<TvRoute.Library> { TvLibraryRoute(it.id) }
-                entry<TvRoute.Player> { TvPlayerRoute(it.id) }
-                entry<TvRoute.Settings> { TvSettingsRoute(appVersion, onPlace = { place = it; nav.back() }) }
-                entry<TvRoute.SeerrTitle> { TvSeerrTitleRoute(it.mediaType, it.tmdbId) }
-            },
-        )
+                    entry<TvRoute.Details> { TvDetailsRoute(it.id) }
+                    entry<TvRoute.Library> { TvLibraryRoute(it.id) }
+                    entry<TvRoute.Player> { TvPlayerRoute(it.id) }
+                    entry<TvRoute.Settings> { TvSettingsRoute(appVersion, onPlace = { place = it; nav.back() }) }
+                    entry<TvRoute.SeerrTitle> { TvSeerrTitleRoute(it.mediaType, it.tmdbId) }
+                },
+            )
+            // Board "Android TV · Update ready": a newer Seedy, offered over the places (never over a page or the player).
+            TvUpdatePrompt(visible = stack.size == 1, brand = session.server.seedy?.name ?: "Seedy")
+        }
     }
 }
 

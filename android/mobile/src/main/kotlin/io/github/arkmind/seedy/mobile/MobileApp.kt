@@ -92,7 +92,7 @@ import io.github.arkmind.seedy.mobile.signin.ProfilesScreen
 import io.github.arkmind.seedy.mobile.signin.QuickConnectSheet
 import io.github.arkmind.seedy.mobile.signin.SignInFor
 import io.github.arkmind.seedy.mobile.signin.UnreachableScreen
-import io.github.arkmind.seedy.mobile.update.AppUpdates
+import io.github.arkmind.seedy.mobile.update.UpdatedNotice
 import io.github.arkmind.seedy.mobile.update.UpdatePrompt
 import io.github.arkmind.seedy.player.Network
 import io.github.arkmind.seedy.player.audio.AudioEngine
@@ -105,6 +105,7 @@ import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.SessionTheme
 import io.github.arkmind.seedy.ui.theme.rememberRetryClock
 import io.github.arkmind.seedy.ui.theme.rememberViewer
+import io.github.arkmind.seedy.ui.update.AppUpdates
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
@@ -116,7 +117,10 @@ fun MobileApp(core: SeedyCore, appVersion: String = "") {
     var quickConnectNext by rememberSaveable { mutableStateOf(false) }
     val finderQuickConnect = { quickConnectNext = true }
     val context = LocalContext.current
-    LaunchedEffect(Unit) { AppUpdates.start(context) }
+    LaunchedEffect(Unit) {
+        UpdatedNotice.clear(context)
+        AppUpdates.start(context)
+    }
     SessionTheme(state) {
         when (val s = state) {
             SessionState.Starting -> Unit

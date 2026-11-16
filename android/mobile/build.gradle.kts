@@ -28,8 +28,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.work.runtime)
-    // Google Play's in-app updates (the update screen, when Seedy came from Play).
-    implementation(libs.play.app.update)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.roborazzi)

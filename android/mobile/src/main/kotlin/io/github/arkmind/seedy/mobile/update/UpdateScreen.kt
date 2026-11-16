@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.i18n.I18n
 import io.github.arkmind.seedy.core.i18n.Lang
 import io.github.arkmind.seedy.core.i18n.t
-import io.github.arkmind.seedy.core.photos.bytesLabel
 import io.github.arkmind.seedy.core.update.InstallState
 import io.github.arkmind.seedy.core.update.ReleaseItem
 import io.github.arkmind.seedy.core.update.UpdateOffer
@@ -54,7 +53,7 @@ import io.github.arkmind.seedy.ui.icons.WebIcons
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
-import kotlin.math.roundToInt
+import io.github.arkmind.seedy.ui.update.sourceLine
 
 /** The board's Update button icon (a taller arrow than the web's Download). */
 private val UpdateIcon = IconDef(2.4f, "M12 3v12", "M7 10l5 5 5-5", "M5 20h14")
@@ -79,7 +78,7 @@ fun UpdateScreen(
     val top = max(40.dp, WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 16.dp)
     val bottom = max(28.dp, WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 12.dp)
     BoxWithConstraints(Modifier.fillMaxSize().background(SeedyColors.Bg).blockTaps()) {
-        DeepSea(DeepScenes.PhoneUpdate, glow = accent)
+        DeepSea(DeepScenes.PhoneUpdate)
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = maxHeight).padding(start = 20.dp, end = 20.dp, top = top, bottom = bottom),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -120,7 +119,7 @@ fun UpdateScreen(
                 when {
                     failed?.download == true -> t("Couldn’t download the update. Check your connection, then try again.")
                     failed != null -> t("Android couldn’t install the update.")
-                    else -> sourceLine(offer)
+                    else -> sourceLine(offer, wifi = true)
                 },
                 Modifier.padding(top = 18.dp), size = 12.sp, color = if (failed != null) SeedyColors.Danger else SeedyColors.Text3, align = TextAlign.Center,
             )
@@ -185,22 +184,5 @@ private fun ItemRow(item: ReleaseItem, accent: Color) {
             SText(title, size = 14.sp, weight = 800, color = SeedyColors.White)
             if (text != null) SText(text, size = 12.sp, lineHeight = 1.4f, color = SeedyColors.Text3)
         }
-    }
-}
-
-/** "18.4 MB · about 20 seconds on Wi‑Fi · from Google Play". */
-private fun sourceLine(offer: UpdateOffer): String = listOfNotNull(
-    offer.bytes?.let(::bytesLabel),
-    offer.bytes?.let(::wifiTime),
-    if (offer.fromPlay) t("from Google Play") else t("from GitHub"),
-).joinToString(" · ")
-
-/** How long the download takes at about 1 MB/s, in tens of seconds or whole minutes. */
-private fun wifiTime(bytes: Long): String {
-    val s = bytes / 1_000_000.0
-    return when {
-        s < 55 -> t("about {n} seconds on Wi‑Fi", "n" to ((s / 10).roundToInt() * 10).coerceAtLeast(10))
-        s < 90 -> t("about a minute on Wi‑Fi")
-        else -> t("about {n} minutes on Wi‑Fi", "n" to (s / 60).roundToInt())
     }
 }

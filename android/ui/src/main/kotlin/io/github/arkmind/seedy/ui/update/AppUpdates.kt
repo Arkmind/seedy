@@ -1,4 +1,4 @@
-package io.github.arkmind.seedy.mobile.update
+package io.github.arkmind.seedy.ui.update
 
 import android.content.Context
 import android.content.Intent
@@ -25,6 +25,9 @@ import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.UpdateAvailability
 import com.google.android.play.core.ktx.requestAppUpdateInfo
 import io.github.arkmind.seedy.core.data.io
+import io.github.arkmind.seedy.core.i18n.t
+import io.github.arkmind.seedy.core.photos.bytesLabel
+import io.github.arkmind.seedy.core.update.InstallState
 import io.github.arkmind.seedy.core.update.ApkInstaller
 import io.github.arkmind.seedy.core.update.Releases
 import io.github.arkmind.seedy.core.update.UpdateOffer
@@ -36,9 +39,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
- * The phone's "is there a newer Seedy?" check, once per run of the app. Installed from Google Play, Play says whether
+ * The apps' "is there a newer Seedy?" check (phone and TV), once per run of the app. Installed from Google Play, Play says whether
  * there's an update (and its size); anywhere else, GitHub's releases do (asked at most every 6 hours). Either way the
  * update screen's list comes from the release's description on GitHub. Debug builds never check.
  */
@@ -59,7 +63,6 @@ object AppUpdates {
         if (started) return
         started = true
         val app = context.applicationContext
-        UpdatedNotice.clear(app)
         if (app.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) return
         scope.launch { offer = runCatching { check(app) }.getOrNull() }
     }
@@ -124,18 +127,20 @@ object AppUpdates {
         if (Build.VERSION.SDK_INT >= 28) longVersionCode else @Suppress("DEPRECATION") versionCode.toLong()
 }
 
+/** What an update screen's buttons do, and where the APK's install is at. */
+class UpdateActions(val install: InstallState, val onUpdate: () -> Unit, val onLater: () -> Unit, val onChanges: () -> Unit)
+
 /**
- * The update screen over the phone's tabs while there's an update to offer ([visible]: only at the top of the tabs,
- * never over the player or a book). Update starts Google Play's own update screen; outside Play, the APK downloads and
- * installs from here (the browser takes it on a build without the updater).
+ * The update screens' buttons (phone and TV). Update starts Google Play's own update screen; outside Play, the APK
+ * downloads and installs from the app (after Android's "Install unknown apps", asked once), or the browser takes it on
+ * a build without the updater. Later stops a download and waits a week. "See everything that changed" opens the
+ * release.
  */
 @Composable
-fun UpdatePrompt(visible: Boolean) {
-    val offer = AppUpdates.offer ?: return
-    if (!visible) return
+fun rememberUpdateActions(offer: UpdateOffer): UpdateActions {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    // A finished update restarts the app; a cancelled one comes back to this screen as it was.
+    // A finished update restarts the app; a cancelled one comes back to the screen as it was.
     val play = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { }
     val install by ApkInstaller.state.collectAsState()
     // Back from "Install unknown apps": the download starts once Seedy may install.
@@ -146,9 +151,8 @@ fun UpdatePrompt(visible: Boolean) {
             if (context.packageManager.canRequestPackageInstalls()) AppUpdates.install(context, offer)
         }
     }
-    UpdateScreen(
-        offer = offer,
-        installed = AppUpdates.installed,
+    return UpdateActions(
+        install = install,
         onUpdate = {
             if (offer.fromPlay) {
                 scope.launch {
@@ -161,12 +165,15 @@ fun UpdatePrompt(visible: Boolean) {
                     if (!started) context.openUrl("market://details?id=${context.packageName}")
                 }
             } else if (offer.apkUrl != null && ApkInstaller.available(context)) {
-                // Android's "Install unknown apps" first (asked once): going there mid-install would cancel it.
+                // Android's "Install unknown apps" first: going there in the middle of an install cancels it.
+                val settings = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
                 if (context.packageManager.canRequestPackageInstalls()) {
                     AppUpdates.install(context, offer)
-                } else {
+                } else if (runCatching { context.startActivity(settings) }.isSuccess) {
                     allowing = true
-                    runCatching { context.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))) }
+                } else {
+                    // No such page on this device: Android's install dialog asks instead.
+                    AppUpdates.install(context, offer)
                 }
             } else {
                 context.openUrl(offer.apkUrl ?: offer.url)
@@ -175,6 +182,28 @@ fun UpdatePrompt(visible: Boolean) {
         },
         onLater = { AppUpdates.later(context) },
         onChanges = { context.openUrl(offer.url) },
-        install = install,
     )
 }
+
+/** About how long the download takes at about 1 MB/s, in tens of seconds or whole minutes ([wifi]: "… on Wi‑Fi"). */
+fun downloadTime(bytes: Long, wifi: Boolean): String {
+    val s = bytes / 1_000_000.0
+    return when {
+        s < 55 -> {
+            val n = ((s / 10).roundToInt() * 10).coerceAtLeast(10)
+            if (wifi) t("about {n} seconds on Wi‑Fi", "n" to n) else t("about {n} seconds", "n" to n)
+        }
+        s < 90 -> if (wifi) t("about a minute on Wi‑Fi") else t("about a minute")
+        else -> {
+            val n = (s / 60).roundToInt()
+            if (wifi) t("about {n} minutes on Wi‑Fi", "n" to n) else t("about {n} minutes", "n" to n)
+        }
+    }
+}
+
+/** "18.4 MB · about 20 seconds on Wi‑Fi · from Google Play" ([wifi]: the phone's). */
+fun sourceLine(offer: UpdateOffer, wifi: Boolean): String = listOfNotNull(
+    offer.bytes?.let(::bytesLabel),
+    offer.bytes?.let { downloadTime(it, wifi) },
+    if (offer.fromPlay) t("from Google Play") else t("from GitHub"),
+).joinToString(" · ")
