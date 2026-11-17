@@ -126,7 +126,7 @@ class Home(private val session: UserSession) {
     }
 
     /** Next up, following Settings · Home screen: shows dropped after N days, rewatches included or not. */
-    private suspend fun nextUp(limit: Int, seriesId: UUID? = null): List<BaseItemDto> {
+    internal suspend fun nextUp(limit: Int, seriesId: UUID? = null): List<BaseItemDto> {
         val custom = session.seedy?.prefs?.custom.orEmpty()
         val days = custom["home.nextUpDays"]?.jsonPrimitive?.intOrNull ?: 365
         val rewatching = custom["home.rewatching"]?.jsonPrimitive?.booleanOrNull ?: false

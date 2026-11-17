@@ -170,6 +170,25 @@ class Sessions(context: Context, private val jellyfin: Jellyfin, private val sto
         open(fresh(server), account, apiFor(server, deviceId, token), user)
     }
 
+    /**
+     * A session for work done away from the screens (the TV home screen's rows): the open one when it's this profile's,
+     * else a new one that leaves what the app shows alone. Null without a token; throws when the server says no (401:
+     * signed out elsewhere) or doesn't answer.
+     */
+    suspend fun background(server: SavedServer, account: SavedAccount): UserSession? {
+        (state.value as? SessionState.SignedIn)?.session
+            ?.takeIf { it.server.id == server.id && it.account.userId == account.userId }
+            ?.let { return it }
+        val token = tokenFor(server, account) ?: return null
+        return withContext(Dispatchers.IO) {
+            val api = apiFor(server, account.deviceId, token)
+            val user = api.userApi.getCurrentUser().content
+            val seedy = SeedyApi.probe(api, unanswered = server.seedy)
+            val me = if (seedy != null) runCatching { SeedyApi(api).me() }.getOrNull() else null
+            UserSession(server.copy(seedy = seedy), account, api, user, me)
+        }
+    }
+
     /** Back to "Who's watching?"; every saved session stays. */
     suspend fun switchProfile() {
         val server = when (val s = state.value) {

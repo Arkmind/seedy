@@ -20,6 +20,8 @@ import io.github.arkmind.seedy.mobile.MobileApp
 import io.github.arkmind.seedy.mobile.notify.RequestAlerts
 import io.github.arkmind.seedy.mobile.notify.RequestLinks
 import io.github.arkmind.seedy.tv.TvApp
+import io.github.arkmind.seedy.tv.watchnext.WatchNext
+import io.github.arkmind.seedy.tv.watchnext.WatchNextLinks
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -35,14 +37,15 @@ import kotlinx.serialization.json.jsonPrimitive
 /** One activity for phones and TVs: the TV screens on a television, the phone screens everywhere else. */
 class MainActivity : ComponentActivity() {
     private var ready = false
+    private var tv = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen().setKeepOnScreenCondition { !ready }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val core = (application as SeedyApp).core
-        val tv = isTelevision()
-        if (!tv) RequestLinks.take(this, intent)
+        tv = isTelevision()
+        if (tv) WatchNextLinks.take(intent) else RequestLinks.take(this, intent)
 
         lifecycleScope.launch {
             // The language this device showed last, so the first screen is already in it; then the session.
@@ -52,7 +55,7 @@ class MainActivity : ComponentActivity() {
             if (core.sessions.state.value == SessionState.Starting) core.sessions.start()
         }
 
-        if (!tv) watchRequests(core)
+        if (tv) WatchNext.watch(this, core) else watchRequests(core)
 
         // The profile's language (Settings · Display) wins once someone is signed in with Seedy; without the plugin,
         // the one chosen on this device. A change reloads the activity into it.
@@ -90,10 +93,10 @@ class MainActivity : ComponentActivity() {
         return super.dispatchKeyEvent(event)
     }
 
-    /** Phones: a request notification tapped while the app is open. */
+    /** Phones: a request notification tapped while the app is open; TVs: a card from the home screen's row. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        RequestLinks.take(this, intent)
+        if (tv) WatchNextLinks.take(intent) else RequestLinks.take(this, intent)
     }
 
     /**
