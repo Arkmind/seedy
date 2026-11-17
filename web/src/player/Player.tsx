@@ -31,6 +31,7 @@ import { EndOfMovie, type TileRect } from './EndOfMovie';
 import { EpisodesPanel } from './EpisodesPanel';
 import { externalApps, openExternal } from './external';
 import { keyAction } from './keys';
+import { cropRect, useBlackBars, useViewport } from './bars';
 import { MediaBridge } from './media';
 import { useNativeCues } from './native-cues';
 import { PausedOverlay } from './PausedOverlay';
@@ -1307,9 +1308,27 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     return () => window.clearTimeout(t);
   }, [endShown]);
 
-  const videoStyle = endShown && tile
-    ? { left: tile.left + 'px', top: tile.top + 'px', width: tile.width + 'px', height: tile.height + 'px' }
+  /* Black bars baked into the frame leave the screen when it is wider than the frame (not with burnt-in subtitles,
+     which may sit in them). */
+  const bars = useBlackBars(item, source?.Id, !isAudio && !stream?.burnIn, () => (soft ? null : mediaRef.current));
+  const viewport = useViewport();
+  const crop = bars && !endShown
+    ? cropRect(bars, m.vw || videoStream(source)?.Width || 0, m.vh || videoStream(source)?.Height || 0, viewport.w, viewport.h)
+    : null;
+  /* The zoom eases in once; after that the frame follows the window without easing. */
+  const [cropSettled, setCropSettled] = useState(false);
+  useEffect(() => {
+    setCropSettled(false);
+    if (!bars) return;
+    const t = window.setTimeout(() => setCropSettled(true), 650);
+    return () => window.clearTimeout(t);
+  }, [bars]);
+
+  const box = endShown && tile ? tile : crop;
+  const videoStyle = box
+    ? { left: box.left + 'px', top: box.top + 'px', width: box.width + 'px', height: box.height + 'px' }
     : undefined;
+  const settled = endShown ? tileSettled : !!crop && cropSettled;
 
   const rootCls = [
     'pl-root',
@@ -1344,7 +1363,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
 
       <video
         ref={mediaRef}
-        class={'pl-video' + (endShown ? ' is-tile' : '') + (endShown && tileSettled ? ' is-settled' : '') + (isAudio || soft ? ' is-hidden' : '')}
+        class={'pl-video' + (endShown ? ' is-tile' : '') + (settled ? ' is-settled' : '') + (isAudio || soft ? ' is-hidden' : '')}
         style={videoStyle}
         playsInline
         preload="auto"
@@ -1352,7 +1371,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
       />
       <div
         ref={softRef}
-        class={'pl-video pl-soft' + (endShown ? ' is-tile' : '') + (endShown && tileSettled ? ' is-settled' : '') + (soft ? '' : ' is-hidden')}
+        class={'pl-video pl-soft' + (endShown ? ' is-tile' : '') + (settled ? ' is-settled' : '') + (soft ? '' : ' is-hidden')}
         style={videoStyle}
         role={soft ? 'img' : undefined}
         aria-label={soft ? item.Name : undefined}
@@ -1394,6 +1413,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
           fit={dev.pictureFit}
           videoWidth={m.vw || videoStream(source)?.Width || 0}
           videoHeight={m.vh || videoStream(source)?.Height || 0}
+          frame={crop}
         />
       )}
 
