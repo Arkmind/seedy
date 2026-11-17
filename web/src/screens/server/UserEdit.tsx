@@ -160,6 +160,7 @@ export function ServerUserEdit({ id }: { id: string }) {
       wide
       overline={<>{overline}<UserAvatar user={user} index={index} size={72} disabled={d.policy.IsDisabled} imgVersion={imgVersion} /></>}
       title={<NameEditor name={d.name} onChange={setName} />}
+      tab={user.Name}
       lede={<span class="srv-ue-status"><span class={'srv-ue-dot' + (pres.online ? ' is-on' : '')} />{pres.text}</span>}
       actions={<HeaderActions user={user} isMe={isMe} onPhoto={() => { setImgVersion((v) => v + 1); loaded.reload(); }} />}
     >

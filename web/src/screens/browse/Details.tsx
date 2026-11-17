@@ -32,6 +32,7 @@ import { BookDetails } from '../books/BookDetails';
 import { asBook, getAudiobook, withPlace } from '../../audio/api';
 import { PhotoAlbumPage } from '../photos/Album';
 import { ancestorsOf, isPhotoLibrary } from '../photos/api';
+import { itemTitle, useTitle } from '../../lib/title';
 
 /* An audiobook in several files opens as the book: its folder, or any of its files. */
 async function asAudiobook(item: BaseItem): Promise<BaseItem> {
@@ -44,6 +45,7 @@ async function asAudiobook(item: BaseItem): Promise<BaseItem> {
 export function Details({ id }: { id: string }) {
   const [version, setVersion] = useState(0);
   const { data: item, error, loading, reload } = useAsync(() => getItem(id).then(asAudiobook), [id, version]);
+  useTitle(t('Details'), itemTitle(item));
   /* A dialog changed this title (metadata, match, images) or deleted it. */
   const managed = useStore(manageChanged);
   useEffect(() => {

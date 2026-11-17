@@ -21,6 +21,7 @@ import { useRequestActions, useSummary, type RequestActions } from './parts';
 import { meStore } from '../../lib/app-state';
 import { useStore } from '../../lib/store';
 import { actLine, aheadDate, requesterName } from './wording';
+import { useTitle } from '../../lib/title';
 
 /* My requests and All requests (RequestsMine board): everything asked for, from Seerr, Lidarr, Shelfarr and Librarr,
    in one list. Each row shows where the request is on its way (Asked → Approved → Searching → Downloading → Ready),
@@ -122,6 +123,7 @@ export function RequestsMine({ scope }: { scope: 'mine' | 'all' }) {
   const me = useStore(meStore);
   const loc = useLocation();
   const everyone = scope === 'all';
+  useTitle(everyone ? t('All requests') : t('My requests'), t('Requests'));
   const type = (['movies', 'music', 'books'] as Service[]).find((s) => s === loc.query.get('type') && services.includes(s)) ?? null;
   const show = SHOWS.find((s) => s.value === loc.query.get('show'))?.value ?? 'all';
   const seerrSummary = useSummary(services.includes('movies'));

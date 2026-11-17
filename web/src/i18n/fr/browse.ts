@@ -416,6 +416,7 @@ const fr: Record<string, string> = {
   "Well, you found Medu": "Eh bien, vous avez trouvé Medu",
   "This title swam off.": "Ce titre s’est fait la malle.",
   "This page swam off.": "Cette page s’est fait la malle.",
+  "Page not found": "Page introuvable",
   "Medu has been looking everywhere. It may have been removed from the server, or it’s outside what this profile can see.": "Medu a cherché partout. Il a peut-être été retiré du serveur, ou ce profil ne peut pas le voir.",
   "Medu has been looking everywhere. The link may be old, or the page has moved.": "Medu a cherché partout. Le lien est peut-être ancien, ou la page a changé de place.",
   "Search Seedy": "Rechercher dans Seedy",

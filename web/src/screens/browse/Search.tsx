@@ -17,6 +17,7 @@ import { addRecent } from '../../ui/search/recent';
 import { useRequests } from './parts';
 import './search.css';
 import { t } from '../../lib/i18n';
+import { useTitle } from '../../lib/title';
 
 /* Search (Search board): the bar's box holds the query; the page shows everything the bar's dropdown sums up as
    "All N results", then "Request it" from Seerr when nothing in the library matches. `?genre=` lists a genre
@@ -31,6 +32,7 @@ export function Search() {
   const loc = useLocation();
   const q = (loc.query.get('q') ?? '').trim();
   const genre = (loc.query.get('genre') ?? '').trim();
+  useTitle(t('Search'), q || genre);
 
   /* What was searched is remembered when the person opens a result or leaves the page. */
   const lastQ = useRef(q);

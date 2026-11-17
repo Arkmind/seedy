@@ -6,6 +6,7 @@ import * as jf from '../api/jellyfin';
 import * as seedy from '../api/seedy';
 import type { AuthResult, BaseItem, User } from '../api/types';
 import { createStore } from './store';
+import { setTitleBrand } from './title';
 
 /* Subtitles at the normal size, lifted above the controls while they show. */
 export const DEFAULT_SUBTITLES: seedy.SubtitlePrefs = { size: 'M', lift: true };
@@ -59,7 +60,7 @@ export function applyBranding(b: seedy.Branding) {
   brandingStore.set(b);
   const accent = /^#[0-9a-f]{6}$/i.test(b.accent) ? b.accent : DEFAULT_BRANDING.accent;
   document.documentElement.style.setProperty('--seedy-accent', accentFilter(accent));
-  document.title = b.name || 'Seedy';
+  setTitleBrand(b.name);
   setFavicon(seedy.faviconUrl(b));
 }
 

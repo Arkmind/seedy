@@ -9,6 +9,7 @@ import { Medu } from '../ui/medu';
 import { SAND_BACK, SAND_FRONT, Sea, Weed, type Bubble, type Fish, type Flake, type Ray } from '../ui/sea';
 import { ago } from './server/format';
 import './not-found.css';
+import { useTitle } from '../lib/title';
 
 // Can't reach the server board: shown when the server stops answering at start-up (restarting, network down).
 // Medu has dropped the cable; Seedy keeps the session and quietly tries again on its own, a little less often each
@@ -46,6 +47,7 @@ export function Unreachable() {
   const [left, setLeft] = useState(WAITS[0]);
   const [checking, setChecking] = useState(false);
   const [back, setBack] = useState(false);
+  useTitle(back ? t('Back online') : t('Can’t reach your server'));
   const seen = lastSeen();
 
   // Ask the server without leaving this page; Seedy starts once Medu has said hello.

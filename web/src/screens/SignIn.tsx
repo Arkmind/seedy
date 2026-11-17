@@ -14,6 +14,7 @@ import { Sea, type Bubble, type Flake, type Ray } from '../ui/sea';
 import { t } from '../lib/i18n';
 import { hhmm24 } from '../lib/format';
 import './sign-in.css';
+import { useTitle } from '../lib/title';
 
 /* Sign in over slowly crossfading library backdrops (admin Branding setting). "Who's watching?" shows the users the
    server lists on its sign-in screen (Jellyfin's "Hide this user from login screens" leaves one out); picking one asks
@@ -50,6 +51,7 @@ function stripTags(html: string): string {
 }
 
 export function SignIn() {
+  useTitle(t('Sign in'));
   const brand = useStore(brandingStore);
   const [step, setStep] = useState<Step | null>(null);
   const [users, setUsers] = useState<User[]>([]);

@@ -5,6 +5,7 @@ import { Link, navigate } from '../../lib/router';
 import { AccountButton, Brand } from '../../ui/navbar/Header';
 import { useStickyHeader } from '../../ui/sticky';
 import { useStore } from '../../lib/store';
+import { useTitle } from '../../lib/title';
 import { pluginUpdatesStore } from '../server/status';
 import { canLeave, hasUnsavedChanges } from './config';
 import { t, tn } from '../../lib/i18n';
@@ -77,9 +78,11 @@ function guardLinks(e: MouseEvent) {
   canLeave().then((ok) => { if (ok) navigate(path + url.search, { force: true }); });
 }
 
-export function AdminLayout({ page, title, lede, children, wide, actions, overline, banner }: {
+export function AdminLayout({ page, title, tab, lede, children, wide, actions, overline, banner }: {
   page: AdminPage;
   title: ComponentChildren;
+  /* What the browser tab says before the section's name, on a page inside a section (a user's name). */
+  tab?: string;
   lede?: ComponentChildren;
   children: ComponentChildren;
   /* Server dashboard pages use the wider 1020 px column. */
@@ -94,6 +97,7 @@ export function AdminLayout({ page, title, lede, children, wide, actions, overli
   const nav = useRef<HTMLElement>(null);
   const header = useStickyHeader<HTMLElement>();
   const updates = useStore(pluginUpdatesStore);
+  useTitle(tab, t(ADMIN_NAV.flatMap((g) => g.items).find((p) => p.id === page)!.label), t('Admin'));
   /* On phones the section nav scrolls sideways; bring the current page into view. */
   useLayoutEffect(() => {
     const el = nav.current;
