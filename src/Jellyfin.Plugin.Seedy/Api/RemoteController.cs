@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Jellyfin.Data;
-using Jellyfin.Database.Implementations.Enums;
 using Jellyfin.Plugin.Seedy.Services;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
@@ -54,7 +52,7 @@ public class RemoteController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>The states of the screens this person may control: their own, everyone's with remote control of others.</summary>
+    /// <summary>The states of the screens this person may control: their own (see <see cref="RemoteControlGuard"/>).</summary>
     /// <returns>States.</returns>
     [HttpGet("States")]
     public ActionResult<List<RemoteStateDto>> GetStates()
@@ -65,8 +63,7 @@ public class RemoteController : ControllerBase
             return Unauthorized();
         }
 
-        var everyone = user.HasPermission(PermissionKind.EnableRemoteControlOfOtherUsers);
-        return _states.For(everyone ? null : new[] { user.Id })
+        return _states.For(new[] { user.Id })
             .Select(s => new RemoteStateDto
             {
                 DeviceId = s.DeviceId,

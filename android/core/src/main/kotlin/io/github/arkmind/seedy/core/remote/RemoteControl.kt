@@ -128,7 +128,8 @@ class RemoteControl private constructor(private val session: UserSession) {
         val byDevice = states.associateBy { it.deviceId }
         val previous = _state.value.screens.orEmpty().associateBy { it.deviceId }
         val screens = sessions
-            .filter { it.supportsRemoteControl && !it.deviceId.isNullOrEmpty() && it.deviceId != myDevice }
+            // Only screens signed in as this person: Seedy's server refuses commands to anyone else's (RemoteControlGuard).
+            .filter { it.userId == session.userId && it.supportsRemoteControl && !it.deviceId.isNullOrEmpty() && it.deviceId != myDevice }
             .distinctBy { it.deviceId }
             .map { remoteScreen(it, byDevice[it.deviceId], now) }
             .map { s -> keepRunning(s, previous[s.deviceId], now) }

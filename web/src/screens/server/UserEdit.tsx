@@ -364,8 +364,6 @@ function AccountTab({ p, name, isMe, set }: { p: FullPolicy; name: string; isMe:
         <SwitchRow name={t('Manage subtitles')} help={t('Search for and remove subtitles')} checked={p.EnableSubtitleManagement} onChange={(v) => set('EnableSubtitleManagement', v)} />
         <SwitchRow name={t('Live TV')} help={t('Watch channels')} checked={p.EnableLiveTvAccess} onChange={(v) => set('EnableLiveTvAccess', v)} />
         <SwitchRow name={t('Manage Live TV recordings')} help={t('Schedule and delete recordings')} checked={p.EnableLiveTvManagement} onChange={(v) => set('EnableLiveTvManagement', v)} />
-        <SwitchRow name={t('Control other users’ sessions')} help={t('Send commands to someone else’s playback')} checked={p.EnableRemoteControlOfOtherUsers} onChange={(v) => set('EnableRemoteControlOfOtherUsers', v)} />
-        <SwitchRow name={t('Control shared devices')} help={t('Play to devices like smart TVs')} checked={p.EnableSharedDeviceControl} onChange={(v) => set('EnableSharedDeviceControl', v)} />
       </Panel>
     </>
   );
