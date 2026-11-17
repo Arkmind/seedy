@@ -1,11 +1,12 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { audioStore, holdSession, pause as pauseMusic, play as playMusic, releaseSession } from '../audio/engine';
 import { bootState } from '../lib/app-state';
-import { t } from '../lib/i18n';
+import { t, tn } from '../lib/i18n';
 import { safeLocal, saveLocal } from '../lib/store';
 import { CUSTOM, readCustom, saveCustom } from '../screens/me/prefs';
+import { Icon, volumeIcon } from '../ui/icons';
 import { Medu, type MeduMood } from '../ui/medu';
-import { BEAT, BPM, LANES, LEVELS, LIVES, Run, formatScore, type Judgment, type Level } from './game';
+import { BEAT, BPM, LANES, LEVELS, LIVES, Run, formatScore, stepCount, type Judgment, type Level } from './game';
 import song from './smack-attack.mp3';
 import './party.css';
 
@@ -16,17 +17,21 @@ import './party.css';
 const BOARD_W = 1440;
 const BOARD_H = 900;
 
-/* The arrow lane: receptors 66 px apart at the top, notes rising from the bottom at 150 px a beat. */
+/* The arrow lane: receptors 66 px apart at the top, notes rising from the bottom at 150 px a beat (Drift's drift slower,
+   Abyssal's rise faster so its sixteenths stay apart). */
 const LANE_H = 470;
 const HIT_Y = 16;
 const LANE_X = (lane: number) => 14 + lane * 66;
-const SPEED = 150 / BEAT;
-const LEAD = (LANE_H - HIT_Y) / SPEED + 0.1;
+const SCROLL: Record<Level, number> = { Drift: 120, Light: 150, Swell: 150, Tentacular: 150, Abyssal: 190 };
+const LEVEL_COLOURS: Record<Level, string> = { Drift: '#9fd3ff', Light: '#9fe0b0', Swell: '#fff59f', Tentacular: '#ffc98a', Abyssal: '#ff9fff' };
 const COLOURS = ['#ff9fff', '#9fd3ff', '#9fe0b0', '#ffc98a'];
 const TURN = [-90, 180, 0, 90];
 const KEYS: Record<string, number> = { ArrowLeft: 0, ArrowDown: 1, ArrowUp: 2, ArrowRight: 3 };
 const LEAVE = ['Escape', 'Backspace', 'BrowserBack', 'GoBack'];
 const LEVEL_KEY = 'seedy.party.level';
+const VOLUME_KEY = 'seedy.party.volume';
+/* The song is mastered loud (about −10 LUFS, hotter than most music): the party starts at 40 %. */
+const VOLUME = 0.4;
 
 type Phase = 'loading' | 'blocked' | 'playing' | 'clear' | 'over';
 interface Hud { score: number; combo: number; lives: number; judge: Judgment | null; n: number }
@@ -132,16 +137,18 @@ function LanePanel({ run, clock, ctl, onMiss, foot, onFoot }: {
   }, []);
 
   const notes = run.current.notes;
+  const speed = SCROLL[run.current.level] / BEAT;
+  const lead = (LANE_H - HIT_Y) / speed + 0.1;
   // The first note still on screen (missed ones keep rising past the receptors for a moment).
   let lo = 0;
   let hi = notes.length;
   while (lo < hi) { const mid = (lo + hi) >> 1; if (notes[mid].t < now - 0.5) lo = mid + 1; else hi = mid; }
   const shown = [];
-  for (let i = lo; i < notes.length && notes[i].t < now + LEAD; i++) {
+  for (let i = lo; i < notes.length && notes[i].t < now + lead; i++) {
     const n = notes[i];
     if (n.result && n.result !== 'miss') continue;
     shown.push(
-      <span key={i} class={'party-note' + (n.result ? ' is-missed' : '')} style={{ left: LANE_X(n.lane) + 'px', transform: `translateY(${(HIT_Y + (n.t - now) * SPEED).toFixed(1)}px)` }}>
+      <span key={i} class={'party-note' + (n.result ? ' is-missed' : '')} style={{ left: LANE_X(n.lane) + 'px', transform: `translateY(${(HIT_Y + (n.t - now) * speed).toFixed(1)}px)` }}>
         <Arrow lane={n.lane} fill={COLOURS[n.lane]} stroke={COLOURS[n.lane]} glow />
       </span>
     );
@@ -179,6 +186,11 @@ export function Party({ onClose }: { onClose: () => void }) {
   phaseRef.current = phase;
   const [paused, setPaused] = useState(true);
   const [muted, setMuted] = useState(false);
+  const [volume, setVolume] = useState(() => { const v = safeLocal<unknown>(VOLUME_KEY, VOLUME); return typeof v === 'number' && v >= 0 && v <= 1 ? v : VOLUME; });
+  const [picking, setPicking] = useState(false);
+  const resumeAfterPick = useRef(false);
+  const levelRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [hud, setHud] = useState<Hud>({ score: 0, combo: 0, lives: LIVES, judge: null, n: 0 });
   const [offer, setOffer] = useState(() => bootState.get() === 'ready' && readCustom(CUSTOM.disco) === null);
   const cardId = useId();
@@ -211,20 +223,48 @@ export function Party({ onClose }: { onClose: () => void }) {
     if (a.paused) { setPhase('loading'); start(); } else setPhase('playing');
   };
 
+  const changeVolume = (v: number) => {
+    const next = Math.round(Math.max(0, Math.min(1, v)) * 100) / 100;
+    setVolume(next);
+    setMuted(false);
+    saveLocal(VOLUME_KEY, next);
+  };
+  // At 0 the speaker brings the sound back rather than muting silence.
+  const toggleMute = () => (volume === 0 ? changeVolume(VOLUME) : setMuted((m) => !m));
+
+  /* The difficulty menu holds the song while it's open; a new chart starts it again from the top. */
+  const openPicker = () => {
+    const a = audioRef.current;
+    resumeAfterPick.current = !!a && !a.paused;
+    a?.pause();
+    setPicking(true);
+  };
+  const closePicker = (choice: Level | null, keyboard: boolean) => {
+    setPicking(false);
+    (keyboard ? levelRef.current : rootRef.current)?.focus({ preventScroll: true });
+    const resume = resumeAfterPick.current;
+    resumeAfterPick.current = false;
+    if (choice && choice !== run.current.level) restart(choice);
+    else if (resume) void audioRef.current?.play().catch(() => {});
+  };
+
   /* What Enter (or the lane's foot) does: start the music the browser held back, or dance again. */
   const action = phase === 'blocked' ? start : phase === 'clear' || phase === 'over' ? () => restart() : undefined;
 
-  const live = useRef({ action, onClose, press: (_lane: number, _synthetic: boolean) => {}, mute: () => {} });
+  const live = useRef({ action, onClose, press: (_lane: number, _synthetic: boolean) => {}, mute: () => {}, louder: (_up: boolean) => {}, picking, closePicker });
   live.current = {
     action,
     onClose,
+    picking,
+    closePicker,
     press: (lane, synthetic) => {
       const r = run.current;
       const j = phaseRef.current === 'playing' && !r.over ? r.hit(lane, clock()) : null;
       ctl.current.press(lane, !!j, synthetic);
       if (j) show(j);
     },
-    mute: () => setMuted((m) => !m)
+    mute: toggleMute,
+    louder: (up) => changeVolume(up ? (muted ? 0 : volume) + 0.1 : volume - 0.1)
   };
 
   useLayoutEffect(() => {
@@ -232,6 +272,13 @@ export function Party({ onClose }: { onClose: () => void }) {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    a.volume = volume;
+    a.muted = muted;
+  }, [volume, muted]);
 
   /* The song: play on open, follow its state, keep the dancers on the beat. */
   useEffect(() => {
@@ -280,9 +327,12 @@ export function Party({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
-  useEffect(() => { if (audioRef.current) audioRef.current.muted = muted; }, [muted]);
+  useEffect(() => {
+    if (picking) menuRef.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus({ preventScroll: true });
+  }, [picking]);
 
-  /* Keys: the arrows play, Esc (or a remote's Back) leaves, M mutes, Enter starts again. Nothing reaches the page. */
+  /* Keys: the arrows play, Esc (or a remote's Back) leaves, M mutes, − and + set the volume, Enter starts again.
+     Nothing reaches the page. While the difficulty menu is open, the arrows move in it and Esc closes it. */
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
     rootRef.current?.focus({ preventScroll: true });
@@ -292,15 +342,27 @@ export function Party({ onClose }: { onClose: () => void }) {
     const onDown = (e: KeyboardEvent) => {
       e.stopPropagation();
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (live.current.picking) {
+        const opts = Array.from(rootRef.current?.querySelectorAll<HTMLElement>('.party-level-option') ?? []);
+        const at = opts.indexOf(document.activeElement as HTMLElement);
+        const go = (i: number) => { e.preventDefault(); opts[(i + opts.length) % opts.length]?.focus(); };
+        if (e.key === 'ArrowDown') return go(at + 1);
+        if (e.key === 'ArrowUp') return go(at - 1);
+        if (e.key === 'Home') return go(0);
+        if (e.key === 'End') return go(opts.length - 1);
+        if (LEAVE.includes(e.key) || e.key === 'Tab') { e.preventDefault(); live.current.closePicker(null, true); return; }
+        if (KEYS[e.key] !== undefined) { e.preventDefault(); return; }
+      }
       const lane = KEYS[e.key];
       if (lane !== undefined) { e.preventDefault(); if (!e.repeat) live.current.press(lane, !e.isTrusted); return; }
       if (LEAVE.includes(e.key)) { e.preventDefault(); live.current.onClose(); return; }
       if (e.key === 'm' || e.key === 'M') { live.current.mute(); return; }
+      if (e.key === '-' || e.key === '_' || e.key === '+' || e.key === '=') { e.preventDefault(); live.current.louder(e.key === '+' || e.key === '='); return; }
       const onButton = !!(e.target as Element | null)?.closest?.('button');
       if ((e.key === 'Enter' || e.key === ' ') && !onButton) { e.preventDefault(); live.current.action?.(); return; }
       if (e.key === 'Tab') {
         // Focus stays in the party.
-        const els = Array.from(rootRef.current?.querySelectorAll<HTMLElement>('button:not([disabled])') ?? []);
+        const els = Array.from(rootRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input') ?? []);
         if (!els.length) return;
         e.preventDefault();
         const i = els.indexOf(document.activeElement as HTMLElement);
@@ -340,7 +402,7 @@ export function Party({ onClose }: { onClose: () => void }) {
   const foot = phase === 'blocked' ? t('Press Enter to start the music')
     : ended ? t('Press Enter to dance again')
     : t('Use ← ↓ ↑ → on the keyboard, or the remote’s arrows');
-  const nextLevel = LEVELS[(LEVELS.indexOf(level) + 1) % LEVELS.length];
+  const heard = muted ? 0 : volume;
   const lifeIcons = Math.min(hud.lives, 5);
 
   return (
@@ -351,6 +413,7 @@ export function Party({ onClose }: { onClose: () => void }) {
       aria-modal="true"
       aria-label="Medu Dance Revolution"
       tabIndex={-1}
+      onPointerDown={(e) => { if (picking && !(e.target as Element).closest('.party-level-wrap')) closePicker(null, false); }}
     >
       <audio ref={audioRef} src={song} preload="auto" />
       <div ref={stageRef} class="party-stage" style={{ width: fit.w + 'px', height: fit.h + 'px', transform: `scale(${fit.s})`, '--party-beat': `${BEAT}s` }}>
@@ -364,11 +427,21 @@ export function Party({ onClose }: { onClose: () => void }) {
             <span>{t('Code accepted')}</span>
           </div>
           <div class="party-actions">
-            <button type="button" class="party-song" aria-pressed={!muted} onClick={() => setMuted((m) => !m)}>
+            <div class="party-song">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 18V5l11-2v13" /><path d="M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" /><path d="M20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" /></svg>
               <span>Smack Attack <span class="party-bpm">· {BPM} BPM</span></span>
-              <span class="party-chip">{muted ? t('Unmute') : t('Mute')}</span>
-            </button>
+              <button type="button" class={'party-mute' + (heard === 0 ? ' is-muted' : '')} aria-label={heard === 0 ? t('Unmute') : t('Mute')} title={(heard === 0 ? t('Unmute') : t('Mute')) + ' (M)'} onClick={toggleMute}>
+                <Icon name={volumeIcon(volume, muted)} size={18} />
+              </button>
+              <span class="party-volume" title={t('Volume') + ' (− +)'}>
+                <span aria-hidden="true" class="party-volume-track">
+                  <span class="party-volume-fill" style={{ width: heard * 100 + '%' }} />
+                  <span class="party-volume-thumb" style={{ left: heard * 100 + '%' }} />
+                </span>
+                <input type="range" min={0} max={100} step={5} value={Math.round(heard * 100)} aria-label={t('Volume')} aria-valuetext={t('Volume {n}%', { n: Math.round(heard * 100) })}
+                  onInput={(e) => changeVolume(Number((e.target as HTMLInputElement).value) / 100)} />
+              </span>
+            </div>
             <button type="button" class="party-leave" onClick={onClose}>{t('Leave the party')}<kbd>Esc</kbd></button>
           </div>
         </div>
@@ -417,11 +490,26 @@ export function Party({ onClose }: { onClose: () => void }) {
               <span class="party-lives-count">×{hud.lives}</span>
             </div>
           </div>
-          <button type="button" class="party-level" title={t('Change the difficulty (the song starts again)')} onClick={() => restart(nextLevel)}>
-            <span>{t('Difficulty')}</span>
-            {/* The charts' own names, like a rhythm game's levels. */}
-            <span class="party-level-name">{level}</span>
-          </button>
+          <div class="party-level-wrap">
+            <button ref={levelRef} type="button" class="party-level" aria-haspopup="menu" aria-expanded={picking} title={t('Change the difficulty (the song starts again)')}
+              onClick={(e) => (picking ? closePicker(null, e.detail === 0) : openPicker())}>
+              <span>{t('Difficulty')}</span>
+              {/* The charts' own names, like a rhythm game's levels. */}
+              <span class="party-level-name">{level}<Icon name="chevronDown" size={14} /></span>
+            </button>
+            {picking && (
+              <div ref={menuRef} role="menu" aria-label={t('Difficulty')} class="party-levels">
+                {LEVELS.map((l, i) => (
+                  <button key={l} type="button" role="menuitemradio" aria-checked={l === level} class="party-level-option" style={{ '--c': LEVEL_COLOURS[l] }}
+                    onClick={(e) => closePicker(l, e.detail === 0)}>
+                    <span aria-hidden="true" class="party-pips">{LEVELS.map((_, k) => <span key={k} class={k <= i ? 'is-on' : undefined} />)}</span>
+                    <span class="party-level-option-name">{l}</span>
+                    <span class="party-level-steps">{tn(stepCount(l), '{n} step', '{n} steps')}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
 
         {offer && (

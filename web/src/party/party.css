@@ -65,11 +65,18 @@
 }
 .party-actions { display: flex; gap: 8px; }
 .party-song, .party-leave { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: 0; border-radius: 13px; font-size: 14px; }
-.party-song { background: rgba(14, 14, 14, 0.78); color: #ffffff; font-weight: 700; }
-.party-song svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.party-song { padding-right: 6px; background: rgba(14, 14, 14, 0.78); color: #ffffff; font-weight: 700; }
+.party-song > svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .party-bpm { color: #8c8c8c; font-weight: 600; }
-.party-chip { margin-left: 4px; padding: 2px 8px; border-radius: 7px; background: #2a2a2a; font-size: 12px; }
-.party-song[aria-pressed='false'] .party-chip { background: var(--seedy-accent); color: #1e1e1e; }
+.party-mute { flex: none; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-left: 4px; padding: 0; border: 0; border-radius: 9px; background: #2a2a2a; color: #ffffff; }
+.party-mute:hover { background: #3a3a3a; }
+.party-mute.is-muted { background: var(--seedy-accent); color: #1e1e1e; }
+.party-volume { position: relative; flex: none; width: 88px; height: 32px; margin: 0 10px 0 2px; display: flex; align-items: center; }
+.party-volume-track { position: relative; width: 100%; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.18); }
+.party-volume-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; background: #ffffff; }
+.party-volume-thumb { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #ffffff; }
+.party-volume input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; opacity: 0; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.party-volume:has(input:focus-visible) .party-volume-track { outline: 2px solid var(--seedy-accent); outline-offset: 6px; }
 .party-leave { background: #f0f0f0; color: #1e1e1e; font-weight: 800; }
 .party-leave kbd { padding: 2px 6px; border-radius: 6px; background: #d6d6d6; font-size: 12px; }
 
@@ -155,12 +162,40 @@
 .party-lives-row { display: flex; align-items: center; gap: 4px; height: 40px; }
 .party-lives-row svg { display: block; flex: none; }
 .party-lives-count { margin-left: 6px; font-size: 22px; font-weight: 900; color: #ffffff; }
+.party-level-wrap { position: relative; display: flex; flex-direction: column; }
 .party-level {
-  display: flex; justify-content: space-between; padding: 12px 18px; border: 0; border-radius: 16px;
+  display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border: 0; border-radius: 16px;
   background: rgba(10, 9, 14, 0.72); font-size: 13px; color: #8c8c8c; text-align: left;
 }
-.party-level:hover { background: rgba(30, 28, 36, 0.85); }
-.party-level-name { font-weight: 800; color: #ffffff; }
+.party-level:hover, .party-level[aria-expanded='true'] { background: rgba(30, 28, 36, 0.85); }
+.party-level-name { display: flex; align-items: center; gap: 6px; font-weight: 800; color: #ffffff; }
+.party-level-name svg { color: #8c8c8c; transition: transform 0.15s ease; }
+.party-level[aria-expanded='true'] .party-level-name svg { transform: rotate(180deg); }
+
+/* The difficulty menu, under its button. */
+.party-levels {
+  position: absolute; z-index: 2; left: 0; right: 0; top: calc(100% + 8px); display: flex; flex-direction: column; gap: 2px;
+  padding: 6px; border-radius: 18px; background: rgba(20, 18, 24, 0.96);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.party-level-option {
+  display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border: 0; border-radius: 12px;
+  background: none; color: #c4c4c4; font-size: 14px; font-weight: 700; text-align: left;
+}
+.party-level-option:hover, .party-level-option:focus-visible { background: rgba(255, 255, 255, 0.06); }
+.party-level-option[aria-checked='true'] { background: rgba(255, 255, 255, 0.11); color: #ffffff; font-weight: 800; }
+.party .party-level-option:focus-visible { outline-offset: -2px; }
+/* Five bars, as many lit as the level's rank. */
+.party-pips { flex: none; display: flex; align-items: flex-end; gap: 3px; height: 14px; }
+.party-pips span { width: 5px; border-radius: 2px; background: rgba(255, 255, 255, 0.14); }
+.party-pips span:nth-child(1) { height: 6px; }
+.party-pips span:nth-child(2) { height: 8px; }
+.party-pips span:nth-child(3) { height: 10px; }
+.party-pips span:nth-child(4) { height: 12px; }
+.party-pips span:nth-child(5) { height: 14px; }
+.party-pips .is-on { background: var(--c); }
+.party-level-option-name { flex: 1; min-width: 0; }
+.party-level-steps { font-size: 12px; font-weight: 700; color: #8c8c8c; font-variant-numeric: tabular-nums; }
 
 /* ── Unlocked: Disco accent ── */
 

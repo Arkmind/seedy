@@ -4,8 +4,11 @@ import steps from './smack-attack.steps.json';
 
 export const LANES = ['left', 'down', 'up', 'right'] as const;
 export type Lane = (typeof LANES)[number];
-export type Level = 'Light' | 'Tentacular';
-export const LEVELS: Level[] = ['Light', 'Tentacular'];
+/* Easiest first: half notes, every beat, eighths, sixteenths with jumps, then everything the song plays. */
+export const LEVELS = ['Drift', 'Light', 'Swell', 'Tentacular', 'Abyssal'] as const;
+export type Level = (typeof LEVELS)[number];
+/** A chart's steps (a jump is one step). */
+export const stepCount = (level: Level) => steps.charts[level].length;
 export type Judgment = 'perfect' | 'great' | 'good' | 'miss';
 
 export const BPM = steps.bpm;
