@@ -11,6 +11,7 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -147,6 +148,20 @@ object AppUpdates {
 
     private fun PackageInfo.code(): Long =
         if (Build.VERSION.SDK_INT >= 28) longVersionCode else @Suppress("DEPRECATION") versionCode.toLong()
+}
+
+/**
+ * Whether the update screen may open: [atTop] (not over a page), and no player since Seedy last came to the front.
+ * Someone back in Seedy straight into the player ([inPlayer]: Home pressed mid-film, the TV's standby, a card from the
+ * TV's Continue watching row) isn't met by the screen when they leave the player either: it waits for the next time
+ * Seedy comes to the front.
+ */
+@Composable
+fun rememberUpdateAllowed(atTop: Boolean, inPlayer: Boolean): Boolean {
+    var played by remember { mutableStateOf(inPlayer) }
+    LaunchedEffect(inPlayer) { if (inPlayer) played = true }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { played = inPlayer }
+    return atTop && !played
 }
 
 /** What an update screen's buttons do, and where the APK's install is at. */

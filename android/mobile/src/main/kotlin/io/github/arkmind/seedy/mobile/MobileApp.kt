@@ -111,6 +111,7 @@ import io.github.arkmind.seedy.ui.theme.SessionTheme
 import io.github.arkmind.seedy.ui.theme.rememberRetryClock
 import io.github.arkmind.seedy.ui.theme.rememberViewer
 import io.github.arkmind.seedy.ui.update.AppUpdates
+import io.github.arkmind.seedy.ui.update.rememberUpdateAllowed
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -375,8 +376,9 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                         onWait = { asking = null },
                     )
                 }
-                // Board "Android · Update ready": a newer Seedy, offered from the top of the tabs.
-                UpdatePrompt(visible = stack.size == 1)
+                // Board "Android · Update ready": a newer Seedy, offered from the top of the tabs (not on a return to a player).
+                val playing = stack.lastOrNull().let { it is Route.Player || it is Route.NowPlaying || it is Route.AudiobookPlayer }
+                UpdatePrompt(visible = rememberUpdateAllowed(atTop = stack.size == 1, inPlayer = playing))
             }
         }
     }
