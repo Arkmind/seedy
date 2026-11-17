@@ -53,6 +53,7 @@ import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.MediaSegmentDto
 import org.jellyfin.sdk.model.api.MediaSegmentType
 import org.jellyfin.sdk.model.api.MediaStream
+import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.PlayMethod
 import java.util.UUID
 
@@ -98,8 +99,14 @@ data class PlayerState(
     val picks: List<BaseItemDto> = emptyList(),
     val endShown: Boolean = false,
     val pickLeft: Int? = null,
+    /** Black bars baked into the video's frame (from its thumbnails); null while unknown, and when there are none. */
+    val bars: Bars? = null,
+    /** The server burns the subtitles into the picture, where they may sit in those bars. */
+    val burntIn: Boolean = false,
 ) {
     val live: Boolean get() = item?.type == BaseItemKind.TV_CHANNEL
+    /** The bars the screen may crop away. */
+    val crop: Bars? get() = bars.takeIf { !burntIn && !live }
 }
 
 /**
@@ -337,6 +344,7 @@ class PlayerController(private val context: Context, private val session: UserSe
         openStream(opts)
         startTicking()
         scope.launch { loadSegments(it) }
+        scope.launch { loadBars(it) }
         scope.launch { loadEpisodes(it) }
         scope.launch { loadPicks(it) }
     }
@@ -362,7 +370,7 @@ class PlayerController(private val context: Context, private val session: UserSe
         _state.update { st ->
             st.copy(
                 audio = s.audioStreams, subtitles = s.subtitleStreams, audioIndex = s.audioIndex, subtitleIndex = s.subtitleIndex,
-                method = s.method, streamLabel = label(s), problem = null,
+                method = s.method, streamLabel = label(s), problem = null, burntIn = s.burnIn,
             )
         }
         loadText(s.subtitleIndex)
@@ -697,6 +705,12 @@ class PlayerController(private val context: Context, private val session: UserSe
             withIo { session.api.mediaSegmentApi.getItemSegments(it.id).content.items }
         }.getOrDefault(emptyList())
         _state.update { s -> s.copy(segments = segments) }
+    }
+
+    private suspend fun loadBars(it: BaseItemDto) {
+        if (it.type == BaseItemKind.TV_CHANNEL || it.mediaType == MediaType.AUDIO) return
+        val bars = runCatching { withIo { trickplayBars(session.api, session.userId, it) } }.getOrNull()?.takeIf { it.any } ?: return
+        if (item?.id == it.id) _state.update { s -> s.copy(bars = bars) }
     }
 
     private suspend fun loadEpisodes(it: BaseItemDto) {
