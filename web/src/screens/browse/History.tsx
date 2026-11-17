@@ -14,6 +14,7 @@ import { MeduState } from '../../ui/medu';
 import { MenuButton, MenuItem, confirm, toast } from '../../ui/overlay';
 import './history.css';
 import { t } from '../../lib/i18n';
+import { useTitle } from '../../lib/title';
 
 type Filter = 'all' | 'movies' | 'shows';
 const PAGE = 30;
@@ -67,6 +68,7 @@ function thumbArt(it: BaseItem | undefined) {
 /* ── Screen ── */
 
 export function History() {
+  useTitle(t('Viewing history'));
   const me = useStore(meStore);
   const [filter, setFilter] = useState<Filter>('all');
   const [showHidden, setShowHidden] = useState(false);

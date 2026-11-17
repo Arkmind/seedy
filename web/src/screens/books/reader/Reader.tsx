@@ -11,12 +11,14 @@ import { BarButton, ReaderMessage, RdIcon, TopBar, useFullscreen } from './chrom
 import { ComicReader, NoPages } from './comic';
 import { EpubReader } from './epub';
 import './reader.css';
+import { useTitle } from '../../../lib/title';
 
 /* /read/:id — the reader for a book: EPUB (epub.js), comics (CBZ pages), PDF (the browser's own viewer), and a clear
    "download it" for what the browser can't open (CBR). Loaded on first use, like the player. */
 
 export function Reader({ id }: { id: string }) {
   const item = useAsync(() => getItem(id, [...DETAIL_FIELDS, 'Path']), [id]);
+  useTitle(item.data?.Name);
   const info = useAsync(() => getBookInfo(id).catch(() => undefined), [id]);
   const reading = useAsync(() => getReading(id).catch(() => undefined), [id]);
   useEffect(() => {

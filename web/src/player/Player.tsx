@@ -61,6 +61,7 @@ import { sendToDevice } from '../ui/cast-menu';
 import { toggleFullscreen as toggleFullscreenOf, useFullscreen } from '../lib/fullscreen';
 import { pipSupported, saveVolume, setVolume as setMediaVolume, toggleMute as toggleMediaMute, togglePip as togglePipOf } from './controls';
 import { BackButton, PBtn } from './parts';
+import { itemTitle, useTitle } from '../lib/title';
 
 /* ───────────────────────── Route entry ───────────────────────── */
 
@@ -94,6 +95,7 @@ export function Player({ id }: { id: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), []);
   const [state, setState] = useState<{ item?: BaseItem; error?: Error }>({});
+  useTitle(itemTitle(state.item));
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let alive = true;
@@ -351,6 +353,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const isAudio = item.MediaType === 'Audio';
   const isEpisode = item.Type === 'Episode';
   const isMovie = item.Type === 'Movie';
+  useTitle(itemTitle(item));
 
   const mediaRef = useRef<HTMLVideoElement>(null);
   /* Where the experimental player draws, and what the controls drive: the <video> element or that player. */

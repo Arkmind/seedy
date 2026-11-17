@@ -28,6 +28,7 @@ import { CastMenu } from './TopMenus';
 import { TracksPanel, type TracksTab } from './TracksPanel';
 import { useWakeLock } from './wake-lock';
 import './live.css';
+import { useTitle } from '../lib/title';
 
 /* Player · Live TV (board "Player · Live TV"): a TV channel in Seedy's player. The live stream opens through
    PlaybackInfo (AutoOpenLiveStream) and closes when the channel changes or the player goes. The channel's logo and
@@ -347,6 +348,7 @@ export function LivePlayer({ channel: initial, profile, bitrateFor }: {
   const status = stream ? streamLine(stream, m.vw, m.vh) : '';
   const cat = cur ? categoryOf(cur) : '';
   const name = channel?.label ?? chRef.current.Name ?? '';
+  useTitle(cur?.Name, name);
   const src = stream?.source;
   const subs = subtitleStreams(src);
   const auds = audioStreams(src);

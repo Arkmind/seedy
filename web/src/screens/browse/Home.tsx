@@ -27,6 +27,7 @@ import { ArrivedNotice } from '../me/arrivals';
 import { CUSTOM, getNextUpForMe, savePrefsPatch as queuePrefs, readCustom, userConfig } from '../me/prefs';
 import './home.css';
 import { t } from '../../lib/i18n';
+import { useTitle } from '../../lib/title';
 
 const BROWSABLE = new Set(['movies', 'tvshows', 'music', 'books', 'boxsets', 'homevideos', 'photos', 'musicvideos', 'mixed', 'playlists', undefined, '']);
 const LATEST_TYPES = new Set(['movies', 'tvshows', 'music', 'homevideos', 'musicvideos', 'mixed', undefined, '']);
@@ -48,6 +49,7 @@ function defaultRows(views: BaseItem[]): HomeRow[] {
 }
 
 export function Home() {
+  useTitle(t('Home'));
   const me = useStore(meStore);
   const [rows, setRows] = useState<HomeRow[] | null>(null);
   const [heroState, setHeroState] = useState<'loading' | 'shown' | 'none'>('loading');

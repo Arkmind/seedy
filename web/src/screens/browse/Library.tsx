@@ -30,6 +30,7 @@ import { MusicLibrary } from '../music/MusicLibrary';
 import { PhotosLibrary } from '../photos/PhotosLibrary';
 import { isPhotoLibrary } from '../photos/api';
 import { LibraryMenuItems } from '../../ui/library-menu';
+import { useTitle } from '../../lib/title';
 
 /* ───────── Tabs, sorts and filters ───────── */
 
@@ -157,6 +158,7 @@ export function Library({ id }: { id: string }) {
   const known = views.find((v) => v.Id === id);
   const fetched = useAsync(() => (known ? Promise.resolve(known) : getItem(id, ['ChildCount'])), [id, !!known]);
   const view = known ?? fetched.data;
+  useTitle(view?.Name);
 
   if (!view) {
     return (
@@ -196,6 +198,7 @@ function LibraryView({ view }: { view: BaseItem }) {
   const opensOn = readCustom(CUSTOM.opensOn, me.prefs)[view.Id] as TabId | undefined;
   const firstTab: TabId = tabs.some((t) => t.id === opensOn) ? opensOn! : tabs[0].id;
   const tab: TabId = tabs.some((t) => t.id === tabParam) ? tabParam! : firstTab;
+  useTitle(tab !== tabs[0].id && t(tabs.find((x) => x.id === tab)!.label), view.Name);
   const isGrid = tab !== 'suggestions' && tab !== 'genres';
   const sortParam = loc.query.get('sort') as SortId | null;
   const sort = SORTS.find((s) => s.id === sortParam) ?? (tab === 'collections' ? SORTS[1] : SORTS[0]);

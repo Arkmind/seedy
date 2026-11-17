@@ -18,6 +18,7 @@ import {
 import './lists.css';
 import { getNextUpForMe } from '../me/prefs';
 import { t } from '../../lib/i18n';
+import { useTitle } from '../../lib/title';
 
 const FIELDS = [...GRID_FIELDS, 'Overview'];
 
@@ -41,7 +42,16 @@ export function ListScreen({ kind }: { kind: string }) {
 }
 
 /* A list page: the header, its title and lede, then the list. */
-export function ListFrame({ title, count, lede, active = 'home', children }: { title: ComponentChildren; count?: string; lede?: ComponentChildren; active?: HeaderActive; children: ComponentChildren }) {
+export function ListFrame({ title, tab, count, lede, active = 'home', children }: {
+  title: ComponentChildren;
+  /* The tab's title, when [title] isn't plain text or needs more (a Requests list says it's one). */
+  tab?: string[];
+  count?: string;
+  lede?: ComponentChildren;
+  active?: HeaderActive;
+  children: ComponentChildren;
+}) {
+  useTitle(...(tab ?? [typeof title === 'string' ? title : undefined]));
   return (
     <div class="page list-page">
       <Header active={active} />
@@ -106,6 +116,7 @@ function SimilarList() {
   return (
     <ListFrame
       title={<><span class="lead">{t('Because you watched')}</span> {name || t('this')}</>}
+      tab={[`${t('Because you watched')} ${name || t('this')}`]}
       count={countOf(state.data)}
       lede={seed ? <BackLink to={`/details/${seed}`} label={t('Back to {name}', { name: name || t('the title') })} /> : undefined}
     >

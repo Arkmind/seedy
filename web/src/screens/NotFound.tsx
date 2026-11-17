@@ -15,6 +15,7 @@ import { seasonsLabel } from './browse/parts';
 import { hhmm24 } from '../lib/format';
 import { copyText } from '../lib/clipboard';
 import './not-found.css';
+import { useTitle } from '../lib/title';
 
 // Not found (404) board: Medu searches the deep with a torch between the two 4s. Used for unknown pages and for
 // titles the server doesn't have (or this profile can't see). Admins get the request and the reason to copy.
@@ -135,6 +136,7 @@ export function NotFound({ title = false }: {
   const loc = useLocation();
   const [at] = useState(() => new Date());
   const picks = usePicks();
+  useTitle(title ? t('Title not found') : t('Page not found'));
   const why = title ? t('no item with this ID in any library') : t('no page at this address');
   // Item ids are shortened to their first 8 characters on screen; Copy details keeps the whole request.
   const shown = loc.path.replace(/^(\/details\/[0-9a-f]{8})[0-9a-f]{24}$/i, '$1');

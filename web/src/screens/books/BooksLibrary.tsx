@@ -21,6 +21,7 @@ import {
 import { LibraryMenuItems } from '../../ui/library-menu';
 import { sortKey, time, useBooksData, type BooksData } from './library-data';
 import './books.css';
+import { useTitle } from '../../lib/title';
 
 /* The books library (Books library board): title and counts, Sort and ⋯, then tabs. Overview shows Continue,
    Recently added, Series, Audiobooks and Comics; the other tabs are full grids (Books, Audiobooks, Comics) or grouped
@@ -68,6 +69,7 @@ export function BooksLibrary({ view }: { view: BaseItem }) {
   const loc = useLocation();
   const tabParam = loc.query.get('tab') as TabId | null;
   const tab: TabId = TABS.some((x) => x.id === tabParam) ? tabParam! : 'overview';
+  useTitle(tab !== 'overview' && tc(TABS.find((x) => x.id === tab)!.label, 'tab'), view.Name);
   const sortParam = loc.query.get('sort') as SortId | null;
   // Authors list by name unless asked otherwise; everything else newest first.
   const sort: SortId = SORTS.some((s) => s.id === sortParam) ? sortParam! : tab === 'authors' ? 'author' : 'added';

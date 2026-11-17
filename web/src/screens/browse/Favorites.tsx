@@ -12,6 +12,7 @@ import { viewsStore } from '../../lib/app-state';
 import { CardGrid, ErrorState, getPersonsList, GRID_FIELDS, GridSkeleton, join, PageHead, toggleFavorite } from './parts';
 import './lists.css';
 import { t } from '../../lib/i18n';
+import { useTitle } from '../../lib/title';
 
 type GroupId = 'movies' | 'shows' | 'episodes' | 'collections' | 'albums' | 'artists' | 'people';
 interface Group { id: GroupId; title: string; types?: string[] }
@@ -29,6 +30,7 @@ const GROUPS: Group[] = [
 const FIELDS = GRID_FIELDS;
 
 export function Favorites() {
+  useTitle(t('Favorites'));
   const loc = useLocation();
   const { data, error, loading, reload } = useAsync(
     () => Promise.all(GROUPS.map((g) =>

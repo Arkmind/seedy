@@ -24,6 +24,7 @@ import {
 import { AlbumsTab, ArtistsTab, FoldersTab, GenresTab, PlaylistsTab, SongsTab } from './tabs';
 import { LibraryMenuItems } from '../../ui/library-menu';
 import './music.css';
+import { useTitle } from '../../lib/title';
 
 /* A music library (MusicHome board): the title with its counts, Shuffle all, Instant mix and ⋯; the Overview (Jump
    back in, Instant mixes for you, Recently added albums, Your playlists, Artists you play most, Genres) and a tab for
@@ -44,6 +45,7 @@ export function MusicLibrary({ view }: { view: BaseItem }) {
   const opensOn = readCustom(CUSTOM.opensOn, me.prefs)[view.Id] as MusicTab | undefined;
   const first: MusicTab = TABS.some((x) => x.id === opensOn) ? opensOn! : 'overview';
   const tab: MusicTab = TABS.some((x) => x.id === asked) ? asked! : first;
+  useTitle(tab !== 'overview' && t(TABS.find((x) => x.id === tab)!.label), view.Name);
   const [reload, setReload] = useState(0);
   const counts = useAsync(
     () => Promise.all([countOf(view.Id, 'MusicAlbum'), albumArtistsCount(view.Id), countOf(view.Id, 'Audio')]),

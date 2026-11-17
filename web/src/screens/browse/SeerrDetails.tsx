@@ -14,6 +14,7 @@ import { RequestSeasonsDialog, markRequested } from './request-seasons';
 import { Row } from '../../ui/Row';
 import './seerr.css';
 import { t } from '../../lib/i18n';
+import { useTitle } from '../../lib/title';
 
 /* A title that is not (fully) on the server yet, from Seerr. Same hero and info panel as the Details board. */
 
@@ -64,6 +65,7 @@ export function SeerrDetails({ mediaType, tmdbId }: { mediaType: 'movie' | 'tv';
   const req = me.requests;
   const { data, error, loading, reload } = useAsync(() => seerrDetails(mediaType, tmdbId), [mediaType, tmdbId]);
   const [d, setD] = useState<SeerrTitle | undefined>(undefined);
+  useTitle(t('Details'), (d ?? data)?.title);
   const [busy, setBusy] = useState<'std' | '4k' | null>(null);
   const [picker, setPicker] = useState(false);
 

@@ -3,6 +3,7 @@ import { meStore, signOut } from '../../lib/app-state';
 import { t } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
+import { useTitle } from '../../lib/title';
 import { Header } from '../../ui/navbar/Header';
 import './me.css';
 
@@ -48,6 +49,7 @@ export function MeLayout({ page, title, lede, children, actions }: {
   actions?: ComponentChildren;
 }) {
   const me = useStore(meStore);
+  useTitle(t(ME_NAV.flatMap((g) => g.items).find((i) => i.id === page)!.label), t('Settings'));
   const leave = () => signOut().then(() => navigate('/', { replace: true, force: true }));
   return (
     <div class="page me-page">

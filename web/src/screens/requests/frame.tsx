@@ -11,6 +11,7 @@ import { SERVICE_NAMES, useMediaSummary } from './media-parts';
 import { useSummary } from './parts';
 import { capitalize, listText } from '../../lib/format';
 import { BackLink, ListFrame } from '../browse/Lists';
+import { useTitle } from '../../lib/title';
 
 /* The Requests page's frame (Requests, RequestsMusic, RequestsBooks, RequestsMine boards): the title with the
    Movies and shows · Music · Books tabs (only for the services the server has), the line saying where requests go,
@@ -165,6 +166,7 @@ export function Frame({ service, tab, placeholder, label, results, children }: {
 }) {
   const services = useServices();
   const query = (useLocation().query.get('q') ?? '').trim();
+  useTitle(query || t('Discover'), service !== 'movies' && t(SERVICES.find((x) => x.id === service)!.label), t('Requests'));
   const [text, setText] = useState(query);
   useEffect(() => {
     const id = window.setTimeout(() => { if (text.trim() !== query) setQuery({ q: text.trim() || undefined }); }, 350);
@@ -222,7 +224,7 @@ export function ResultsSection({ query, sub, children }: { query: string; sub?: 
 /* A Discover row's See all page, with the way back to its Discover page. */
 export function BrowseFrame({ title, back, backLabel, children }: { title: string; back: string; backLabel: string; children: ComponentChildren }) {
   return (
-    <ListFrame active="requests" title={title} lede={<BackLink to={back} label={backLabel} />}>
+    <ListFrame active="requests" title={title} tab={[title, t('Requests')]} lede={<BackLink to={back} label={backLabel} />}>
       {children}
     </ListFrame>
   );

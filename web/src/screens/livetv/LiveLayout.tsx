@@ -2,6 +2,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { t, tn } from '../../lib/i18n';
 import { Link } from '../../lib/router';
+import { useTitle } from '../../lib/title';
 import { Header } from '../../ui/navbar/Header';
 import { toast } from '../../ui/overlay';
 import { channelByNumber, loadTuners, recordingNow, useChannels, useTimers } from './data';
@@ -27,10 +28,7 @@ export function LiveLayout({ tab, children }: { tab: LiveTab; children: Componen
   const total = channels.list?.length;
 
   useEffect(() => { loadTuners(); }, []);
-  useEffect(() => {
-    const name = TABS.find((x) => x.id === tab)!.label;
-    document.title = `${t(name)} · ${t('Live TV')}`;
-  }, [tab]);
+  useTitle(t(TABS.find((x) => x.id === tab)!.label), t('Live TV'));
 
   return (
     <div class="page lt-page">

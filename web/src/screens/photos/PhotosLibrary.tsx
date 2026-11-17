@@ -26,6 +26,7 @@ import {
 import { PhotoViewer } from './Viewer';
 import { LibraryMenuItems } from '../../ui/library-menu';
 import './photos.css';
+import { useTitle } from '../../lib/title';
 
 /* A photos library (Photos · Timeline board): its name and counts, Slideshow, Select and ⋯, then Timeline, Folders,
    Videos, Favorites and Cameras with the tile size. The timeline opens with "On this day" (photos from this date in
@@ -45,6 +46,7 @@ export function PhotosLibrary({ view }: { view: BaseItem }) {
   const opensOn = readCustom(CUSTOM.opensOn, me.prefs)[view.Id] as TabId | undefined;
   const first: TabId = tabs.some((x) => x.id === opensOn) ? opensOn! : 'timeline';
   const tab: TabId = tabs.some((x) => x.id === tabParam) ? tabParam! : first;
+  useTitle(tab !== 'timeline' && tabs.find((x) => x.id === tab)!.label, view.Name);
   const camera = loc.query.get('camera');
   const base = `/library/${view.Id}`;
   const [size, setSize] = useTileSize();

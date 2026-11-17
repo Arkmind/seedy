@@ -115,6 +115,7 @@ export function AdminStatisticsDay({ date }: { date: string }) {
       wide
       overline={<BackBar class="st-crumbs" crumbs={[{ label: t('Statistics'), to: '/admin/statistics' }, { label: longDay(day, true) }]} />}
       title={longDay(day)}
+      tab={longDay(day, true)}
       lede={current ? <DaySummary data={current} /> : undefined}
       actions={
         <div class="st-daynav">
