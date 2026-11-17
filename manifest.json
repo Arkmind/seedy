@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.4.10.0",
+        "changelog": "# What's Changed\n- Your screens answer only to you\n  Other accounts, admins included, can no longer control your TV or computer\n- Only your screens to control\n  “Control a screen” lists the TVs and computers signed in to your account\n- Each device’s Seedy version\n  The admin shows which version of Seedy every phone, TV and browser runs\n- See who needs to update\n  Devices behind your server’s Seedy show “Update available”\n\n## Good to know\n- Admins keep Stop and Message on everyone's playback (Overview › Playing now). Every other control of someone else's screen is refused, from Jellyfin's own apps too.\n- The \"Control other users' sessions\" and \"Control shared devices\" switches are gone from the user page: they no longer do anything.\n- Two people sharing one account still control each other's screens: the server only knows accounts.\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play).\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart the server: the rule on screens is enforced there.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.9...v0.4.10",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.4.10/seedy_0.4.10.0.zip",
+        "checksum": "a822ab52005012885207e21c842c32c4",
+        "timestamp": "2026-11-17T11:04:36Z"
+      },
+      {
         "version": "0.4.9.0",
         "changelog": "# What's Changed\n- Play and pause always answer\n  The remote’s button now follows what your TV or computer is really doing\n- Volume and position keep up\n  After a seek or a volume change, the remote shows it right away\n- One click when Chrome blocks play\n  If the browser won’t start playback, your computer asks for a click\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play).\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart the server: the computer's side of the fix comes with it.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.8...v0.4.9",
         "targetAbi": "12.0.0.0",
