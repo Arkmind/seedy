@@ -73,6 +73,7 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import io.github.arkmind.seedy.core.remote.ScreenCommand
@@ -96,7 +97,8 @@ fun TvApp(core: SeedyCore, appVersion: String = "") {
     var quickConnectNext by rememberSaveable { mutableStateOf(false) }
     val finderQuickConnect = { quickConnectNext = true }
     val context = LocalContext.current
-    LaunchedEffect(Unit) { AppUpdates.start(context) }
+    // Each time Seedy comes to the front: TVs keep it running in the background instead of closing it.
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { AppUpdates.start(context) }
     LaunchedEffect(Unit) { openWatchNextProfiles(core) }
     SessionTheme(state) {
         when (val s = state) {

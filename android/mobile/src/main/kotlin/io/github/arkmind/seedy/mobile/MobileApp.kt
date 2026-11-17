@@ -26,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -121,10 +123,9 @@ fun MobileApp(core: SeedyCore, appVersion: String = "") {
     var quickConnectNext by rememberSaveable { mutableStateOf(false) }
     val finderQuickConnect = { quickConnectNext = true }
     val context = LocalContext.current
-    LaunchedEffect(Unit) {
-        UpdatedNotice.clear(context)
-        AppUpdates.start(context)
-    }
+    LaunchedEffect(Unit) { UpdatedNotice.clear(context) }
+    // Each time Seedy comes to the front: Android may keep it running in the background for days.
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { AppUpdates.start(context) }
     SessionTheme(state) {
         when (val s = state) {
             SessionState.Starting -> Unit
