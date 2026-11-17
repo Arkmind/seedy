@@ -225,6 +225,26 @@ fun cmpVersion(a: String?, b: String?): Int {
     return 0
 }
 
+/** Seedy's own apps: "Seedy" (web), "Seedy for Android", "Seedy for Android TV". */
+private val SeedyApp = Regex("^seedy\\b", RegexOption.IGNORE_CASE)
+
+fun isSeedyApp(app: String?): Boolean = SeedyApp.containsMatchIn(app.orEmpty())
+
+/** An app and its version: Seedy's in full since its patch releases matter ("Seedy 0.4.9"), anyone else's as major.minor ("Swiftfin 1.6"). */
+fun appWithVersion(app: String?, version: String?): String =
+    listOf(app.orEmpty(), if (isSeedyApp(app)) shortVersion(version) else majorMinor(version)).filter { it.isNotEmpty() }.joinToString(" ")
+
+/**
+ * The server's Seedy when a Seedy app runs an older one (a phone that hasn't updated, a tab opened before the server
+ * did), else null. A pre-release comes before its release: 0.5.0-beta.1 is older than 0.5.0.
+ */
+fun seedyUpdate(app: String?, version: String?, server: String?): String? {
+    if (!isSeedyApp(app) || version.isNullOrEmpty() || server.isNullOrEmpty()) return null
+    val release = version.substringBefore('-')
+    val c = cmpVersion(release, server)
+    return if (c < 0 || (c == 0 && '-' in version)) shortVersion(server) else null
+}
+
 /** "21 Mbps", "8 Mbps", "2.5 Mbps". */
 fun mbps(bps: Long?): String {
     if (bps == null || bps <= 0) return ""

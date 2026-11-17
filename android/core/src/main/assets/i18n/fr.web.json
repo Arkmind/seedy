@@ -3557,6 +3557,7 @@
  "Update": "Mettre à jour",
  "Update all": "Tout mettre à jour",
  "Update available": "Mise à jour disponible",
+ "Update available: {version}": "Mise à jour disponible : {version}",
  "Update {plugin} to {version}": "Mettre à jour {plugin} vers {version}",
  "Updated {ago}": "Mis à jour {ago}",
  "Updated {ago} · {days} of listings": "Mis à jour {ago} · {days} de programmes",
