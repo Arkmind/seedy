@@ -3,6 +3,7 @@ using Jellyfin.Plugin.Seedy.Services;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jellyfin.Plugin.Seedy;
@@ -26,6 +27,8 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<DeviceTracker>();
         serviceCollection.AddSingleton<ClientDecoding>();
         serviceCollection.AddSingleton<RemoteStates>();
+        serviceCollection.AddSingleton<RemoteControlGuard>();
+        serviceCollection.Configure<MvcOptions>(o => o.Filters.AddService<RemoteControlGuard>());
         serviceCollection.AddSingleton<Services.Media.ServiceHttp>();
         serviceCollection.AddSingleton<Services.Media.LidarrClient>();
         serviceCollection.AddSingleton<Services.Media.ShelfarrClient>();

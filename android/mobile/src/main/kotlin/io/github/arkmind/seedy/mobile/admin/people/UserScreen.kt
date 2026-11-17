@@ -208,7 +208,5 @@ private fun AccountTab(state: UserEditState, actions: UserEditActions, sheet: Sh
         switch(state, actions, "EnableSubtitleManagement", t("Manage subtitles"), t("Search for and remove subtitles"))
         switch(state, actions, "EnableLiveTvAccess", t("Live TV"), t("Watch channels"), default = true)
         switch(state, actions, "EnableLiveTvManagement", t("Manage Live TV recordings"), t("Schedule and delete recordings"))
-        switch(state, actions, "EnableRemoteControlOfOtherUsers", t("Control other people’s playback"), t("Send commands to someone else’s session"))
-        switch(state, actions, "EnableSharedDeviceControl", t("Play to shared devices"), t("Smart TVs and speakers on the network"), default = true)
     }
 }
