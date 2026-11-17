@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.4.11.0",
+        "changelog": "# What's Changed\n- Continue watching on Google TV\n  What you’re watching and your next episodes show up on the TV’s home screen\n- No more black bars on wide screens\n  Films with built-in bars now fill ultrawide monitors and phones held sideways\n- Tabs say what’s on screen\n  Your browser tab names the film you’re watching or the page you’re on\n\n## Also\n- Medu's secret party can be turned down now, and has five levels instead of two.\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play). The TV’s home row is on by default: Settings › Home screen turns it off.\n- Update the Seedy plugin from Jellyfin's plugin catalogue for the web changes.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.10...v0.4.11",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.4.11/seedy_0.4.11.0.zip",
+        "checksum": "ff30b2ae940b3737d8f8fe5b8e07e6cc",
+        "timestamp": "2026-11-17T15:44:20Z"
+      },
+      {
         "version": "0.4.10.0",
         "changelog": "# What's Changed\n- Your screens answer only to you\n  Other accounts, admins included, can no longer control your TV or computer\n- Only your screens to control\n  “Control a screen” lists the TVs and computers signed in to your account\n- Each device’s Seedy version\n  The admin shows which version of Seedy every phone, TV and browser runs\n- See who needs to update\n  Devices behind your server’s Seedy show “Update available”\n\n## Good to know\n- Admins keep Stop and Message on everyone's playback (Overview › Playing now). Every other control of someone else's screen is refused, from Jellyfin's own apps too.\n- The \"Control other users' sessions\" and \"Control shared devices\" switches are gone from the user page: they no longer do anything.\n- Two people sharing one account still control each other's screens: the server only knows accounts.\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play).\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart the server: the rule on screens is enforced there.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.9...v0.4.10",
         "targetAbi": "12.0.0.0",
