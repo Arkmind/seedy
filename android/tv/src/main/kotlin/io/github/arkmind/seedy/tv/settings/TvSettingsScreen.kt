@@ -302,9 +302,9 @@ private fun CodeRow(state: SettingsState, actions: SettingsActions, focus: Focus
 private fun HomeSection(state: SettingsState, actions: SettingsActions, f: (String) -> FocusRequester?, preview: String?, onHint: (String?) -> Unit) {
     if (state.seedy) {
         val mine = state.prefs.rowOrder == "mine"
-        TvSectionTitle(t("Row order"))
+        TvSectionTitle(t("Order and Google TV"))
         TvChoiceRow(t("Order"), t("Rows you play from most move up once a day"), listOf(Choice(false, t("Automatic")), Choice(true, t("My order"))), mine, actions::setRowOrder, focus = f("order"))
-        // The board's "Continue watching on the Google TV home" waits for the Watch Next integration.
+        GoogleTvRow(state, actions)
         Box(Modifier.padding(start = 24.bp, end = 24.bp, top = 18.bp, bottom = 10.bp)) {
             SText(if (mine) t("Rows · in my order") else t("Rows · ordered automatically"), Modifier.cssBox(15f, io.github.arkmind.seedy.ui.theme.NotoLineRatio, up = false), size = 15.bsp, weight = 800, tracking = 0.1f, color = SeedyColors.Text3, uppercase = true)
         }
@@ -325,6 +325,17 @@ private fun HomeSection(state: SettingsState, actions: SettingsActions, f: (Stri
         TvSwitchRow(t("Use episode pictures"), t("Instead of the show’s artwork"), state.customBool(Keys.EpisodeImages, true), { actions.setCustom(Keys.EpisodeImages, if (it) JsonNull else JsonPrimitive(false)) })
     }
     TvSwitchRow(t("Hide what I’ve watched from Latest"), t("Only new-to-you titles in Latest rows"), state.config?.hidePlayedInLatest != false, { on -> actions.setConfig { it.copy(hidePlayedInLatest = on) } })
+    // Without the plugin there's no Order: the TV home's row joins Next up and Continue watching.
+    if (!state.seedy) GoogleTvRow(state, actions)
+}
+
+/** This TV's titles in the home screen's Continue watching row (tv/watchnext/WatchNext). */
+@Composable
+private fun GoogleTvRow(state: SettingsState, actions: SettingsActions) {
+    TvSwitchRow(
+        t("Continue watching on the Google TV home"), t("Your in-progress titles in the home screen’s Continue watching row"),
+        state.device.googleTvContinue, { on -> actions.setDevice { it.copy(googleTvContinue = on) } }, device = true,
+    )
 }
 
 /**

@@ -83,7 +83,9 @@ import io.github.arkmind.seedy.tv.remote.press
 import io.github.arkmind.seedy.tv.remote.showMessage
 import io.github.arkmind.seedy.tv.update.TvUpdatePrompt
 import io.github.arkmind.seedy.ui.update.AppUpdates
+import io.github.arkmind.seedy.tv.watchnext.WatchNextLinks
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 /** The Android TV app: the same journey as the phone (server, profile, home), drawn for the remote. */
@@ -95,6 +97,7 @@ fun TvApp(core: SeedyCore, appVersion: String = "") {
     val finderQuickConnect = { quickConnectNext = true }
     val context = LocalContext.current
     LaunchedEffect(Unit) { AppUpdates.start(context) }
+    LaunchedEffect(Unit) { openWatchNextProfiles(core) }
     SessionTheme(state) {
         when (val s = state) {
             SessionState.Starting -> Unit
@@ -111,6 +114,23 @@ private fun AddServerEntry(core: SeedyCore, onQuickConnect: () -> Unit) {
     val vm = viewModel { AddServerViewModel(core) }
     val state by vm.state.collectAsStateWithLifecycle()
     TvAddServerScreen(state, onAdd = vm::add, onSearch = vm::search, onQuickConnect = { found -> onQuickConnect(); vm.add(found.address) })
+}
+
+/**
+ * A card from the home screen's Continue watching row for a profile that isn't the open one ("Who's watching?", or
+ * someone else): opens that profile's saved session, and the signed-in app plays the card. Without a saved session (or
+ * when it can't open), the card is dropped and the app stays where it is.
+ */
+private suspend fun openWatchNextProfiles(core: SeedyCore) {
+    combine(WatchNextLinks.pending, core.sessions.state) { link, state -> link to state }.collect { (link, state) ->
+        if (link == null || state == SessionState.Starting) return@collect
+        val session = (state as? SessionState.SignedIn)?.session
+        if (session != null && session.server.id == link.server && session.account.userId == link.user) return@collect
+        val server = core.store.current().servers.firstOrNull { it.id == link.server }
+        val account = server?.account(link.user)
+        val token = account?.let { core.sessions.tokenFor(server, it) }
+        if (server == null || account == null || token == null || !core.sessions.resume(server, account, token)) WatchNextLinks.clear()
+    }
 }
 
 private data object ProfilesKey
@@ -228,6 +248,16 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                 is ScreenCommand.Message -> activity?.let { showMessage(it, c.text) }
                 else -> screen.player?.invoke(c)
             }
+        }
+    }
+    // A card from the home screen's Continue watching row: it plays (from where it was left), over Home.
+    LaunchedEffect(session) {
+        WatchNextLinks.pending.collect { l ->
+            if (l == null || l.server != session.server.id || l.user != session.account.userId) return@collect
+            WatchNextLinks.clear()
+            while (stack.size > 1) stack.removeAt(stack.lastIndex)
+            place = TvPlace.Home
+            nav.go(TvRoute.Player(l.itemId))
         }
     }
     CompositionLocalProvider(LocalViewer provides viewer, LocalSession provides session, LocalCore provides core, LocalTvNav provides nav, LocalTvScreen provides screen) {
