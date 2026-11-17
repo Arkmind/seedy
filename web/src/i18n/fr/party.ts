@@ -23,6 +23,8 @@ const fr: Record<string, string> = {
   'FULL COMBO!!': 'SANS FAUTE !!',
   'Difficulty': 'Difficulté',
   'Change the difficulty (the song starts again)': 'Changer la difficulté (la chanson recommence)',
+  '{n} step': '{n} pas',
+  '{n} steps': '{n} pas',
   'Unlocked': 'Débloqué',
   'Disco accent': 'Accent disco',
   'Your accent slowly cycles through every colour. Switch it off any time in Settings.': 'Votre couleur d’accent passe lentement par toutes les couleurs. Désactivable à tout moment dans les Paramètres.',

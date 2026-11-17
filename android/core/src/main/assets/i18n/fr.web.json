@@ -4338,6 +4338,8 @@
  "{n} song": "{n} morceau",
  "{n} songs": "{n} morceaux",
  "{n} sources on": "{n} sources actives",
+ "{n} step": "{n} pas",
+ "{n} steps": "{n} pas",
  "{n} stream": "{n} flux",
  "{n} stream at once at {time}.": "{n} flux simultané à {time}.",
  "{n} streams": "{n} flux",
