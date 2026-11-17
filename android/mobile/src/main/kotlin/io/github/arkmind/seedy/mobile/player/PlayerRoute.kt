@@ -36,7 +36,6 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,7 +50,6 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.compose.ContentFrame
 import io.github.arkmind.seedy.core.feature.SettingsViewModel
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.player.problemText
@@ -134,8 +132,9 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
     LaunchedEffect(state.ask, state.endShown) { if (state.ask != null || state.endShown) panel = null }
     // "I’m done for now", Back to browse, Back: leaving from the credits counts the title as watched.
     val leave = { player.doneForNow(); nav.back() }
-    // The video: full screen, or in the end-of-movie tile (a new surface there, so it lays out afresh each time).
-    val videoFrame: @Composable () -> Unit = { ContentFrame(player = player.exo, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
+    // The video: full screen (without the black bars baked into its frame), or in the end-of-movie tile (a new surface
+    // there, so it lays out afresh each time).
+    val videoFrame: @Composable () -> Unit = { CroppedVideo(player.exo, state.crop.takeIf { !state.endShown && !pip }) }
 
     BackHandler {
         when {

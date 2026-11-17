@@ -14,6 +14,7 @@ export type LoadedSubtitles =
   | { kind: 'pgs'; cues: PgsCue[] };
 
 interface Box { w: number; h: number }
+interface Rect { x: number; y: number; w: number; h: number }
 
 /* Size of the player area, kept current. */
 function useBox(ref: { current: HTMLElement | null }): Box {
@@ -34,16 +35,23 @@ function useBox(ref: { current: HTMLElement | null }): Box {
   return box;
 }
 
-/* Where the picture sits inside the player (object-fit: contain). */
-function contentRect(box: Box, vw: number, vh: number) {
-  if (!vw || !vh || !box.w || !box.h) return { x: 0, y: 0, w: box.w, h: box.h };
-  const s = Math.min(box.w / vw, box.h / vh);
+/* Where the picture sits inside its element (object-fit: contain). */
+function contentRect(el: Rect, vw: number, vh: number): Rect {
+  if (!vw || !vh || !el.w || !el.h) return el;
+  const s = Math.min(el.w / vw, el.h / vh);
   const w = vw * s;
   const h = vh * s;
-  return { x: (box.w - w) / 2, y: (box.h - h) / 2, w, h };
+  return { x: el.x + (el.w - w) / 2, y: el.y + (el.h - h) / 2, w, h };
 }
 
-export function SubtitleLayer({ subs, time, style, lifted, hidden, fit, videoWidth, videoHeight }: {
+/* The part of `r` inside the player. */
+function visible(r: Rect, box: Box): Rect {
+  const x = Math.max(0, r.x);
+  const y = Math.max(0, r.y);
+  return { x, y, w: Math.max(0, Math.min(box.w, r.x + r.w) - x), h: Math.max(0, Math.min(box.h, r.y + r.h) - y) };
+}
+
+export function SubtitleLayer({ subs, time, style, lifted, hidden, fit, videoWidth, videoHeight, frame }: {
   subs: LoadedSubtitles | null;
   /* Media time with the sync offset already applied. */
   time: number;
@@ -54,13 +62,16 @@ export function SubtitleLayer({ subs, time, style, lifted, hidden, fit, videoWid
   fit: PictureFit;
   videoWidth: number;
   videoHeight: number;
+  /* The video element's box when it isn't the whole player (enlarged so baked-in black bars leave the screen). */
+  frame?: { left: number; top: number; width: number; height: number } | null;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const box = useBox(ref);
+  const assRect = contentRect(frame ? { x: frame.left, y: frame.top, w: frame.width, h: frame.height } : { x: 0, y: 0, ...box }, videoWidth, videoHeight);
   return (
     <div ref={ref} class="pl-sublayer" aria-hidden={hidden ? 'true' : undefined} style={hidden ? { visibility: 'hidden' } : undefined}>
       {subs?.kind === 'vtt' && <TextCues cues={subs.cues} time={time} style={style} lifted={lifted} />}
-      {subs?.kind === 'ass' && <AssCues track={subs.track} time={time} rect={contentRect(box, videoWidth, videoHeight)} />}
+      {subs?.kind === 'ass' && <AssCues track={subs.track} time={time} rect={assRect} view={visible(assRect, box)} />}
       {subs?.kind === 'pgs' && <PgsCanvas cue={activePgs(subs.cues, time)} box={box} fit={fit} />}
     </div>
   );
@@ -153,7 +164,9 @@ function runCss(r: RunStyle, sy: number, sx: number, borderStyle: number): Recor
 
 const H_ALIGN = (an: number) => (an % 3 === 1 ? 'left' : an % 3 === 2 ? 'center' : 'right');
 
-function AssCues({ track, time, rect }: { track: AssTrack; time: number; rect: { x: number; y: number; w: number; h: number } }) {
+/* Positioned events follow the picture (`rect`); lines placed by their margins stay on the part that's on screen
+   (`view`), so dialogue set in a cropped bar still shows. */
+function AssCues({ track, time, rect, view }: { track: AssTrack; time: number; rect: Rect; view: Rect }) {
   const evs = activeEvents(track, time);
   if (!evs.length || !rect.w) return null;
   const sx = rect.w / track.playResX;
@@ -204,30 +217,33 @@ function AssCues({ track, time, rect }: { track: AssTrack; time: number; rect: {
     );
   });
 
+  const at = (r: Rect) => ({ left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
   return (
-    <div class="pl-ass" style={{ left: rect.x + 'px', top: rect.y + 'px', width: rect.w + 'px', height: rect.h + 'px' }}>
-      {Array.from(groups.entries()).map(([an, lines]) => {
-        const m = groupMargins.get(an)!;
-        const v = an >= 7 ? { top: (m.v * sy) + 'px' } : an >= 4 ? { top: '50%', transform: 'translateY(-50%)' } : { bottom: (m.v * sy) + 'px' };
-        return (
-          <div
-            key={'g' + an}
-            class="pl-ass-group"
-            style={{
-              ...v,
-              left: (m.l * sx) + 'px',
-              right: (m.r * sx) + 'px',
-              // The first line stays nearest its edge; later ones stack away from it.
-              flexDirection: an <= 3 ? 'column-reverse' : 'column',
-              alignItems: an % 3 === 1 ? 'flex-start' : an % 3 === 2 ? 'center' : 'flex-end'
-            }}
-          >
-            {lines}
-          </div>
-        );
-      })}
-      {placed}
-    </div>
+    <>
+      <div class="pl-ass" style={at(view)}>
+        {Array.from(groups.entries()).map(([an, lines]) => {
+          const m = groupMargins.get(an)!;
+          const v = an >= 7 ? { top: (m.v * sy) + 'px' } : an >= 4 ? { top: '50%', transform: 'translateY(-50%)' } : { bottom: (m.v * sy) + 'px' };
+          return (
+            <div
+              key={'g' + an}
+              class="pl-ass-group"
+              style={{
+                ...v,
+                left: (m.l * sx) + 'px',
+                right: (m.r * sx) + 'px',
+                // The first line stays nearest its edge; later ones stack away from it.
+                flexDirection: an <= 3 ? 'column-reverse' : 'column',
+                alignItems: an % 3 === 1 ? 'flex-start' : an % 3 === 2 ? 'center' : 'flex-end'
+              }}
+            >
+              {lines}
+            </div>
+          );
+        })}
+      </div>
+      {placed.length > 0 && <div class="pl-ass" style={at(rect)}>{placed}</div>}
+    </>
   );
 }
 
