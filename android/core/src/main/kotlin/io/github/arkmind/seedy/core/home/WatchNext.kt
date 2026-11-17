@@ -35,10 +35,13 @@ suspend fun UserSession.watchNext(inProgress: Int, upNext: Int): List<WatchNextE
     val showPlayed = if (next.isEmpty()) emptyMap() else lastPlayedShows()
     val entries = resume.map { WatchNextEntry(it, next = false, lastEngaged = millisOf(it.userData?.lastPlayedDate)) } +
         next.map { WatchNextEntry(it, next = true, lastEngaged = it.seriesId?.let(showPlayed::get) ?: 0L) }
-    // Anything without a date goes after the rest, in the order the server gave.
-    val floor = (entries.map { it.lastEngaged }.filter { it > 0 }.minOrNull() ?: System.currentTimeMillis()) - 60_000
+    // Anything without a date goes after the rest, in the order the server gave. Nothing is later than now: Android
+    // TV's launcher leaves out what it thinks hasn't happened yet (a server clock running ahead).
+    val now = System.currentTimeMillis()
+    val floor = (entries.map { it.lastEngaged }.filter { it > 0 }.minOrNull() ?: now) - 60_000
     var missing = 0
-    entries.map { if (it.lastEngaged > 0) it else it.copy(lastEngaged = floor - 60_000L * missing++) }.sortedByDescending { it.lastEngaged }
+    entries.map { it.copy(lastEngaged = if (it.lastEngaged > 0) it.lastEngaged.coerceAtMost(now) else floor - 60_000L * missing++) }
+        .sortedByDescending { it.lastEngaged }
 }
 
 /** When each show had an episode played, from the 200 episodes played last. */

@@ -6,6 +6,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.media.tv.TvContract
 import android.media.tv.TvContract.WatchNextPrograms
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -68,7 +69,8 @@ object WatchNext {
                 .collect { (on, _) -> if (on) start(context) else stop(context) }
         }
         activity.lifecycle.addObserver(LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP && core.device.current.googleTvContinue) refresh(context)
+            // A few seconds later: the player reports where it stopped as it closes.
+            if (event == Lifecycle.Event.ON_STOP && core.device.current.googleTvContinue) refresh(context, delaySeconds = 5)
         })
     }
 
@@ -84,8 +86,8 @@ object WatchNext {
     private val online = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
     /** A refresh as soon as the network allows (one waiting at most). */
-    private fun refresh(context: Context) {
-        val request = OneTimeWorkRequestBuilder<WatchNextWorker>().setConstraints(online).build()
+    private fun refresh(context: Context, delaySeconds: Long = 0) {
+        val request = OneTimeWorkRequestBuilder<WatchNextWorker>().setConstraints(online).setInitialDelay(delaySeconds, TimeUnit.SECONDS).build()
         WorkManager.getInstance(context).enqueueUniqueWork(Now, ExistingWorkPolicy.REPLACE, request)
     }
 
@@ -129,7 +131,7 @@ object WatchNext {
             } catch (_: Exception) {
                 return@withLock
             }
-            runCatching { publish(context, session, entries) }
+            runCatching { publish(context, session, entries) }.onFailure { Log.w("WatchNext", "The home screen's row couldn't be updated", it) }
         }
     }
 

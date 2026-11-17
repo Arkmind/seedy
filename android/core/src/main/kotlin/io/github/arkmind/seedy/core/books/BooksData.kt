@@ -14,6 +14,7 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.math.max
@@ -80,8 +81,8 @@ fun comicSub(item: BaseItemDto, reading: Reading?, running: Boolean): String {
 /** An audiobook's length: "14 h 20 min". */
 fun audioLength(item: BaseItemDto): String = item.runTimeTicks?.takeIf { it > 0 }?.let { duration(ticksToSeconds(it)) }.orEmpty()
 
-/** Jellyfin's dates are UTC. */
-fun millisOf(d: LocalDateTime?): Long = d?.toInstant(ZoneOffset.UTC)?.toEpochMilli() ?: 0L
+/** The SDK hands Jellyfin's dates over in this device's time zone (its DateTimeSerializer). */
+fun millisOf(d: LocalDateTime?): Long = d?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli() ?: 0L
 
 fun millisOf(iso: String?): Long = iso?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() } ?: 0L
 

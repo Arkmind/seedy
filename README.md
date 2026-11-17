@@ -92,6 +92,9 @@ tries hard not to make your server convert anything it doesn't have to.
 
 - **A real TV app**, not the phone app stretched out: a side rail, focus that goes where you expect on a remote, an
   on-screen keyboard grid for search, and voice search when the TV has a speech recognizer.
+- **Continue watching on the TV's home screen.** What you're watching and the next episode of your shows appear in
+  Google TV's Continue watching row (Play Next on Android TV), and a card picks up where you left off. It can be
+  turned off in Settings › Home screen.
 - **Direct play first.** The app reads what the device can decode, what the screen can show (HDR10, HLG, Dolby
   Vision) and, on TVs, what the receiver can take over HDMI, and asks Jellyfin for exactly that.
 - **The player** (AndroidX Media3): chapters, audio and subtitle tracks, subtitle timing, skip buttons and the next
