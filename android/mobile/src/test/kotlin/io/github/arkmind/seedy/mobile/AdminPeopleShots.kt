@@ -225,15 +225,15 @@ object PeopleSamples {
         changes = 1,
     )
 
-    private fun dev(id: String, name: String, kind: DeviceKind, app: String, user: String, index: Int, last: String, playing: String? = null, mine: Boolean = false) =
-        DeviceRow(id, name, name, kind, app, id, user, index, null, last, playing, mine)
+    private fun dev(id: String, name: String, kind: DeviceKind, app: String, user: String, index: Int, last: String, playing: String? = null, mine: Boolean = false, update: String? = null) =
+        DeviceRow(id, name, name, kind, app, id, user, index, null, last, playing, mine, update)
 
     val devices = DevicesState(
         devices = listOf(
-            dev("1", "Living room TV", DeviceKind.Tv, "Seedy 0.1 · Android TV", "Alex", 0, "Now", "Playing Northbound"),
-            dev("2", "Sam’s iPhone", DeviceKind.Phone, "Seedy 0.1 · Safari", "Sam", 1, "Now", "Playing Glass Harbor"),
+            dev("1", "Living room TV", DeviceKind.Tv, "Seedy for Android TV 0.4.7", "Alex", 0, "Now", "Playing Northbound", update = "0.4.9"),
+            dev("2", "Sam’s iPhone", DeviceKind.Phone, "Seedy 0.4.9 · Safari", "Sam", 1, "Now", "Playing Glass Harbor"),
             dev("3", "Léa’s laptop", DeviceKind.Computer, "Jellyfin Web 12.2 · Firefox", "Léa", 2, "Now", "Playing Low Tide Club"),
-            dev("4", "Alex’s Pixel", DeviceKind.Phone, "Seedy 0.1", "Alex", 0, "2 min ago", mine = true),
+            dev("4", "Alex’s Pixel", DeviceKind.Phone, "Seedy for Android 0.4.9", "Alex", 0, "2 min ago", mine = true),
             dev("5", "Bedroom Fire TV", DeviceKind.Tv, "Jellyfin for Fire TV 0.18", "Kids", 3, "Yesterday, 19:40"),
             dev("6", "Sam’s iPad", DeviceKind.Phone, "Swiftfin 1.6", "Sam", 1, "14 Oct"),
             dev("7", "Office PC", DeviceKind.Computer, "Jellyfin Media Player 2.0", "Alex", 0, "9 Oct"),

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { deviceId } from '../../api/client';
 import { userImageUrl } from '../../api/images';
+import { meStore } from '../../lib/app-state';
 import { t, tn, tx } from '../../lib/i18n';
 import { Link } from '../../lib/router';
 import { Icon } from '../../ui/icons';
@@ -9,7 +10,7 @@ import { SelectField } from '../../ui/controls';
 import { AdminLayout } from '../admin/AdminLayout';
 import { deleteDevices, type DeviceInfo, errText, type FullUser, getDevices, getSessions, getUsers, renameDevice, type Session } from './api';
 import { LoadFailed, useLoad } from './parts';
-import { avatarColour, lastActive, majorMinor } from './format';
+import { appWithVersion, avatarColour, lastActive, seedyUpdate } from './format';
 import { Glyph } from './glyphs';
 
 type Kind = 'tv' | 'phone' | 'computer';
@@ -28,11 +29,11 @@ function kindOf(d: DeviceInfo): Kind {
   return 'computer';
 }
 
-/* "0.1.0" → "0.1", "10.10.7" → "10.10", "1.6" → "1.6". */
 const BROWSER = /\b(Chrome|Chromium|Firefox|Safari|Edge|Opera|Vivaldi|Brave)\b/i;
 
+/* "Seedy 0.4.9 · Chrome", "Swiftfin 1.6". */
 function appLabel(d: DeviceInfo): string {
-  const app = [d.AppName, majorMinor(d.AppVersion)].filter(Boolean).join(' ');
+  const app = appWithVersion(d.AppName, d.AppVersion);
   const browser = BROWSER.exec(d.Name ?? '')?.[1];
   return browser && !(d.AppName ?? '').toLowerCase().includes(browser.toLowerCase()) ? `${app} · ${browser}` : app;
 }
@@ -56,6 +57,7 @@ export function ServerDevices() {
   const [shown, setShown] = useState(PAGE);
   const [busy, setBusy] = useState(false);
   const mine = deviceId();
+  const server = meStore.get().pluginVersion;
 
   useEffect(() => {
     let alive = true;
@@ -194,6 +196,7 @@ export function ServerDevices() {
               const user = ui >= 0 ? userList[ui] : undefined;
               const img = user ? userImageUrl(user, 52) : undefined;
               const userName = user?.Name ?? d.LastUserName ?? '';
+              const update = seedyUpdate(d.AppName, d.AppVersion, server);
               return (
                 <div key={d.Id} role="row" class="srv-trow">
                   <div role="cell" class="srv-td srv-dev">
@@ -204,7 +207,10 @@ export function ServerDevices() {
                       {isMine && <span class="srv-dev-this">{t('This device')}</span>}
                     </span>
                   </div>
-                  <div role="cell" class="srv-td is-app">{appLabel(d)}</div>
+                  <div role="cell" class="srv-td is-app">
+                    {appLabel(d)}
+                    {update && <span class="srv-dev-update">{t('Update available: {version}', { version: update })}</span>}
+                  </div>
                   <div role="cell" class="srv-td srv-who">
                     {userName && (
                       <span class="srv-avatar-sm" aria-hidden="true" style={img ? undefined : { background: avatarColour(ui) }}>

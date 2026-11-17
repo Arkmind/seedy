@@ -13,6 +13,7 @@ import { AdminLayout, LoadError, PanelSkeletons } from '../admin/AdminLayout';
 import { accountsStore, loadAccounts, loadProfiles, profilesStore } from '../admin/config';
 import { type AccessDay, type AccessSchedule, deleteUser, deleteUserImage, errText, type FullPolicy, type FullUser, getUser, type ParentalRating, patchUserPolicy, renameUser, resetUserPassword, sameId, setUserPassword, signOutEverywhere, type UnratedItem, uploadUserImage } from './api';
 import { pickChanged, same, UnsavedBar, useFilePicker, UserAvatar, useUnsavedGuard } from './parts';
+import { appWithVersion } from './format';
 import { hourLabel, loadUsersData, presence, type UsersData } from './Users';
 
 /* Server · Edit user: one person's account, playback, access, parental controls, password and Seedy switches. */
@@ -415,7 +416,7 @@ function AccessTab({ p, user, data, set }: { p: FullPolicy; user: FullUser; data
               <div class="srv-grid2 srv-grid2-rows">
                 {devices.map((dv) => (
                   <div key={dv.Id} class="srv-sw">
-                    <span class="srv-sw-text"><span class="srv-sw-name">{dv.CustomName || dv.Name || dv.Id}</span><span class="srv-sw-sub">{[dv.AppName, dv.LastUserName].filter(Boolean).join(' · ')}</span></span>
+                    <span class="srv-sw-text"><span class="srv-sw-name">{dv.CustomName || dv.Name || dv.Id}</span><span class="srv-sw-sub">{[appWithVersion(dv.AppName, dv.AppVersion), dv.LastUserName].filter(Boolean).join(' · ')}</span></span>
                     <Switch checked={p.EnabledDevices.includes(dv.Id)} onChange={(v) => set('EnabledDevices', toggleIn(p.EnabledDevices, dv.Id, v))} label={t('Allow {name}', { name: dv.CustomName || dv.Name || dv.Id })} />
                   </div>
                 ))}

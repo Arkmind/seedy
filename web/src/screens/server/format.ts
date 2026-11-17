@@ -119,6 +119,23 @@ export function cmpVersion(a?: string | null, b?: string | null): number {
   return 0;
 }
 
+/* Seedy's own apps: "Seedy" (web), "Seedy for Android", "Seedy for Android TV". */
+export const isSeedyApp = (app?: string | null) => /^seedy\b/i.test(app ?? '');
+
+/* An app and its version: Seedy's in full since its patch releases matter ("Seedy 0.4.9", a pre-release's hyphen
+   unbreakable), anyone else's as major.minor ("Jellyfin Web 10.10"). */
+export const appWithVersion = (app?: string | null, version?: string | null) =>
+  [app, isSeedyApp(app) ? shortVersion(version).replace(/-/g, '\u2011') : majorMinor(version)].filter(Boolean).join(' ');
+
+/* The server's Seedy when a Seedy app runs an older one (a phone that hasn't updated, a tab opened before the server
+   did), else null. A pre-release comes before its release: 0.5.0-beta.1 is older than 0.5.0. */
+export function seedyUpdate(app?: string | null, version?: string | null, server?: string | null): string | null {
+  if (!isSeedyApp(app) || !version || !server) return null;
+  const [release, pre] = version.split('-', 2);
+  const c = cmpVersion(release, server);
+  return c < 0 || (c === 0 && pre) ? shortVersion(server) : null;
+}
+
 export { copyText, downloadText } from '../../lib/clipboard';
 
 /* ── Dates and people (Overview, Users, Devices, Activity) ── */

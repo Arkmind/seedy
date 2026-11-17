@@ -141,6 +141,9 @@ private fun DeviceLine(d: DeviceRow, onClick: () -> Unit) {
                 if (d.user.isNotEmpty()) AdminAvatar(d.user, avatarColour(d.userIndex), 16.dp, 9.sp, imageUrl = d.userImage)
                 SpacedDots(listOf(d.user, d.app), 12.sp, SeedyColors.Text3)
             }
+            if (d.update != null) {
+                SText(t("Update available: {version}", "version" to d.update), size = 12.sp, weight = 600, color = SeedyColors.Pending, maxLines = 1)
+            }
         }
         SIcon(AdminIcons.Dots, size = 18.dp, color = SeedyColors.Text3)
     }

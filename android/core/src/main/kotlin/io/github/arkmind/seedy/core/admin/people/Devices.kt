@@ -5,10 +5,12 @@ import androidx.lifecycle.viewModelScope
 import io.github.arkmind.seedy.core.admin.AdminDevice
 import io.github.arkmind.seedy.core.admin.AdminHttp
 import io.github.arkmind.seedy.core.admin.AdminUser
+import io.github.arkmind.seedy.core.admin.appWithVersion
 import io.github.arkmind.seedy.core.admin.ItemsResult
 import io.github.arkmind.seedy.core.admin.errorText
 import io.github.arkmind.seedy.core.admin.realDate
 import io.github.arkmind.seedy.core.admin.sameId
+import io.github.arkmind.seedy.core.admin.seedyUpdate
 import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.i18n.tn
@@ -46,10 +48,9 @@ fun kindOf(d: AdminDevice): DeviceKind {
     }
 }
 
-/** "Seedy 0.1 · Chrome", "Swiftfin 1.6". */
+/** "Seedy 0.4.9 · Chrome", "Swiftfin 1.6". */
 fun appLabel(d: AdminDevice): String {
-    val version = d.appVersion?.split('.')?.take(2)?.joinToString(".").orEmpty()
-    val app = listOf(d.appName.orEmpty(), version).filter { it.isNotEmpty() }.joinToString(" ")
+    val app = appWithVersion(d.appName, d.appVersion)
     val browser = Browser.find(d.name.orEmpty())?.groupValues?.get(1)
     return if (browser != null && !d.appName.orEmpty().lowercase().contains(browser.lowercase())) "$app · $browser" else app
 }
@@ -73,6 +74,8 @@ data class DeviceRow(
     val playing: String? = null,
     /** The device this app runs on. */
     val mine: Boolean = false,
+    /** The server's Seedy when this Seedy app runs an older one. */
+    val update: String? = null,
 )
 
 data class DevicesState(
@@ -179,6 +182,7 @@ class DevicesViewModel(
                             last = if (play != null) t("Now") else lastActive(realDate(d.dateLastActivity), clock),
                             playing = play,
                             mine = d.id == mine,
+                            update = seedyUpdate(d.appName, d.appVersion, session.seedy?.pluginVersion),
                         ) to d.dateLastActivity.orEmpty()
                     }.sortedWith(compareByDescending<Pair<DeviceRow, String>> { if (it.first.playing != null) 1 else 0 }.thenByDescending { it.second }).map { it.first }
                 },

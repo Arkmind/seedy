@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { cardArt } from '../../api/images';
 import type { BaseItem } from '../../api/types';
-import { userStore } from '../../lib/app-state';
+import { meStore, userStore } from '../../lib/app-state';
 import { episodeTag, joinNames, pct } from '../../lib/format';
 import { formatNumber, t, tn, tx } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
@@ -15,7 +15,7 @@ import { AdminLayout } from '../admin/AdminLayout';
 import { type ActivityEntry, errText, type FullUser, getActivity, getItemCounts, getPackages, getPlaying, getPlugins, getStorage, getSystemInfo, getTasks, getUsers, type ItemCounts, type PackageInfo, type PluginInfo, restartingStore, type PlayingSession, restartServer, sameId, scanAllLibraries, seedyBackups, sendSessionMessage, type Session, shutdownServer, stopSession, type SystemInfo, type TaskInfo } from './api';
 import { Glyph } from './glyphs';
 import { InlineError, Notice, usePoll, UserAvatar } from './parts';
-import { activityWhen, dayDiff, fmtSize, hhmm, majorMinor, percent, platformLabel, playDetail, playMethod, shortDate, uptime } from './format';
+import { activityWhen, appWithVersion, dayDiff, fmtSize, hhmm, majorMinor, percent, platformLabel, playDetail, playMethod, seedyUpdate, shortDate, uptime } from './format';
 import { countPluginUpdates, pluginTargetAbi } from './plugins';
 import { sentenceCase, serverStartFromTasks } from './tasks';
 import { pluginUpdatesStore } from './status';
@@ -262,6 +262,8 @@ function NowCard({ s, users, onChanged }: { s: PlayingSession; users?: FullUser[
   const canMessage = !!s.SupportedCommands?.includes('DisplayMessage');
   const canStop = !!s.SupportsMediaControl;
   const detail = playDetail(s, s.decodedOnClient);
+  const app = appWithVersion(s.Client, s.ApplicationVersion);
+  const update = seedyUpdate(s.Client, s.ApplicationVersion, meStore.get().pluginVersion);
 
   const stop = async () => {
     const ok = await confirm({
@@ -294,7 +296,10 @@ function NowCard({ s, users, onChanged }: { s: PlayingSession; users?: FullUser[
         <UserAvatar user={{ Id: s.UserId ?? '', Name: name, PrimaryImageTag: s.UserPrimaryImageTag }} index={index} size={32} />
         <div class="srv-now-text">
           <span class="srv-now-title">{sessionTitle(item)}</span>
-          <span class="srv-now-user">{[name, s.DeviceName, s.Client].filter(Boolean).join(' · ')}</span>
+          <span class="srv-now-user">
+            {[name, s.DeviceName].filter(Boolean).join(' · ')}
+            {app && <>{s.DeviceName || name ? ' · ' : ''}<span class={update ? 'srv-now-app is-old' : 'srv-now-app'} title={update ? t('Update available: {version}', { version: update }) : undefined}>{app}</span></>}
+          </span>
           <span class="srv-now-detail">{detail}</span>
         </div>
       </div>

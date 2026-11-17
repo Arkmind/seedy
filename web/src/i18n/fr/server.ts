@@ -1229,6 +1229,7 @@ const fr: Record<string, string> = {
   "Copy extra fanart to extrathumbs": "Copier les fanarts supplémentaires dans extrathumbs",
   "For older Kodi skins that look there": "Pour les anciens skins Kodi qui les cherchent là",
   "Update available": "Mise à jour disponible",
+  "Update available: {version}": "Mise à jour disponible : {version}",
   "Installed with {version}": "Installée avec {version}",
   "Up to date": "À jour",
   "This interface · {repo}": "Cette interface · {repo}",

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.arkmind.seedy.core.admin.ActivityEntry
 import io.github.arkmind.seedy.core.admin.AdminHttp
+import io.github.arkmind.seedy.core.admin.appWithVersion
 import io.github.arkmind.seedy.core.admin.ItemsResult
 import io.github.arkmind.seedy.core.admin.SeedyJson
 import io.github.arkmind.seedy.core.admin.errorText
@@ -290,7 +291,7 @@ class UserEditViewModel(
                     FolderChoice(f.itemId, f.name, (listOf(t(TypeLabels[f.collectionType ?: "mixed"] ?: "Mixed")) + f.locations).joinToString(" · "))
                 },
                 devices = latest.map { d ->
-                    DeviceChoice(d.id, d.customName?.takeIf { n -> n.isNotBlank() } ?: d.name ?: d.id, listOfNotNull(d.appName, d.lastUserName).filter { s -> s.isNotEmpty() }.joinToString(" · "), sameId(d.lastUserId, u.id), d.id == session.api.deviceInfo.id)
+                    DeviceChoice(d.id, d.customName?.takeIf { n -> n.isNotBlank() } ?: d.name ?: d.id, listOfNotNull(appWithVersion(d.appName, d.appVersion), d.lastUserName).filter { s -> s.isNotEmpty() }.joinToString(" · "), sameId(d.lastUserId, u.id), d.id == session.api.deviceInfo.id)
                 },
                 ratings = people.ratings,
             )
