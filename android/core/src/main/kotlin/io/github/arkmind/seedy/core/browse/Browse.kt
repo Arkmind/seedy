@@ -54,6 +54,14 @@ class Browse(private val session: UserSession) {
         ).content.items
     }
 
+    /** A season's episodes on the server, with what saving their files needs (file name, container, permission). */
+    suspend fun episodeFiles(seriesId: UUID, seasonId: UUID): List<BaseItemDto> = io {
+        api.showApi.getEpisodes(
+            seriesId = seriesId, userId = userId, seasonId = seasonId, isMissing = false, enableUserData = false,
+            fields = listOf(ItemFields.PATH, ItemFields.MEDIA_SOURCES, ItemFields.CAN_DOWNLOAD),
+        ).content.items
+    }
+
     /** Where a show or season stands: its episode in progress, unless the person moved past it (see [continueWatching]). */
     suspend fun resume(parentId: UUID): BaseItemDto? = io { session.continueWatching(limit = 1, parentId = parentId, fields = CardFields).firstOrNull() }
 

@@ -3,6 +3,7 @@ package io.github.arkmind.seedy.core.feature
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.arkmind.seedy.core.browse.Browse
+import io.github.arkmind.seedy.core.browse.Downloads
 import io.github.arkmind.seedy.core.browse.ItemsQuery
 import io.github.arkmind.seedy.core.browse.techBadges
 import io.github.arkmind.seedy.core.format.blankUserData
@@ -170,6 +171,16 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
             if (!_state.value.hasTrailer && (item.type == BaseItemKind.MOVIE || item.type == BaseItemKind.SERIES)) {
                 launch { if (browse.seedyTrailer(item.id) != null) _state.update { it.copy(hasTrailer = true) } }
             }
+        }
+    }
+
+    /** The open season's episodes this person may save; null when they couldn't be read. */
+    fun seasonFiles(onReady: (season: BaseItemDto, files: List<BaseItemDto>?) -> Unit) {
+        val series = _state.value.item ?: return
+        val season = _state.value.selectedSeason ?: return
+        viewModelScope.launch {
+            val eps = runCatching { browse.episodeFiles(series.id, season.id) }.getOrNull()
+            onReady(season, eps?.filter { Downloads.isVideoFile(it) && it.canDownload != false })
         }
     }
 

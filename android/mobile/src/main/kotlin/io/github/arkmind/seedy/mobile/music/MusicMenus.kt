@@ -1,8 +1,6 @@
 package io.github.arkmind.seedy.mobile.music
 
-import android.app.DownloadManager
 import android.content.Context
-import android.os.Build
 import android.os.Environment
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
+import io.github.arkmind.seedy.core.browse.Downloads
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.manage.AddTarget
 import io.github.arkmind.seedy.core.music.CastTarget
@@ -48,7 +46,9 @@ import io.github.arkmind.seedy.mobile.manage.MenuEntry
 import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.nav.MobileNav
 import io.github.arkmind.seedy.mobile.nav.Route
+import io.github.arkmind.seedy.mobile.parts.SaveFile
 import io.github.arkmind.seedy.mobile.parts.Toast
+import io.github.arkmind.seedy.mobile.parts.downloadFiles
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.settings.SheetHead
 import io.github.arkmind.seedy.player.audio.AudioEngine
@@ -164,18 +164,13 @@ class MusicController(
     fun download(tracks: List<BaseItemDto>, folder: String) {
         val ctx = context ?: return
         val s = session ?: return
-        val manager = ctx.getSystemService(DownloadManager::class.java) ?: return
-        val dir = folder.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim().ifEmpty { "Seedy" }
-        for (tk in tracks) {
+        val dir = Downloads.safe(folder).ifEmpty { "Seedy" }
+        val files = tracks.map { tk ->
             val ext = tk.mediaSources?.firstOrNull()?.container?.substringBefore(',')?.takeIf { it.isNotBlank() } ?: "mp3"
-            val file = listOfNotNull(tk.indexNumber?.toString()?.padStart(2, '0'), tk.name).joinToString(" ").replace(Regex("[\\\\/:*?\"<>|]"), "_") + ".$ext"
-            val request = DownloadManager.Request(s.api.withApiKey("/Items/${tk.id}/Download").toUri())
-                .setTitle(tk.name.orEmpty())
-                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            if (Build.VERSION.SDK_INT >= 29) request.setDestinationInExternalPublicDir(Environment.DIRECTORY_MUSIC, "$dir/$file")
-            else request.setDestinationInExternalFilesDir(ctx, Environment.DIRECTORY_MUSIC, "$dir/$file")
-            runCatching { manager.enqueue(request) }
+            val file = Downloads.safe(listOfNotNull(tk.indexNumber?.toString()?.padStart(2, '0'), tk.name).joinToString(" ")) + ".$ext"
+            SaveFile(s.api.withApiKey("/Items/${tk.id}/Download"), "$dir/$file", tk.name.orEmpty())
         }
+        downloadFiles(ctx, files, Environment.DIRECTORY_MUSIC)
         say(t("Downloading {n} songs", "n" to tracks.size))
     }
 }
