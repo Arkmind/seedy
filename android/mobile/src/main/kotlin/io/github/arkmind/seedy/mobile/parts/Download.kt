@@ -28,3 +28,23 @@ fun downloadFile(context: Context, url: String, name: String): String? {
         null
     }.getOrElse { t("Couldn’t download {name}", "name" to name) }
 }
+
+/** A file to save: its address, where it goes under the folder ("Show/file.mkv") and the notification's title. */
+class SaveFile(val url: String, val path: String, val title: String)
+
+/**
+ * Saves [files] through the download manager into the phone's [dir] (Movies, Music…; before Android 10, the app's own
+ * copy of it, which needs no permission). Returns how many started.
+ */
+fun downloadFiles(context: Context, files: List<SaveFile>, dir: String): Int {
+    val manager = context.getSystemService(DownloadManager::class.java) ?: return 0
+    return files.count { f ->
+        runCatching {
+            val request = DownloadManager.Request(f.url.toUri()).setTitle(f.title)
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            if (Build.VERSION.SDK_INT >= 29) request.setDestinationInExternalPublicDir(dir, f.path)
+            else request.setDestinationInExternalFilesDir(context, dir, f.path)
+            manager.enqueue(request)
+        }.isSuccess
+    }
+}

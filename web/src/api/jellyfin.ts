@@ -10,7 +10,7 @@ export const CARD_FIELDS = [
 export const DETAIL_FIELDS = [
   'Overview', 'Genres', 'People', 'Studios', 'Taglines', 'MediaSources', 'MediaStreams', 'Chapters', 'Trickplay',
   'RemoteTrailers', 'ExternalUrls', 'ProviderIds', 'AirTime', 'ChildCount', 'RecursiveItemCount', 'DateCreated',
-  'OriginalTitle', 'LocalTrailerCount', 'SpecialFeatureCount', 'Tags', 'ProductionLocations', 'CanDelete'
+  'OriginalTitle', 'LocalTrailerCount', 'SpecialFeatureCount', 'Tags', 'ProductionLocations', 'CanDelete', 'CanDownload'
 ];
 export const PLAYER_FIELDS = ['Overview', 'Genres', 'People', 'MediaSources', 'MediaStreams', 'Chapters', 'Trickplay', 'ParentId'];
 

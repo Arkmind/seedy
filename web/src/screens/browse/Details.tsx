@@ -4,7 +4,8 @@ import { getEpisodes, getItem, getItems, getNextUp, getResume, getSeasons } from
 import { backdropUrl, personImageUrl, primaryUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { seerrDetails, type SeerrDetails } from '../../api/seedy';
-import { meStore, viewsStore } from '../../lib/app-state';
+import { canDownload, meStore, viewsStore } from '../../lib/app-state';
+import { downloadItems, isVideoFile, mayDownload } from '../../lib/download';
 import { dayOf, episodeTag, fmtDate, initials, plural, progressFraction, remainingSeconds, runtime, timeLeft, yearRange } from '../../lib/format';
 import { back, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -209,6 +210,18 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
     if (first) navigate(playPath(first, { restart: true }));
     else toast(t('Nothing to play yet'), 'error');
   };
+  /* Every episode of the open season that has a file this person may save. */
+  const shownSeason = list.find((s) => s.Id === selected && s.LocationType !== 'Virtual');
+  const downloadSeason = async (season: BaseItem) => {
+    const eps = (await getEpisodes(item.Id, season.Id, { fields: 'CanDownload', isMissing: false }).catch(() => null))?.Items;
+    const files = eps?.filter((e) => isVideoFile(e) && mayDownload(e)) ?? [];
+    if (!files.length) {
+      toast(eps ? t('Nothing to download in {name}', { name: season.Name ?? '' }) : t('Couldn’t download {name}', { name: season.Name ?? '' }), 'error');
+      return;
+    }
+    downloadItems(files.map((e) => e.Id));
+    toast(tn(files.length, 'Downloading {n} episode', 'Downloading {n} episodes'));
+  };
   const shuffle = async () => {
     const ep = await playRandom({ parentId: item.Id, includeItemTypes: ['Episode'], isMissing: false }).catch(() => undefined);
     if (ep) navigate(playPath(ep));
@@ -258,7 +271,14 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
             />
             <SquareToggle icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
             <MoreActions item={item}>
-              {(close) => list.length > 0 && <MenuItem icon="restart" label={t('Play from the first episode')} onSelect={() => { close(); void playFirst(); }} />}
+              {(close) => (
+                <>
+                  {list.length > 0 && <MenuItem icon="restart" label={t('Play from the first episode')} onSelect={() => { close(); void playFirst(); }} />}
+                  {shownSeason && canDownload() && (
+                    <MenuItem icon="download" label={t('Download {name}', { name: shownSeason.Name ?? t('season') })} onSelect={() => { close(); void downloadSeason(shownSeason); }} />
+                  )}
+                </>
+              )}
             </MoreActions>
           </>
         }
