@@ -47,6 +47,15 @@ class DownloadsTest {
     }
 
     @Test
+    fun aSeasonWithoutItsOwnFolderStillHasEpisodes() {
+        // Episodes right in the show's folder: Jellyfin makes the season up and calls it virtual.
+        val made = BaseItemDto(id = UUID(0, 2), type = BaseItemKind.SEASON, name = "Season 1", locationType = LocationType.VIRTUAL, childCount = 13)
+        assertTrue(Downloads.hasEpisodes(made))
+        assertTrue(Downloads.hasEpisodes(made.copy(locationType = LocationType.FILE_SYSTEM, childCount = null)))
+        assertFalse(Downloads.hasEpisodes(made.copy(childCount = 0)))
+    }
+
+    @Test
     fun subNamesTheContainer() {
         assertEquals("MKV", Downloads.sub(video(BaseItemKind.MOVIE, "Sintel", container = "mkv,webm")))
         assertNull(Downloads.sub(video(BaseItemKind.MOVIE, "Sintel")))
