@@ -5,7 +5,7 @@ import { backdropUrl, personImageUrl, primaryUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { seerrDetails, type SeerrDetails } from '../../api/seedy';
 import { canDownload, meStore, viewsStore } from '../../lib/app-state';
-import { downloadItems, isVideoFile, mayDownload } from '../../lib/download';
+import { downloadItems, hasEpisodes, isVideoFile, mayDownload } from '../../lib/download';
 import { dayOf, episodeTag, fmtDate, initials, plural, progressFraction, remainingSeconds, runtime, timeLeft, yearRange } from '../../lib/format';
 import { back, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -211,7 +211,7 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
     else toast(t('Nothing to play yet'), 'error');
   };
   /* Every episode of the open season that has a file this person may save. */
-  const shownSeason = list.find((s) => s.Id === selected && s.LocationType !== 'Virtual');
+  const shownSeason = list.find((s) => s.Id === selected && hasEpisodes(s));
   const downloadSeason = async (season: BaseItem) => {
     const eps = (await getEpisodes(item.Id, season.Id, { fields: 'CanDownload', isMissing: false }).catch(() => null))?.Items;
     const files = eps?.filter((e) => isVideoFile(e) && mayDownload(e)) ?? [];

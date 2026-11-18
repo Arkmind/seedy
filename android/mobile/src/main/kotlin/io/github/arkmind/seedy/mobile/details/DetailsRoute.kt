@@ -153,7 +153,7 @@ private fun menuEntries(
         val all = eps.isNotEmpty() && eps.all { it.userData?.played == true }
         val name = season.name.orEmpty()
         add(MenuEntry(WebIcons.Check, if (all) t("Mark {name} unwatched", "name" to name) else t("Mark {name} watched", "name" to name), run = vm::toggleSeasonPlayed))
-        if (download.season != null && !season.isVirtual) add(MenuEntry(WebIcons.Download, t("Download {name}", "name" to name), run = download.season))
+        if (download.season != null && Downloads.hasEpisodes(season)) add(MenuEntry(WebIcons.Download, t("Download {name}", "name" to name), run = download.season))
     }
     if (playlistable(item)) add(MenuEntry(ManageIcons.PlaylistAdd, t("Add to playlist"), more = true, run = { onSheet("playlist") }))
     if (perms.collections && item.type != BaseItemKind.BOX_SET && item.type != BaseItemKind.PLAYLIST) {

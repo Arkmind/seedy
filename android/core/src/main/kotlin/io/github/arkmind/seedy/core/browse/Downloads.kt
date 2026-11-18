@@ -16,6 +16,12 @@ object Downloads {
     /** A movie, episode or other video that has a file on the server. */
     fun isVideoFile(item: BaseItemDto): Boolean = item.mediaType == MediaType.VIDEO && item.isFolder != true && !item.isVirtual
 
+    /**
+     * A season with episodes. Jellyfin calls a season virtual when it has no folder of its own (episodes right in the
+     * show's folder), so that says nothing about its files; seasons that are really missing don't come with episodes.
+     */
+    fun hasEpisodes(season: BaseItemDto): Boolean = (season.childCount ?: 1) > 0
+
     /** The server's file name ("Sintel (2010).mkv"), else the title and its container. */
     fun fileName(item: BaseItemDto): String {
         item.path?.substringAfterLast('/')?.substringAfterLast('\\')?.takeIf { '.' in it.trim('.') }?.let { return safe(it) }
