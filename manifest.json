@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.4.14.0",
+        "changelog": "# What's Changed\n- Download any season\n  Download Season now shows on every show, not only some of them\n\n## Updating\n- Seedy offers this version itself on phones (or update from Google Play). Nothing changes on TVs.\n- Update the Seedy plugin from Jellyfin's plugin catalogue for the web fix, then restart Jellyfin.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.13...v0.4.14",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.4.14/seedy_0.4.14.0.zip",
+        "checksum": "a5aba5db5484c8883e9f822d1325c50f",
+        "timestamp": "2026-11-18T16:14:26Z"
+      },
+      {
         "version": "0.4.13.0",
         "changelog": "# What's Changed\n- Download movies and episodes\n  Save the file from the ⋯ menu, or a whole season at once\n\n## Updating\n- Seedy offers this version itself on phones (or update from Google Play). Downloads land in the phone’s Movies folder, each show in its own folder. Nothing changes on TVs.\n- Update the Seedy plugin from Jellyfin's plugin catalogue for the web changes.\n- Download only shows for profiles that Jellyfin allows to download (Users › a profile › Allow media downloading).\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.12...v0.4.13",
         "targetAbi": "12.0.0.0",
