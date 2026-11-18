@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.4.12.0",
+        "changelog": "# What's Changed\n- Never miss a new version\n  Seedy checks each time you come back to it, even on TVs that keep it running\n\n## Also\n- The update screen never shows up when you come back straight into what you were watching: it waits for the next time Seedy opens on Home.\n\n## Updating\n- On a TV that keeps Seedy running, this version is offered once Seedy restarts (restart the TV, or force stop Seedy in the TV’s settings). Later versions show up by themselves.\n- Phones: Seedy offers it itself (or update from Google Play).\n- Nothing changes in the web app or the Seedy plugin this time.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.11...v0.4.12",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.4.12/seedy_0.4.12.0.zip",
+        "checksum": "fdbf52d6dfaa2ef62d606475cec46253",
+        "timestamp": "2026-11-18T07:27:20Z"
+      },
+      {
         "version": "0.4.11.0",
         "changelog": "# What's Changed\n- Continue watching on Google TV\n  What you’re watching and your next episodes show up on the TV’s home screen\n- No more black bars on wide screens\n  Films with built-in bars now fill ultrawide monitors and phones held sideways\n- Tabs say what’s on screen\n  Your browser tab names the film you’re watching or the page you’re on\n\n## Also\n- Medu's secret party can be turned down now, and has five levels instead of two.\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play). The TV’s home row is on by default: Settings › Home screen turns it off.\n- Update the Seedy plugin from Jellyfin's plugin catalogue for the web changes.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.10...v0.4.11",
         "targetAbi": "12.0.0.0",
