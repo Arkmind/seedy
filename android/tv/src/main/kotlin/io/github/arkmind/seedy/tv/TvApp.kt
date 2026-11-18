@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
@@ -73,6 +74,7 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import io.github.arkmind.seedy.core.remote.ScreenCommand
@@ -83,6 +85,7 @@ import io.github.arkmind.seedy.tv.remote.press
 import io.github.arkmind.seedy.tv.remote.showMessage
 import io.github.arkmind.seedy.tv.update.TvUpdatePrompt
 import io.github.arkmind.seedy.ui.update.AppUpdates
+import io.github.arkmind.seedy.ui.update.rememberUpdateAllowed
 import io.github.arkmind.seedy.tv.watchnext.WatchNextLinks
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.combine
@@ -96,7 +99,8 @@ fun TvApp(core: SeedyCore, appVersion: String = "") {
     var quickConnectNext by rememberSaveable { mutableStateOf(false) }
     val finderQuickConnect = { quickConnectNext = true }
     val context = LocalContext.current
-    LaunchedEffect(Unit) { AppUpdates.start(context) }
+    // Each time Seedy comes to the front: TVs keep it running in the background instead of closing it.
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { AppUpdates.start(context) }
     LaunchedEffect(Unit) { openWatchNextProfiles(core) }
     SessionTheme(state) {
         when (val s = state) {
@@ -307,8 +311,11 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                     entry<TvRoute.SeerrTitle> { TvSeerrTitleRoute(it.mediaType, it.tmdbId) }
                 },
             )
-            // Board "Android TV · Update ready": a newer Seedy, offered over the places (never over a page or the player).
-            TvUpdatePrompt(visible = stack.size == 1, brand = session.server.seedy?.name ?: "Seedy")
+            // Board "Android TV · Update ready": a newer Seedy, offered over the places (never over a page, nor on a return
+            // to the player, nor while a Continue watching card is about to play).
+            val card by WatchNextLinks.pending.collectAsState()
+            val allowed = rememberUpdateAllowed(atTop = stack.size == 1, inPlayer = stack.lastOrNull() is TvRoute.Player)
+            TvUpdatePrompt(visible = allowed && card == null, brand = session.server.seedy?.name ?: "Seedy")
         }
     }
 }

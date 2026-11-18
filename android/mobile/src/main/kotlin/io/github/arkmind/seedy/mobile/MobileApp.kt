@@ -26,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -109,6 +111,7 @@ import io.github.arkmind.seedy.ui.theme.SessionTheme
 import io.github.arkmind.seedy.ui.theme.rememberRetryClock
 import io.github.arkmind.seedy.ui.theme.rememberViewer
 import io.github.arkmind.seedy.ui.update.AppUpdates
+import io.github.arkmind.seedy.ui.update.rememberUpdateAllowed
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -121,10 +124,9 @@ fun MobileApp(core: SeedyCore, appVersion: String = "") {
     var quickConnectNext by rememberSaveable { mutableStateOf(false) }
     val finderQuickConnect = { quickConnectNext = true }
     val context = LocalContext.current
-    LaunchedEffect(Unit) {
-        UpdatedNotice.clear(context)
-        AppUpdates.start(context)
-    }
+    LaunchedEffect(Unit) { UpdatedNotice.clear(context) }
+    // Each time Seedy comes to the front: Android may keep it running in the background for days.
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { AppUpdates.start(context) }
     SessionTheme(state) {
         when (val s = state) {
             SessionState.Starting -> Unit
@@ -374,8 +376,9 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                         onWait = { asking = null },
                     )
                 }
-                // Board "Android · Update ready": a newer Seedy, offered from the top of the tabs.
-                UpdatePrompt(visible = stack.size == 1)
+                // Board "Android · Update ready": a newer Seedy, offered from the top of the tabs (not on a return to a player).
+                val playing = stack.lastOrNull().let { it is Route.Player || it is Route.NowPlaying || it is Route.AudiobookPlayer }
+                UpdatePrompt(visible = rememberUpdateAllowed(atTop = stack.size == 1, inPlayer = playing))
             }
         }
     }
