@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'preact/hooks';
-import { del, downloadUrl } from '../../api/client';
+import { del } from '../../api/client';
 import { getItem, getItems } from '../../api/jellyfin';
 import { imageUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { canDownload, userStore, viewsStore } from '../../lib/app-state';
+import { downloadItems } from '../../lib/download';
 import { dayOf, dot, TICKS_PER_SECOND, ticksToSeconds } from '../../lib/format';
 import { t } from '../../lib/i18n';
 import { Link, navigate } from '../../lib/router';
@@ -39,17 +40,7 @@ function usePlaysVersion(ids: string[] | undefined): number {
 
 /* Every song of the album, one file after the other (the browser asks once). */
 function downloadAll(tracks: Track[]) {
-  tracks.forEach((tk, i) => {
-    window.setTimeout(() => {
-      const a = document.createElement('a');
-      a.href = downloadUrl(tk.Id);
-      a.download = '';
-      a.rel = 'noreferrer';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    }, i * 400);
-  });
+  downloadItems(tracks.map((tk) => tk.Id));
   toast(t('Downloading {n} songs', { n: tracks.length }));
 }
 

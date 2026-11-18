@@ -13,9 +13,11 @@ import { openManage } from './host';
 import { deleteSize } from './delete';
 import { listText } from '../../../lib/format';
 import { copyText } from '../../../lib/clipboard';
+import { downloadItems, isVideoFile, mayDownload } from '../../../lib/download';
 
 /* Details · More menu board: the item's own actions on top (from the page), Add to playlist and Add to collection
-   with their side menus, the Manage group for admins, Delete, then Open in Jellyfin and Copy link. */
+   with their side menus, Download for a movie or episode, the Manage group for admins, Delete, then Open in Jellyfin
+   and Copy link. */
 
 const TYPE_DELETE: Record<string, string> = { Series: 'Delete series', Season: 'Delete season', Episode: 'Delete episode', Movie: 'Delete movie' };
 
@@ -36,6 +38,7 @@ export function ItemMenu({ item, children, shortcut }: {
   /* People can't go in playlists; collections don't go in collections. */
   const listable = item.Type !== 'Person';
   const collectable = listable && canCollect() && item.Type !== 'BoxSet' && item.Type !== 'Playlist';
+  const downloadable = isVideoFile(item) && mayDownload(item);
 
   useEffect(() => {
     if (!open || !deletable) return;
@@ -72,6 +75,13 @@ export function ItemMenu({ item, children, shortcut }: {
     else toast(t('Couldn’t copy the link'), 'error');
   };
 
+  const download = () => {
+    downloadItems([item.Id]);
+    toast(t('Downloading {name}', { name: item.Name ?? '' }));
+  };
+  const source = item.MediaSources?.[0];
+  const fileSub = [source?.Container?.split(',')[0].toUpperCase(), source?.Size ? deleteSize(source.Size) : ''].filter(Boolean).join(' · ') || undefined;
+
   const p = preview?.items[0];
   const seasons = p?.groups.filter((g) => g.kind === 'season').length ?? 0;
   const deleteSub = p ? [item.Type === 'Series' && seasons ? tn(seasons, '{n} season', '{n} seasons') : '', deleteSize(p.bytes)].filter(Boolean).join(' · ') : undefined;
@@ -87,6 +97,7 @@ export function ItemMenu({ item, children, shortcut }: {
             {children?.(close)}
             {listable && <SubItem icon="playlistAdd" label={t('Add to playlist')} open={sub === 'playlist'} onOpen={() => setSub('playlist')} />}
             {collectable && <SubItem icon="collection" label={t('Add to collection')} open={sub === 'collection'} onOpen={() => setSub('collection')} />}
+            {downloadable && <Entry icon="download" label={t('Download')} sub={fileSub} onSelect={act(download)} />}
             {manage && (
               <>
                 <div role="separator" class="im-menu-sep" />
