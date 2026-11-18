@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.4.13.0",
+        "changelog": "# What's Changed\n- Download movies and episodes\n  Save the file from the ⋯ menu, or a whole season at once\n\n## Updating\n- Seedy offers this version itself on phones (or update from Google Play). Downloads land in the phone’s Movies folder, each show in its own folder. Nothing changes on TVs.\n- Update the Seedy plugin from Jellyfin's plugin catalogue for the web changes.\n- Download only shows for profiles that Jellyfin allows to download (Users › a profile › Allow media downloading).\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.12...v0.4.13",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.4.13/seedy_0.4.13.0.zip",
+        "checksum": "9aa1f8c57747beeb313870aede4f4b65",
+        "timestamp": "2026-11-18T11:17:25Z"
+      },
+      {
         "version": "0.4.12.0",
         "changelog": "# What's Changed\n- Never miss a new version\n  Seedy checks each time you come back to it, even on TVs that keep it running\n\n## Also\n- The update screen never shows up when you come back straight into what you were watching: it waits for the next time Seedy opens on Home.\n\n## Updating\n- On a TV that keeps Seedy running, this version is offered once Seedy restarts (restart the TV, or force stop Seedy in the TV’s settings). Later versions show up by themselves.\n- Phones: Seedy offers it itself (or update from Google Play).\n- Nothing changes in the web app or the Seedy plugin this time.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.11...v0.4.12",
         "targetAbi": "12.0.0.0",
