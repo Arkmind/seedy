@@ -68,14 +68,26 @@ export function removeLocal(key: string) {
   try { window.localStorage.removeItem(key); } catch { /* storage unavailable */ }
 }
 
+/* Summaries belong to the signed-in profile: forgetSummaries() drops them when it changes, so the next profile never
+   sees the last one's counts or Waiting for your approval. */
+const summaries = new Set<() => void>();
+export const forgetSummaries = () => summaries.forEach((forget) => forget());
+
 /* A summary the pieces of a page share (the request tabs' counts): one call when a page opens, at most every
    [throttleMs], and the last answer kept when a call fails. While [enabled] is false it reads as null. */
 export function createSummary<T>(fetch: () => Promise<T>, throttleMs = 3000) {
   const store = createStore<T | null>(null);
   let at = 0;
+  let profile = 0;
+  summaries.add(() => {
+    profile++;
+    at = 0;
+    store.set(null);
+  });
   const refresh = (): Promise<void> => {
     at = Date.now();
-    return fetch().then((s) => store.set(s), () => { /* the last answer stays */ });
+    const asked = profile;
+    return fetch().then((s) => { if (asked === profile) store.set(s); }, () => { /* the last answer stays */ });
   };
   function useSummary(enabled = true): T | null {
     const s = useStore(store);
