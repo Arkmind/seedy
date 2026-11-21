@@ -528,7 +528,7 @@ internal fun PersonalityStory(w: Wrapped) {
                     }.padding(top = 14.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    SText(line.big, Modifier.width(126.dp).alignByBaseline(), size = 24.sp, weight = 900, tracking = -.02f, color = Ink, maxLines = 1)
+                    SText(line.big, Modifier.width(126.dp).alignByBaseline(), size = 24.sp, weight = 900, tracking = -.02f, color = Ink)
                     SText(line.small, Modifier.weight(1f).alignByBaseline(), size = 14.sp, weight = 600, lineHeight = 1.35f, color = Ink)
                 }
             }

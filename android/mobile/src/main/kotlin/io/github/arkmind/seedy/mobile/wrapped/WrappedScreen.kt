@@ -2,7 +2,9 @@ package io.github.arkmind.seedy.mobile.wrapped
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -115,21 +117,29 @@ fun WrappedScreen(
     Box(
         Modifier.fillMaxSize().background(look.bg)
             .pointerInput(player) {
-                detectTapGestures(
-                    onPress = {
-                        player.holding = true
-                        tryAwaitRelease()
-                        player.holding = false
-                    },
-                    // A long hold only holds the story; it doesn't move on when let go.
-                    onLongPress = {},
-                    onTap = { at -> if (at.x < size.width * .3f) player.previous() else player.next() },
-                )
+                // A finger down holds the story; a quick tap goes on (back on the left third). A long hold only holds,
+                // and a tap a button took (Let's go, Share…) isn't a tap on the story.
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    player.holding = true
+                    var up: PointerInputChange? = null
+                    while (true) {
+                        val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) {
+                            up = change
+                            break
+                        }
+                    }
+                    player.holding = false
+                    if (up != null && !up.isConsumed && up.uptimeMillis - down.uptimeMillis < viewConfiguration.longPressTimeoutMillis) {
+                        if (up.position.x < size.width * .3f) player.previous() else player.next()
+                    }
+                }
             },
     ) {
         CompositionLocalProvider(LocalStoryTime provides player.storyTime(), LocalStoryLoop provides loop) {
             // What "Share this story" shares: the story with its brand, without the bar and the buttons.
-            Box(Modifier.fillMaxSize().record(storyLayer)) {
+            Box(Modifier.fillMaxSize().record(storyLayer).background(look.bg)) {
                 look.brush?.let { b -> Box(Modifier.fillMaxSize().background(b)) }
                 BoardCanvas(Modifier.fillMaxSize()) { w, h -> storyBackdrop(story, accent, w, h, loop.loopSeconds(), wrapped.clock?.kind) }
                 Brand(wrapped.year, look, Modifier.padding(start = 14.dp, top = statusTop + 13.dp))
@@ -227,7 +237,7 @@ private fun Story(
     }
     if (story == StoryKey.Summary) {
         Box(Modifier.fillMaxSize().padding(bottom = frame.bottom - 70.dp)) {
-            SummaryButtons(Modifier.align(Alignment.BottomCenter), onShareCard, onSaveCard, onAgain = { player.go(0) })
+            SummaryButtons(Modifier.align(Alignment.BottomCenter), onShareCard, onSaveCard, onAgain = { player.paused = false; player.go(0) })
         }
     }
 }
