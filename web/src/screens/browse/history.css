@@ -13,9 +13,9 @@
 .history-search { width: 260px; max-width: 100%; }
 .history-search input::-webkit-search-cancel-button { filter: invert(0.6); }
 
+.history-toolbar { display: flex; flex-direction: column; gap: 14px; }
 .history-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .history-tabs { display: flex; gap: 8px; }
-.history-hidden-toggle { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; color: var(--seedy-text-hero); }
 
 .history-group { display: flex; flex-direction: column; gap: 10px; }
 .history-group-label {
@@ -67,7 +67,7 @@ a.history-title-link:hover { color: #ffffff; text-decoration: underline; text-un
 .history-actions { display: flex; align-items: center; gap: 4px; }
 .history-act { color: var(--seedy-text-2); }
 
-/* Hidden titles stay listed (Show hidden) but step back. */
+/* Hidden titles stay listed (Filters › Show hidden) but step back. */
 .history-row.is-hidden .history-thumb { opacity: 0.4; }
 .history-row.is-hidden .history-title-link, .history-row.is-hidden .history-state-main { color: var(--seedy-text-3); }
 .history-row.is-hidden .history-sub, .history-row.is-hidden .history-when { color: #6a6a6a; }

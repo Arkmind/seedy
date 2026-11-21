@@ -2,11 +2,43 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Seedy.Data;
+
+/// <summary>What the viewing history shows and in which order.</summary>
+public sealed class HistoryQuery
+{
+    /// <summary>Gets the item types to include (empty = all).</summary>
+    public IReadOnlyList<string> Types { get; init; } = [];
+
+    /// <summary>Gets the text to match in the title or item name.</summary>
+    public string? Search { get; init; }
+
+    /// <summary>Gets a value indicating whether hidden titles are included.</summary>
+    public bool IncludeHidden { get; init; }
+
+    /// <summary>Gets "finished", "inprogress" or null for both.</summary>
+    public string? State { get; init; }
+
+    /// <summary>Gets the start of the period (UTC), if any.</summary>
+    public DateTime? From { get; init; }
+
+    /// <summary>Gets the end of the period (UTC, exclusive), if any.</summary>
+    public DateTime? To { get; init; }
+
+    /// <summary>Gets the devices (or apps, for unnamed devices) the plays were on (empty = any).</summary>
+    public IReadOnlyList<string> Devices { get; init; } = [];
+
+    /// <summary>Gets "date" (when watched) or "title".</summary>
+    public string Sort { get; init; } = "date";
+
+    /// <summary>Gets a value indicating whether the order is ascending.</summary>
+    public bool Ascending { get; init; }
+}
 
 /// <summary>One recorded play.</summary>
 public sealed class PlayRecord
@@ -342,38 +374,54 @@ public sealed partial class SeedyDatabase : IDisposable
     }
 
     /// <summary>
-    /// Lists what a user watched, newest first: one row per movie or episode, its latest play, so pausing, stopping
-    /// and coming back doesn't stack up rows. Every play stays in the log for Statistics and recommendations.
+    /// Lists what a user watched: one row per movie or episode, its latest play, so pausing, stopping and coming back
+    /// doesn't stack up rows. Every play stays in the log for Statistics and recommendations. When and device pick
+    /// the plays first (a movie seen in 2025 and again in 2026 is in both years), the rest filters the latest one.
     /// </summary>
     /// <param name="userId">User id.</param>
-    /// <param name="types">Item types to include (empty = all).</param>
-    /// <param name="search">Text to match in title or item name.</param>
-    /// <param name="includeHidden">Whether hidden titles are included.</param>
+    /// <param name="q">Filters and order.</param>
     /// <param name="skip">Rows to skip.</param>
-    /// <param name="take">Rows to take.</param>
+    /// <param name="take">Rows to take (0 = only count).</param>
     /// <param name="total">Total matching items.</param>
     /// <returns>Each item's latest play plus whether its title is hidden.</returns>
-    public List<(PlayRecord Play, bool Hidden)> History(string userId, IReadOnlyList<string> types, string? search, bool includeHidden, int skip, int take, out int total)
+    public List<(PlayRecord Play, bool Hidden)> History(string userId, HistoryQuery q, int skip, int take, out int total)
     {
         using var c = Open();
-        var where = "p.rn = 1";
-        if (types.Count > 0)
+        var plays = $"user_id = $user AND {WatchingOnly}";
+        if (q.From is not null)
         {
-            var names = new List<string>();
-            for (var i = 0; i < types.Count; i++)
-            {
-                names.Add("$t" + i.ToString(CultureInfo.InvariantCulture));
-            }
-
-            where += $" AND p.item_type IN ({string.Join(", ", names)})";
+            plays += " AND started_at >= $from";
         }
 
-        if (!string.IsNullOrWhiteSpace(search))
+        if (q.To is not null)
+        {
+            plays += " AND started_at < $to";
+        }
+
+        if (q.Devices.Count > 0)
+        {
+            plays += $" AND {DeviceKey} IN ({Names("$d", q.Devices.Count)})";
+        }
+
+        var where = "p.rn = 1";
+        if (q.Types.Count > 0)
+        {
+            where += $" AND p.item_type IN ({Names("$t", q.Types.Count)})";
+        }
+
+        if (!string.IsNullOrWhiteSpace(q.Search))
         {
             where += " AND (p.title_name LIKE $q ESCAPE '\\' OR p.item_name LIKE $q ESCAPE '\\')";
         }
 
-        if (!includeHidden)
+        where += q.State switch
+        {
+            "finished" => " AND p.finished = 1",
+            "inprogress" => " AND p.finished = 0 AND p.position_ticks > 0",
+            _ => string.Empty
+        };
+
+        if (!q.IncludeHidden)
         {
             where += " AND h.title_id IS NULL";
         }
@@ -381,20 +429,27 @@ public sealed partial class SeedyDatabase : IDisposable
         void BindAll(SqliteCommand cmd)
         {
             Bind(cmd, "$user", userId);
-            for (var i = 0; i < types.Count; i++)
+            BindList(cmd, "$t", q.Types);
+            BindList(cmd, "$d", q.Devices);
+            if (q.From is not null)
             {
-                Bind(cmd, "$t" + i.ToString(CultureInfo.InvariantCulture), types[i]);
+                Bind(cmd, "$from", Ms(q.From.Value));
             }
 
-            if (!string.IsNullOrWhiteSpace(search))
+            if (q.To is not null)
             {
-                var escaped = search.Trim().Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal);
+                Bind(cmd, "$to", Ms(q.To.Value));
+            }
+
+            if (!string.IsNullOrWhiteSpace(q.Search))
+            {
+                var escaped = q.Search.Trim().Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal);
                 Bind(cmd, "$q", "%" + escaped + "%");
             }
         }
 
-        // Each item's latest play (rn = 1), then the filters on it.
-        var latest = $"WITH latest AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY item_id ORDER BY started_at DESC, id) AS rn FROM plays WHERE user_id = $user AND {WatchingOnly})";
+        // Each item's latest play (rn = 1) among the picked plays, then the filters on it.
+        var latest = $"WITH latest AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY item_id ORDER BY started_at DESC, id) AS rn FROM plays WHERE {plays})";
         var from = $"FROM latest p LEFT JOIN hidden_titles h ON h.user_id = p.user_id AND h.title_id = p.title_id WHERE {where}";
         using (var count = c.CreateCommand())
         {
@@ -403,12 +458,21 @@ public sealed partial class SeedyDatabase : IDisposable
             total = Convert.ToInt32(count.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
 
+        var list = new List<(PlayRecord, bool)>();
+        if (take <= 0)
+        {
+            return list;
+        }
+
+        var dir = q.Ascending ? "ASC" : "DESC";
+        var order = q.Sort == "title"
+            ? $"p.title_name COLLATE NOCASE {dir}, p.started_at DESC, p.id"
+            : $"p.started_at {dir}, p.id";
         using var cmd = c.CreateCommand();
-        cmd.CommandText = $"{latest} SELECT {PlayColumnsP}, h.title_id IS NOT NULL {from} ORDER BY p.started_at DESC, p.id LIMIT $take OFFSET $skip";
+        cmd.CommandText = $"{latest} SELECT {PlayColumnsP}, h.title_id IS NOT NULL {from} ORDER BY {order} LIMIT $take OFFSET $skip";
         BindAll(cmd);
         Bind(cmd, "$take", take);
         Bind(cmd, "$skip", skip);
-        var list = new List<(PlayRecord, bool)>();
         using var r = cmd.ExecuteReader();
         while (r.Read())
         {
@@ -416,6 +480,62 @@ public sealed partial class SeedyDatabase : IDisposable
         }
 
         return list;
+    }
+
+    /// <summary>What the history's filters can offer: the years with plays (newest first) and the devices, last used first.</summary>
+    /// <param name="userId">User id.</param>
+    /// <param name="types">Item types to include (empty = all).</param>
+    /// <returns>Years and device names.</returns>
+    public (List<int> Years, List<string> Devices) HistoryOptions(string userId, IReadOnlyList<string> types)
+    {
+        using var c = Open();
+        var where = $"user_id = $user AND {WatchingOnly}";
+        if (types.Count > 0)
+        {
+            where += $" AND item_type IN ({Names("$t", types.Count)})";
+        }
+
+        var years = new List<int>();
+        using (var cmd = c.CreateCommand())
+        {
+            cmd.CommandText = $"SELECT DISTINCT CAST(strftime('%Y', started_at / 1000, 'unixepoch') AS INTEGER) AS y FROM plays WHERE {where} ORDER BY y DESC";
+            Bind(cmd, "$user", userId);
+            BindList(cmd, "$t", types);
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                years.Add(r.GetInt32(0));
+            }
+        }
+
+        var devices = new List<string>();
+        using (var cmd = c.CreateCommand())
+        {
+            cmd.CommandText = $"SELECT {DeviceKey} AS d FROM plays WHERE {where} AND {DeviceKey} <> '' GROUP BY d ORDER BY MAX(started_at) DESC";
+            Bind(cmd, "$user", userId);
+            BindList(cmd, "$t", types);
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                devices.Add(r.GetString(0));
+            }
+        }
+
+        return (years, devices);
+    }
+
+    // The device a history row names: its device, or the app when the device had no name.
+    private const string DeviceKey = "COALESCE(NULLIF(device_name, ''), client, '')";
+
+    private static string Names(string prefix, int count) =>
+        string.Join(", ", Enumerable.Range(0, count).Select(i => prefix + i.ToString(CultureInfo.InvariantCulture)));
+
+    private static void BindList(SqliteCommand cmd, string prefix, IReadOnlyList<string> values)
+    {
+        for (var i = 0; i < values.Count; i++)
+        {
+            Bind(cmd, prefix + i.ToString(CultureInfo.InvariantCulture), values[i]);
+        }
     }
 
     /// <summary>Counts plays per title since a date, one vote per profile.</summary>

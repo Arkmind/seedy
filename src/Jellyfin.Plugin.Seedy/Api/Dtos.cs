@@ -288,6 +288,12 @@ public sealed class HistoryDto
     [JsonPropertyName("total")] public int Total { get; set; }
 }
 
+public sealed class HistoryOptionsDto
+{
+    [JsonPropertyName("years")] public List<int> Years { get; set; } = [];
+    [JsonPropertyName("devices")] public List<string> Devices { get; set; } = [];
+}
+
 public sealed class HiddenBody
 {
     [JsonPropertyName("hidden")] public bool Hidden { get; set; }

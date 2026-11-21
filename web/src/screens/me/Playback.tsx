@@ -14,7 +14,7 @@ import { DeviceTag, MeLayout } from './MeLayout';
 import { PlaybackRow, Picker, languageOptions, tOptions, useFreshUser, useLanguages, type PickOption } from './playback-parts';
 import { SaveLine } from './parts';
 import { type FullUserConfig, saveCustom, savePlayback, saveUserConfig } from './prefs';
-import { getLang, t, tn } from '../../lib/i18n';
+import { t, tc, tn } from '../../lib/i18n';
 
 /* Settings · Playback (MePlayback board). Quality and a few audio/skip settings are per device;
    the rest follow the profile, and Jellyfin's own options are saved to its UserConfiguration. */
@@ -322,7 +322,7 @@ export function MePlayback() {
               <span class="me-pb-adv-title">{t('Advanced')}<DeviceTag /></span>
               <span class="me-pb-adv-help">{t('Codec and streaming tweaks for when something won’t play. {n} settings.', { n: ADVANCED.length + 1 })}</span>
             </span>
-            <span class="me-pb-adv-toggle">{advOpen ? t('Hide') : getLang() === 'en' ? 'Show' : t('Show (verb)')}</span>
+            <span class="me-pb-adv-toggle">{advOpen ? t('Hide') : tc('Show', 'verb')}</span>
           </summary>
           <div class="me-pb-adv-body">
             {ADVANCED.map((a) => (

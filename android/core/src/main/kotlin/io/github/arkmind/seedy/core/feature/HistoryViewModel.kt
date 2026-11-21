@@ -7,7 +7,10 @@ import io.github.arkmind.seedy.core.data.plusNew
 import io.github.arkmind.seedy.core.history.HistoryApi
 import io.github.arkmind.seedy.core.history.HistoryEntry
 import io.github.arkmind.seedy.core.history.HistoryFilter
+import io.github.arkmind.seedy.core.history.HistoryFilters
 import io.github.arkmind.seedy.core.history.HistoryFormat
+import io.github.arkmind.seedy.core.history.HistoryOptions
+import io.github.arkmind.seedy.core.history.HistorySort
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.coroutines.Job
@@ -26,22 +29,34 @@ data class HistoryState(
     val text: String = "",
     /** The search the list shows (the typed text, once it settles). */
     val search: String = "",
-    val showHidden: Boolean = false,
+    val sort: HistorySort = HistorySort.Date,
+    val descending: Boolean = sort.descending,
+    val filters: HistoryFilters = HistoryFilters(),
+    /** What the Filters sheet offers; null until loaded, and on older plugins (which can't sort or filter: no tools then). */
+    val options: HistoryOptions? = null,
     val items: List<HistoryEntry> = emptyList(),
     val total: Int = 0,
     val status: String = "loading",
     val message: String? = null,
 ) {
     val busy: Boolean get() = status == "loading"
-    val filtered: Boolean get() = search.isNotEmpty() || filter != HistoryFilter.All
+    val showHidden: Boolean get() = filters.hidden
+    val filtered: Boolean get() = search.isNotEmpty() || filter != HistoryFilter.All || filters.narrows
     val more: Boolean get() = items.isNotEmpty() && items.size < total
+
+    /** Day groups when sorted by date (newest or oldest first); one list when sorted by title. */
+    val byDay: Boolean get() = sort == HistorySort.Date
 }
 
 /** What the History screen can do; the view model does it, screenshot tests ignore it. */
 interface HistoryActions {
     fun setFilter(filter: HistoryFilter) {}
     fun setText(text: String) {}
-    fun setShowHidden(on: Boolean) {}
+    fun setSort(sort: HistorySort, descending: Boolean) {}
+    fun setFilters(filters: HistoryFilters) {}
+
+    /** How many entries [filters] would show, for the Filters sheet's button; null when unknown. */
+    suspend fun countFor(filters: HistoryFilters): Int? = null
     fun retry() {}
     fun loadMore() {}
     fun toggleHidden(entry: HistoryEntry) {}
@@ -51,8 +66,8 @@ interface HistoryActions {
 }
 
 /**
- * Viewing history (web/src/screens/browse/History.tsx): Seedy's play log for this profile, newest first, 30 at a time,
- * by kind and searched on the server. Hiding a title hides all its plays (and stops it shaping recommendations).
+ * Viewing history (web/src/screens/browse/History.tsx): Seedy's play log for this profile, 30 at a time, by kind,
+ * sorted, filtered and searched on the server. Hiding a title hides all its plays (and stops it shaping recommendations).
  */
 class HistoryViewModel(private val session: UserSession) : ViewModel(), HistoryActions {
     private val api = HistoryApi(session.api)
@@ -63,7 +78,11 @@ class HistoryViewModel(private val session: UserSession) : ViewModel(), HistoryA
 
     init {
         load()
+        loadOptions()
     }
+
+    private suspend fun page(s: HistoryState, start: Int, limit: Int, filters: HistoryFilters = s.filters) =
+        ioOrNull { api.page(start, limit, s.filter, s.search, filters, s.sort, s.descending) }
 
     private fun load() {
         val s = _state.value
@@ -71,7 +90,7 @@ class HistoryViewModel(private val session: UserSession) : ViewModel(), HistoryA
         val id = ++request
         _state.update { it.copy(status = "loading") }
         viewModelScope.launch {
-            val page = ioOrNull { api.page(0, PAGE, s.filter, s.search, s.showHidden) }
+            val page = page(s, 0, PAGE)
             if (id != request) return@launch
             _state.update {
                 if (page == null) it.copy(status = "error") else it.copy(items = page.items, total = page.total, status = "ready")
@@ -79,11 +98,37 @@ class HistoryViewModel(private val session: UserSession) : ViewModel(), HistoryA
         }
     }
 
+    /** The years and devices to offer, for this kind; their absence (an older plugin) hides Sort and Filters. */
+    private fun loadOptions() {
+        val s = _state.value
+        if (!s.enabled) return
+        viewModelScope.launch {
+            val options = ioOrNull { api.options(s.filter) } ?: return@launch
+            _state.update { if (it.filter == s.filter) it.copy(options = options) else it }
+        }
+    }
+
     override fun setFilter(filter: HistoryFilter) {
         if (filter == _state.value.filter) return
         _state.update { it.copy(filter = filter) }
         load()
+        loadOptions()
     }
+
+    override fun setSort(sort: HistorySort, descending: Boolean) {
+        val s = _state.value
+        if (sort == s.sort && descending == s.descending) return
+        _state.update { it.copy(sort = sort, descending = descending) }
+        load()
+    }
+
+    override fun setFilters(filters: HistoryFilters) {
+        if (filters == _state.value.filters) return
+        _state.update { it.copy(filters = filters) }
+        load()
+    }
+
+    override suspend fun countFor(filters: HistoryFilters): Int? = page(_state.value, 0, 0, filters)?.total
 
     /** The server searches once the typing stops for 300 ms. */
     override fun setText(text: String) {
@@ -98,11 +143,6 @@ class HistoryViewModel(private val session: UserSession) : ViewModel(), HistoryA
         }
     }
 
-    override fun setShowHidden(on: Boolean) {
-        _state.update { it.copy(showHidden = on) }
-        load()
-    }
-
     override fun retry() = load()
 
     override fun loadMore() {
@@ -111,7 +151,7 @@ class HistoryViewModel(private val session: UserSession) : ViewModel(), HistoryA
         val id = ++request
         _state.update { it.copy(status = "more") }
         viewModelScope.launch {
-            val page = ioOrNull { api.page(s.items.size, PAGE, s.filter, s.search, s.showHidden) }
+            val page = page(s, s.items.size, PAGE)
             if (id != request) return@launch
             if (page == null) return@launch _state.update { it.copy(status = "ready", message = t("Couldn't load earlier plays")) }
             _state.update { st -> st.copy(items = st.items.plusNew(page.items) { it.itemId }, total = page.total, status = "ready") }

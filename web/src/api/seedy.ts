@@ -361,8 +361,25 @@ export const recordDecoder = (itemId: string, onClient: boolean) => post<void>('
 export const ownToken = () => post<{ accessToken: string }>('/Seedy/Me/Token');
 export const getTrailer = (itemId: string) => get<TrailerInfo | undefined>(`/Seedy/Items/${itemId}/Trailer`);
 
-export const getHistory = (q: { startIndex?: number; limit?: number; type?: 'all' | 'movies' | 'shows'; search?: string; includeHidden?: boolean }) =>
-  get<{ items: HistoryEntry[]; total: number }>('/Seedy/Plays', q as Query);
+/* Viewing history: each movie or episode once, as its latest play left it. `from`/`to` (ISO) and `devices` pick the plays
+   first; `state` and hidden filter that latest play. Sorted by when it was watched (newest first) or by title (A to Z). */
+export interface HistoryQuery {
+  startIndex?: number;
+  limit?: number;
+  type?: 'all' | 'movies' | 'shows';
+  search?: string;
+  includeHidden?: boolean;
+  state?: 'finished' | 'inprogress';
+  from?: string;
+  to?: string;
+  /* Device names separated by |. */
+  devices?: string;
+  sort?: 'date' | 'title';
+  order?: 'asc' | 'desc';
+}
+export const getHistory = (q: HistoryQuery) => get<{ items: HistoryEntry[]; total: number }>('/Seedy/Plays', q as Query);
+/* What the history's filters offer: years with plays (newest first) and devices (last used first). */
+export const getHistoryOptions = (type: 'all' | 'movies' | 'shows') => get<{ years: number[]; devices: string[] }>('/Seedy/Plays/Filters', { type });
 export const hideHistoryTitle = (titleId: string, hidden: boolean) => post<void>(`/Seedy/Plays/Titles/${titleId}/Hidden`, { hidden });
 export const removeHistoryEntry = (id: string) => del<void>(`/Seedy/Plays/${id}`);
 export const clearHistory = () => del<void>('/Seedy/Plays');

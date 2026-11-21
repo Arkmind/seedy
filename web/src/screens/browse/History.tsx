@@ -1,29 +1,75 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { clearHistory, getHistory, hideHistoryTitle, removeHistoryEntry, type HistoryEntry } from '../../api/seedy';
+import {
+  clearHistory, getHistory, getHistoryOptions, hideHistoryTitle, removeHistoryEntry, type HistoryEntry, type HistoryQuery
+} from '../../api/seedy';
 import { cardArt } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { meStore } from '../../lib/app-state';
-import { clock, episodeTag, timeLeft, fmtWeekdayDate, historyGroup, ticksToSeconds, timecode } from '../../lib/format';
-import { Link, navigate } from '../../lib/router';
-import { useStore } from '../../lib/store';
+import { clock, episodeTag, timeLeft, fmtWeekdayDate, historyGroup, plural, ticksToSeconds, timecode } from '../../lib/format';
+import { Link, navigate, setQuery, useLocation } from '../../lib/router';
+import { useAsync, useStore } from '../../lib/store';
 import { Art, Progress, WatchedCheck, playPath } from '../../ui/cards';
-import { Switch } from '../../ui/controls';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { MeduState } from '../../ui/medu';
-import { MenuButton, MenuItem, confirm, toast } from '../../ui/overlay';
+import { MenuButton, MenuItem, Sheet, confirm, toast } from '../../ui/overlay';
+import { FilterChips, FilterGroup, FilterOption, FiltersButton, SortButton, type FilterChip, type SortOption, type SortOrder } from './sort-filter';
 import './history.css';
-import { t } from '../../lib/i18n';
+import { t, tc } from '../../lib/i18n';
 import { useTitle } from '../../lib/title';
 
-type Filter = 'all' | 'movies' | 'shows';
+type Kind = 'all' | 'movies' | 'shows';
+type HistorySort = 'date' | 'title';
+type PlayState = 'finished' | 'inprogress';
 const PAGE = 30;
 
-const FILTERS: { value: Filter; label: string }[] = [
+const KINDS: { value: Kind; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'movies', label: 'Movies' },
   { value: 'shows', label: 'Shows' }
 ];
+
+const SORTS = [
+  { id: 'date', label: 'Date watched', order: 'desc', asc: 'Oldest first', desc: 'Newest first' },
+  { id: 'title', label: 'Title', order: 'asc', asc: 'A to Z', desc: 'Z to A' }
+] as const satisfies readonly SortOption<HistorySort>[];
+
+/* ── Filters (kept in the address: ?show=finished&hidden=1&when=2025&devices=TV|Phone) ── */
+
+interface Filters { state?: PlayState; hidden: boolean; when?: string; devices: string[] }
+const NO_FILTERS: Filters = { hidden: false, devices: [] };
+
+function readFilters(q: URLSearchParams): Filters {
+  const show = q.get('show');
+  const when = q.get('when') ?? '';
+  return {
+    state: show === 'finished' || show === 'inprogress' ? show : undefined,
+    hidden: q.get('hidden') === '1',
+    when: when === '7d' || when === '30d' || /^\d{4}$/.test(when) ? when : undefined,
+    devices: (q.get('devices') ?? '').split('|').map((d) => d.trim()).filter(Boolean)
+  };
+}
+
+const filterParams = (f: Filters) => ({ show: f.state, hidden: f.hidden ? '1' : undefined, when: f.when, devices: f.devices.join('|') || undefined });
+const filterCount = (f: Filters) => (f.state ? 1 : 0) + (f.hidden ? 1 : 0) + (f.when ? 1 : 0) + f.devices.length;
+/* Filters that leave plays out (Show hidden only adds some). */
+const narrows = (f: Filters) => !!f.state || !!f.when || f.devices.length > 0;
+
+/* The past 7 or 30 days start at midnight, so they line up with the day groups; a year is local time. */
+function period(when?: string): { from?: string; to?: string } {
+  if (!when) return {};
+  const now = new Date();
+  if (when === '7d' || when === '30d') return { from: new Date(now.getFullYear(), now.getMonth(), now.getDate() - (when === '7d' ? 6 : 29)).toISOString() };
+  const y = Number(when);
+  return { from: new Date(y, 0, 1).toISOString(), to: new Date(y + 1, 0, 1).toISOString() };
+}
+
+const periodLabel = (when: string) => (when === '7d' ? t('Past 7 days') : when === '30d' ? t('Past 30 days') : when);
+const stateLabel = (s: PlayState) => (s === 'finished' ? t('Finished') : t('In progress'));
+
+function withFilters(q: HistoryQuery, f: Filters): HistoryQuery {
+  return { ...q, includeHidden: f.hidden || undefined, state: f.state, ...period(f.when), devices: f.devices.join('|') || undefined };
+}
 
 /* ── Copy, as on the History board ── */
 
@@ -70,8 +116,16 @@ function thumbArt(it: BaseItem | undefined) {
 export function History() {
   useTitle(t('Viewing history'));
   const me = useStore(meStore);
-  const [filter, setFilter] = useState<Filter>('all');
-  const [showHidden, setShowHidden] = useState(false);
+  const loc = useLocation();
+  const kindParam = loc.query.get('type');
+  const filter: Kind = kindParam === 'movies' || kindParam === 'shows' ? kindParam : 'all';
+  const sort: HistorySort = loc.query.get('sort') === 'title' ? 'title' : 'date';
+  const orderParam = loc.query.get('order');
+  const order: SortOrder = orderParam === 'asc' || orderParam === 'desc' ? orderParam : SORTS.find((s) => s.id === sort)!.order;
+  const filters = readFilters(loc.query);
+  const filterKey = JSON.stringify(filters);
+  const showHidden = filters.hidden;
+  const [sheet, setSheet] = useState(false);
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
   const [items, setItems] = useState<HistoryEntry[]>([]);
@@ -86,11 +140,14 @@ export function History() {
     return () => window.clearTimeout(t);
   }, [text]);
 
+  const base: HistoryQuery = { type: filter, search: search || undefined, sort, order };
+  const query = withFilters(base, filters);
+
   useEffect(() => {
     if (!me.historyEnabled) return;
     const id = ++req.current;
     setStatus('loading');
-    getHistory({ startIndex: 0, limit: PAGE, type: filter, search: search || undefined, includeHidden: showHidden || undefined }).then(
+    getHistory({ ...query, startIndex: 0, limit: PAGE }).then(
       (r) => {
         if (id !== req.current) return;
         setItems(r.items);
@@ -99,12 +156,13 @@ export function History() {
       },
       () => { if (id === req.current) setStatus('error'); }
     );
-  }, [filter, search, showHidden, tick, me.historyEnabled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, search, sort, order, filterKey, tick, me.historyEnabled]);
 
   const loadMore = () => {
     const id = ++req.current;
     setStatus('more');
-    getHistory({ startIndex: items.length, limit: PAGE, type: filter, search: search || undefined, includeHidden: showHidden || undefined }).then(
+    getHistory({ ...query, startIndex: items.length, limit: PAGE }).then(
       (r) => {
         if (id !== req.current) return;
         const seen = new Set(items.map((i) => i.itemId));
@@ -120,8 +178,10 @@ export function History() {
     );
   };
 
+  /* By day when sorted by date; one list, each row with its date, when sorted by title. */
   const groups = useMemo(() => {
     const out: { key: string; label: string; recent: boolean; items: HistoryEntry[] }[] = [];
+    if (sort === 'title') return items.length ? [{ key: 'all', label: '', recent: false, items }] : out;
     for (const e of items) {
       const g = historyGroup(new Date(e.startedAt));
       let last = out[out.length - 1];
@@ -132,7 +192,16 @@ export function History() {
       last.items.push(e);
     }
     return out;
-  }, [items]);
+  }, [items, sort]);
+
+  const setKind = (k: Kind) => setQuery({ type: k === 'all' ? undefined : k });
+  const setFilters = (f: Filters) => setQuery(filterParams(f));
+  const chips: FilterChip[] = [
+    ...(filters.state ? [{ key: 's', label: stateLabel(filters.state), remove: () => setFilters({ ...filters, state: undefined }) }] : []),
+    ...(filters.hidden ? [{ key: 'h', label: t('Hidden titles'), remove: () => setFilters({ ...filters, hidden: false }) }] : []),
+    ...(filters.when ? [{ key: 'w', label: periodLabel(filters.when), remove: () => setFilters({ ...filters, when: undefined }) }] : []),
+    ...filters.devices.map((d) => ({ key: 'd' + d, label: d, remove: () => setFilters({ ...filters, devices: filters.devices.filter((x) => x !== d) }) }))
+  ];
 
   const toggleHidden = async (e: HistoryEntry) => {
     const next = !e.hidden;
@@ -199,7 +268,7 @@ export function History() {
     );
   }
 
-  const filtered = !!search || filter !== 'all';
+  const filtered = !!search || filter !== 'all' || narrows(filters);
   const busy = status === 'loading';
 
   return (
@@ -224,30 +293,33 @@ export function History() {
           </div>
         </div>
 
-        <div class="history-filters">
-          <div
-            role="tablist"
-            aria-label={t('Filter history')}
-            class="history-tabs"
-            onKeyDown={(e) => {
-              if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-              e.preventDefault();
-              const i = FILTERS.findIndex((f) => f.value === filter);
-              const n = (i + (e.key === 'ArrowRight' ? 1 : FILTERS.length - 1)) % FILTERS.length;
-              setFilter(FILTERS[n].value);
-              ((e.currentTarget as HTMLElement).children[n] as HTMLElement | undefined)?.focus();
-            }}
-          >
-            {FILTERS.map((f) => (
-              <button key={f.value} type="button" role="tab" class="tab" tabIndex={filter === f.value ? 0 : -1} aria-selected={filter === f.value ? 'true' : 'false'} onClick={() => setFilter(f.value)}>
-                {t(f.label)}
-              </button>
-            ))}
+        <div class="history-toolbar">
+          <div class="history-filters">
+            <div
+              role="tablist"
+              aria-label={t('Filter history')}
+              class="history-tabs"
+              onKeyDown={(e) => {
+                if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+                e.preventDefault();
+                const i = KINDS.findIndex((f) => f.value === filter);
+                const n = (i + (e.key === 'ArrowRight' ? 1 : KINDS.length - 1)) % KINDS.length;
+                setKind(KINDS[n].value);
+                ((e.currentTarget as HTMLElement).children[n] as HTMLElement | undefined)?.focus();
+              }}
+            >
+              {KINDS.map((f) => (
+                <button key={f.value} type="button" role="tab" class="tab" tabIndex={filter === f.value ? 0 : -1} aria-selected={filter === f.value ? 'true' : 'false'} onClick={() => setKind(f.value)}>
+                  {t(f.label)}
+                </button>
+              ))}
+            </div>
+            <div class="lib-tools">
+              <SortButton sorts={SORTS} sort={sort} order={order} onChange={(s, o) => setQuery({ sort: s === 'date' ? undefined : s, order: o === SORTS.find((x) => x.id === s)!.order ? undefined : o })} />
+              <FiltersButton count={filterCount(filters)} onClick={() => setSheet(true)} />
+            </div>
           </div>
-          <div class="history-hidden-toggle">
-            <span aria-hidden="true">{t('Show hidden')}</span>
-            <Switch checked={showHidden} onChange={setShowHidden} label={t('Show hidden titles')} />
-          </div>
+          <FilterChips chips={chips} onClear={() => setFilters(NO_FILTERS)} />
         </div>
 
         {busy && <HistorySkeleton />}
@@ -270,12 +342,21 @@ export function History() {
 
         {!busy && status !== 'error' && items.length === 0 && (search || filtered) && (
           <div class="empty">
-            <span class="empty-icon" aria-hidden="true"><Icon name={filtered ? 'searchX' : 'history'} size={26} /></span>
+            <span class="empty-icon" aria-hidden="true"><Icon name={narrows(filters) && !search ? 'filters' : 'searchX'} size={26} /></span>
             <div class="empty-body">
               {search ? (
                 <>
                   <h2 class="empty-title">{t('Nothing in your history for “{search}”', { search })}</h2>
-                  <p class="empty-text">{showHidden ? t('Try another title, or switch to All.') : t('Try another title, or switch to All and turn on Show hidden.')}</p>
+                  <p class="empty-text">
+                    {filter !== 'all' || narrows(filters) ? t('Try another title, or remove a filter.')
+                      : showHidden ? t('Try another title, or check the spelling.')
+                      : t('Try another title, or turn on Show hidden in Filters.')}
+                  </p>
+                </>
+              ) : narrows(filters) ? (
+                <>
+                  <h2 class="empty-title">{t('Nothing matches these filters')}</h2>
+                  <p class="empty-text">{t('Try removing a filter or two.')}</p>
                 </>
               ) : (
                 <>
@@ -284,12 +365,13 @@ export function History() {
                 </>
               )}
             </div>
+            {!search && narrows(filters) && <button type="button" class="btn btn-primary is-sm" onClick={() => setFilters(NO_FILTERS)}>{t('Clear all')}</button>}
           </div>
         )}
 
         {!busy && status !== 'error' && groups.map((g) => (
-          <section key={g.key} class="history-group" aria-labelledby={'hg-' + g.key}>
-            <h2 id={'hg-' + g.key} class="history-group-label">{g.label}</h2>
+          <section key={g.key} class="history-group" aria-labelledby={g.label ? 'hg-' + g.key : undefined} aria-label={g.label ? undefined : t('Viewing history')}>
+            {g.label && <h2 id={'hg-' + g.key} class="history-group-label">{g.label}</h2>}
             <div class="history-list">
               {g.items.map((e) => (
                 <HistoryRow key={e.id} entry={e} recent={g.recent} onToggleHidden={() => toggleHidden(e)} onRemove={() => remove(e)} />
@@ -301,12 +383,81 @@ export function History() {
         {!busy && status !== 'error' && items.length > 0 && items.length < total && (
           <div class="history-more">
             <button type="button" class="btn btn-secondary history-more-btn" onClick={loadMore} disabled={status === 'more'}>
-              {status === 'more' ? t('Loading…') : t('Show earlier')}
+              {status === 'more' ? t('Loading…') : sort === 'date' && order === 'desc' ? t('Show earlier') : t('Show more')}
             </button>
           </div>
         )}
       </main>
+
+      {sheet && (
+        <FilterSheet
+          kind={filter}
+          base={base}
+          initial={filters}
+          onClose={() => setSheet(false)}
+          onApply={(f) => { setSheet(false); setFilters(f); }}
+        />
+      )}
     </div>
+  );
+}
+
+/* What to show (finished or not, hidden titles), when it was watched and on which device, with the count. */
+function FilterSheet({ kind, base, initial, onClose, onApply }: { kind: Kind; base: HistoryQuery; initial: Filters; onClose: () => void; onApply: (f: Filters) => void }) {
+  const [draft, setDraft] = useState<Filters>(initial);
+  const opts = useAsync(() => getHistoryOptions(kind), [kind]);
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    setCount(null);
+    let alive = true;
+    const timer = window.setTimeout(() => {
+      getHistory({ ...withFilters(base, draft), startIndex: 0, limit: 0 })
+        .then((r) => alive && setCount(r.total), () => alive && setCount(null));
+    }, 220);
+    // An older count must not land after a newer one.
+    return () => { alive = false; window.clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(draft)]);
+
+  // A year or device picked earlier stays offered, so it can be turned off.
+  const years = Array.from(new Set([...(opts.data?.years ?? []).map(String), ...(draft.when && /^\d{4}$/.test(draft.when) ? [draft.when] : [])])).sort().reverse();
+  const devices = [...(opts.data?.devices ?? []), ...draft.devices.filter((d) => !opts.data?.devices.includes(d))];
+  const pickState = (s: PlayState) => setDraft((d) => ({ ...d, state: d.state === s ? undefined : s }));
+  const pickWhen = (w: string) => setDraft((d) => ({ ...d, when: d.when === w ? undefined : w }));
+  const pickDevice = (v: string) => setDraft((d) => ({ ...d, devices: d.devices.includes(v) ? d.devices.filter((x) => x !== v) : [...d.devices, v] }));
+
+  return (
+    <Sheet open onClose={onClose} label={t('Filters')} wide>
+      <div class="sheet-head">
+        <h2 class="sheet-title">{t('Filters')}</h2>
+        <button type="button" class="btn icon-btn is-bare is-40" aria-label={t('Close filters')} onClick={onClose}><Icon name="close" size={18} /></button>
+      </div>
+      <FilterGroup label={tc('Show', 'verb')}>
+        {(['finished', 'inprogress'] as const).map((s) => <FilterOption key={s} on={draft.state === s} label={stateLabel(s)} onClick={() => pickState(s)} />)}
+      </FilterGroup>
+      <FilterGroup label={t('Hidden titles')}>
+        <FilterOption on={draft.hidden} label={t('Show hidden')} onClick={() => setDraft((d) => ({ ...d, hidden: !d.hidden }))} />
+      </FilterGroup>
+      <FilterGroup label={t('When')}>
+        {['7d', '30d', ...years].map((w) => <FilterOption key={w} on={draft.when === w} label={periodLabel(w)} onClick={() => pickWhen(w)} />)}
+        {opts.loading && !opts.data && <span class="skel" style={{ width: '70px', height: '36px', borderRadius: '999px' }} />}
+      </FilterGroup>
+      {opts.loading && !opts.data ? (
+        <FilterGroup label={t('Devices')}>
+          {[0, 1, 2].map((i) => <span key={i} class="skel" style={{ width: '110px', height: '36px', borderRadius: '999px' }} />)}
+        </FilterGroup>
+      ) : devices.length > 0 && (
+        <FilterGroup label={t('Devices')}>
+          {devices.map((d) => <FilterOption key={d} on={draft.devices.includes(d)} label={d} onClick={() => pickDevice(d)} />)}
+        </FilterGroup>
+      )}
+      <div class="sheet-actions fsheet-actions">
+        <button type="button" class="btn btn-ghost is-light" disabled={!filterCount(draft)} onClick={() => setDraft(NO_FILTERS)}>{t('Clear all')}</button>
+        <button type="button" class="btn btn-primary is-sm" onClick={() => onApply(draft)}>
+          {count === null ? t('Show titles') : count === 0 ? t('No titles match') : t('Show {count}', { count: plural(count, 'title') })}
+        </button>
+      </div>
+    </Sheet>
   );
 }
 

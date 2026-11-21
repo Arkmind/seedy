@@ -50,16 +50,84 @@ data class HistoryPage(val items: List<HistoryEntry> = emptyList(), val total: I
 
 enum class HistoryFilter(val key: String, val label: String) { All("all", "All"), Movies("movies", "Movies"), Shows("shows", "Shows") }
 
+/** How the history is ordered: by when each was last watched (newest first) or by title (A to Z). */
+enum class HistorySort(val key: String, val label: String, val descending: Boolean) {
+    Date("date", "Date watched", true),
+    Title("title", "Title", false),
+}
+
+/** GET /Seedy/Plays/Filters: the years with plays (newest first) and the devices played on (last used first). */
+@Serializable
+data class HistoryOptions(val years: List<Int> = emptyList(), val devices: List<String> = emptyList())
+
+/**
+ * The history's Filters sheet (web/src/screens/browse/History.tsx): finished or still going, hidden titles too, when
+ * ("7d", "30d" or a year) and on which devices. When and devices pick the plays; the rest looks at each latest play.
+ */
+data class HistoryFilters(
+    val state: String? = null,
+    val hidden: Boolean = false,
+    val period: String? = null,
+    val devices: List<String> = emptyList(),
+) {
+    val count: Int get() = (if (state != null) 1 else 0) + (if (hidden) 1 else 0) + (if (period != null) 1 else 0) + devices.size
+
+    /** Leaves plays out (Show hidden only adds some). */
+    val narrows: Boolean get() = state != null || period != null || devices.isNotEmpty()
+
+    /** "Finished · 2025 · Living room TV": what's on, for the line next to the tools. */
+    val labels: List<String> get() = listOfNotNull(state?.let(::stateLabel), if (hidden) t("Hidden titles") else null, period?.let(::periodLabel)) + devices
+
+    fun toggleState(s: String) = copy(state = if (state == s) null else s)
+    fun togglePeriod(p: String) = copy(period = if (period == p) null else p)
+    fun toggleDevice(d: String) = copy(devices = if (d in devices) devices - d else devices + d)
+
+    companion object {
+        const val FINISHED = "finished"
+        const val IN_PROGRESS = "inprogress"
+
+        fun stateLabel(s: String): String = if (s == FINISHED) t("Finished") else t("In progress")
+        fun periodLabel(p: String): String = when (p) {
+            "7d" -> t("Past 7 days")
+            "30d" -> t("Past 30 days")
+            else -> p
+        }
+
+        /** The past 7 or 30 days start at midnight, so they line up with the day groups; a year is local time. */
+        fun range(period: String?, today: LocalDate, zone: ZoneId): Pair<String?, String?> {
+            fun iso(d: LocalDate) = d.atStartOfDay(zone).toInstant().toString()
+            return when {
+                period == null -> null to null
+                period == "7d" -> iso(today.minusDays(6)) to null
+                period == "30d" -> iso(today.minusDays(29)) to null
+                else -> period.toIntOrNull()?.let { y -> iso(LocalDate.of(y, 1, 1)) to iso(LocalDate.of(y + 1, 1, 1)) } ?: (null to null)
+            }
+        }
+    }
+}
+
 /** Seedy's play log for the signed-in person (web/src/api/seedy.ts: getHistory and friends). */
 class HistoryApi(private val api: ApiClient) {
-    suspend fun page(start: Int, limit: Int, filter: HistoryFilter, search: String?, includeHidden: Boolean): HistoryPage =
-        api.get<HistoryPage>(
+    suspend fun page(
+        start: Int, limit: Int, filter: HistoryFilter, search: String?,
+        filters: HistoryFilters = HistoryFilters(), sort: HistorySort = HistorySort.Date, descending: Boolean = sort.descending,
+        today: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault(),
+    ): HistoryPage {
+        val (from, to) = HistoryFilters.range(filters.period, today, zone)
+        return api.get<HistoryPage>(
             "/Seedy/Plays",
             queryParameters = mapOf(
                 "startIndex" to start, "limit" to limit, "type" to filter.key,
-                "search" to search?.takeIf { it.isNotBlank() }, "includeHidden" to if (includeHidden) true else null,
+                "search" to search?.takeIf { it.isNotBlank() }, "includeHidden" to if (filters.hidden) true else null,
+                "state" to filters.state, "from" to from, "to" to to, "devices" to filters.devices.joinToString("|").ifEmpty { null },
+                "sort" to sort.key, "order" to if (descending) "desc" else "asc",
             ),
         ).content
+    }
+
+    /** What the Filters sheet offers; fails on plugins from before history filters (the screen then hides Sort and Filters). */
+    suspend fun options(filter: HistoryFilter): HistoryOptions =
+        api.get<HistoryOptions>("/Seedy/Plays/Filters", queryParameters = mapOf("type" to filter.key)).content
 
     /** Hides a movie or a show (every play of it) from history, recommendations and the Top 10. */
     suspend fun hide(titleId: String, hidden: Boolean) {
