@@ -171,6 +171,7 @@ const fr: Record<string, string> = {
   'Watching together': 'Visionnage en groupe',
   'Watching with {n}': 'Vous êtes {total} à regarder',
   'Waiting for others': 'En attente des autres',
+  'Waiting for everyone': 'En attente de tout le monde',
   'Just you so far': 'Personne d’autre pour l’instant',
   'Leave group': 'Quitter le groupe',
   'You left the group': 'Vous avez quitté le groupe',
@@ -187,6 +188,7 @@ const fr: Record<string, string> = {
   '{name} left': '{name} a quitté le groupe',
   "You can't join that group": 'Vous ne pouvez pas rejoindre ce groupe',
   'The group stopped playback': 'Le groupe a arrêté la lecture',
+  'You left the group so the others can go on': 'Vous avez quitté le groupe pour que les autres puissent continuer',
 
   // Cast and external players
   'Cast to a device': 'Caster sur un appareil',
