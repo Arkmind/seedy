@@ -62,24 +62,14 @@ import io.github.arkmind.seedy.ui.wrapped.LocalStoryLoop
 import io.github.arkmind.seedy.ui.wrapped.LocalStoryTime
 import io.github.arkmind.seedy.ui.wrapped.StoryLook
 import io.github.arkmind.seedy.ui.wrapped.StoryPlayer
+import io.github.arkmind.seedy.ui.wrapped.Segments
+import io.github.arkmind.seedy.ui.wrapped.WrappedIcons
 import io.github.arkmind.seedy.ui.wrapped.loopSeconds
 import io.github.arkmind.seedy.ui.wrapped.rememberStoryPlayer
 import io.github.arkmind.seedy.ui.wrapped.storyBackdrop
 import io.github.arkmind.seedy.ui.wrapped.storyLook
 import io.github.arkmind.seedy.ui.wrapped.storyTime
 import kotlinx.coroutines.launch
-
-/** The Wrapped boards' icons. */
-internal object WrappedIcons {
-    val Pause = IconDef(2.4f, "M8 5v14", "M16 5v14")
-    val Close = IconDef(2.4f, "M6 6l12 12", "M18 6L6 18")
-    val Share = IconDef(2.4f, "M12 3v12", "M7 8l5-5 5 5", "M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6")
-    val Go = IconDef(2.6f, "M5 12h14", "M13 6l6 6-6 6")
-    val Save = IconDef(2.4f, "M12 4v11", "M7 10l5 5 5-5", "M5 20h14")
-    val Again = IconDef(2.4f, "M4 12a8 8 0 1 0 2.4-5.7", "M4 4v5h5")
-    val Bolt = IconDef(2.4f, "M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z")
-    val Next = IconDef(2.6f, "M9 6l6 6-6 6")
-}
 
 /** Where a phone story's parts sit: below the status bar and the header, above the share button. */
 internal class StoryFrame(val top: Dp, val bottom: Dp)
@@ -185,29 +175,6 @@ private fun Chrome(player: StoryPlayer, look: StoryLook, statusTop: Dp, onClose:
             RoundButton(WrappedIcons.Close, look.ink, t("Close Wrapped"), onClose)
         }
     }
-}
-
-/** The stories' bar: 3 px segments 4 px apart, past ones full, the current one filling. */
-@Composable
-internal fun Segments(player: StoryPlayer, ink: Color, modifier: Modifier = Modifier, height: Dp = 3.dp, gap: Dp = 4.dp, radius: Dp = 2.dp, track: Float = .25f) {
-    Box(
-        modifier.height(height).drawBehind {
-            val g = gap.toPx()
-            val w = (size.width - g * (player.count - 1)) / player.count
-            val r = CornerRadius(radius.toPx())
-            val fill = player.progress.floatValue
-            for (i in 0 until player.count) {
-                val x = i * (w + g)
-                drawRoundRect(ink.copy(alpha = track), Offset(x, 0f), Size(w, size.height), r)
-                val f = when {
-                    i < player.index -> 1f
-                    i == player.index -> fill
-                    else -> 0f
-                }
-                if (f > 0f) drawRoundRect(ink, Offset(x, 0f), Size(w * f, size.height), r)
-            }
-        },
-    )
 }
 
 @Composable

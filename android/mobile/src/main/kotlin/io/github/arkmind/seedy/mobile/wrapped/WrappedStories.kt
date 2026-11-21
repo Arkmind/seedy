@@ -99,6 +99,12 @@ import io.github.arkmind.seedy.ui.wrapped.ClockDial
 import io.github.arkmind.seedy.ui.wrapped.LocalStoryTime
 import io.github.arkmind.seedy.ui.wrapped.MovieArt
 import io.github.arkmind.seedy.ui.wrapped.Odometer
+import io.github.arkmind.seedy.ui.wrapped.SummaryCard
+import io.github.arkmind.seedy.ui.wrapped.WrappedIcons
+import io.github.arkmind.seedy.ui.wrapped.Heading
+import io.github.arkmind.seedy.ui.wrapped.OutlineText
+import io.github.arkmind.seedy.ui.wrapped.TightText
+import io.github.arkmind.seedy.ui.wrapped.margin
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import io.github.arkmind.seedy.ui.wrapped.Say
@@ -123,74 +129,6 @@ import io.github.arkmind.seedy.ui.wrapped.waves
 
 private val Ink = WrappedInk
 private val Hero = Color(0xFFC8C8C8)
-
-/** CSS margins, negative ones included: the box grows or shrinks by them and the content sits [start], [top] in. */
-internal fun Modifier.margin(start: Dp = 0.dp, top: Dp = 0.dp, end: Dp = 0.dp, bottom: Dp = 0.dp): Modifier = layout { m, c ->
-    val s = start.roundToPx()
-    val e = end.roundToPx()
-    val tp = top.roundToPx()
-    val b = bottom.roundToPx()
-    val h = s + e
-    val inner = c.copy(
-        minWidth = (c.minWidth - h).coerceAtLeast(0),
-        maxWidth = if (c.hasBoundedWidth) (c.maxWidth - h).coerceAtLeast(0) else c.maxWidth,
-        minHeight = (c.minHeight - tp - b).coerceAtLeast(0),
-        maxHeight = if (c.hasBoundedHeight) (c.maxHeight - tp - b).coerceAtLeast(0) else c.maxHeight,
-    )
-    val p = m.measure(inner)
-    layout((p.width + h).coerceAtLeast(0), (p.height + tp + b).coerceAtLeast(0)) { p.place(s, tp) }
-}
-
-/**
- * A story heading: heavy capitals, tight lines, allowed 6 px into the right margin (a line that just fits on the
- * boards then fits here too).
- */
-@Composable
-internal fun Heading(text: String, size: TextUnit, color: Color, modifier: Modifier = Modifier, lineHeight: Float = .98f, tracking: Float = -.03f) {
-    TightText(AnnotatedString(text.uppercase()), size, 900, color, lineHeight, modifier.margin(end = (-6).dp), tracking = tracking)
-}
-
-/**
- * Text whose lines are closer than the font's own height, laid out as CSS does: Compose keeps the font's full height
- * above the first line and below the last, so the box loses the difference on both ends ([NotoLineRatio]).
- */
-@Composable
-internal fun TightText(
-    text: AnnotatedString,
-    size: TextUnit,
-    weight: Int,
-    color: Color,
-    lineHeight: Float,
-    modifier: Modifier = Modifier,
-    tracking: Float = 0f,
-    align: TextAlign = TextAlign.Unspecified,
-) {
-    BasicText(
-        text,
-        modifier.layout { m, c ->
-            val d = ((NotoLineRatio - lineHeight) / 2f * size.toPx()).roundToInt().coerceAtLeast(0)
-            val p = m.measure(c.copy(minHeight = 0, maxHeight = Constraints.Infinity))
-            layout(p.width, (p.height - 2 * d).coerceAtLeast(0)) { p.place(0, -d) }
-        },
-        style = BaseText.copy(
-            fontSize = size, fontWeight = FontWeight(weight), color = color, lineHeight = lineHeight.em,
-            letterSpacing = if (tracking == 0f) TextUnit.Unspecified else tracking.em, textAlign = align,
-        ),
-    )
-}
-
-/** Text drawn as an outline only (CSS -webkit-text-stroke on transparent text). */
-@Composable
-internal fun OutlineText(text: String, size: TextUnit, color: Color, stroke: Dp, modifier: Modifier = Modifier, lineHeight: Float = 1f, tracking: Float = 0f) {
-    val px = with(LocalDensity.current) { stroke.toPx() }
-    BasicText(
-        text,
-        modifier.cssLineBox(size, lineHeight),
-        style = BaseText.copy(fontSize = size, fontWeight = FontWeight(900), color = color, letterSpacing = tracking.em, drawStyle = Stroke(px)),
-        maxLines = 1,
-        softWrap = false,
-    )
-}
 
 /** Medu with its line beside it: the bubble's tail points at Medu. */
 @Composable
@@ -615,82 +553,6 @@ internal fun SummaryStory(w: Wrapped, cardLayer: GraphicsLayer) {
         )
         Box(Modifier.storyPop(.3f).padding(top = 14.dp).record(cardLayer)) {
             SummaryCard(w, accent, Modifier.width(342.dp))
-        }
-    }
-}
-
-/** The card the summary shares and saves: the year at a glance on the accent. */
-@Composable
-internal fun SummaryCard(w: Wrapped, accent: Color, modifier: Modifier = Modifier) {
-    val first = w.shows.firstOrNull()
-    val label: @Composable (String) -> Unit = { SText(it, size = 11.sp, weight = 800, tracking = .08f, color = Ink.copy(alpha = .6f), uppercase = true, maxLines = 1) }
-    Box(modifier.clip(RoundedCornerShape(28.dp)).background(accent)) {
-        BoardCanvas(Modifier.matchParentSize()) { _, _ -> waves(listOf(470f, 510f), 18f, 20f, Color.White.copy(alpha = .25f), to = 440f) }
-        Column(Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Medu(MeduMood.Party, 64.dp, height = 84.dp, glow = false)
-                Column {
-                    SText(t("Seedy Wrapped"), size = 12.sp, weight = 800, tracking = .08f, color = Ink.copy(alpha = .6f), uppercase = true, maxLines = 1)
-                    SText(t("My {year}", "year" to w.year), size = 26.sp, weight = 900, lineHeight = 1f, tracking = -.02f, color = Ink, maxLines = 1)
-                }
-            }
-            if (first != null) {
-                Box(Modifier.padding(top = 14.dp).fillMaxWidth().height(128.dp).clip(RoundedCornerShape(18.dp))) {
-                    ShowArt(first, 0, wide = true, modifier = Modifier.fillMaxSize())
-                    Box(Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 10.dp).clip(RoundedCornerShape(999.dp)).background(Color(0xCC0E0E0E)).padding(horizontal = 9.dp, vertical = 3.dp)) {
-                        SText("#1 · ${first.name}", size = 11.sp, weight = 800, color = Color.White, maxLines = 1)
-                    }
-                }
-            }
-            Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                if (w.shows.isNotEmpty()) {
-                    Column(Modifier.weight(1.15f)) {
-                        // An inline label on the card's 16 px line (the other column's are blocks).
-                        Box(Modifier.padding(top = 5.dp, bottom = 2.dp)) { label(t("Top shows")) }
-                        Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            w.shows.take(5).forEachIndexed { i, s ->
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    SText("${i + 1}", Modifier.width(12.dp).alignByBaseline(), size = 14.sp, weight = 900, color = Ink.copy(alpha = .55f), maxLines = 1)
-                                    SText(s.name, Modifier.alignByBaseline(), size = 14.sp, weight = 800, color = Ink, maxLines = 1)
-                                }
-                            }
-                        }
-                    }
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        label(t("Hours"))
-                        SText(formatNumber(hoursOf(w.watchMs)), size = 30.sp, weight = 900, lineHeight = 1.05f, tracking = -.02f, color = Ink, maxLines = 1)
-                    }
-                    w.genres.firstOrNull()?.let { g ->
-                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            label(t("Top genre"))
-                            TightText(AnnotatedString(genreName(g)), 18.sp, 900, Ink, 1.05f, tracking = -.02f)
-                        }
-                    }
-                    w.movie?.let { m ->
-                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            label(t("Top movie"))
-                            TightText(AnnotatedString(m.name), 18.sp, 900, Ink, 1.05f, tracking = -.02f)
-                        }
-                    }
-                }
-            }
-            Row(
-                Modifier.padding(top = 16.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Ink).padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Column(Modifier.weight(1f)) {
-                    SText(t("Watch personality"), size = 10.sp, weight = 800, tracking = .1f, color = accent, uppercase = true, maxLines = 1)
-                    SText(personalityName(w.personality.key), size = 17.sp, weight = 900, color = Color.White, maxLines = 1)
-                }
-                SIcon(WrappedIcons.Bolt, size = 24.dp, color = Color.White)
-            }
-            Row(Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                SText(summaryAlso(w), size = 12.sp, weight = 800, color = Ink, maxLines = 1)
-                SText("seedy", size = 12.sp, weight = 800, color = Ink.copy(alpha = .6f), maxLines = 1)
-            }
         }
     }
 }

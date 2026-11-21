@@ -36,6 +36,7 @@ import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.wrapped.WrappedInk
+import io.github.arkmind.seedy.ui.wrapped.WrappedIcons
 import io.github.arkmind.seedy.ui.wrapped.WrappedLilac
 import io.github.arkmind.seedy.ui.wrapped.cssGradient
 

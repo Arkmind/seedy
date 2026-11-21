@@ -15,6 +15,8 @@ sealed interface TvRoute {
     data object Settings : TvRoute
     /** A title that's on Seerr but not on the server. */
     data class SeerrTitle(val mediaType: String, val tmdbId: Int) : TvRoute
+    /** Seedy Wrapped for [year] (board "Seedy Wrapped · TV"). */
+    data class Wrapped(val year: Int) : TvRoute
 }
 
 /** Moves between pages; every TV screen reaches it through [LocalTvNav]. */

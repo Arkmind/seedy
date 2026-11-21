@@ -165,9 +165,13 @@ private val Stars = (0 until 22).map { i ->
 /**
  * A story's backdrop (boards Wrapped*: waves, bubbles, rings, rays, stars and lights), in a [w] × [h] board-pixel box.
  * What sits low on the board keeps its distance to the bottom ([bottomShift] moves it further down), so it rests on
- * taller screens the way it rests on the boards; [t] is the loop clock (null: at rest).
+ * taller screens the way it rests on the boards; [t] is the loop clock (null: at rest). [focus] is where the cover's
+ * rings and the movie's rays turn (the TV puts them elsewhere), and the cover's confetti spreads over the box.
  */
-fun DrawScope.storyBackdrop(story: StoryKey, accent: Color, w: Float, h: Float, t: Double?, clockKind: String? = null, bubbles: Boolean = true, bottomShift: Float = 0f) {
+fun DrawScope.storyBackdrop(
+    story: StoryKey, accent: Color, w: Float, h: Float, t: Double?, clockKind: String? = null, bubbles: Boolean = true, bottomShift: Float = 0f,
+    focus: Offset? = null,
+) {
     val low = h - 844f + bottomShift
     val driftA = { p: Float -> Triple(-18f * p, 14f * p, 4f * p) }
     val driftB = { p: Float -> Triple(16f * p, -12f * p, -5f * p) }
@@ -178,20 +182,21 @@ fun DrawScope.storyBackdrop(story: StoryKey, accent: Color, w: Float, h: Float, 
     }
     when (story) {
         StoryKey.Cover -> {
+            val c = focus ?: Offset(195f, 440f)
             val (ga, gk) = glow(t)
-            light(-120f, 120f, 630f, accent, .28f * ga, gk)
+            light(c.x - 315f, c.y - 320f, 630f, accent, .28f * ga, gk)
             val turn = if (t == null) 0f else loopAt(t, 40.0) * 360f
-            rotate(turn, Offset(195f, 440f)) {
-                val c = Offset(195f, 440f)
+            rotate(turn, c) {
                 drawCircle(accent.copy(alpha = .35f), 140f, c, style = Stroke(2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 10f))))
                 drawCircle(accent.copy(alpha = .22f), 200f, c, style = Stroke(2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(30f, 14f))))
                 drawCircle(accent.copy(alpha = .14f), 262f, c, style = Stroke(2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 8f))))
                 drawCircle(accent.copy(alpha = .10f), 300f, c, style = Stroke(2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(60f, 20f))))
             }
             for (b in Confetti) {
-                val dy = if (b.y > 422f) low else 0f
-                rotate(b.turn, Offset(b.x + b.w / 2f, b.y + dy + b.h / 2f)) {
-                    drawRoundRect(b.color ?: accent, Offset(b.x, b.y + dy), Size(b.w, b.h), CornerRadius(b.r), alpha = twinkle(t, b.delay))
+                val x = b.x * w / 390f
+                val y = if (focus != null) b.y * h / 844f else b.y + if (b.y > 422f) low else 0f
+                rotate(b.turn, Offset(x + b.w / 2f, y + b.h / 2f)) {
+                    drawRoundRect(b.color ?: accent, Offset(x, y), Size(b.w, b.h), CornerRadius(b.r), alpha = twinkle(t, b.delay))
                 }
             }
         }
@@ -210,7 +215,7 @@ fun DrawScope.storyBackdrop(story: StoryKey, accent: Color, w: Float, h: Float, 
         }
         StoryKey.Movie -> {
             val turn = if (t == null) 0f else loopAt(t, 40.0) * 360f
-            val c = Offset(195f, 420f)
+            val c = focus ?: Offset(195f, 420f)
             rotate(turn, c) {
                 for (i in 0 until 16) {
                     val a0 = Math.toRadians(i * 22.5).toFloat()
