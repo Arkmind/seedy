@@ -81,6 +81,7 @@ import io.github.arkmind.seedy.mobile.parts.HeaderButton
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.mobile.requests.SeerrTitleCard
+import io.github.arkmind.seedy.mobile.wrapped.WrappedBanner
 import io.github.arkmind.seedy.ui.components.Artwork
 import io.github.arkmind.seedy.ui.components.BrandMark
 import io.github.arkmind.seedy.ui.components.ProfileSquare
@@ -122,6 +123,8 @@ fun HomeScreen(
     /** The header's Cast: "Control a screen" (null hides it); [controlling] lights it while the phone is a remote. */
     onCast: (() -> Unit)? = null,
     controlling: Boolean = false,
+    /** December's Seedy Wrapped banner (board "Android · Home · Wrapped"): opens that year. */
+    onWrapped: (Int) -> Unit = {},
 ) {
     var menuFor by remember { mutableStateOf<BaseItemDto?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -145,6 +148,9 @@ fun HomeScreen(
                 } else {
                     Box(Modifier.fillMaxWidth().height(if (state.hasHero && featured == null) 540.dp else 96.dp))
                 }
+            }
+            state.wrapped?.let { teaser ->
+                item(key = "wrapped") { WrappedBanner(teaser, { onWrapped(teaser.year) }, Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) }
             }
             for (row in state.visibleRows) {
                 val onMenu: ((BaseItemDto) -> Unit)? = if (row.row.kind == "continue" && onFinish != null) { item -> menuFor = item } else null

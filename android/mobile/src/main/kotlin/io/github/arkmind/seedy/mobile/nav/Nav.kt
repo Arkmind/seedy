@@ -64,6 +64,8 @@ sealed interface Route {
     data class MediaRequestsRow(val music: Boolean, val row: String) : Route
     /** The phone as a remote for the screens picked in "Control a screen" (boards "Android · Remote for a TV / computer"). */
     data object Remote : Route
+    /** Seedy Wrapped for [year] (boards "Seedy Wrapped · 1–9"), full screen. */
+    data class Wrapped(val year: Int) : Route
 }
 
 /** Moves between pages; every screen reaches it through [LocalMobileNav]. */
