@@ -1,5 +1,7 @@
 package io.github.arkmind.seedy.tv.home
 
+import io.github.arkmind.seedy.tv.wrapped.TvWrappedBanner
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -117,6 +119,8 @@ fun TvHomeScreen(
     onSeerr: (SeerrTitle) -> Unit = {},
     /** A Continue watching card's menu (hold OK, or the Menu key): mark watched (true) or take out of the row (false). */
     onFinish: ((BaseItemDto, Boolean, (Boolean) -> Unit) -> Unit)? = null,
+    /** December's Seedy Wrapped card over the rows: opens that year. */
+    onWrapped: (Int) -> Unit = {},
 ) {
     val rows = state.visibleRows
     // The Continue watching card whose menu is open, and the card the remote goes back to once it closes.
@@ -141,6 +145,18 @@ fun TvHomeScreen(
             val cardRows = LocalBringIntoViewSpec.current
             CompositionLocalProvider(LocalBringIntoViewSpec provides NoFocusScroll) {
             LazyColumn(Modifier.fillMaxWidth().weight(1f), state = list, verticalArrangement = Arrangement.spacedBy(44.bp - CardRowRingRoom * 2), contentPadding = PaddingValues(bottom = 200.bp)) {
+                // December: Seedy Wrapped's card first (Up from the first row), the rows under it.
+                val banner = state.wrapped
+                if (banner != null) item(key = "wrapped") {
+                    TvWrappedBanner(
+                        banner, { onWrapped(banner.year) }, Modifier.padding(top = CardRowRingRoom, bottom = CardRowRingRoom),
+                        onFocus = {
+                            focusedRow = -1
+                            scope.launch { list.animateScrollToItem(0) }
+                        },
+                    )
+                }
+                val first = if (banner != null) 1 else 0
                 itemsIndexed(rows, key = { _, r -> r.row.id }) { index, row ->
                     TvRow(
                         row = row,
@@ -150,8 +166,10 @@ fun TvHomeScreen(
                             // Seerr's titles aren't in the library, so the hero stays on the last one that is.
                             if (item != null) pick = HeroPick(item, row.title)
                             if (focusedRow != index) {
+                                // Back from the Wrapped card to the first row: the card stays in view.
+                                val toTop = focusedRow == -1 && index == 0
                                 focusedRow = index
-                                scope.launch { list.animateScrollToItem(index) }
+                                if (!toTop) scope.launch { list.animateScrollToItem(index + first) }
                             }
                         },
                         onOpen = onOpen,

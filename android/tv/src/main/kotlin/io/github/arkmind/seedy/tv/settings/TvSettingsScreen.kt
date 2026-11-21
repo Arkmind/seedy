@@ -118,6 +118,8 @@ fun TvSettingsScreen(
     start: TvSection = TvSection.Profile,
     focusRow: String? = null,
     moving: String? = null,
+    /** Seedy Wrapped's row under the sections (when the profile has a Wrapped): opens the newest year. */
+    onWrapped: (() -> Unit)? = null,
 ) {
     var section by remember { mutableStateOf(start) }
     var inPane by remember { mutableStateOf(false) }
@@ -147,6 +149,7 @@ fun TvSettingsScreen(
             for (s in TvSection.entries) {
                 Category(s, s == section, categories.getValue(s), pane) { section = s }
             }
+            if (onWrapped != null && state.wrappedYears.isNotEmpty()) io.github.arkmind.seedy.tv.wrapped.TvWrappedSettingsRow(onWrapped)
             Row(Modifier.padding(top = 14.bp), horizontalArrangement = Arrangement.spacedBy(10.bp)) {
                 LeftButton(t("Switch profile"), SeedyColors.Text, actions::switchProfile)
                 LeftButton(t("Sign out"), SeedyColors.Danger, actions::signOut)

@@ -18,6 +18,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +54,7 @@ import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
+import io.github.arkmind.seedy.mobile.wrapped.WrappedYearsSheet
 
 /** Settings, the list of pages (board "Android · Settings"); the shell shows it with the tab bar. */
 @Composable
@@ -77,12 +81,14 @@ internal fun settingsNav(nav: MobileNav) = SettingsNav(
     requests = { nav.toTab(Tab.Requests) },
     admin = { nav.go(Route.Admin("server")) },
     history = { nav.go(Route.History) },
+    wrapped = { nav.go(Route.Wrapped(it)) },
 )
 
 @Composable
 fun SettingsHomeScreen(state: SettingsState, appVersion: String, actions: SettingsActions, nav: SettingsNav, requests: Boolean) {
     val sheet = rememberSheet()
     val accent = LocalAccent.current
+    var years by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize().background(SeedyColors.Bg)) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
             PageHeader(t("Settings"), nav.back)
@@ -115,6 +121,11 @@ fun SettingsHomeScreen(state: SettingsState, appVersion: String, actions: Settin
                 if (state.historyEnabled) {
                     item(t("Viewing history"), state.lastPlayed?.let { t("Last: {title}", "title" to it) } ?: t("See what you watched"), SettingsIcons.History, onClick = nav.history)
                 }
+                if (state.wrappedYears.isNotEmpty()) {
+                    item(t("Seedy Wrapped"), t("Your year on Seedy, ready every December"), WrappedGift) {
+                        if (state.wrappedYears.size == 1) nav.wrapped(state.wrappedYears.first()) else years = true
+                    }
+                }
                 if (requests) {
                     item(t("My requests"), state.openRequests?.let { tn(it, "{n} open", "{n} open") } ?: t("What you asked for"), SettingsIcons.Requests, onClick = nav.requests)
                 }
@@ -134,6 +145,7 @@ fun SettingsHomeScreen(state: SettingsState, appVersion: String, actions: Settin
         }
         SheetHost(sheet)
         if (sheet.form == "code") CodeSheet(state, actions, sheet::close)
+        if (years) WrappedYearsSheet(state.wrappedYears, onPick = { years = false; nav.wrapped(it) }, onDismiss = { years = false })
     }
 }
 
@@ -212,3 +224,10 @@ private fun PageItem(name: String, sub: String, icon: IconDef, ink: Color, onCli
         SIcon(AppIcons.Chevron, size = 16.dp, color = SeedyColors.Text3)
     }
 }
+
+/** Settings › Seedy Wrapped: a gift. */
+private val WrappedGift = IconDef(
+    2.1f,
+    "M4 11.5h16v8a1.5 1.5 0 0 1-1.5 1.5h-13a1.5 1.5 0 0 1-1.5-1.5z", "M3 7.5h18v4H3z", "M12 7.5V21",
+    "M12 7.5H8.2a2.5 2.5 0 0 1 0-5C10.8 2.5 12 7.5 12 7.5z", "M12 7.5h3.8a2.5 2.5 0 0 0 0-5C13.2 2.5 12 7.5 12 7.5z",
+)

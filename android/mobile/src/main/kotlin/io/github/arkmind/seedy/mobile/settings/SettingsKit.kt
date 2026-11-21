@@ -209,6 +209,8 @@ data class SettingsNav(
     val requests: () -> Unit = {},
     val admin: () -> Unit = {},
     val history: () -> Unit = {},
+    /** Seedy Wrapped for a year. */
+    val wrapped: (Int) -> Unit = {},
 )
 
 /**

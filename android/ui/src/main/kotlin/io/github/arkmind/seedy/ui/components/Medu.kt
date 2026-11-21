@@ -100,6 +100,9 @@ enum class MeduMood {
 
     /** Sad: worried brows and a falling tear, at half speed (a request declined, a title leaving soon). */
     Sad,
+
+    /** Party: sunglasses, a party hat and a big open grin, at double speed (Seedy Wrapped's cover and summary). */
+    Party,
 }
 
 /**
@@ -297,6 +300,7 @@ private enum class Part(val key: String, val at: Offset?) {
     MSad("mSad", Offset(100f, 100f)),
     MLove("mLove", Offset(100f, 103f)),
     MChew("mChew", Offset(100f, 99f)),
+    PartyFace("party", Offset(100f, 70f)),
     Tear("tear", Offset(73f, 100f)),
     Popcorn("popcorn", Offset(100f, 176f)),
     D4("d4", Offset(152f, 112f)),
@@ -328,6 +332,7 @@ private fun faceOf(mood: MeduMood): List<Part> = when (mood) {
     MeduMood.Love -> listOf(Part.EyesHeart, Part.MLove)
     MeduMood.Popcorn -> listOf(Part.EyesUp, Part.MChew)
     MeduMood.Sad -> listOf(Part.Eyes, Part.BrowsSad, Part.MSad)
+    MeduMood.Party -> listOf(Part.PartyFace)
 }
 
 /** What comes with each mood's face. */
@@ -342,6 +347,7 @@ private fun propsOf(mood: MeduMood): List<Part> = when (mood) {
     MeduMood.Love -> listOf(Part.Hearts)
     MeduMood.Popcorn -> listOf(Part.Popcorn)
     MeduMood.Sad -> listOf(Part.Tear)
+    MeduMood.Party -> emptyList()
 }
 
 private val FaceParts: Set<Part> = MeduMood.entries.flatMapTo(mutableSetOf(), ::faceOf)
@@ -362,17 +368,17 @@ private fun blushOf(mood: MeduMood): Float = when (mood) {
     MeduMood.Sleepy, MeduMood.Popcorn -> .5f
     MeduMood.Yay -> .7f
     MeduMood.Think -> .45f
-    MeduMood.Love -> .75f
+    MeduMood.Love, MeduMood.Party -> .75f
     MeduMood.Sad -> .35f
 }
 
 /** The idle loops' durations in seconds (float and pulse, tentacles): m-slow and m-fast. */
 private enum class Pace(val float: Double, val wiggle: Double) { Normal(3.2, 2.4), Slow(5.5, 4.0), Fast(1.6, 1.2) }
 
-/** Sleepy and Sad float at half speed, Yay at double. */
+/** Sleepy and Sad float at half speed, Yay and Party at double. */
 private fun paceOf(mood: MeduMood): Pace = when (mood) {
     MeduMood.Sleepy, MeduMood.Sad -> Pace.Slow
-    MeduMood.Yay -> Pace.Fast
+    MeduMood.Yay, MeduMood.Party -> Pace.Fast
     else -> Pace.Normal
 }
 
@@ -445,7 +451,7 @@ private fun genericBody(fromY: Float, to: MeduMood): MutableMap<String, MeduTrac
         "bell" to MeduTrack(100f, 124f, listOf(fr(0f, "scale(1,1)", easing = "ease-in-out"), fr(.22f, "scale(.97,1.04)", easing = "ease-in-out"), fr(.55f, "scale(1.05,.94)", easing = "ease-in-out"), fr(1f, "scale(1,1)"))),
         "tg" to MeduTrack(100f, 116f, listOf(fr(0f, "scaleY(1)", easing = "ease-in-out"), fr(.22f, "scaleY(1.04)", easing = "ease-in-out"), fr(.55f, "scaleY(.94)", easing = "ease-in-out"), fr(1f, "scaleY(1)"))),
     )
-    val top = if (to == MeduMood.Yay || to == MeduMood.Love || to == MeduMood.Popcorn || to == MeduMood.Wave) -12f else -6f
+    val top = if (to == MeduMood.Yay || to == MeduMood.Love || to == MeduMood.Party || to == MeduMood.Popcorn || to == MeduMood.Wave) -12f else -6f
     return mutableMapOf(
         "b" to MeduTrack(100f, 130f, listOf(fr(0f, ty(fromY), easing = "ease-in-out"), fr(.16f, ty(fromY + 4f), easing = "cubic-bezier(.2,.7,.3,1)"), fr(.42f, ty(top), easing = "cubic-bezier(.5,0,.5,1)"), fr(.7f, ty(3f), easing = "ease-out"), fr(1f, ty(0f)))),
         "bell" to MeduTrack(100f, 124f, listOf(fr(0f, "scale(1,1)", easing = "ease-out"), fr(.16f, "scale(1.07,.93)", easing = "cubic-bezier(.2,.7,.3,1)"), fr(.42f, "scale(.94,1.08)", easing = "ease-in-out"), fr(.7f, "scale(1.05,.95)", easing = "ease-out"), fr(1f, "scale(1,1)"))),
@@ -756,6 +762,12 @@ private object Art {
     val sadBrowL = p("M70 71 Q78 64 86 68")
     val sadBrowR = p("M114 68 Q122 64 130 71")
     val sadMouth = p("M92 103 Q100 96 108 103")
+    val partyHat = p("M78 31 Q100 40 122 31 L106 -18 Z")
+    val partyStripes = p("M86 14 Q100 20 114 14 M93 -2 Q101 2 109 -2")
+    val shadesFrame = p("M95 79 Q100 75 105 79 M64 78 L48 72 M136 78 L152 72")
+    val shadesGlint = p("M71 77 L79 86 M112 77 L120 86")
+    val partyMouth = p("M88 98 Q100 116 112 98 Z")
+    val partyTongue = p("M94 105 Q100 111 106 105 Q100 101 94 105 Z")
 
     val bucket = p("M70 126 L130 126 L123 176 L77 176 Z")
     val stripes = p("M84 126 L96 126 L95 176 L86 176 Z M106 126 L118 126 L113 176 L104 176 Z")
@@ -979,6 +991,19 @@ private fun DrawScope.drawBell(pose: Pose, t: Double?, accent: Color) {
     }
     part(pose, Part.MFrown) { stroke(Art.frown, Ink, 3f) }
     part(pose, Part.MSad) { stroke(Art.sadMouth, Ink, 3f) }
+    // Party: the hat, the sunglasses and a wide grin (the web's "party" part, one piece).
+    part(pose, Part.PartyFace) {
+        drawPath(Art.partyHat, accent)
+        stroke(Art.partyStripes, Color.White.copy(alpha = .9f), 4f)
+        drawCircle(Color.White, 8f, Offset(106f, -19f))
+        drawRoundRect(Ink, Offset(64f, 72f), Size(31f, 22f), CornerRadius(9f))
+        drawRoundRect(Ink, Offset(105f, 72f), Size(31f, 22f), CornerRadius(9f))
+        stroke(Art.shadesFrame, Ink, 3.5f)
+        stroke(Art.shadesGlint, Color.White.copy(alpha = .85f), 3f)
+        drawPath(Art.partyMouth, Ink)
+        stroke(Art.partyMouth, Ink, 2.4f, cap = StrokeCap.Butt, join = StrokeJoin.Round)
+        drawPath(Art.partyTongue, accent)
+    }
     part(pose, Part.MLove) {
         drawPath(Art.loveMouth, Ink)
         stroke(Art.loveMouth, Ink, 2.4f, cap = StrokeCap.Butt, join = StrokeJoin.Round)
