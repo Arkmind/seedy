@@ -107,8 +107,8 @@ export function History() {
     getHistory({ startIndex: items.length, limit: PAGE, type: filter, search: search || undefined, includeHidden: showHidden || undefined }).then(
       (r) => {
         if (id !== req.current) return;
-        const seen = new Set(items.map((i) => i.id));
-        setItems((prev) => [...prev, ...r.items.filter((i) => !seen.has(i.id))]);
+        const seen = new Set(items.map((i) => i.itemId));
+        setItems((prev) => [...prev, ...r.items.filter((i) => !seen.has(i.itemId))]);
         setTotal(r.total);
         setStatus('ready');
       },
@@ -314,7 +314,7 @@ function TitleBlock() {
   return (
     <div class="history-title">
       <h1>{t('Viewing history')}</h1>
-      <p>{t('Every play on this profile, newest first. Hidden titles stop shaping your recommendations and the Top 10.')}</p>
+      <p>{t("What you've watched on this profile and where you left off, newest first. Hidden titles stop shaping your recommendations and the Top 10.")}</p>
     </div>
   );
 }

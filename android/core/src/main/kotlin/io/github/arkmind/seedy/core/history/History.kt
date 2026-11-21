@@ -27,7 +27,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlin.math.max
 
-/** One play in the person's history (GET /Seedy/Plays); [item] is gone when the title left the server. */
+/** A movie or episode in the person's history as its latest play left it (GET /Seedy/Plays); [item] is gone when the title left the server. */
 @Serializable
 data class HistoryEntry(
     val id: String,
@@ -66,6 +66,7 @@ class HistoryApi(private val api: ApiClient) {
         api.post<Unit>("/Seedy/Plays/Titles/{id}/Hidden", mapOf("id" to titleId), requestBody = buildJsonObject { put("hidden", hidden) })
     }
 
+    /** Removes the entry's movie or episode (all its plays) from history. */
     suspend fun remove(id: String) {
         api.delete<Unit>("/Seedy/Plays/{id}", mapOf("id" to id))
     }

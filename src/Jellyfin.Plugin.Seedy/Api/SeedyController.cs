@@ -392,7 +392,7 @@ public class SeedyController : ControllerBase
         return c.PlayLogEnabled && c.UseForHistory && ConfigMapper.PlayLogProfile(c, uid).History;
     }
 
-    /// <summary>The person's viewing history, newest first.</summary>
+    /// <summary>The person's viewing history, newest first: each movie or episode once, as its latest play left it.</summary>
     /// <param name="startIndex">Rows to skip.</param>
     /// <param name="limit">Rows to return.</param>
     /// <param name="type">all, movies or shows.</param>
@@ -485,8 +485,8 @@ public class SeedyController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Removes one play from the person's history.</summary>
-    /// <param name="id">Play id.</param>
+    /// <summary>Removes a movie or episode from the person's history (all its plays).</summary>
+    /// <param name="id">Play id of the history entry.</param>
     /// <returns>No content.</returns>
     [HttpDelete("Plays/{id}")]
     public ActionResult DeletePlay([FromRoute] string id)
