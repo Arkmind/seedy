@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.4.15.0",
+        "changelog": "# What's Changed\n- Watch together pauses less\n  On the web, a short hiccup on one screen no longer stops everyone\n- No more waiting on a stuck viewer\n  If someone’s player fails, they leave the group so the others can go on\n- One row per title in your history\n  Each movie or episode shows once, with where you left off\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play).\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart Jellyfin: the history and Watch together changes come with it.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.14...v0.4.15",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.4.15/seedy_0.4.15.0.zip",
+        "checksum": "e84eb7051d88b88675fd38dec5350969",
+        "timestamp": "2026-11-21T18:13:17Z"
+      },
+      {
         "version": "0.4.14.0",
         "changelog": "# What's Changed\n- Download any season\n  Download Season now shows on every show, not only some of them\n\n## Updating\n- Seedy offers this version itself on phones (or update from Google Play). Nothing changes on TVs.\n- Update the Seedy plugin from Jellyfin's plugin catalogue for the web fix, then restart Jellyfin.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.13...v0.4.14",
         "targetAbi": "12.0.0.0",
