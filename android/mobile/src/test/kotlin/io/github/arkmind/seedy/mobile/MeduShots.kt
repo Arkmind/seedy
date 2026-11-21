@@ -24,7 +24,7 @@ import org.robolectric.annotation.GraphicsMode
 /** Medu's moods in their rest pose, side by side (board "Brand · Mascot"), for comparing with the boards' SVG. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = "w1420dp-h300dp-mdpi", sdk = [35])
+@Config(qualifiers = "w1560dp-h300dp-mdpi", sdk = [35])
 class MeduShots {
     @get:Rule val compose = createComposeRule()
 

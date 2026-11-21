@@ -388,7 +388,7 @@ internal fun BingeStory(w: Wrapped, look: StoryLook) {
             TightText(AnnotatedString(t("episodes") + "\n" + t("in one go")), 26.sp, 900, Ink, 1f, Modifier.alignByBaseline())
         }
         // One box per episode (at most 12), as wide as the minutes watched of it.
-        val minutes = b.minutes?.takeIf { it.size == b.episodes || it.isNotEmpty() }
+        val minutes = b.minutes?.takeIf { it.isNotEmpty() }
         val boxes = (minutes?.size ?: b.episodes).coerceIn(0, 12)
         Row(Modifier.padding(top = 18.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             for (i in 0 until boxes) {
