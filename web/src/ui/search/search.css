@@ -158,6 +158,10 @@
   display: flex; flex-direction: column; gap: 14px; padding: 18px 16px max(18px, env(safe-area-inset-bottom));
   background: var(--seedy-bg); animation: fade-in 140ms ease-out;
 }
+/* Opened from a wider window's bar: the same column, centred. */
+@media (min-width: 721px) {
+  .nb-psearch { padding: 20px max(var(--gutter), calc(50% - 380px)) 32px; }
+}
 .nb-psearch-top { display: flex; align-items: center; gap: 8px; }
 .nb-psearch-top .nb-search { flex: 1; min-width: 0; }
 .nb-cancel {
