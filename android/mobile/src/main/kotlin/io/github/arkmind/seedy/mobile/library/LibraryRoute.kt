@@ -43,7 +43,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -275,36 +274,14 @@ private fun Tools(state: LibraryViewModel.State, actions: LibraryActions) {
     Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box {
             ToolButton(WebIcons.Sort, t(state.sort.label), { menu = true })
-            SortMenu(menu, state.sort, state.descending, onDismiss = { menu = false }) { s, d -> menu = false; actions.onSort(s, d) }
+            SortMenu(
+                menu, Sort.entries.map { SortChoice(t(it.label), it.descending, it != Sort.Random) }, state.sort.ordinal, state.descending,
+                onDismiss = { menu = false },
+            ) { i, d -> menu = false; actions.onSort(Sort.entries[i], d) }
         }
         if (state.tab != LibraryTab.Collections) ToolButton(WebIcons.Filters, t("Filters"), actions.onFilters, badge = state.filters.count)
         Spacer(Modifier.weight(1f))
         SText(state.filters.labels.joinToString(" · "), size = 12.sp, color = SeedyColors.Text3, maxLines = 1)
-    }
-}
-
-@Composable
-private fun SortMenu(open: Boolean, sort: Sort, descending: Boolean, onDismiss: () -> Unit, onPick: (Sort, Boolean) -> Unit) {
-    DropdownMenu(expanded = open, onDismissRequest = onDismiss, containerColor = SeedyColors.Row, shape = RoundedCornerShape(12.dp)) {
-        SText(t("Sort by"), Modifier.padding(horizontal = 16.dp, vertical = 8.dp), size = 11.sp, weight = 800, tracking = 0.1f, color = SeedyColors.Text3, uppercase = true)
-        for (s in Sort.entries) {
-            DropdownMenuItem(
-                text = { SText(t(s.label), size = 14.sp, weight = if (s == sort) 800 else 600, color = SeedyColors.White) },
-                trailingIcon = if (s == sort) ({ SIcon(WebIcons.Check, size = 16.dp, color = LocalAccent.current) }) else null,
-                onClick = { onPick(s, if (s == sort) descending else s.descending) },
-            )
-        }
-        if (sort != Sort.Random) {
-            HorizontalDivider(color = SeedyColors.Surface2)
-            for (d in listOf(false, true)) {
-                DropdownMenuItem(
-                    text = { SText(if (d) t("Descending") else t("Ascending"), size = 14.sp, weight = if (d == descending) 800 else 600, color = SeedyColors.White) },
-                    leadingIcon = { SIcon(WebIcons.SortEpisodes, size = 16.dp, color = SeedyColors.Text2) },
-                    trailingIcon = if (d == descending) ({ SIcon(WebIcons.Check, size = 16.dp, color = LocalAccent.current) }) else null,
-                    onClick = { onPick(sort, d) },
-                )
-            }
-        }
     }
 }
 

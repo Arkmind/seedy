@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -39,12 +38,18 @@ import io.github.arkmind.seedy.core.feature.HistoryViewModel
 import io.github.arkmind.seedy.core.format.uuidOf
 import io.github.arkmind.seedy.core.history.HistoryEntry
 import io.github.arkmind.seedy.core.history.HistoryFilter
+import io.github.arkmind.seedy.core.history.HistoryFilters
 import io.github.arkmind.seedy.core.history.HistoryFormat
+import io.github.arkmind.seedy.core.history.HistoryGroup
+import io.github.arkmind.seedy.core.history.HistorySort
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.mobile.admin.BoardField
 import io.github.arkmind.seedy.mobile.admin.ConfirmSheet
 import io.github.arkmind.seedy.mobile.admin.PillButton
 import io.github.arkmind.seedy.mobile.browse.Chip
+import io.github.arkmind.seedy.mobile.browse.ToolButton
+import io.github.arkmind.seedy.mobile.library.SortChoice
+import io.github.arkmind.seedy.mobile.library.SortMenu
 import io.github.arkmind.seedy.mobile.manage.ItemMenuSheet
 import io.github.arkmind.seedy.mobile.manage.ManageIcons
 import io.github.arkmind.seedy.mobile.manage.MenuEntry
@@ -53,7 +58,6 @@ import io.github.arkmind.seedy.mobile.nav.Route
 import io.github.arkmind.seedy.mobile.parts.Tab
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
-import io.github.arkmind.seedy.mobile.settings.BoardSwitch
 import io.github.arkmind.seedy.mobile.settings.Card
 import io.github.arkmind.seedy.mobile.settings.Faint
 import io.github.arkmind.seedy.mobile.settings.RowLine
@@ -97,12 +101,14 @@ fun HistoryRoute() {
 
 /**
  * Viewing history, from the web's History board (its phone layout) in the phone's settings kit: search and Clear
- * history, the kinds and Show hidden, then the plays by day in cards, 30 at a time. [today] places the day groups.
+ * history, the kinds, Sort and Filters, then the plays by day in cards (one card when sorted by title), 30 at a time.
+ * [today] places the day groups.
  */
 @Composable
 fun HistoryScreen(state: HistoryState, actions: HistoryActions, today: LocalDate, nav: HistoryNav) {
     var menu by remember { mutableStateOf<HistoryEntry?>(null) }
     var clearing by remember { mutableStateOf(false) }
+    var filtering by remember { mutableStateOf(false) }
     SettingsPage(
         t("Viewing history"),
         t("What you've watched on this profile and where you left off, newest first. Hidden titles stop shaping your recommendations and the Top 10."),
@@ -110,6 +116,12 @@ fun HistoryScreen(state: HistoryState, actions: HistoryActions, today: LocalDate
         overlay = {
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter))
             menu?.let { e -> RowMenu(e, actions, nav) { menu = null } }
+            if (filtering) {
+                HistoryFilterSheet(
+                    state.filters, state.options, actions::countFor,
+                    onApply = { actions.setFilters(it); filtering = false }, onDismiss = { filtering = false },
+                )
+            }
             if (clearing) {
                 ConfirmSheet(
                     t("Clear viewing history?"),
@@ -130,18 +142,11 @@ fun HistoryScreen(state: HistoryState, actions: HistoryActions, today: LocalDate
             }
             PillButton(t("Clear history"), { clearing = true }, height = 46.dp, enabled = state.items.isNotEmpty() || state.busy)
         }
-        // The kinds, then Show hidden at the end of the line (under them when the words don't fit).
-        FlowRow(
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
-            itemVerticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (f in HistoryFilter.entries) Chip(t(f.label), f == state.filter, { actions.setFilter(f) })
-            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)) {
-                SText(t("Show hidden"), size = 13.sp, weight = 600, color = SeedyColors.TextHero, maxLines = 1)
-                BoardSwitch(state.showHidden, actions::setShowHidden)
-            }
         }
+        // Sort and Filters, as in a library; plugins from before them can't sort or filter, so they don't show.
+        if (state.options != null) Tools(state, actions) { filtering = true }
 
         when {
             state.busy -> Skeleton()
@@ -149,10 +154,11 @@ fun HistoryScreen(state: HistoryState, actions: HistoryActions, today: LocalDate
                 WebIcons.Alert, t("Couldn't load your history"), t("The server didn't answer. Check that the Seedy plugin is running, then try again."),
                 t("Try again"), actions::retry,
             )
-            state.items.isEmpty() -> Empty(state, nav)
+            state.items.isEmpty() -> Empty(state, actions, nav)
             else -> {
-                for (g in HistoryFormat.groups(state.items, today)) {
-                    SectionTitle(g.label)
+                val groups = if (state.byDay) HistoryFormat.groups(state.items, today) else listOf(HistoryGroup("all", "", false, state.items))
+                for (g in groups) {
+                    if (g.label.isNotEmpty()) SectionTitle(g.label) else Spacer(Modifier.height(16.dp))
                     Card(Modifier.padding(horizontal = 16.dp)) {
                         g.items.forEachIndexed { i, e ->
                             if (i > 0) RowLine()
@@ -162,7 +168,8 @@ fun HistoryScreen(state: HistoryState, actions: HistoryActions, today: LocalDate
                 }
                 if (state.more) {
                     Box(Modifier.fillMaxWidth().padding(top = 20.dp), contentAlignment = Alignment.Center) {
-                        PillButton(if (state.status == "more") t("Loading…") else t("Show earlier"), actions::loadMore, enabled = state.status != "more", height = 44.dp)
+                        val label = if (state.byDay && state.descending) t("Show earlier") else t("Show more")
+                        PillButton(if (state.status == "more") t("Loading…") else label, actions::loadMore, enabled = state.status != "more", height = 44.dp)
                     }
                 }
             }
@@ -250,14 +257,39 @@ private fun RowMenu(e: HistoryEntry, actions: HistoryActions, nav: HistoryNav, o
     ItemMenuSheet(HistoryFormat.title(e), entries, onDismiss)
 }
 
-/** Nothing played, or nothing for this search or kind. */
+/** Sort (its menu) and Filters with how many are on, then what's on, as in a library's tools. */
 @Composable
-private fun Empty(state: HistoryState, nav: HistoryNav) {
+private fun Tools(state: HistoryState, actions: HistoryActions, onFilters: () -> Unit) {
+    var menu by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box {
+            ToolButton(WebIcons.Sort, t(state.sort.label), { menu = true })
+            SortMenu(
+                menu, HistorySort.entries.map { SortChoice(t(it.label), it.descending) }, state.sort.ordinal, state.descending,
+                onDismiss = { menu = false },
+            ) { i, d -> menu = false; actions.setSort(HistorySort.entries[i], d) }
+        }
+        ToolButton(WebIcons.Filters, t("Filters"), onFilters, badge = state.filters.count)
+        Spacer(Modifier.weight(1f))
+        SText(state.filters.labels.joinToString(" · "), size = 12.sp, color = SeedyColors.Text3, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Nothing played, or nothing for this search, kind or these filters. */
+@Composable
+private fun Empty(state: HistoryState, actions: HistoryActions, nav: HistoryNav) {
     when {
         state.search.isNotEmpty() -> Message(
             WebIcons.SearchX, t("Nothing in your history for “{search}”", "search" to state.search),
-            if (state.showHidden) t("Try another title, or switch to All.") else t("Try another title, or switch to All and turn on Show hidden."),
+            when {
+                state.filter != HistoryFilter.All || state.filters.narrows -> t("Try another title, or remove a filter.")
+                !state.showHidden && state.options != null -> t("Try another title, or turn on Show hidden in Filters.")
+                else -> t("Try another title, or check the spelling.")
+            },
         )
+        state.filters.narrows -> Message(
+            WebIcons.Filters, t("Nothing matches these filters"), t("Try removing a filter or two."), t("Clear all"),
+        ) { actions.setFilters(HistoryFilters()) }
         state.filter == HistoryFilter.Movies -> Message(WebIcons.SearchX, t("No movies played yet"), t("Movies you play on this profile show up here, newest first."))
         state.filter == HistoryFilter.Shows -> Message(WebIcons.SearchX, t("No shows played yet"), t("Episodes you play on this profile show up here, newest first."))
         else -> Message(

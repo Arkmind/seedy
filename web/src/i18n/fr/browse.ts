@@ -222,8 +222,6 @@ const fr: Record<string, string> = {
   "Couldn't remove that play": "Impossible de retirer cette lecture",
   "Couldn't clear history": "Impossible d’effacer l’historique",
   "Nothing in your history for “{search}”": "Rien dans votre historique pour « {search} »",
-  "Try another title, or switch to All.": "Essayez un autre titre, ou passez à Tout.",
-  "Try another title, or switch to All and turn on Show hidden.": "Essayez un autre titre, ou passez à Tout et activez Afficher les masqués.",
   "No movies played yet": "Aucun film lu pour l’instant",
   "No shows played yet": "Aucune série lue pour l’instant",
   "Movies you play on this profile show up here, newest first.": "Les films lus sur ce profil apparaissent ici, du plus récent au plus ancien.",

@@ -55,10 +55,7 @@ fun FilterSheet(state: LibraryViewModel.State, count: suspend (Filters) -> Int?,
         n = count(draft)
     }
     BottomSheet(onDismiss) {
-        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            SText(t("Filters"), Modifier.weight(1f), size = 17.sp, weight = 800, color = SeedyColors.White)
-            HeaderButton(WebIcons.Close, onDismiss, color = SeedyColors.Text2, stroke = 2.4f)
-        }
+        FiltersHead(onDismiss)
         Column(
             Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -74,32 +71,47 @@ fun FilterSheet(state: LibraryViewModel.State, count: suspend (Filters) -> Int?,
                 if (o.ratings.isNotEmpty()) Group(t("Parental rating")) { for (r in o.ratings) Option(r, r in draft.ratings) { draft = draft.toggleRating(r) } }
             }
         }
-        val bottom = max(26.dp, WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 12.dp)
-        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = bottom), verticalAlignment = Alignment.CenterVertically) {
-            SText(
-                t("Clear all"),
-                Modifier.clip(RoundedCornerShape(12.dp)).tap(enabled = draft.count > 0) { draft = Filters() }.padding(horizontal = 6.dp, vertical = 12.dp),
-                size = 14.sp, weight = 700, color = if (draft.count > 0) SeedyColors.White else SeedyColors.Text3,
-            )
-            Spacer(Modifier.weight(1f))
-            val label = when (val c = n) {
-                null -> t("Show titles")
-                0 -> t("No titles match")
-                else -> t("Show {count}", "count" to tn(c, "{n} title", "{n} titles"))
-            }
-            Box(
-                Modifier.height(48.dp).clip(RoundedCornerShape(13.dp)).background(SeedyColors.Inverse).tap { onApply(draft) }.padding(horizontal = 20.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                SText(label, size = 14.sp, weight = 800, color = SeedyColors.InkInverse, maxLines = 1)
-            }
+        SheetActions(n, draft.count > 0, onClear = { draft = Filters() }, onApply = { onApply(draft) })
+    }
+}
+
+/** The sheet's head: "Filters" and its close button. */
+@Composable
+internal fun FiltersHead(onDismiss: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        SText(t("Filters"), Modifier.weight(1f), size = 17.sp, weight = 800, color = SeedyColors.White)
+        HeaderButton(WebIcons.Close, onDismiss, color = SeedyColors.Text2, stroke = 2.4f)
+    }
+}
+
+/** The sheet's foot: Clear all, then the button that applies the filters and says how many titles they leave. */
+@Composable
+internal fun SheetActions(count: Int?, canClear: Boolean, onClear: () -> Unit, onApply: () -> Unit) {
+    val bottom = max(26.dp, WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 12.dp)
+    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = bottom), verticalAlignment = Alignment.CenterVertically) {
+        SText(
+            t("Clear all"),
+            Modifier.clip(RoundedCornerShape(12.dp)).tap(enabled = canClear, onClick = onClear).padding(horizontal = 6.dp, vertical = 12.dp),
+            size = 14.sp, weight = 700, color = if (canClear) SeedyColors.White else SeedyColors.Text3,
+        )
+        Spacer(Modifier.weight(1f))
+        val label = when (count) {
+            null -> t("Show titles")
+            0 -> t("No titles match")
+            else -> t("Show {count}", "count" to tn(count, "{n} title", "{n} titles"))
+        }
+        Box(
+            Modifier.height(48.dp).clip(RoundedCornerShape(13.dp)).background(SeedyColors.Inverse).tap(onClick = onApply).padding(horizontal = 20.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            SText(label, size = 14.sp, weight = 800, color = SeedyColors.InkInverse, maxLines = 1)
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Group(label: String, content: @Composable () -> Unit) {
+internal fun Group(label: String, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SText(label, size = 12.sp, weight = 800, tracking = 0.1f, color = SeedyColors.Text3, uppercase = true)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
@@ -107,7 +119,7 @@ private fun Group(label: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun Option(label: String, on: Boolean, onClick: () -> Unit) {
+internal fun Option(label: String, on: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.height(36.dp).clip(RoundedCornerShape(999.dp)).background(if (on) SeedyColors.Inverse else SeedyColors.Surface).tap(onClick = onClick).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),

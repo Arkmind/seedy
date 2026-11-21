@@ -12,6 +12,9 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.arkmind.seedy.core.feature.HistoryActions
 import io.github.arkmind.seedy.core.feature.HistoryState
 import io.github.arkmind.seedy.core.history.HistoryEntry
+import io.github.arkmind.seedy.core.history.HistoryFilters
+import io.github.arkmind.seedy.core.history.HistoryOptions
+import io.github.arkmind.seedy.core.history.HistorySort
 import io.github.arkmind.seedy.mobile.history.HistoryNav
 import io.github.arkmind.seedy.mobile.history.HistoryScreen
 import io.github.arkmind.seedy.ui.theme.LocalViewer
@@ -56,7 +59,20 @@ class HistoryShots {
 
     @Test
     @Config(qualifiers = "w390dp-h1500dp-mdpi")
-    fun history() = shot("AndroidHistory", HistoryState(items = HistorySamples.plays, total = 40, status = "ready"))
+    fun history() = shot("AndroidHistory", HistoryState(items = HistorySamples.plays, total = 40, status = "ready", options = HistorySamples.options))
+
+    /** Sorted by title with filters on: one card, each row with its date, what's on next to the tools. */
+    @Test
+    @Config(qualifiers = "w390dp-h844dp-mdpi")
+    fun filtered() = shot(
+        "AndroidHistoryFiltered",
+        HistoryState(
+            items = HistorySamples.plays.filter { it.finished && it.deviceName == "Living room TV" }.sortedBy { it.item?.seriesName ?: it.item?.name },
+            total = 3, status = "ready",
+            sort = HistorySort.Title, filters = HistoryFilters(state = HistoryFilters.FINISHED, devices = listOf("Living room TV")),
+            options = HistorySamples.options,
+        ),
+    )
 
     @Test
     @Config(qualifiers = "w390dp-h844dp-mdpi")
@@ -66,6 +82,7 @@ class HistoryShots {
 /** The History board's plays: today, yesterday and last week, as Arky watched them. */
 object HistorySamples {
     val today: LocalDate = LocalDate.of(2026, 10, 19)
+    val options = HistoryOptions(years = listOf(2026, 2025), devices = listOf("Living room TV", "iPad", "Pixel 8"))
     private const val MIN = 60L * 10_000_000L
 
     private fun id(name: String): UUID = UUID.nameUUIDFromBytes(name.toByteArray())
