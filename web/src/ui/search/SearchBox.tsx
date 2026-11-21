@@ -22,8 +22,8 @@ import { t, tn } from '../../lib/i18n';
    - Results drop down while typing, from the second letter after a short pause.
    - "/" or Ctrl/Cmd K puts the cursor in it from anywhere; arrows move, Enter opens, Esc closes.
    - On the Search page it holds the page's query instead: typing updates the page and its address.
-   - On phones it's a button by the cast button that opens the full-screen search (as in the Android app); the
-     Search page keeps its box under the bar. */
+   - On phones and narrower windows it's a button by the cast button that opens the full-screen search (as in the
+     Android app); the Search page keeps its box under the bar. */
 
 
 /* "/" (not while typing elsewhere) or Ctrl/Cmd K. Dialogs keep their keys. openSearch() does the same. */

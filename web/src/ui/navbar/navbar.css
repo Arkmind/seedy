@@ -53,21 +53,24 @@
 
 .nb-search-wrap { position: relative; flex: 1 1 320px; max-width: 600px; margin: 0 auto; min-width: 0; }
 
-/* ── Narrower windows: the search takes its own row under the bar ── */
+/* ── Narrower windows: search is a button by cast (Header.tsx); the Search page's box takes a row under the bar ── */
 
 @media (min-width: 721px) and (max-width: 1239px) {
   .nb-actions { margin-left: auto; }
   .nb-search-wrap { order: 5; flex-basis: 100%; }
 }
-@media (min-width: 721px) and (max-width: 900px) {
-  .site-header.nb { column-gap: 12px; }
-}
-@media (min-width: 721px) and (max-width: 880px) {
-  .nb .brand-name { display: none; }
-}
-@media (min-width: 721px) and (max-width: 790px) {
-  .nb-req { width: 44px; padding: 0; justify-content: center; font-size: 0; gap: 0; }
-}
+
+/* Then, until the bar fits on one row, Header.tsx adds these steps one by one. */
+.site-header.nb[data-fit~='1'] { column-gap: 12px; }
+.nb[data-fit~='1'] .brand-name { display: none; }
+.nb[data-fit~='2'] .nb-req { width: 44px; padding: 0; justify-content: center; font-size: 0; gap: 0; }
+.nb[data-fit~='3'] .nb-nav { gap: 2px; }
+.nb[data-fit~='3'] .nb-link { padding: 0 10px; }
+.nb[data-fit~='3'] .nb-libs-btn { padding: 0 8px 0 10px; }
+.nb[data-fit~='4'] .nb-link > svg:not(.nb-chev) { display: none; }
+.nb[data-fit~='5'] .nb-link { gap: 2px; font-size: 0; }
+.nb[data-fit~='5'] .nb-link > svg:not(.nb-chev) { display: block; }
+.nb[data-fit~='5'] .nb-link:not(.nb-libs-btn) { width: 44px; padding: 0; justify-content: center; }
 
 /* ── Libraries menu ── */
 

@@ -1,5 +1,5 @@
 import { createPortal } from 'preact/compat';
-import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { brandLogoUrl, type Me } from '../../api/seedy';
 import { userImageUrl } from '../../api/images';
 import { JELLYFIN_WEB } from '../../api/client';
@@ -19,9 +19,10 @@ import { t } from '../../lib/i18n';
 
 /* The navigation bar (Navigation bar board): brand; Home, Libraries and Favorites; a real search box in the
    middle; Requests, cast and the account menu on the right. Over the Home banner and a details hero it sits on the
-   art with glass controls; elsewhere it uses the solid controls and a hairline under it. On phones (as in the Android
-   app): brand, then search, cast and avatar on one row (the Search page adds its box under them), and a tab bar at
-   the bottom. */
+   art with glass controls; elsewhere it uses the solid controls and a hairline under it. When the box no longer fits
+   in the middle (under 1240 px) it becomes the phone's search button by cast, opening the full-screen search; the
+   Search page keeps its box, on a row under the bar. On phones (as in the Android app): brand, then search, cast and
+   avatar on one row (the Search page adds its box under them), and a tab bar at the bottom. */
 
 export function BrandMark({ size = 34 }: { size?: number }) {
   const b = useStore(brandingStore);
@@ -48,26 +49,71 @@ export function Brand({ small }: { small?: boolean }) {
 
 export type HeaderActive = 'home' | 'favorites' | 'history' | 'search' | 'settings' | 'requests' | { viewId: string } | { collectionType: string } | null;
 
-/* The app's phone breakpoint (tokens.css: the gutter drops to 16 px). */
-const PHONE = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
-function usePhone(): boolean {
-  const [phone, setPhone] = useState(() => !!PHONE?.matches);
+function useMedia(query: string): boolean {
+  const [hit, setHit] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(query).matches);
   useEffect(() => {
-    if (!PHONE) return;
-    const on = () => setPhone(PHONE.matches);
+    const mq = window.matchMedia?.(query);
+    if (!mq) return;
+    const on = () => setHit(mq.matches);
     on();
-    PHONE.addEventListener('change', on);
-    return () => PHONE.removeEventListener('change', on);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, [query]);
+  return hit;
+}
+/* The app's phone breakpoint (tokens.css: the gutter drops to 16 px), and where the bar's search box stops fitting
+   (navbar.css). */
+const PHONE = '(max-width: 720px)';
+const COMPACT = '(max-width: 1239px)';
+
+/* Narrower windows drop what matters least until the bar fits on one row (navbar.css, data-fit): 1 the brand's
+   name, 2 the Requests label, 3 the nav's padding, 4 its icons, 5 its words for icons. Measured, not breakpoints,
+   since translations, the server's name and the current library's name all change the widths. */
+const FIT_STEPS = 5;
+function useFitBar(ref: { current: HTMLElement | null }, on: boolean, searchRow: boolean) {
+  const fit = useRef<() => void>(() => undefined);
+  fit.current = () => {
+    const bar = ref.current;
+    if (!bar) return;
+    delete bar.dataset.fit;
+    if (!on) return;
+    const parts = [...bar.children].filter((el) => !(searchRow && el.classList.contains('nb-search-wrap')));
+    for (let step = 1; step <= FIT_STEPS && !oneRow(parts); step++) {
+      bar.dataset.fit = Array.from({ length: step }, (_, i) => i + 1).join(' ');
+    }
+  };
+  useLayoutEffect(() => fit.current());
+  useEffect(() => {
+    const run = () => fit.current();
+    const bar = ref.current;
+    window.addEventListener('resize', run);
+    bar?.addEventListener('load', run, true);
+    void document.fonts?.ready.then(run);
+    return () => { window.removeEventListener('resize', run); bar?.removeEventListener('load', run, true); };
   }, []);
-  return phone;
+}
+function oneRow(parts: Element[]): boolean {
+  let top = -Infinity, bottom = Infinity;
+  for (const el of parts) {
+    const r = el.getBoundingClientRect();
+    top = Math.max(top, r.top);
+    bottom = Math.min(bottom, r.bottom);
+  }
+  return top < bottom;
 }
 
 export function Header({ variant = 'plain', active }: { variant?: 'overlay' | 'plain'; active: HeaderActive }) {
   const glass = variant === 'overlay';
-  const phone = usePhone();
+  const phone = useMedia(PHONE);
+  const compact = useMedia(COMPACT);
   const { ref, stuck } = useStickyHeader<HTMLElement>();
   const pageMode = active === 'search';
+  const searchButton = compact && !pageMode;
   const placeholder = searchPlaceholder(useStore(viewsStore), active);
+  // The bar re-measures on each render, so it follows what changes its width: Requests appearing, the brand's name.
+  useStore(meStore);
+  useStore(brandingStore);
+  useFitBar(ref, !phone, compact && pageMode);
   return (
     <>
       <header ref={ref} class={'site-header nb' + (glass ? ' is-overlay' : ' is-plain') + (stuck ? ' is-stuck' : '') + (phone ? ' is-phone' : '')}>
@@ -91,8 +137,8 @@ export function Header({ variant = 'plain', active }: { variant?: 'overlay' | 'p
               <LibrariesButton active={active} glass={glass} />
               <NavLink to="/favorites" icon="heart" label={t('Favorites')} current={active === 'favorites'} glass={glass} />
             </nav>
-            <SearchBox glass={glass} pageMode={pageMode} placeholder={placeholder} />
-            <HeaderActions glass={glass} active={active} />
+            {!searchButton && <SearchBox glass={glass} pageMode={pageMode} placeholder={placeholder} />}
+            <HeaderActions glass={glass} active={active} searchButton={searchButton} />
           </>
         )}
       </header>
@@ -127,8 +173,8 @@ function requestsPath(me: Me): string | null {
   return me.media?.books ? '/requests/books' : null;
 }
 
-/* Requests (when Seerr, Lidarr or a book app is connected), cast, and the account button. */
-export function HeaderActions({ glass, active }: { glass?: boolean; active?: HeaderActive }) {
+/* Requests (when Seerr, Lidarr or a book app is connected), search (narrower windows), cast, and the account button. */
+function HeaderActions({ glass, active, searchButton }: { glass?: boolean; active?: HeaderActive; searchButton?: boolean }) {
   const me = useStore(meStore);
   const current = active === 'requests';
   const to = requestsPath(me);
@@ -140,6 +186,7 @@ export function HeaderActions({ glass, active }: { glass?: boolean; active?: Hea
           {t('Requests')}
         </Link>
       )}
+      {searchButton && <SearchBox phone glass={glass} />}
       <CastButton glass={glass} />
       <AccountButton variant="pill" glass={glass} highlighted={active === 'settings'} />
     </div>
