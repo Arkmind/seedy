@@ -91,6 +91,9 @@ public sealed class Wrapped
     private readonly HomeService _home;
     private readonly ILogger<Wrapped> _logger;
     private readonly ConcurrentDictionary<string, string> _zones = new(StringComparer.OrdinalIgnoreCase);
+
+    // Profiles with too little to tell, by "user:year": not built again on every Home visit, only after a while.
+    private readonly ConcurrentDictionary<string, DateTime> _nothing = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _buildLock = new();
 
     /// <summary>
@@ -178,10 +181,14 @@ public sealed class Wrapped
         {
             dto = JsonSerializer.Deserialize<WrappedDto>(stored.Json, Json);
         }
-        else if (OpenYear(uid) == year)
+        else if (OpenYear(uid) == year && !(_nothing.TryGetValue($"{uid}:{year}", out var tried) && DateTime.UtcNow - tried < TimeSpan.FromHours(6)))
         {
             // Wrapped is out but the December task hasn't reached this profile yet.
-            BuildYear(year, [user], false);
+            if (BuildYear(year, [user], false) == 0)
+            {
+                _nothing[$"{uid}:{year}"] = DateTime.UtcNow;
+            }
+
             dto = _db.ReadWrapped(uid, year) is { } built ? JsonSerializer.Deserialize<WrappedDto>(built.Json, Json) : null;
         }
 
