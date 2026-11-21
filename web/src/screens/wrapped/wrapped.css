@@ -2,6 +2,8 @@
    scaled to fit; their own styles are inline, as on the boards. Prefix: wr-. */
 
 .wr-story { position: relative; width: 390px; overflow: hidden; font-family: var(--font); -webkit-font-smoothing: antialiased; user-select: none; }
+/* The boards size boxes without their padding (Medu's bubbles are 190 px of text); the app's reset counts it in. */
+.wr-story, .wr-story *, .wr-story *::before, .wr-story *::after { box-sizing: content-box; }
 .wr-story button { font-family: inherit; }
 .wr-story h1, .wr-story h2, .wr-story p, .wr-story ol, .wr-story ul { margin: 0; }
 

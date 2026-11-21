@@ -9,11 +9,11 @@ import { MeduProps } from './medu-props';
 import type { StoryKey, Wrapped } from './api';
 import {
   bingeEpisode, bingeLine, bingeText, clockDay, clockMedu, clockMood, clockShare, clockTitle, coverHint, genreLead, genreMedu,
-  genreName, genreOther, hourChips, hoursOf, movieMedu, movieMeta, movieTickets, movieTitle, personalityMedu, personalityName,
+  genreName, genreOther, hourChips, hoursOf, loverChips, loverMedu, loverOther, loverPct, loverShows, loverTitle, loverUnit, movieMedu, movieMeta, movieTickets, movieTitle, personalityMedu, personalityName,
   personalityText, showMeta, showTime, showsFootnote, showsMedu, statLine, STORY_SECONDS, summaryAlso, summaryLabel, timeOf
 } from './copy';
 import {
-  BingeBackdrop, CoverBackdrop, GenresBackdrop, HoursBackdrop, MovieBackdrop, NightBackdrop, PersonalityBackdrop, ShowsBackdrop, SummaryBackdrop
+  BingeBackdrop, CoverBackdrop, GenresBackdrop, HoursBackdrop, LoverBackdrop, MovieBackdrop, NightBackdrop, PersonalityBackdrop, ShowsBackdrop, SummaryBackdrop
 } from './backdrops';
 
 /* The nine Wrapped stories (boards Wrapped · 1–9), drawn at the boards' 390 px width; the viewer scales them. Phone
@@ -21,6 +21,8 @@ import {
 
 export const STORY_MS = STORY_SECONDS * 1000;
 const ACCENT = 'var(--seedy-accent)';
+const SKY = '#9fd3ff';
+const PEACH = '#ffc98a';
 const DARK = '#1e1e1e';
 
 export interface StoryProps {
@@ -52,6 +54,7 @@ interface Theme { bg: string; light: boolean }
 function themeOf(story: StoryKey, w: Wrapped): Theme {
   switch (story) {
     case 'hours': return { bg: ACCENT, light: false };
+    case 'lover': return { bg: loverShows(w) ? SKY : PEACH, light: false };
     case 'genres': return { bg: '#121212', light: true };
     case 'shows': return { bg: '#b8f59f', light: false };
     case 'movie': return { bg: '#ffc98a', light: false };
@@ -70,6 +73,7 @@ const isDay = (w: Wrapped) => w.clock?.kind === 'morning' || w.clock?.kind === '
 const LABELS: Record<StoryKey, () => string> = {
   cover: () => t('Seedy Wrapped'),
   hours: () => t('Hours watched'),
+  lover: () => t('Shows or movies?'),
   genres: () => t('Your year in genres'),
   shows: () => t('Your top shows'),
   movie: () => t('Your most-watched movie'),
@@ -108,6 +112,7 @@ function Backdrop({ story, w }: { story: StoryKey; w: Wrapped }) {
   switch (story) {
     case 'cover': return <CoverBackdrop />;
     case 'hours': return <HoursBackdrop />;
+    case 'lover': return <LoverBackdrop band={loverShows(w) ? PEACH : SKY} />;
     case 'genres': return <GenresBackdrop />;
     case 'shows': return <ShowsBackdrop />;
     case 'movie': return <MovieBackdrop />;
@@ -211,6 +216,7 @@ function Content(p: StoryProps) {
   switch (p.story) {
     case 'cover': return <Cover {...p} />;
     case 'hours': return <Hours {...p} />;
+    case 'lover': return <Lover {...p} />;
     case 'genres': return <Genres {...p} />;
     case 'shows': return <Shows {...p} />;
     case 'movie': return <MovieStory {...p} />;
@@ -247,13 +253,13 @@ function Cover({ w, total, onNext, still }: StoryProps) {
 // ── 2 · Hours ──
 
 /* The board's odometer: each digit rolls up to its value; separators stay put. */
-function Odometer({ text }: { text: string }) {
+function Odometer({ text, delay: start = 0.2 }: { text: string; delay?: number }) {
   let d = 0;
   return (
     <span class="odo" aria-hidden="true">
       {[...text].map((ch, i) => {
         if (!/\d/.test(ch)) return <span key={i} style="animation: none">{ch}</span>;
-        const delay = 0.2 + 0.08 * d++;
+        const delay = start + 0.08 * d++;
         return (
           <span key={i} style={`transform: translateY(-${ch}em); animation-delay: ${delay.toFixed(2)}s`}>
             {Array.from({ length: 10 }, (_, n) => <span key={n}>{n}</span>)}
@@ -285,6 +291,45 @@ function Hours({ w }: StoryProps) {
     <div style="display: flex; align-items: flex-end; justify-content: flex-end; gap: 0; margin-right: -14px">
       <Say side="right" delay={1.8} style="margin-bottom: 120px; margin-right: -26px">{t('I made popcorn for every single one of them.')}</Say>
       <Pop delay={1.5}><MeduAt mood="popcorn" size={150} label={t('Medu with popcorn')} /></Pop>
+    </div>
+  </>;
+}
+
+// ── 3 · Shows or movies? ──
+
+function Lover({ w }: StoryProps) {
+  const shows = loverShows(w);
+  const count = shows ? w.showsWatched ?? 0 : w.moviesPlayed ?? 0;
+  const pct = loverPct(w);
+  const other = loverOther(w);
+  const [lead, kind] = loverTitle(w);
+  const [win, lose] = shows ? [t('Shows'), t('Movies')] : [t('Movies'), t('Shows')];
+  return <>
+    <span class="in" style="animation-delay: .1s; margin-top: 16px; font-size: 18px; font-weight: 800">{t('Shows or movies?')}</span>
+    <h2 class="in" style="animation-delay: .2s; margin: 6px 0 0; font-size: 40px; line-height: 0.95; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase">{lead}<br />{kind}</h2>
+    <div role="img" aria-label={`${formatNumber(count)} ${loverUnit(count, shows)}`} style="display: flex; align-items: flex-end; gap: 10px; margin-top: 16px">
+      <span style="font-size: 92px; line-height: 0.86; font-weight: 900; letter-spacing: -0.06em"><Odometer text={formatNumber(count)} delay={0.45} /></span>
+      <span class="in" style="animation-delay: .9s; padding-bottom: 6px; font-size: 28px; line-height: 1; font-weight: 900">{loverUnit(count, shows)}</span>
+    </div>
+    <div class="in" style="animation-delay: 1s; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px">
+      {loverChips(w).map((c) => <span key={c} style="padding: 6px 10px; border-radius: 999px; background: #1e1e1e; color: #ffffff; font-size: 12px; font-weight: 800">{c}</span>)}
+    </div>
+    <div role="img" aria-label={t('{a} {pa}%, {b} {pb}% of your hours', { a: win, pa: pct, b: lose, pb: 100 - pct })} style="margin-top: 22px">
+      <div style="display: flex; height: 30px; border-radius: 10px; overflow: hidden; background: rgba(255, 255, 255, 0.55)">
+        <span class="grow" style={`animation-delay: 1.1s; width: ${pct}%; display: flex; align-items: center; padding-left: 12px; box-sizing: border-box; background: #1e1e1e; color: #ffffff; font-size: 14px; font-weight: 900; white-space: nowrap`}>{formatNumber(pct)}%</span>
+        <span style="flex: 1; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; font-size: 14px; font-weight: 900">{formatNumber(100 - pct)}%</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; font-weight: 800"><span>{win}</span><span>{lose}</span></div>
+    </div>
+    <div class="in" style="animation-delay: 1.5s; display: flex; align-items: baseline; gap: 8px; margin-top: 116px">
+      <b style="font-size: 52px; line-height: 0.9; font-weight: 900; letter-spacing: -0.05em">{formatNumber(other.count)}</b>
+      <span style="font-size: 22px; font-weight: 900">{loverUnit(other.count, !shows)}</span>
+    </div>
+    <span class="in" style="animation-delay: 1.6s; margin-top: 4px; font-size: 14px; font-weight: 700; opacity: 0.75">{other.line}</span>
+    <div style="flex: 1" />
+    <div style="display: flex; align-items: flex-end; justify-content: flex-end; margin: 0 -10px -6px 0">
+      <Say side="right" dark delay={2.1} style="margin-bottom: 48px; margin-right: -12px">{loverMedu(w)}</Say>
+      <Pop delay={1.8}><MeduAt mood="sad" size={74} label={t('Medu, a little sad')} /></Pop>
     </div>
   </>;
 }
@@ -489,7 +534,7 @@ function Binge({ w }: StoryProps) {
       <div style="position: relative; height: 158px; margin-top: 22px">
         <div class="fan" style="animation-delay: 1.30s; position: absolute; left: 50%; top: 22px; width: 246px; height: 108px; margin-left: -123px; border-radius: 18px; background: #1e1e1e; box-shadow: 0 10px 26px rgba(0, 30, 60, 0.3); transform: rotate(-8deg); opacity: 0.35" />
         <div class="fan" style="animation-delay: 1.38s; position: absolute; left: 50%; top: 14px; width: 246px; height: 108px; margin-left: -123px; border-radius: 18px; background: #1e1e1e; box-shadow: 0 10px 26px rgba(0, 30, 60, 0.3); transform: rotate(6deg); opacity: 0.6" />
-        <div class="fan" style="animation-delay: 1.45s; position: absolute; left: 50%; top: 26px; width: 246px; margin-left: -123px; padding: 14px; box-sizing: border-box; border-radius: 18px; background: #1e1e1e; color: #ffffff; box-shadow: 0 10px 26px rgba(0, 30, 60, 0.3); transform: rotate(0deg); opacity: 1">
+        <div class="fan" style="animation-delay: 1.45s; position: absolute; left: 50%; top: 26px; width: 246px; margin-left: -123px; padding: 14px; border-radius: 18px; background: #1e1e1e; color: #ffffff; box-shadow: 0 10px 26px rgba(0, 30, 60, 0.3); transform: rotate(0deg); opacity: 1">
           <b style="display: block; font-size: 16px; font-weight: 900">{t('Still watching?')}</b>
           <span style="display: block; margin-top: 2px; font-size: 12px; color: #a1a1a1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{bingeEpisode(w)}</span>
           <span style="display: flex; gap: 6px; margin-top: 10px">
