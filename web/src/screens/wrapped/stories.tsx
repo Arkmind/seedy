@@ -56,7 +56,10 @@ function themeOf(story: StoryKey, w: Wrapped): Theme {
     case 'shows': return { bg: '#b8f59f', light: false };
     case 'movie': return { bg: '#ffc98a', light: false };
     case 'binge': return { bg: '#9fd3ff', light: false };
-    case 'clock': return isDay(w) ? { bg: '#cfe8ff', light: false } : { bg: '#121633', light: true };
+    case 'clock': return w.clock?.kind === 'morning' ? { bg: '#ffc98a', light: false }
+      : w.clock?.kind === 'afternoon' ? { bg: '#9fd3ff', light: false }
+      : w.clock?.kind === 'evening' ? { bg: '#2a1f4d', light: true }
+      : { bg: '#121633', light: true };
     case 'personality': return { bg: 'linear-gradient(160deg, #cdb4ff 0%, #e6b8ff 55%, #ff9fff 100%)', light: false };
     default: return { bg: '#0e0e0e', light: true };
   }
@@ -109,7 +112,7 @@ function Backdrop({ story, w }: { story: StoryKey; w: Wrapped }) {
     case 'shows': return <ShowsBackdrop />;
     case 'movie': return <MovieBackdrop />;
     case 'binge': return <BingeBackdrop />;
-    case 'clock': return <NightBackdrop day={isDay(w)} />;
+    case 'clock': return <NightBackdrop kind={w.clock?.kind} />;
     case 'personality': return <PersonalityBackdrop />;
     default: return <SummaryBackdrop />;
   }
@@ -500,7 +503,7 @@ function Binge({ w }: StoryProps) {
     <p class="in" style="animation-delay: 1.9s; margin: 14px 0 0; font-size: 15px; line-height: 1.45; font-weight: 700">{bingeText(w)}</p>
     <div style="flex: 1" />
     <div style="display: flex; align-items: flex-end; margin: 0 0 -6px -10px">
-      <Pop delay={2.1}><MeduAt mood="oops" size={80} label={t('Medu, baffled')} /></Pop>
+      <Pop delay={2.1}><MeduAt mood="search" size={80} label={t('Medu, baffled')} /></Pop>
       <Say side="left" dark delay={2.4} style="margin-bottom: 56px; margin-left: -8px">{t('Did you… blink at all?')}</Say>
     </div>
   </>;
