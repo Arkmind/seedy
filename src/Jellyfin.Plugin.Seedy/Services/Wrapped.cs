@@ -223,7 +223,16 @@ public sealed class Wrapped
         return dto;
     }
 
-    /// <summary>Builds a year's Wrapped for profiles; with <paramref name="replace"/>, again for those who have one.</summary>
+    /// <summary>Gets whether the play log still holds all of a year, so its Wrapped can be built again from it: this
+    /// year, or a past year the log's retention hasn't started trimming yet. A past year's Wrapped is never rebuilt from a
+    /// trimmed log, which would replace it with part of the year.</summary>
+    /// <param name="year">Year.</param>
+    /// <returns>Whether it can be rebuilt.</returns>
+    public bool CanRebuild(int year)
+        => year == DateTime.UtcNow.Year || (year < DateTime.UtcNow.Year && _db.FirstPlayAt() is { } first && first <= new DateTime(year, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddHours(-14));
+
+    /// <summary>Builds a year's Wrapped for profiles; with <paramref name="replace"/>, again for those who have one.
+    /// A profile the log has too little on for that year keeps the Wrapped it has.</summary>
     /// <param name="year">Year.</param>
     /// <param name="users">Profiles, or null for everyone.</param>
     /// <param name="replace">Whether existing ones are built again.</param>

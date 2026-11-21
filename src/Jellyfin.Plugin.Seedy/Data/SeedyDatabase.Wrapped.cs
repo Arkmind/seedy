@@ -12,7 +12,8 @@ namespace Jellyfin.Plugin.Seedy.Data;
 /// <param name="At">When it happened (UTC).</param>
 public sealed record MomentRecord(string UserId, string Kind, string? ItemId, long Value, DateTime At);
 
-/// <summary>Seedy Wrapped: the yearly snapshots, the moments they count, and each profile's last known time zone.</summary>
+/// <summary>Seedy Wrapped: the yearly snapshots (kept for good: nothing deletes them), the moments they count, and each
+/// profile's last known time zone.</summary>
 public sealed partial class SeedyDatabase
 {
     private static void MigrateWrapped(SqliteConnection c)
@@ -56,16 +57,6 @@ public sealed partial class SeedyDatabase
         Bind(cmd, "$year", year);
         Bind(cmd, "$json", json);
         Bind(cmd, "$at", Ms(builtAt));
-        cmd.ExecuteNonQuery();
-    });
-
-    /// <summary>Deletes every profile's Wrapped for a year, before building it again.</summary>
-    /// <param name="year">Year.</param>
-    public void DeleteWrapped(int year) => Write(c =>
-    {
-        using var cmd = c.CreateCommand();
-        cmd.CommandText = "DELETE FROM wrapped WHERE year = $year";
-        Bind(cmd, "$year", year);
         cmd.ExecuteNonQuery();
     });
 

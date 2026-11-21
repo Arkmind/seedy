@@ -34,6 +34,9 @@ public sealed class WrappedTeaserDto
 /// </summary>
 public sealed class WrappedDto
 {
+    /// <summary>The snapshot's format. Wrapped are kept for years, so later versions of Seedy read older ones by it.</summary>
+    [JsonPropertyName("v")] public int Version { get; set; } = 1;
+
     [JsonPropertyName("year")] public int Year { get; set; }
 
     /// <summary>Gets or sets when it was built (UTC, ISO 8601).</summary>

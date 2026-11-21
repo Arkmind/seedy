@@ -567,18 +567,19 @@ public sealed partial class SeedyDatabase : IDisposable
         return n > 0;
     }
 
-    /// <summary>Deletes a user's plays, hidden titles, learned row order, moments and Wrapped; or everyone's.</summary>
+    /// <summary>Deletes a user's plays, hidden titles, learned row order and moments; or everyone's. Wrapped stays: each
+    /// year's is kept for good, long after the plays it was built from.</summary>
     /// <param name="userId">User id, or null for everyone.</param>
     public void ClearPlays(string? userId) => Write(c =>
     {
         using var cmd = c.CreateCommand();
         if (userId is null)
         {
-            cmd.CommandText = "DELETE FROM plays; DELETE FROM hidden_titles; DELETE FROM row_order; DELETE FROM moments; DELETE FROM wrapped;";
+            cmd.CommandText = "DELETE FROM plays; DELETE FROM hidden_titles; DELETE FROM row_order; DELETE FROM moments;";
         }
         else
         {
-            cmd.CommandText = "DELETE FROM plays WHERE user_id = $user; DELETE FROM hidden_titles WHERE user_id = $user; DELETE FROM row_order WHERE user_id = $user; DELETE FROM moments WHERE user_id = $user; DELETE FROM wrapped WHERE user_id = $user;";
+            cmd.CommandText = "DELETE FROM plays WHERE user_id = $user; DELETE FROM hidden_titles WHERE user_id = $user; DELETE FROM row_order WHERE user_id = $user; DELETE FROM moments WHERE user_id = $user;";
             Bind(cmd, "$user", userId);
         }
 

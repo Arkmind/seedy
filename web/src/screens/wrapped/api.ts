@@ -12,6 +12,8 @@ export interface WrappedGenre { name: string; key?: string | null; pct: number }
 export interface WrappedStat { key: string; value: number; extra?: number | null }
 
 export interface Wrapped {
+  /** The snapshot's format: each year's Wrapped is kept for good, so this app may meet older ones. */
+  v?: number;
   year: number;
   builtAt: string;
   zone: string;

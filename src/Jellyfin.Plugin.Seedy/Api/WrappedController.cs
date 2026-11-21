@@ -102,6 +102,11 @@ public class WrappedController : ControllerBase
             return BadRequest(new { message = "No Wrapped for that year." });
         }
 
+        if (!_wrapped.CanRebuild(year))
+        {
+            return BadRequest(new { message = "The play log no longer holds all of that year, so its Wrapped is kept as it is." });
+        }
+
         return Ok(new { built = _wrapped.BuildYear(year, null, true) });
     }
 }

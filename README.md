@@ -59,7 +59,8 @@ tries hard not to make your server convert anything it doesn't have to.
 - **Seedy Wrapped.** Every December, each profile gets its year on Seedy in a few stories: hours watched, top genres
   and shows, the movie they couldn't stop rewatching, their biggest binge, when they watch and their watch
   personality, with a card to share. It shows up on Home during December and stays in Settings afterwards. It's built
-  from the play log (1 January to 30 November) and kept, so it outlives the log's retention.
+  from the play log (1 January to 30 November) and kept for good: trimming or clearing the play log doesn't remove a
+  past year's Wrapped.
 - **English and French.** "Auto" follows the device, and each profile can choose.
 
 ### In the browser

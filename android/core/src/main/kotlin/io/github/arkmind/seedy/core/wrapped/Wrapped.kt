@@ -26,6 +26,8 @@ data class WrappedTeaser(val year: Int, val watchMs: Long = 0, val stories: Int 
 
 @Serializable
 data class Wrapped(
+    /** The snapshot's format: each year's Wrapped is kept for good, so later apps may meet older ones. */
+    val v: Int = 1,
     val year: Int,
     val builtAt: String = "",
     val zone: String = "",
