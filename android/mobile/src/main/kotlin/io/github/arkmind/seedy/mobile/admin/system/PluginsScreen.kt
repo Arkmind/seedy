@@ -171,7 +171,7 @@ private fun Installed(state: PluginsState, actions: PluginsActions, onMenu: (Plu
             }
         }
     }
-    FootNote(t("A plugin's own settings page comes from the plugin itself and opens in Jellyfin's web app."))
+    FootNote(t("Settings pages come from the plugins themselves, so some look a little different."))
 }
 
 @Composable

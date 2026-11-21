@@ -1,0 +1,259 @@
+/* Inside the frame that shows a plugin's own settings page (PluginSettings.tsx). Plugins write their pages for
+   Jellyfin's web app, with its class names (inputContainer, checkboxContainer, raised button-submit…) and emby-*
+   elements; these rules give that markup Seedy's panels, fields, checkboxes and buttons. The page sits on the panel
+   colour, so the frame itself stays transparent. */
+@import '../../ui/tokens.css';
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Pages that follow Jellyfin's theme variables (jellyfin-web's MUI palette) get Seedy's colours through them. */
+:root {
+  --jf-palette-text-primary: #ffffff;
+  --jf-palette-text-secondary: var(--seedy-text-2);
+  --jf-palette-text-disabled: var(--seedy-text-3);
+  --jf-palette-divider: var(--seedy-surface);
+  --jf-palette-background-default: var(--seedy-panel);
+  --jf-palette-background-paper: var(--seedy-surface);
+  --jf-palette-primary-main: var(--seedy-accent);
+  --jf-palette-primary-contrastText: var(--seedy-ink-inverse);
+  --jf-palette-secondary-main: var(--seedy-inverse);
+  --jf-palette-info-main: var(--seedy-accent);
+  --jf-palette-error-main: var(--seedy-danger);
+  --jf-palette-warning-main: var(--seedy-pending);
+  --jf-palette-success-main: var(--seedy-ok);
+  --jf-palette-action-hover: var(--seedy-hairline);
+  --jf-palette-action-selected: var(--seedy-surface-2);
+  --jf-card-borderRadius: var(--r-card);
+  --jf-shape-borderRadius: var(--r-ctl);
+}
+
+html, body {
+  margin: 0; background: transparent; color: var(--seedy-text);
+  font-family: var(--font); font-size: 14px; line-height: 1.45;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+body { overflow: hidden; }
+.seedy-plugin-root { display: flow-root; padding: 2px 2px 4px; }
+
+/* Jellyfin's page wrappers carry layout of their own (min-height, padding); here they're plain blocks. */
+.seedy-plugin-root .page, .seedy-plugin-root [data-role='page'], .seedy-plugin-root [data-role='content'],
+.seedy-plugin-root .content-primary, .seedy-plugin-root .readOnlyContent {
+  position: static; min-height: 0; height: auto; margin: 0; padding: 0; background: none;
+}
+.hide, .hidden, [hidden] { display: none !important; }
+
+/* Modal dialogs and popovers centre on the part of the frame that's on screen (plugin-frame.ts keeps the variables). */
+dialog:modal {
+  inset-block-start: var(--seedy-vt, 0px); inset-block-end: calc(100% - var(--seedy-vt, 0px) - var(--seedy-vh, 100%));
+  max-height: calc(var(--seedy-vh, 100%) - 2em - 6px);
+}
+[popover]:popover-open {
+  inset-block-start: var(--seedy-vt, 0px); inset-block-end: calc(100% - var(--seedy-vt, 0px) - var(--seedy-vh, 100%));
+}
+.seedy-dup-title { display: none !important; }
+
+/* ── Text ── */
+
+h1, h2, h3, h4 { margin: 28px 0 10px; color: #ffffff; font-weight: 800; line-height: 1.25; }
+h1 { font-size: 22px; }
+h2, .sectionTitle { font-size: 18px; }
+h3 { font-size: 16px; }
+h4 { font-size: 14px; }
+p { margin: 0 0 12px; color: var(--seedy-text-2); }
+a { color: var(--seedy-accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+b, strong { color: #ffffff; font-weight: 700; }
+code, pre, kbd { font-family: var(--font-mono); font-size: 13px; }
+code { padding: 1px 6px; border-radius: var(--r-xs); background: var(--seedy-surface); }
+pre { overflow: auto; padding: 12px 14px; border-radius: var(--r-card); background: var(--seedy-surface); }
+hr { height: 0; margin: 24px 0; border: 0; border-top: 1px solid var(--seedy-line); }
+ul, ol { margin: 0 0 12px; padding-left: 22px; color: var(--seedy-text-2); }
+.seedy-plugin-root > * > :first-child, .content-primary > :first-child, form > :first-child { margin-top: 0; }
+
+.sectionTitleContainer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 28px 0 12px; }
+.sectionTitleContainer > .sectionTitle, .sectionTitleContainer > h1, .sectionTitleContainer > h2, .sectionTitleContainer > h3 { margin: 0; }
+.seedy-plugin-root .sectionTitleContainer:first-child { margin-top: 0; }
+.fieldDescription, .secondary, .listItemBodyText.secondary {
+  margin-top: 6px; color: var(--seedy-text-3); font-size: 13px; line-height: 1.45;
+}
+.fieldDescription a { font-weight: 600; }
+
+/* Sections read like Seedy's settings rows: a hairline between them. */
+.verticalSection { margin: 0; padding: 24px 0 4px; border-top: 1px solid var(--seedy-line); }
+.seedy-plugin-root .verticalSection:first-child, .seedy-dup-title + .verticalSection { padding-top: 0; border-top: 0; }
+.verticalSection > h2:first-child, .verticalSection > h3:first-child, .verticalSection > .sectionTitle:first-child,
+.verticalSection > .sectionTitleContainer:first-child { margin-top: 0; }
+.verticalSection-extrabottompadding { padding-bottom: 16px; }
+
+/* ── Fields ── */
+
+.inputContainer, .selectContainer, .textareaContainer, .checkboxContainer, .checkboxList, .inputContainer-withDescription {
+  display: block; margin: 0 0 20px;
+}
+.selectContainer-inline { display: inline-block; margin-right: 12px; }
+
+.inputLabel, .selectLabel, .textareaLabel, .checkboxListLabel, label.seedy-label {
+  display: block; margin: 0 0 8px; color: #ffffff; font-size: 15px; font-weight: 700; line-height: 1.3;
+}
+
+input:is([type='text'], [type='number'], [type='password'], [type='email'], [type='url'], [type='search'], [type='tel'],
+  [type='date'], [type='time'], [type='datetime-local'], [type='month'], [type='week'], :not([type])),
+select, textarea {
+  display: block; width: 100%; max-width: 560px; height: 44px; margin: 0; padding: 0 14px;
+  border: 0; border-radius: var(--r-card); background: var(--seedy-surface); color: var(--seedy-white);
+  font: inherit; font-size: 15px; font-weight: 600; line-height: normal;
+  transition: box-shadow var(--t-fast) var(--ease);
+}
+textarea { max-width: none; height: auto; min-height: 120px; padding: 12px 14px; font-family: var(--font-mono); font-size: 13px; font-weight: 500; line-height: 1.5; resize: vertical; }
+input::placeholder, textarea::placeholder { color: var(--seedy-text-3); font-weight: 500; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 2px; }
+input:disabled, select:disabled, textarea:disabled { opacity: 0.5; cursor: default; }
+input[type='number'] { max-width: 200px; }
+input[type='color'] { width: 56px; height: 36px; padding: 2px; border: 0; border-radius: var(--r-ctl); background: var(--seedy-surface); }
+input[type='range'] { width: 100%; max-width: 560px; accent-color: var(--seedy-accent); }
+input[type='file'] { color: var(--seedy-text-2); font: inherit; }
+input[type='file']::file-selector-button {
+  height: 36px; margin-right: 12px; padding: 0 12px; border: 0; border-radius: var(--r-ctl);
+  background: var(--seedy-surface); color: var(--seedy-text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+input:user-invalid, select:user-invalid, textarea:user-invalid { box-shadow: inset 0 0 0 1px var(--seedy-danger); }
+
+select {
+  padding-right: 40px; appearance: none; -webkit-appearance: none; cursor: pointer; font-size: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1a1' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center; background-size: 16px;
+}
+select[multiple] { height: auto; min-height: 120px; padding: 8px; background-image: none; }
+select option { background: var(--seedy-surface); color: var(--seedy-white); }
+.selectArrowContainer, .checkboxOutline, .inputLabelFocused:empty { display: none !important; }
+
+/* Checkboxes: a 20 px box that fills with the accent, the label beside it. */
+.checkboxContainer > label, label.checkboxContainer, .checkboxList > label, .checkboxList-paperList > label, label:has(> input[type='checkbox']), label:has(> input[type='radio']) {
+  display: flex; align-items: flex-start; gap: 12px; color: var(--seedy-text); font-size: 15px; font-weight: 600; line-height: 1.35; cursor: pointer;
+}
+/* Lists of checkboxes (often one <div> per row): a little air between rows. */
+.checkboxList label:has(> input[type='checkbox']), .checkboxList-paperList label:has(> input[type='checkbox']) { margin-bottom: 12px; }
+input[type='checkbox'], input[type='radio'] {
+  position: relative; flex: none; width: 20px; height: 20px; margin: 0; border: 2px solid var(--seedy-stroke);
+  border-radius: var(--r-xs); background: transparent; appearance: none; -webkit-appearance: none; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+input[type='radio'] { border-radius: 50%; }
+input[type='checkbox']:checked, input[type='radio']:checked { border-color: var(--seedy-accent); background: var(--seedy-accent); }
+input[type='checkbox']:checked::after {
+  content: ''; position: absolute; inset: 0; background: var(--seedy-ink-inverse);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 14px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 14px no-repeat;
+}
+input[type='radio']:checked::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: var(--seedy-ink-inverse); }
+input[type='checkbox']:focus-visible, input[type='radio']:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 2px; }
+input[type='checkbox']:disabled, input[type='radio']:disabled { opacity: 0.45; cursor: default; }
+.checkboxFieldDescription, .checkboxContainer > .fieldDescription { margin-top: 4px; padding-left: 32px; }
+
+/* emby-toggle: Seedy's switch. */
+input[is='emby-toggle'] { width: 44px; height: 26px; border: 0; border-radius: var(--r-pill); background: var(--seedy-surface-2); }
+input[is='emby-toggle']::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--seedy-text-3);
+  -webkit-mask: none; mask: none; transition: left var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+}
+input[is='emby-toggle']:checked { background: var(--seedy-accent); }
+input[is='emby-toggle']:checked::after { inset: auto; top: 3px; left: 21px; background: var(--seedy-ink-inverse); }
+
+fieldset { margin: 0 0 20px; padding: 16px 18px 4px; border: 1px solid var(--seedy-surface-2); border-radius: var(--r-card); }
+legend { padding: 0 6px; color: var(--seedy-text-2); font-size: 13px; font-weight: 700; }
+
+/* ── Buttons ── */
+
+button, .emby-button, [is='emby-button'], [is='emby-linkbutton'].raised, a.raised {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; margin: 0 8px 8px 0; padding: 0 14px;
+  border: 0; border-radius: var(--r-menu); background: var(--seedy-surface); color: var(--seedy-text);
+  font: inherit; font-size: 14px; font-weight: 600; line-height: 1; white-space: nowrap; text-decoration: none; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+button:not(:disabled):hover, .emby-button:hover, [is='emby-button']:hover, a.raised:hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); text-decoration: none; }
+button:disabled { opacity: 0.5; cursor: default; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--seedy-accent); outline-offset: 2px; }
+button > span, .emby-button > span { pointer-events: none; }
+
+/* Save: the primary button, light on dark, as on every admin page. */
+.button-submit, button[type='submit'] {
+  height: 44px; padding: 0 22px; border-radius: var(--r-card);
+  background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-weight: 800;
+}
+.button-submit:not(:disabled):hover, button[type='submit']:not(:disabled):hover { background: var(--seedy-surface); color: var(--seedy-white); }
+.button-submit.block, button[type='submit'].block { min-width: 160px; margin-top: 12px; }
+.button-cancel, .btnCancel { background: transparent; color: var(--seedy-text-hero); }
+.button-cancel:not(:disabled):hover, .btnCancel:not(:disabled):hover { background: var(--seedy-surface); color: var(--seedy-white); }
+.button-delete, .button-destructive {
+  background: transparent; box-shadow: inset 0 0 0 1px var(--seedy-danger); color: var(--seedy-danger); font-weight: 800;
+}
+.button-delete:not(:disabled):hover, .button-destructive:not(:disabled):hover { background: var(--seedy-danger); color: var(--seedy-ink-inverse); }
+.button-link, [is='emby-linkbutton']:not(.raised) {
+  display: inline; height: auto; margin: 0; padding: 0; border-radius: 0; background: none; color: var(--seedy-accent); font-weight: 600;
+}
+.button-link:not(:disabled):hover, [is='emby-linkbutton']:not(.raised):hover { background: none; color: var(--seedy-accent); text-decoration: underline; }
+.headerHelpButton { height: 34px; margin: 0; padding: 0 12px; border-radius: var(--r-ctl); font-size: 13px; }
+[is='paper-icon-button-light'], .paper-icon-button-light, .listItemButton {
+  width: 40px; height: 40px; margin: 0; padding: 0; border-radius: 50%; background: transparent; color: var(--seedy-text-2);
+}
+[is='paper-icon-button-light']:not(:disabled):hover, .listItemButton:not(:disabled):hover { background: var(--seedy-surface); color: var(--seedy-white); }
+.emby-collapsible-button { margin: 0; }
+
+/* Icons that plugins name the Material way ("material-icons delete"), drawn with Seedy's. */
+.material-icons { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex: none; font-size: 0; font-style: normal; vertical-align: middle; }
+.material-icons > svg { width: 20px; height: 20px; }
+.material-icons:not([data-seedy-icon]) { display: none; }
+
+/* ── Lists and tables ── */
+
+.paperList, .checkboxList-paperList { margin: 0 0 20px; border-radius: var(--r-card); background: var(--seedy-row); overflow: hidden; }
+.checkboxList-paperList { padding: 14px 16px 2px; }
+.listItem { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 12px 8px 16px; border-top: 1px solid var(--seedy-line); color: var(--seedy-text); }
+.listItem:first-child { border-top: 0; }
+.listItem-border { border-bottom: 0; }
+.listItemBody { flex: 1; min-width: 0; }
+.listItemBodyText { color: #ffffff; font-size: 15px; font-weight: 600; }
+.listItemIcon { flex: none; color: var(--seedy-text-2); }
+.listItemImage { flex: none; width: 40px; height: 40px; border-radius: var(--r-sm); background: var(--seedy-surface) center / cover no-repeat; }
+
+table { width: 100%; margin: 0 0 20px; border-collapse: collapse; font-size: 14px; }
+th, .detailTableHeaderCell { padding: 10px 12px; color: var(--seedy-text-3); font-size: 13px; font-weight: 700; text-align: left; white-space: nowrap; }
+td, .detailTableBodyCell { padding: 10px 12px; border-top: 1px solid var(--seedy-line); color: var(--seedy-text); vertical-align: middle; }
+.detailTableBodyRow-shaded { background: var(--seedy-row); }
+
+/* emby-collapse: a header row that opens its section. */
+.emby-collapse { margin: 0 0 12px; border-radius: var(--r-card); background: var(--seedy-row); }
+.verticalSection.emby-collapse { padding: 0; border-top: 0; }
+.emby-collapsible-button {
+  display: flex; width: 100%; height: auto; min-height: 56px; justify-content: space-between; gap: 12px; padding: 12px 16px;
+  border-radius: var(--r-card); background: transparent; color: #ffffff; text-align: left;
+}
+.emby-collapsible-button:not(:disabled):hover { background: var(--seedy-surface); color: #ffffff; }
+.emby-collapsible-title { margin: 0; color: inherit; font-size: 16px; font-weight: 700; white-space: normal; }
+.emby-collapse-expandIcon { transition: transform var(--t-fast) var(--ease); color: var(--seedy-text-2); }
+.emby-collapsible-button[aria-expanded='true'] .emby-collapse-expandIcon { transform: rotate(180deg); }
+.emby-collapse > .collapseContent { padding: 8px 16px 4px; }
+
+/* Jellyfin's layout helpers. */
+.flex { display: flex; }
+.flex-grow { flex-grow: 1; }
+.flex-shrink-zero { flex-shrink: 0; }
+.flex-direction-column { flex-direction: column; }
+.flex-direction-row { flex-direction: row; }
+.flex-wrap-wrap { flex-wrap: wrap; }
+.align-items-center { align-items: center; }
+.align-items-flex-start { align-items: flex-start; }
+.align-items-flex-end { align-items: flex-end; }
+.justify-content-center { justify-content: center; }
+.justify-content-flex-end { justify-content: flex-end; }
+.justify-content-space-between { justify-content: space-between; }
+.margin-auto-x { margin-left: auto; margin-right: auto; }
+.padded-left { padding-left: 16px; }
+.padded-right { padding-right: 16px; }
+.block { display: block; }
+button.block, .emby-button.block { display: inline-flex; }
+
+@media (max-width: 640px) {
+  input:is([type='text'], [type='number'], [type='password'], [type='email'], [type='url'], [type='search'], :not([type])), select { max-width: none; }
+  table { display: block; overflow-x: auto; }
+}
