@@ -9,6 +9,8 @@ import io.github.arkmind.seedy.core.requests.SeerrTitle
 import io.github.arkmind.seedy.core.seedy.FeaturedEntry
 import io.github.arkmind.seedy.core.seedy.HomeRow
 import io.github.arkmind.seedy.core.session.UserSession
+import io.github.arkmind.seedy.core.wrapped.WrappedTeaser
+import io.github.arkmind.seedy.core.wrapped.wrappedStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,6 +48,8 @@ class HomeViewModel(private val session: UserSession) : ViewModel() {
         val libraries: List<BaseItemDto> = emptyList(),
         /** Pull to refresh is fetching everything again (the rows on screen stay until it's done). */
         val refreshing: Boolean = false,
+        /** This year's Seedy Wrapped, offered under the hero while it's December (servers with Seedy). */
+        val wrapped: WrappedTeaser? = null,
     ) {
         /** Rows with titles to show (still-loading rows included, empty ones dropped). */
         val visibleRows: List<Row>
@@ -71,7 +75,13 @@ class HomeViewModel(private val session: UserSession) : ViewModel() {
                 _state.update { it.copy(featured = featured) }
             }
             for (row in list) launch { fill(row, libraries) }
+            launch { loadWrapped() }
         }
+    }
+
+    private suspend fun loadWrapped() {
+        val current = wrappedStatus(session)?.current
+        _state.update { it.copy(wrapped = current) }
     }
 
     /** Pull to refresh: the rows and the hero again, swapped in all at once when they're in. */
@@ -92,7 +102,8 @@ class HomeViewModel(private val session: UserSession) : ViewModel() {
                 val filled = list.map { r -> async { rowFor(r, libraries) } }
                 featured.await() to filled.awaitAll()
             }
-            _state.update { State(loading = false, hasHero = hasHero, featured = featured, rows = filled, libraries = libraries) }
+            _state.update { State(loading = false, hasHero = hasHero, featured = featured, rows = filled, libraries = libraries, wrapped = it.wrapped) }
+            loadWrapped()
         }
     }
 

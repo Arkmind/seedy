@@ -124,6 +124,11 @@ class SettingsViewModel(
             val api = session.seedyApi
             if (api != null && session.hasRequests) io { api.openRequests().let { n -> extras.update { it.copy(openRequests = n) } } }
         }
+        if ("home" in all || "wrapped" in all) {
+            if (session.seedyApi != null) io {
+                io.github.arkmind.seedy.core.wrapped.wrappedStatus(session)?.years?.sortedDescending()?.let { y -> extras.update { it.copy(wrappedYears = y) } }
+            }
+        }
         if ("profile" in all) {
             session.seedyApi?.let { api -> io { api.passwordState().changedAt?.let { d -> extras.update { it.copy(passwordChanged = changedLabel(d)) } } } }
             // Seedy lists anyone's own devices; plain Jellyfin lets only admins list them, so the row hides for others.
