@@ -203,7 +203,9 @@ Seedy to install apps).
 
 **Admin › Requests.** Enter Seerr's address *as the Jellyfin server reaches it* (for example `http://seerr:5055` on a
 Docker network) and its API key (Seerr › Settings › General). Profiles are matched to Seerr accounts automatically when
-Seerr uses Jellyfin sign-in; admins can link the others by hand and switch requesting off per profile. Set Seerr's
+Seerr uses Jellyfin sign-in. A profile that may request but has no Seerr account yet gets one, with Seerr's default
+permissions, as soon as it opens Seedy, if Seerr lets new Jellyfin users in (Seerr › Settings › Users › Enable New
+Jellyfin Sign-In). Admins can link the others by hand and switch requesting off per profile. Set Seerr's
 **Application URL** (Seerr › Settings › General) to an address browsers can open, so the Requests links work.
 
 The Android app goes through the plugin for requests, so there's nothing to set up on the phone or the TV.

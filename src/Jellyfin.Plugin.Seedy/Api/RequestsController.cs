@@ -55,7 +55,7 @@ public class RequestsController : ControllerBase
 
         try
         {
-            var (account, _) = await _seerr.AccountFor(user, ct).ConfigureAwait(false);
+            var (account, _) = await _seerr.AccountOrCreateFor(user, ct).ConfigureAwait(false);
             return await body(user, account?.Id).ConfigureAwait(false);
         }
         catch (SeerrException ex)
