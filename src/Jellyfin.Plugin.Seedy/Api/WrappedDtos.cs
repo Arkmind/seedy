@@ -45,8 +45,8 @@ public sealed class WrappedDto
     /// <summary>Gets or sets the time zone its days and hours are in.</summary>
     [JsonPropertyName("zone")] public string Zone { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the stories to show, in order: cover, hours, genres, shows, movie, binge, clock, personality,
-    /// summary. Stories without enough to say are left out; clients skip names they don't know.</summary>
+    /// <summary>Gets or sets the stories to show, in order: cover, hours, lover, genres, shows, movie, binge, clock,
+    /// personality, summary. Stories without enough to say are left out; clients skip names they don't know.</summary>
     [JsonPropertyName("stories")] public List<string> Stories { get; set; } = [];
 
     /// <summary>Gets or sets the video watched (shows, movies, Live TV, other videos), in milliseconds.</summary>
@@ -81,6 +81,27 @@ public sealed class WrappedDto
 
     /// <summary>Gets or sets the different movies watched.</summary>
     [JsonPropertyName("movies")] public int Movies { get; set; }
+
+    /// <summary>Gets or sets the different movies played (watched to the end or not).</summary>
+    [JsonPropertyName("moviesPlayed")] public int MoviesPlayed { get; set; }
+
+    /// <summary>Gets or sets the movies watched on two days or more.</summary>
+    [JsonPropertyName("moviesRewatched")] public int MoviesRewatched { get; set; }
+
+    /// <summary>Gets or sets the time spent on movies, in milliseconds.</summary>
+    [JsonPropertyName("movieMs")] public long MovieMs { get; set; }
+
+    /// <summary>Gets or sets the different shows watched (at least one episode).</summary>
+    [JsonPropertyName("showsWatched")] public int ShowsWatched { get; set; }
+
+    /// <summary>Gets or sets the shows whose last episode in the library was watched to the end in the year.</summary>
+    [JsonPropertyName("showsFinished")] public int ShowsFinished { get; set; }
+
+    /// <summary>Gets or sets the different episodes watched.</summary>
+    [JsonPropertyName("episodes")] public int Episodes { get; set; }
+
+    /// <summary>Gets or sets the time spent on shows, in milliseconds.</summary>
+    [JsonPropertyName("showMs")] public long ShowMs { get; set; }
 
     [JsonPropertyName("binge")] public WrappedBingeDto? Binge { get; set; }
 

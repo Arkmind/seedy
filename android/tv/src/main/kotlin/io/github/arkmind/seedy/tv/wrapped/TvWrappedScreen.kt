@@ -133,6 +133,18 @@ import io.github.arkmind.seedy.ui.wrapped.storyLook
 import io.github.arkmind.seedy.ui.wrapped.storyPop
 import io.github.arkmind.seedy.ui.wrapped.storySay
 import io.github.arkmind.seedy.ui.wrapped.storyTime
+import io.github.arkmind.seedy.core.wrapped.loverChips
+import io.github.arkmind.seedy.core.wrapped.loverMedu
+import io.github.arkmind.seedy.core.wrapped.loverOther
+import io.github.arkmind.seedy.core.wrapped.loverPct
+import io.github.arkmind.seedy.core.wrapped.loverShows
+import io.github.arkmind.seedy.core.wrapped.loverSplitLabel
+import io.github.arkmind.seedy.core.wrapped.loverTitle
+import io.github.arkmind.seedy.core.wrapped.loverUnit
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 
 /*
  * Board "Seedy Wrapped · TV" (1920 × 1080, top shows): the stories sideways, the title and its words on the left with
@@ -153,7 +165,7 @@ fun TvWrappedScreen(wrapped: Wrapped, onClose: () -> Unit, start: Int = 0, fixed
     val player = rememberStoryPlayer(stories.size, start, fixedProgress)
     val story = stories[player.index.coerceIn(0, stories.lastIndex)]
     val accent = LocalAccent.current
-    val look = storyLook(story, accent, wrapped.clock?.kind)
+    val look = storyLook(story, accent, wrapped.clock?.kind, loverShows(wrapped))
     val loop = rememberLoopClock()
     val focus = remember { FocusRequester() }
     BackHandler(onBack = onClose)
@@ -189,7 +201,7 @@ fun TvWrappedScreen(wrapped: Wrapped, onClose: () -> Unit, start: Int = 0, fixed
                     StoryKey.Movie -> Offset(w * .71f, h * .5f)
                     else -> null
                 }
-                storyBackdrop(story, accent, w, h, loop.loopSeconds(), wrapped.clock?.kind, bubbles = false, bottomShift = 70.7f, focus = turn)
+                storyBackdrop(story, accent, w, h, loop.loopSeconds(), wrapped.clock?.kind, bubbles = false, bottomShift = 70.7f, focus = turn, showsWon = loverShows(wrapped), band = false)
             }
             CompositionLocalProvider(LocalStoryTime provides player.storyTime(), LocalStoryLoop provides loop) {
                 key(player.index) { TvStory(story, wrapped, look) }
@@ -292,6 +304,7 @@ private fun TvStory(story: StoryKey, w: Wrapped, look: StoryLook) {
     when (story) {
         StoryKey.Cover -> Cover(w)
         StoryKey.Hours -> Hours(w)
+        StoryKey.Lover -> Lover(w)
         StoryKey.Genres -> Genres(w)
         StoryKey.Shows -> Shows(w)
         StoryKey.Movie -> Movie(w)
@@ -352,6 +365,62 @@ private fun Hours(w: Wrapped) {
                 SText(chip.big, size = 56.bsp, weight = 900, color = Color.White, maxLines = 1)
                 SText(chip.small, size = 26.bsp, color = Color(0xFFC8C8C8), maxLines = 1)
             }
+        }
+    }
+}
+
+// ── 3 · Shows or movies? ──
+
+/** No TV board: the phone board laid out like the others. The winner on the left, the split and the other side (on its
+ * own colour, the phone's slanted band) on the right. */
+@Composable
+private fun Lover(w: Wrapped) {
+    val shows = loverShows(w)
+    val count = if (shows) w.showsWatched else w.moviesPlayed
+    val pct = loverPct(w)
+    val (otherCount, otherLine) = loverOther(w)
+    val (lead, kind) = loverTitle(w)
+    val (win, lose) = if (shows) t("Shows") to t("Movies") else t("Movies") to t("Shows")
+    Left {
+        SText(t("Shows or movies?"), Modifier.storyIn(.1f, 40.bp), size = 36.bsp, weight = 800, color = Ink)
+        Box(Modifier.padding(top = 10.bp)) { Title("$lead\n$kind", Ink, size = 80) }
+        Row(
+            Modifier.padding(top = 26.bp).semantics(mergeDescendants = true) { contentDescription = "${formatNumber(count)} ${loverUnit(count, shows)}" },
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(20.bp),
+        ) {
+            Box(Modifier.height(184.bp).margin(end = (-22).bp), contentAlignment = Alignment.BottomStart) { Odometer(formatNumber(count), 184.bsp, Ink, tracking = -.06f, delay = .45f) }
+            SText(loverUnit(count, shows), Modifier.storyIn(.9f, 40.bp).padding(bottom = 12.bp), size = 56.bsp, weight = 900, color = Ink, lineHeight = 1f, maxLines = 1)
+        }
+        MeduLine(MeduMood.Sad, loverMedu(w), Ink, Color.White, size = 150, top = 40)
+    }
+    Right(gap = 34.bp) {
+        FlowRow(Modifier.storyIn(1f, 40.bp), horizontalArrangement = Arrangement.spacedBy(12.bp), verticalArrangement = Arrangement.spacedBy(12.bp)) {
+            for (chip in loverChips(w)) {
+                SText(chip, Modifier.clip(RoundedCornerShape(999.bp)).background(Ink).padding(horizontal = 22.bp, vertical = 12.bp), size = 26.bsp, weight = 800, color = Color.White, maxLines = 1)
+            }
+        }
+        Column(Modifier.semantics(mergeDescendants = true) { contentDescription = loverSplitLabel(w) }) {
+            Box(Modifier.fillMaxWidth().height(64.bp).clip(RoundedCornerShape(20.bp)).background(Color.White.copy(alpha = .55f))) {
+                Box(Modifier.fillMaxWidth(pct / 100f).fillMaxHeight().storyGrow(1.1f).background(Ink), contentAlignment = Alignment.CenterStart) {
+                    SText("${formatNumber(pct)}%", Modifier.padding(start = 24.bp), size = 30.bsp, weight = 900, color = Color.White, maxLines = 1)
+                }
+                SText("${formatNumber(100 - pct)}%", Modifier.align(Alignment.CenterEnd).padding(end = 20.bp), size = 30.bsp, weight = 900, color = Ink, maxLines = 1)
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 12.bp), horizontalArrangement = Arrangement.SpaceBetween) {
+                SText(win, size = 26.bsp, weight = 800, color = Ink, maxLines = 1)
+                SText(lose, size = 26.bsp, weight = 800, color = Ink, maxLines = 1)
+            }
+        }
+        Column(
+            Modifier.storyIn(1.5f, 40.bp).fillMaxWidth().clip(RoundedCornerShape(36.bp)).background(if (shows) WrappedPeach else WrappedBlue)
+                .padding(horizontal = 40.bp, vertical = 32.bp),
+        ) {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.bp)) {
+                SText(formatNumber(otherCount), size = 104.bsp, weight = 900, tracking = -.05f, lineHeight = .9f, color = Ink, maxLines = 1)
+                SText(loverUnit(otherCount, !shows), Modifier.padding(bottom = 4.bp), size = 44.bsp, weight = 900, color = Ink, maxLines = 1)
+            }
+            SText(otherLine, Modifier.padding(top = 8.bp), size = 28.bsp, weight = 700, color = Ink.copy(alpha = .75f))
         }
     }
 }

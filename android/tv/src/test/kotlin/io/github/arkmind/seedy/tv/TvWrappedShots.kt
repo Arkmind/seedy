@@ -48,7 +48,7 @@ class TvWrappedShots {
     private val h = 3_600_000L
     private val year = Wrapped(
         year = 2026,
-        stories = listOf("cover", "hours", "genres", "shows", "movie", "binge", "clock", "personality", "summary"),
+        stories = listOf("cover", "hours", "lover", "genres", "shows", "movie", "binge", "clock", "personality", "summary"),
         watchMs = 4_620_960_000L, plays = 2_310, prevWatchMs = 3_916_067_797L, rank = 2, viewers = 6,
         genres = listOf(
             WrappedGenre("Thriller", "thriller", 34), WrappedGenre("Drama", "drama", 22), WrappedGenre("Sci-Fi & Fantasy", "scifi", 15),
@@ -62,6 +62,13 @@ class TvWrappedShots {
         seasonsFinished = 11, showsStarted = 7,
         movie = WrappedMovie("6", "Paper Lanterns", 4, 448 * 60_000L, listOf("2026-03-07", "2026-07-19", "2026-10-11", "2026-11-02")),
         movies = 41,
+        moviesPlayed = 141,
+        moviesRewatched = 23,
+        movieMs = 264 * 3_600_000L,
+        showsWatched = 38,
+        showsFinished = 16,
+        episodes = 612,
+        showMs = 1_020 * 3_600_000L,
         binge = WrappedBinge("1", "Northbound", 9, season = 2, lastSeason = 2, lastEpisode = 7, start = "2026-03-14T14:02", end = "2026-03-14T22:47", minutes = listOf(52, 49, 55, 51, 58, 50, 53, 56, 61)),
         still = WrappedStill(23, 23),
         clock = WrappedClock(
@@ -84,15 +91,16 @@ class TvWrappedShots {
 
     private fun story(index: Int, name: String) = shot(name) { TvWrappedScreen(year, onClose = {}, start = index, fixedProgress = .4f) }
 
-    @Test fun shows() = story(3, "WrappedTV")
+    @Test fun shows() = story(4, "WrappedTV")
     @Test fun cover() = story(0, "WrappedTVCover")
     @Test fun hours() = story(1, "WrappedTVHours")
-    @Test fun genres() = story(2, "WrappedTVGenres")
-    @Test fun movie() = story(4, "WrappedTVMovie")
-    @Test fun binge() = story(5, "WrappedTVBinge")
-    @Test fun clock() = story(6, "WrappedTVNight")
-    @Test fun personality() = story(7, "WrappedTVPersonality")
-    @Test fun summary() = story(8, "WrappedTVSummary")
+    @Test fun lover() = story(2, "WrappedTVLover")
+    @Test fun genres() = story(3, "WrappedTVGenres")
+    @Test fun movie() = story(5, "WrappedTVMovie")
+    @Test fun binge() = story(6, "WrappedTVBinge")
+    @Test fun clock() = story(7, "WrappedTVNight")
+    @Test fun personality() = story(8, "WrappedTVPersonality")
+    @Test fun summary() = story(9, "WrappedTVSummary")
 
     /** No board: December's card over the home rows, the phone banner at TV size. */
     @Test

@@ -73,6 +73,7 @@ import io.github.arkmind.seedy.ui.wrapped.storyBackdrop
 import io.github.arkmind.seedy.ui.wrapped.storyLook
 import io.github.arkmind.seedy.ui.wrapped.storyTime
 import kotlinx.coroutines.launch
+import io.github.arkmind.seedy.core.wrapped.loverShows
 
 /** Where a phone story's parts sit: below the status bar and the header, above the share button. */
 internal class StoryFrame(val top: Dp, val bottom: Dp)
@@ -99,7 +100,7 @@ fun WrappedScreen(
     val player = rememberStoryPlayer(stories.size, start, fixedProgress)
     val story = stories[player.index.coerceIn(0, stories.lastIndex)]
     val accent = LocalAccent.current
-    val look = storyLook(story, accent, wrapped.clock?.kind)
+    val look = storyLook(story, accent, wrapped.clock?.kind, loverShows(wrapped))
     val loop = rememberLoopClock()
     val statusTop = max(32.dp, WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -142,7 +143,7 @@ fun WrappedScreen(
             // What "Share this story" shares: the story with its brand, without the bar and the buttons.
             Box(Modifier.fillMaxSize().storySlide(player.index).record(storyLayer).background(look.bg)) {
                 look.brush?.let { b -> Box(Modifier.fillMaxSize().background(b)) }
-                BoardCanvas(Modifier.fillMaxSize()) { w, h -> storyBackdrop(story, accent, w, h, loop.loopSeconds(), wrapped.clock?.kind) }
+                BoardCanvas(Modifier.fillMaxSize()) { w, h -> storyBackdrop(story, accent, w, h, loop.loopSeconds(), wrapped.clock?.kind, showsWon = loverShows(wrapped), topShift = (statusTop - 32.dp).value) }
                 Brand(wrapped.year, look, Modifier.padding(start = 14.dp, top = statusTop + 13.dp))
                 key(player.index) {
                     Story(story, wrapped, look, frame, player, onShareCard = { share(cardLayer, false) }, onSaveCard = { share(cardLayer, true) }, cardLayer = cardLayer)
@@ -230,6 +231,7 @@ private fun Story(
         when (story) {
             StoryKey.Cover -> CoverStory(w, player.count, onGo = player::next)
             StoryKey.Hours -> HoursStory(w)
+            StoryKey.Lover -> LoverStory(w)
             StoryKey.Genres -> GenresStory(w)
             StoryKey.Shows -> ShowsStory(w)
             StoryKey.Movie -> MovieStory(w)

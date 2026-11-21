@@ -38,6 +38,27 @@ const fr: Record<string, string> = {
   'Hours watched': 'Heures regardées',
   'Medu with popcorn': 'Medu et son pop-corn',
 
+  // Shows or movies?
+  'Shows or movies?': 'Séries ou films ?',
+  'TV show lover': 'fan de séries',
+  'movie lover': 'fan de films',
+  'show|unit': 'série',
+  'shows|unit': 'séries',
+  'movie|unit': 'film',
+  'movies|unit': 'films',
+  '{h} h {mm}': '{h} h {mm}',
+  '{n} show finished': '{n} série terminée',
+  '{n} shows finished': '{n} séries terminées',
+  '{time} on average': '{time} en moyenne',
+  '{n} rewatched|one': '{n} revu',
+  '{n} rewatched|other': '{n} revus',
+  '{a} {pa}%, {b} {pb}% of your hours': '{a} {pa} %, {b} {pb} % de vos heures',
+  'Not one movie this year.': 'Pas un seul film cette année.',
+  'Not one show this year.': 'Pas une seule série cette année.',
+  'Movies miss you a little.': 'Les films se sentent un peu seuls.',
+  'Shows miss you a little.': 'Les séries se sentent un peu seules.',
+  'Medu, a little sad': 'Medu, un peu triste',
+
   // Genres
   'Your year in genres': 'Votre année en genres',
   'Your year': 'Votre année',

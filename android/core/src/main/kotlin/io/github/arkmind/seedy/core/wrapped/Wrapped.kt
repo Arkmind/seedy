@@ -46,6 +46,15 @@ data class Wrapped(
     val showsStarted: Int = 0,
     val movie: WrappedMovie? = null,
     val movies: Int = 0,
+    /** Movies played (to the end or not), movies watched on two days or more, and the time on movies. */
+    val moviesPlayed: Int = 0,
+    val moviesRewatched: Int = 0,
+    val movieMs: Long = 0,
+    /** Shows with an episode watched, shows whose last episode was watched to the end, their episodes and time. */
+    val showsWatched: Int = 0,
+    val showsFinished: Int = 0,
+    val episodes: Int = 0,
+    val showMs: Long = 0,
     val binge: WrappedBinge? = null,
     val still: WrappedStill = WrappedStill(),
     val clock: WrappedClock? = null,
@@ -116,7 +125,7 @@ internal data class Moment(val kind: String, val itemId: String? = null, val ms:
 
 /** The stories, in the server's order. */
 enum class StoryKey(val key: String) {
-    Cover("cover"), Hours("hours"), Genres("genres"), Shows("shows"), Movie("movie"), Binge("binge"), Clock("clock"),
+    Cover("cover"), Hours("hours"), Lover("lover"), Genres("genres"), Shows("shows"), Movie("movie"), Binge("binge"), Clock("clock"),
     Personality("personality"), Summary("summary"),
 }
 

@@ -4,8 +4,8 @@ import type { BaseItem } from '../../api/types';
 /* /Seedy/Me/Wrapped: each profile's year on Seedy, built once in December (1 January to 30 November, in the time zone
    the apps report) and kept. Clients write every sentence themselves from these numbers (copy.ts). */
 
-export type StoryKey = 'cover' | 'hours' | 'genres' | 'shows' | 'movie' | 'binge' | 'clock' | 'personality' | 'summary';
-export const STORY_KEYS: StoryKey[] = ['cover', 'hours', 'genres', 'shows', 'movie', 'binge', 'clock', 'personality', 'summary'];
+export type StoryKey = 'cover' | 'hours' | 'lover' | 'genres' | 'shows' | 'movie' | 'binge' | 'clock' | 'personality' | 'summary';
+export const STORY_KEYS: StoryKey[] = ['cover', 'hours', 'lover', 'genres', 'shows', 'movie', 'binge', 'clock', 'personality', 'summary'];
 
 export interface WrappedTitle { id: string; name: string; episodes: number; watchMs: number; item?: BaseItem | null }
 export interface WrappedGenre { name: string; key?: string | null; pct: number }
@@ -31,6 +31,14 @@ export interface Wrapped {
   showsStarted: number;
   movie?: { id: string; name: string; views: number; watchMs: number; dates: string[]; item?: BaseItem | null } | null;
   movies: number;
+  /** Time on movies and on shows, the shows watched and their episodes (absent from Wrapped built before they were). */
+  movieMs?: number;
+  moviesPlayed?: number;
+  moviesRewatched?: number;
+  showsWatched?: number;
+  showsFinished?: number;
+  episodes?: number;
+  showMs?: number;
   binge?: {
     id: string; name: string; episodes: number; season?: number | null; seasonTo?: number | null;
     lastSeason?: number | null; lastEpisode?: number | null; start: string; end: string; item?: BaseItem | null;

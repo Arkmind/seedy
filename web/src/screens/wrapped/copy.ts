@@ -36,6 +36,71 @@ export function hourChips(w: Wrapped): Chip[] {
   return chips;
 }
 
+// ── Shows or movies? ──
+
+/* Which side won the year, by time: shows, unless movies took longer. */
+export const loverShows = (w: Wrapped) => (w.showMs ?? 0) >= (w.movieMs ?? 0);
+
+const one = (n: number) => {
+  try { return new Intl.PluralRules(locale()).select(n) === 'one'; } catch { return n === 1; }
+};
+
+/* "shows" or "movies" after a big number, in the number's form. */
+export const loverUnit = (n: number, shows: boolean) => tc(shows ? (one(n) ? 'show' : 'shows') : (one(n) ? 'movie' : 'movies'), 'unit');
+
+/* "1 h 52" (or "48 min"): a movie's average length. */
+export function averageTime(ms: number): string {
+  const min = Math.max(1, Math.round(ms / 60_000));
+  const h = Math.floor(min / 60);
+  return h ? t('{h} h {mm}', { h: formatNumber(h), mm: String(min % 60).padStart(2, '0') }) : t('{m} min', { m: formatNumber(min) });
+}
+
+export const loverTitle = (w: Wrapped): [string, string] => [t('You’re a'), loverShows(w) ? t('TV show lover') : t('movie lover')];
+
+export function loverChips(w: Wrapped): string[] {
+  const hours = (ms?: number) => tn(hoursOf(ms ?? 0), '{n} hour', '{n} hours');
+  if (loverShows(w)) {
+    return [
+      tn(w.episodes ?? 0, '{n} episode', '{n} episodes'),
+      hours(w.showMs),
+      (w.showsFinished ?? 0) > 0 ? tn(w.showsFinished!, '{n} show finished', '{n} shows finished') : ''
+    ].filter(Boolean);
+  }
+  const played = w.moviesPlayed ?? 0;
+  return [
+    hours(w.movieMs),
+    played > 0 ? t('{time} on average', { time: averageTime((w.movieMs ?? 0) / played) }) : '',
+    // English says "23 rewatched" either way; French agrees with the number (revu, revus).
+    (w.moviesRewatched ?? 0) > 0 ? tc('{n} rewatched', one(w.moviesRewatched!) ? 'one' : 'other', { n: formatNumber(w.moviesRewatched!) }) : ''
+  ].filter(Boolean);
+}
+
+/* The winner's share of the time, 0–100. */
+export function loverPct(w: Wrapped): number {
+  const shows = w.showMs ?? 0;
+  const movies = w.movieMs ?? 0;
+  const all = shows + movies;
+  return all ? Math.round(((loverShows(w) ? shows : movies) * 100) / all) : 100;
+}
+
+/* The other side, on the band: its count and what it took. */
+export function loverOther(w: Wrapped): { count: number; line: string } {
+  if (loverShows(w)) {
+    const n = w.moviesPlayed ?? 0;
+    return {
+      count: n,
+      line: n > 0 ? `${tn(hoursOf(w.movieMs ?? 0), '{n} hour', '{n} hours')} · ${t('{time} on average', { time: averageTime((w.movieMs ?? 0) / n) })}` : t('Not one movie this year.')
+    };
+  }
+  const n = w.showsWatched ?? 0;
+  return {
+    count: n,
+    line: n > 0 ? `${tn(w.episodes ?? 0, '{n} episode', '{n} episodes')} · ${tn(hoursOf(w.showMs ?? 0), '{n} hour', '{n} hours')}` : t('Not one show this year.')
+  };
+}
+
+export const loverMedu = (w: Wrapped) => (loverShows(w) ? t('Movies miss you a little.') : t('Shows miss you a little.'));
+
 // ── Genres ──
 
 const GENRE_NAMES: Record<string, () => string> = {
