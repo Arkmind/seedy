@@ -211,7 +211,7 @@ public sealed class PlaybackRecorder : IHostedService
     }
 
     // Movies, episodes and other videos (not trailers or extras), songs, audiobooks and Live TV channels.
-    private static bool Recordable(BaseItem? item)
+    internal static bool Recordable(BaseItem? item)
         => (item is Video and not Trailer && item.ExtraType is null) || item is Audio || item is LiveTvChannel;
 
     private static string Key(string userId, PlaybackProgressEventArgs e)
@@ -352,7 +352,7 @@ public sealed class PlaybackRecorder : IHostedService
     }
 
     // Episodes count towards their series, songs towards their album, audiobook files towards the book.
-    private (string Id, string? Name) Title(BaseItem item, User user)
+    internal (string Id, string? Name) Title(BaseItem item, User user)
     {
         switch (item)
         {
@@ -368,7 +368,7 @@ public sealed class PlaybackRecorder : IHostedService
         }
     }
 
-    private string? LibraryOf(BaseItem item)
+    internal string? LibraryOf(BaseItem item)
     {
         if (item is LiveTvChannel)
         {
