@@ -150,7 +150,8 @@ export interface SeerrUpcoming extends SeerrItem { releaseDate: string; releaseK
 
 export type RequestStatus = 'pending' | 'approved' | 'declined' | 'failed' | 'completed';
 
-/* A Seerr request: the title, who asked and when, and where it is now. `status` is the title's availability, as on posters. */
+/* A Seerr request: the title, who asked and when, and where it is now. `status` is the title's availability, as on posters,
+   except for a series: the requested seasons' (available once those are in, even when later seasons aren't). */
 export interface SeerrRequest extends SeerrItem {
   requestId: number;
   requestedAt: string;

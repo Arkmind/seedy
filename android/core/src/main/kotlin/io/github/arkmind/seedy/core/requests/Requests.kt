@@ -25,7 +25,7 @@ data class SeerrRequest(
     val posterPath: String? = null,
     val backdropPath: String? = null,
     val overview: String? = null,
-    /** The title's status in Seerr: "available", "partial", "processing", "pending"… */
+    /** The title's status in Seerr: "available", "partial", "processing", "pending"… (a series request: its seasons'). */
     val status: String = "none",
     val requestedBy: String? = null,
     val requestedByMe: Boolean = false,
