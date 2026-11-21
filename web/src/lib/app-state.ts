@@ -5,7 +5,7 @@ import { castTarget } from './cast';
 import * as jf from '../api/jellyfin';
 import * as seedy from '../api/seedy';
 import type { AuthResult, BaseItem, User } from '../api/types';
-import { createStore } from './store';
+import { createStore, forgetSummaries } from './store';
 import { setTitleBrand } from './title';
 
 /* Subtitles at the normal size, lifted above the controls while they show. */
@@ -163,6 +163,7 @@ export async function boot() {
 
 export async function completeSignIn(auth: AuthResult) {
   allowAdoption();
+  forgetSummaries();
   setSession(sessionFromAuth(auth));
   await loadSignedIn(auth.User);
 }
@@ -173,6 +174,7 @@ function signOutLocal() {
   meStore.set(fallbackMe());
   viewsStore.set([]);
   castTarget.set(null);
+  forgetSummaries();
   bootState.set('signedOut');
 }
 
