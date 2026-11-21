@@ -1,5 +1,8 @@
 /* Admin and profile settings, from the four Admin boards. */
 
+/* Short pages keep the scrollbar's room too, so the nav and content don't jump sideways between pages. */
+html:has(.me-page, .admin-page) { scrollbar-gutter: stable; }
+
 .panel { display: flex; flex-direction: column; padding: 24px; border-radius: var(--r-panel); background: var(--seedy-panel); }
 .panel-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 10px; }
 .panel-head.is-title-only { padding-bottom: 10px; }
