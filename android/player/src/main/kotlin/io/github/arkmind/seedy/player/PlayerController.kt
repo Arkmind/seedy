@@ -17,6 +17,7 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.upstream.Loader
@@ -66,7 +67,11 @@ data class PlayerState(
     /** Why playback stopped: a Jellyfin code ("NotAllowed"…), "network", "media", "serverError" or "liveUnavailable". */
     val problem: String? = null,
     val playing: Boolean = false,
+    /** It should play (not paused), even while the picture waits for the stream. */
+    val wantsPlay: Boolean = false,
     val buffering: Boolean = false,
+    /** The stream broke and Seedy is opening it again where it stood. */
+    val reconnecting: Boolean = false,
     val ended: Boolean = false,
     val positionMs: Long = 0,
     val durationMs: Long = 0,
@@ -109,6 +114,8 @@ data class PlayerState(
     val live: Boolean get() = item?.type == BaseItemKind.TV_CHANNEL
     /** The bars the screen may crop away. */
     val crop: Bars? get() = bars.takeIf { !burntIn && !live }
+    /** The picture is held up: the stream opening, running dry while it should play, or reconnecting (the spinner). */
+    val waiting: Boolean get() = problem == null && !ended && ask == null && !endShown && (loading || reconnecting || (buffering && wantsPlay))
 }
 
 /**
@@ -160,6 +167,7 @@ class PlayerController(private val context: Context, private val session: UserSe
     private val prefs = session.seedy?.prefs?.playback
 
     val exo: ExoPlayer = ExoPlayer.Builder(context)
+        .setLoadControl(Connection.loadControl())
         .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
         .setHandleAudioBecomingNoisy(true)
         .setSeekBackIncrementMs(seekBackSeconds * 1000L)
@@ -195,6 +203,8 @@ class PlayerController(private val context: Context, private val session: UserSe
     private var started = false
     private var skipped = mutableSetOf<UUID>()
     private var jobs = mutableListOf<Job>()
+    private val reconnects = Reconnects()
+    private var reconnecting: Job? = null
 
     /** Skip steps: this device's, else the profile's. */
     val seekBackSeconds: Int get() = device.seekBack ?: prefs?.seekBackSeconds ?: 10
@@ -277,8 +287,13 @@ class PlayerController(private val context: Context, private val session: UserSe
                 if (started) report()
             }
 
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                _state.update { it.copy(wantsPlay = playWhenReady) }
+            }
+
             override fun onPlaybackStateChanged(playbackState: Int) {
                 _state.update { it.copy(buffering = playbackState == Player.STATE_BUFFERING) }
+                if (playbackState == Player.STATE_READY) _state.update { it.copy(reconnecting = false) }
                 if (playbackState == Player.STATE_READY && !started) {
                     started = true
                     _state.update { it.copy(loading = false) }
@@ -325,6 +340,8 @@ class PlayerController(private val context: Context, private val session: UserSe
         item = it
         started = false
         skipped.clear()
+        reconnecting?.cancel()
+        reconnects.reset()
         // A title Seedy started adds to its run; one started by hand starts the runs over.
         if (autoStart) {
             if (it.type == BaseItemKind.MOVIE) movieRun++ else episodeRun++
@@ -353,15 +370,18 @@ class PlayerController(private val context: Context, private val session: UserSe
         scope.launch { loadPicks(it) }
     }
 
-    private suspend fun openStream(opts: StreamOptions, keepPaused: Boolean = false) {
-        val it = item ?: return
+    /** Asks the server for a stream with [opts] and plays it; false when it couldn't (said so, unless [quiet]). */
+    private suspend fun openStream(opts: StreamOptions, keepPaused: Boolean = false, quiet: Boolean = false): Boolean {
+        val it = item ?: return false
         val old = stream
         val s = try {
             streams.request(it, opts)
         } catch (e: PlaybackProblem) {
-            return _state.update { st -> st.copy(loading = false, problem = e.code) }
+            if (!quiet) _state.update { st -> st.copy(loading = false, problem = e.code) }
+            return false
         } catch (_: Exception) {
-            return _state.update { st -> st.copy(loading = false, problem = "network") }
+            if (!quiet) _state.update { st -> st.copy(loading = false, problem = "network") }
+            return false
         }
         stream = s
         val media = MediaItem.Builder().setUri(s.url).setMediaMetadata(metadata(it))
@@ -374,11 +394,12 @@ class PlayerController(private val context: Context, private val session: UserSe
         _state.update { st ->
             st.copy(
                 audio = s.audioStreams, subtitles = s.subtitleStreams, audioIndex = s.audioIndex, subtitleIndex = s.subtitleIndex,
-                method = s.method, streamLabel = label(s), problem = null, burntIn = s.burnIn,
+                method = s.method, streamLabel = label(s), problem = null, burntIn = s.burnIn, wantsPlay = exo.playWhenReady,
             )
         }
         loadText(s.subtitleIndex)
         applyFileTracks()
+        return true
     }
 
     /** Picks the chosen audio and picture-subtitle tracks inside the file (when it plays as it is). */
@@ -579,19 +600,48 @@ class PlayerController(private val context: Context, private val session: UserSe
     }
 
     private fun onError(error: PlaybackException) {
-        // A stream this device turned out not to decode or read: the server converts it, a step further each time.
         val s = stream
+        // The connection dropped once it was playing: open it again where it stood, waiting a little longer each time.
+        val status = (error.cause as? HttpDataSource.InvalidResponseCodeException)?.responseCode
+        if (s != null && started && Connection.lost(error.errorCode, status) && reconnect()) return
+        // A stream this device turned out not to decode or read: the server converts it, a step further each time.
         val mime = (error as? ExoPlaybackException)?.takeIf { it.type == ExoPlaybackException.TYPE_RENDERER }?.rendererFormat?.sampleMimeType
         val unreadable = error.cause is Loader.UnexpectedLoaderException
-        val next = s?.takeIf { error.errorCode !in NetworkErrors }?.let { nextAttempt(it.options, it.method, failedPart(error.errorCode, mime, unreadable)) }
+        val next = s?.takeIf { error.errorCode !in Connection.NetworkErrors }?.let { nextAttempt(it.options, it.method, failedPart(error.errorCode, mime, unreadable)) }
         if (next != null) return reopen(next)
         // The server answered with an error: a live channel whose source is down, or a conversion that failed.
         val problem = when {
             error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> if (_state.value.live) "liveUnavailable" else "serverError"
-            error.errorCode in NetworkErrors -> "network"
+            error.errorCode in Connection.NetworkErrors -> "network"
             else -> "media"
         }
-        _state.update { it.copy(problem = problem, loading = false) }
+        _state.update { it.copy(problem = problem, loading = false, reconnecting = false) }
+    }
+
+    /**
+     * The next reconnect attempt, after its wait; false once they're all spent. A file played as it is reloads from
+     * the same address (still valid after a server restart); a conversion asks the server for a fresh one, as the old
+     * one may be gone. A server that doesn't answer yet costs an attempt too.
+     */
+    private fun reconnect(): Boolean {
+        val wait = reconnects.next(SystemClock.elapsedRealtime()) ?: return false
+        val id = item?.id
+        _state.update { it.copy(reconnecting = true) }
+        reconnecting?.cancel()
+        reconnecting = scope.launch {
+            delay(wait)
+            val s = stream
+            if (item?.id != id || s == null) return@launch
+            val ok = if (s.method == PlayMethod.DIRECT_PLAY) {
+                exo.prepare()
+                true
+            } else {
+                val opts = if (_state.value.live) s.options else s.options.copy(startTicks = exo.currentPosition * 10_000)
+                openStream(opts, keepPaused = true, quiet = true)
+            }
+            if (!ok && !reconnect()) _state.update { it.copy(problem = "network", loading = false, reconnecting = false) }
+        }
+        return true
     }
 
     private fun onEnded() {
@@ -685,6 +735,7 @@ class PlayerController(private val context: Context, private val session: UserSe
     }
 
     private fun tick() {
+        reconnects.playing(exo.isPlaying, SystemClock.elapsedRealtime())
         val pos = exo.currentPosition
         val dur = exo.duration.takeIf { it > 0 } ?: ((item?.runTimeTicks ?: 0L) / 10_000)
         val st = _state.value
@@ -823,6 +874,7 @@ class PlayerController(private val context: Context, private val session: UserSe
     /** Reports the stop, ends any conversion and frees the decoder. Call once, when the player closes. */
     fun release() {
         jobs.forEach { it.cancel() }
+        reconnecting?.cancel()
         val snapshot = Triple(item, stream, if (finishOnRelease) _state.value.durationMs else exo.currentPosition)
         val paused = !exo.playWhenReady
         val speed = exo.playbackParameters.speed
@@ -878,14 +930,6 @@ class PlayerController(private val context: Context, private val session: UserSe
     }
 
     private suspend fun <T> withIo(block: suspend () -> T): T = withContext(kotlinx.coroutines.Dispatchers.IO) { block() }
-
-    private companion object {
-        val NetworkErrors = setOf(
-            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
-            PlaybackException.ERROR_CODE_TIMEOUT,
-        )
-    }
 }
 
 /** The screen's longer side in pixels: "Screen size" for the largest picture when converting. */

@@ -219,7 +219,7 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
             Box(
                 Modifier.size(68.dp).clip(RoundedCornerShape(19.dp)).background(SeedyColors.Inverse).tap(onClick = actions.onPlayPause),
                 contentAlignment = Alignment.Center,
-            ) { SIcon(if (state.playing) WebIcons.Pause else WebIcons.Play, size = 28.dp, color = SeedyColors.InkInverse) }
+            ) { SIcon(if (state.playing || state.wantsPlay) WebIcons.Pause else WebIcons.Play, size = 28.dp, color = SeedyColors.InkInverse) }
             if (!state.live) Box(
                 Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).background(SeedyColors.Bg.copy(alpha = 0.45f)).tap { actions.onSeekBy(seekForward * 1000L) },
                 contentAlignment = Alignment.Center,

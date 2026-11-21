@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableLongState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -245,3 +246,11 @@ fun Spinner(size: Dp, color: Color, modifier: Modifier = Modifier, stroke: Float
 }
 
 private val SpinnerArc = PathParser().parsePathString("M12 3a9 9 0 1 1-9 9").toPath()
+
+/** [Spinner] over a video: white, on a soft dark disc so it shows on a bright picture too. */
+@Composable
+fun VideoSpinner(size: Dp, modifier: Modifier = Modifier) {
+    Box(modifier.size(size * 1.8f).drawBehind { drawCircle(Color.Black.copy(alpha = 0.45f)) }, contentAlignment = Alignment.Center) {
+        Spinner(size, Color.White)
+    }
+}

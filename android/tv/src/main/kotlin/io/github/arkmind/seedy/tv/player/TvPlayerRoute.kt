@@ -53,6 +53,7 @@ import io.github.arkmind.seedy.tv.parts.TvButton
 import io.github.arkmind.seedy.tv.parts.bp
 import io.github.arkmind.seedy.tv.parts.bsp
 import io.github.arkmind.seedy.tv.parts.focusSoon
+import io.github.arkmind.seedy.ui.components.VideoSpinner
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
@@ -99,9 +100,10 @@ fun TvPlayerRoute(id: UUID, startTicks: Long? = null) {
     }
     // Board "Android TV · Screensaver": paused and untouched a while; any key brings the player back.
     var saver by remember { mutableStateOf(false) }
-    LaunchedEffect(state.playing, touched, state.problem, state.item?.id) {
+    LaunchedEffect(state.playing, state.wantsPlay, touched, state.problem, state.item?.id) {
         saver = false
-        if (!state.playing && state.item != null && state.problem == null && !state.live && state.ask == null && !state.endShown) {
+        // (Not while it waits for the stream to play on.)
+        if (!state.playing && !state.wantsPlay && state.item != null && state.problem == null && !state.live && state.ask == null && !state.endShown) {
             delay(ScreensaverAfterMs)
             saver = true
         }
@@ -284,6 +286,9 @@ fun TvPlayerRoute(id: UUID, startTicks: Long? = null) {
                 }
             },
         )
+        // The picture held up (opening, the stream running dry, reconnecting): the web player's spinner, so a frozen
+        // frame doesn't pass for a pause.
+        if (state.waiting && tool == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { VideoSpinner(64.bp) }
         state.problem?.let { Problem(it, onBack = { nav.back() }) }
         val item = state.item
         if (state.endShown && item != null) {
