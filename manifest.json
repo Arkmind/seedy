@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.5.1.0",
+        "changelog": "# What's Changed\n- Sort and filter your history\n  By date or title, finished or in progress, when, and on which device\n- Steadier playback on weak Wi-Fi\n  The phone and TV apps buffer further ahead and reconnect by themselves\n- Request right away\n  Your Seerr account is set up for you, no need to ask your admin\n- Requested seasons show Ready\n  As soon as the season is on the server, not once the whole show is\n\n## Fixes\n- On the web, search becomes a button on narrower windows instead of a second row under the bar.\n- Settings pages no longer jump sideways when you move between them.\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play).\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart Jellyfin: the history and requests changes come with it.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.5.0...v0.5.1",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.5.1/seedy_0.5.1.0.zip",
+        "checksum": "4aa77d03f033917803b75e33e60d2e54",
+        "timestamp": "2026-11-21T22:19:59Z"
+      },
+      {
         "version": "0.5.0.0",
         "changelog": "# What's Changed\n- A bit of polish\n  Small touches here and there, with more to come\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play).\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart Jellyfin.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.4.15...v0.5.0",
         "targetAbi": "12.0.0.0",
