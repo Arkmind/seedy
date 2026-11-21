@@ -201,10 +201,12 @@ export function Sheet({ open, onClose, children, wide, label, labelledBy, class:
   );
 }
 
-interface ConfirmState { title: string; text: string; action: string; danger?: boolean; resolve: (ok: boolean) => void }
+/* `cancel: false` makes it a notice with a single button. */
+interface ConfirmOpts { title: string; text: string; action: string; danger?: boolean; cancel?: false }
+interface ConfirmState extends ConfirmOpts { resolve: (ok: boolean) => void }
 const confirmStore = createStore<ConfirmState | null>(null);
 
-export function confirm(opts: { title: string; text: string; action: string; danger?: boolean }): Promise<boolean> {
+export function confirm(opts: ConfirmOpts): Promise<boolean> {
   /* Only one question at a time: a newer one answers the older with "no", so whoever awaited it isn't left hanging. */
   confirmStore.get()?.resolve(false);
   return new Promise((resolve) => confirmStore.set({ ...opts, resolve }));
@@ -220,7 +222,7 @@ export function ConfirmHost() {
           <div class="sheet-head"><h2 class="sheet-title">{c.title}</h2></div>
           <p class="sheet-text">{c.text}</p>
           <div class="sheet-actions">
-            <button type="button" class="btn btn-ghost is-light" onClick={() => done(false)}>{t('Cancel')}</button>
+            {c.cancel !== false && <button type="button" class="btn btn-ghost is-light" onClick={() => done(false)}>{t('Cancel')}</button>}
             <button type="button" class={'btn ' + (c.danger ? 'btn-danger' : 'btn-primary is-sm')} onClick={() => done(true)}>{c.action}</button>
           </div>
         </>

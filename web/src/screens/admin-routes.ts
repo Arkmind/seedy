@@ -17,6 +17,7 @@ export { ServerLiveTV } from './server/LiveTV';
 export { ServerDevices } from './server/Devices';
 export { ServerActivity } from './server/Activity';
 export { ServerPlugins } from './server/Plugins';
+export { ServerPluginSettings } from './server/PluginSettings';
 export { ServerTasks } from './server/Tasks';
 export { ServerBackups } from './server/Backups';
 export { ServerLogs } from './server/Logs';
