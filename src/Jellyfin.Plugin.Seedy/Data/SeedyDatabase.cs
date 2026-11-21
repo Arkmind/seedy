@@ -267,9 +267,12 @@ public sealed partial class SeedyDatabase : IDisposable
 
     /// <summary>Inserts a play.</summary>
     /// <param name="p">The play.</param>
-    public void InsertPlay(PlayRecord p) => Write(c =>
+    public void InsertPlay(PlayRecord p) => Write(c => Insert(c, p, null));
+
+    private static void Insert(SqliteConnection c, PlayRecord p, SqliteTransaction? tx)
     {
         using var cmd = c.CreateCommand();
+        cmd.Transaction = tx;
         cmd.CommandText = $"INSERT INTO plays ({PlayColumns}) VALUES ($id, $user, $item, $title, $type, $tname, $iname, $started, $stopped, $pos, $run, $fin, $dev, $client, $session, $origin, $watched, $method, $reasons, $bitrate, $library, $vcodec, $scodec)";
         Bind(cmd, "$id", p.Id);
         Bind(cmd, "$user", p.UserId);
@@ -290,7 +293,7 @@ public sealed partial class SeedyDatabase : IDisposable
         BindStats(cmd, p);
         Bind(cmd, "$library", p.LibraryId);
         cmd.ExecuteNonQuery();
-    });
+    }
 
     private static void BindStats(SqliteCommand cmd, PlayRecord p)
     {

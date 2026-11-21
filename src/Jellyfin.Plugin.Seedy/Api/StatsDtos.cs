@@ -155,4 +155,30 @@ public sealed class StatsSessionDto
     [JsonPropertyName("count")] public int Count { get; set; } = 1;
 }
 
+// /Seedy/Admin/HistoryImport: what importing Jellyfin's activity log adds (or added) to the play log.
+public sealed class HistoryImportDto
+{
+    [JsonPropertyName("dryRun")] public bool DryRun { get; set; }
+    [JsonPropertyName("playLogEnabled")] public bool PlayLogEnabled { get; set; } = true;
+    [JsonPropertyName("from")] public DateTime? From { get; set; }
+    [JsonPropertyName("until")] public DateTime Until { get; set; }
+    [JsonPropertyName("plays")] public int Plays { get; set; }
+    [JsonPropertyName("counted")] public int Counted { get; set; }
+    [JsonPropertyName("watchMs")] public long WatchMs { get; set; }
+    [JsonPropertyName("finished")] public int Finished { get; set; }
+    [JsonPropertyName("replaced")] public int Replaced { get; set; }
+    [JsonPropertyName("entries")] public int Entries { get; set; }
+    [JsonPropertyName("missingItems")] public int MissingItems { get; set; }
+    [JsonPropertyName("missingUsers")] public int MissingUsers { get; set; }
+    [JsonPropertyName("users")] public List<HistoryImportUserDto> Users { get; set; } = [];
+}
+
+public sealed class HistoryImportUserDto
+{
+    [JsonPropertyName("userId")] public string UserId { get; set; } = string.Empty;
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("plays")] public int Plays { get; set; }
+    [JsonPropertyName("watchMs")] public long WatchMs { get; set; }
+}
+
 #pragma warning restore SA1402, SA1649, CA1002, CA2227, SA1600, CA1819

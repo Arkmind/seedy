@@ -83,7 +83,8 @@ tries hard not to make your server convert anything it doesn't have to.
   play on its own, instead of the server converting them. It is on by default for videos up to 1080p. When the device
   can't keep up, it hands the video back to the server, and after the second time it turns itself off on that device.
 - **A play log** behind the Top 10, the viewing history page, row order, genre rows and the admin Statistics. Jellyfin
-  itself only keeps the last play of each title.
+  itself only keeps the last play of each title. The "Seedy: import Jellyfin play history" task adds the plays from
+  before Seedy that Jellyfin's activity log remembers (when and what, not pauses or how it played).
 - **Personal settings** at `/settings`: profile and sign-in, the devices you're signed in on (sign out one or all the
   others; new devices from outside your home network are flagged), home screen, playback, subtitles, display (accent,
   language, dates, screensaver, TV layout, custom CSS) and controls.
@@ -308,7 +309,7 @@ src/Jellyfin.Plugin.Seedy/
                           RootRedirect (Seedy's pages at the server address, Jellyfin's app at /old)
   Data/SeedyDatabase      SQLite (play log, hidden titles, preferences, learned row order, reading places, music and
                           book requests) in <data>/seedy/seedy.db
-  Tasks/                  play log retention, weekly automatic backup
+  Tasks/                  play log retention, weekly automatic backup, importing Jellyfin's play history
 web/                      Preact + TypeScript + Vite
   src/api                 Jellyfin client, Seedy API contract (seedy.ts), Live TV, image helpers
   src/lib                 app state, router, store, translations, dates and numbers, casting
