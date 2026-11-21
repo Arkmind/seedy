@@ -31,6 +31,11 @@ export interface Wrapped {
   showsStarted: number;
   movie?: { id: string; name: string; views: number; watchMs: number; dates: string[]; item?: BaseItem | null } | null;
   movies: number;
+  /** Time on movies and on shows, the shows watched and their episodes (absent from Wrapped built before they were). */
+  movieMs?: number;
+  showsWatched?: number;
+  episodes?: number;
+  showMs?: number;
   binge?: {
     id: string; name: string; episodes: number; season?: number | null; seasonTo?: number | null;
     lastSeason?: number | null; lastEpisode?: number | null; start: string; end: string; item?: BaseItem | null;

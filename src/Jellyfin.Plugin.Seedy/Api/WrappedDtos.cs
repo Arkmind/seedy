@@ -82,6 +82,18 @@ public sealed class WrappedDto
     /// <summary>Gets or sets the different movies watched.</summary>
     [JsonPropertyName("movies")] public int Movies { get; set; }
 
+    /// <summary>Gets or sets the time spent on movies, in milliseconds.</summary>
+    [JsonPropertyName("movieMs")] public long MovieMs { get; set; }
+
+    /// <summary>Gets or sets the different shows watched (at least one episode).</summary>
+    [JsonPropertyName("showsWatched")] public int ShowsWatched { get; set; }
+
+    /// <summary>Gets or sets the different episodes watched.</summary>
+    [JsonPropertyName("episodes")] public int Episodes { get; set; }
+
+    /// <summary>Gets or sets the time spent on shows, in milliseconds.</summary>
+    [JsonPropertyName("showMs")] public long ShowMs { get; set; }
+
     [JsonPropertyName("binge")] public WrappedBingeDto? Binge { get; set; }
 
     /// <summary>Gets or sets how often "Still watching?" was asked, and answered with yes.</summary>

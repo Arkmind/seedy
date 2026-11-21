@@ -385,6 +385,9 @@ public sealed class Wrapped
 
         // ── Shows ──
         var episodes = video.Where(r => r.Kind == "show").ToList();
+        dto.ShowsWatched = episodes.Select(r => r.Play.TitleId).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        dto.Episodes = episodes.Select(r => r.Play.ItemId).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        dto.ShowMs = episodes.Sum(r => r.Watched);
         dto.Shows = episodes
             .GroupBy(r => r.Play.TitleId, StringComparer.OrdinalIgnoreCase)
             .Select(g => new WrappedTitleDto
@@ -441,6 +444,7 @@ public sealed class Wrapped
             })
             .ToList();
         dto.Movies = movieViews.Count(m => m.Days.Count > 0);
+        dto.MovieMs = movieRows.Sum(r => r.Watched);
         var top = movieViews.Where(m => m.Days.Count > 0).OrderByDescending(m => m.Days.Count).ThenByDescending(m => m.Ms).FirstOrDefault();
         if (top is not null)
         {
