@@ -21,8 +21,9 @@ const fr: Record<string, string> = {
   // Cover
   'Medu took notes all year. Here’s what you watched, binged and couldn’t stop rewatching.': 'Medu a pris des notes toute l’année. Voici ce que vous avez regardé, enchaîné et revu sans vous lasser.',
   'Let’s go': 'C’est parti',
-  '{n} story · about a minute · tap to skip ahead': '{n} story · environ une minute · touchez pour passer',
-  '{n} stories · about a minute · tap to skip ahead': '{n} stories · environ une minute · touchez pour passer',
+  'about a minute': 'environ une minute',
+  'about {n} minutes': 'environ {n} minutes',
+  'tap to skip ahead': 'touchez pour passer',
   'Medu, ready to party': 'Medu, prête à faire la fête',
 
   // Hours

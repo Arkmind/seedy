@@ -9,8 +9,13 @@ export const hoursOf = (ms: number) => Math.max(0, Math.round(ms / 3_600_000));
 
 // ── Cover ──
 
-export const coverHint = (stories: number) =>
-  tn(stories, '{n} story · about a minute · tap to skip ahead', '{n} stories · about a minute · tap to skip ahead');
+/* Each story stays 16 s: nine take about two minutes. */
+export const STORY_SECONDS = 16;
+
+export function coverHint(stories: number): string {
+  const minutes = Math.max(1, Math.round((stories * STORY_SECONDS) / 60));
+  return [tn(stories, '{n} story', '{n} stories'), tn(minutes, 'about a minute', 'about {n} minutes'), t('tap to skip ahead')].join(' · ');
+}
 
 // ── Hours ──
 

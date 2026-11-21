@@ -25,8 +25,13 @@ fun hoursOf(ms: Long): Long = max(0L, round(ms / 3_600_000.0))
 
 // ── Cover ──
 
-fun coverHint(stories: Int): String =
-    tn(stories, "{n} story · about a minute · tap to skip ahead", "{n} stories · about a minute · tap to skip ahead")
+/** Each story stays this long: nine take about two minutes. */
+const val StorySeconds = 16
+
+fun coverHint(stories: Int): String {
+    val minutes = max(1L, round(stories * StorySeconds / 60.0)).toInt()
+    return listOf(tn(stories, "{n} story", "{n} stories"), tn(minutes, "about a minute", "about {n} minutes"), t("tap to skip ahead")).joinToString(" · ")
+}
 
 // ── Hours ──
 

@@ -10,7 +10,7 @@ import type { StoryKey, Wrapped } from './api';
 import {
   bingeEpisode, bingeLine, bingeText, clockDay, clockMedu, clockMood, clockShare, clockTitle, coverHint, genreLead, genreMedu,
   genreName, genreOther, hourChips, hoursOf, movieMedu, movieMeta, movieTickets, movieTitle, personalityMedu, personalityName,
-  personalityText, showMeta, showTime, showsFootnote, showsMedu, statLine, summaryAlso, summaryLabel, timeOf
+  personalityText, showMeta, showTime, showsFootnote, showsMedu, statLine, STORY_SECONDS, summaryAlso, summaryLabel, timeOf
 } from './copy';
 import {
   BingeBackdrop, CoverBackdrop, GenresBackdrop, HoursBackdrop, MovieBackdrop, NightBackdrop, PersonalityBackdrop, ShowsBackdrop, SummaryBackdrop
@@ -19,7 +19,7 @@ import {
 /* The nine Wrapped stories (boards Wrapped · 1–9), drawn at the boards' 390 px width; the viewer scales them. Phone
    boards start with a 32 px status bar; the web's stories (Web · Wrapped viewer) start 14 px down instead. */
 
-export const STORY_MS = 8000;
+export const STORY_MS = STORY_SECONDS * 1000;
 const ACCENT = 'var(--seedy-accent)';
 const DARK = '#1e1e1e';
 

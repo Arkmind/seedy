@@ -1,5 +1,8 @@
 package io.github.arkmind.seedy.ui.wrapped
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.FloatState
@@ -13,6 +16,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import io.github.arkmind.seedy.core.wrapped.WrappedMovie
@@ -21,8 +25,8 @@ import io.github.arkmind.seedy.ui.components.MeduMood
 import io.github.arkmind.seedy.ui.components.rememberStillMotion
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 
-/** How long a story stays up before the next one, as on the boards' progress bars (8 s). */
-const val StorySeconds = 8f
+/** How long a story stays up before the next one (16 s, twice the boards' progress bars). */
+val StorySeconds = io.github.arkmind.seedy.core.wrapped.StorySeconds.toFloat()
 
 /**
  * The stories' clock, for the phone and the TV: which story is up, how far its bar has filled, the time since it came
@@ -121,4 +125,30 @@ fun meduMood(name: String): MeduMood = when (name) {
     "popcorn" -> MeduMood.Popcorn
     "party" -> MeduMood.Party
     else -> MeduMood.Wave
+}
+
+/**
+ * The move between stories: the new one slides in a third of the way from the side it comes from as it fades up
+ * (0.45 s, the web viewer's phone slide). [index] is the story showing; the first one just appears.
+ */
+@Composable
+fun Modifier.storySlide(index: Int): Modifier {
+    val progress = remember { Animatable(1f) }
+    var last by remember { mutableIntStateOf(index) }
+    var dir by remember { mutableIntStateOf(0) }
+    LaunchedEffect(index) {
+        if (index == last) return@LaunchedEffect
+        dir = if (index > last) 1 else -1
+        progress.snapTo(0f)
+        last = index
+        progress.animateTo(1f, tween(450, easing = CubicBezierEasing(.2f, .8f, .2f, 1f)))
+    }
+    return graphicsLayer {
+        // Until the effect starts, the new story waits off to its side rather than flashing in place.
+        val waiting = index != last
+        val p = if (waiting) 0f else progress.value
+        val d = if (waiting) (if (index > last) 1 else -1) else dir
+        translationX = (1f - p) * .35f * size.width * d
+        alpha = p
+    }
 }

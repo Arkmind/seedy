@@ -2,11 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { back, Link, navigate } from '../../lib/router';
 import { t } from '../../lib/i18n';
 import { useTitle } from '../../lib/title';
-import { BrandMark } from '../../ui/navbar/Header';
+import { Brand } from '../../ui/navbar/Header';
 import { MeduState } from '../../ui/medu';
 import { toast } from '../../ui/overlay';
-import { useStore } from '../../lib/store';
-import { brandingStore } from '../../lib/app-state';
 import { getWrapped, getWrappedStatus, storiesOf, type StoryKey, type Wrapped as WrappedData } from './api';
 import { Story, SummaryCard } from './stories';
 import { picture, savePicture, sharePicture } from './share';
@@ -87,8 +85,9 @@ function Viewer({ w }: { w: WrappedData }) {
   const [held, setHeld] = useState(false);
   const [busy, setBusy] = useState(false);
   const [run, setRun] = useState(0);
+  // Which way the last move went, for the slide between stories: 1 on, -1 back, 0 none.
+  const [dir, setDir] = useState(0);
   const vp = useViewport();
-  const brand = useStore(brandingStore).name || 'Seedy';
   const storyEl = useRef<HTMLDivElement>(null);
   const cardEl = useRef<HTMLElement | null>(null);
   const holdTimer = useRef(0);
@@ -100,16 +99,22 @@ function Viewer({ w }: { w: WrappedData }) {
     ? Math.max(0.45, Math.min(0.88, (vp.h - 157) / STORY_H, (vp.w - 280) / 1010))
     : Math.min(vp.w / 390, vp.h / 700);
   const side = scale * (0.7 / 0.88);
+  // From the middle of the current story to the middle of a neighbour: half of each, the arrow and the gaps.
+  const shift = (390 * scale) / 2 + 26 + 56 + 26 + (390 * side) / 2;
   const height = wide ? STORY_H : Math.round(vp.h / scale);
 
   const go = (to: number) => {
     if (to < 0 || to >= total) return;
+    setDir(to > index ? 1 : to < index ? -1 : 0);
     setIndex(to);
     setPaused(false);
     setRun((r) => r + 1);
   };
   const next = () => go(index + 1);
-  const prev = () => (index > 0 ? go(index - 1) : setRun((r) => r + 1));
+  const prev = () => {
+    if (index > 0) go(index - 1);
+    else { setDir(0); setRun((r) => r + 1); }
+  };
   const close = () => back('/');
 
   useEffect(() => {
@@ -181,7 +186,12 @@ function Viewer({ w }: { w: WrappedData }) {
   const storyProps = (key: StoryKey, i: number) => ({ w, story: key, index: i, total, height });
 
   const current = (
-    <div class="wr-frame is-current" ref={storyEl} style={`width: ${390 * scale}px; height: ${height * scale}px`}>
+    <div
+      key={`c${index}-${run}`}
+      class={'wr-frame is-current' + (dir > 0 ? ' from-next' : dir < 0 ? ' from-prev' : '')}
+      ref={storyEl}
+      style={`width: ${390 * scale}px; height: ${height * scale}px`}
+    >
       <div class="wr-scale" style={`width: 390px; height: ${height}px; transform: scale(${scale})`}>
         <Story
           key={`${index}-${run}`}
@@ -221,9 +231,12 @@ function Viewer({ w }: { w: WrappedData }) {
     );
   }
 
+  // The neighbours slide with the move: after going on, the left one is the story that was just in the middle and the
+  // right one comes in from further right (mirrored going back).
   const neighbour = (i: number) => (
     <div
-      class={'wr-frame is-side' + (i < 0 || i >= total ? ' is-blank' : '')}
+      key={`s${i}`}
+      class={'wr-frame is-side' + (i < 0 || i >= total ? ' is-blank' : '') + (dir === 0 ? '' : (i < index) === (dir > 0) ? ' was-current' : ' from-far')}
       style={`width: ${390 * side}px; height: ${STORY_H * side}px`}
       onClick={() => go(i)}
       aria-hidden="true"
@@ -241,7 +254,7 @@ function Viewer({ w }: { w: WrappedData }) {
       <div aria-hidden="true" class="glow" style="position: absolute; left: calc(50% - 340px); top: -120px; width: 680px; height: 680px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 159, 255, 0.32), rgba(255, 159, 255, 0))" />
       <div aria-hidden="true" class="glow" style="position: absolute; left: calc(50% - 100px); top: 420px; width: 620px; height: 620px; border-radius: 50%; background: radial-gradient(closest-side, rgba(205, 180, 255, 0.22), rgba(205, 180, 255, 0)); animation-delay: -2s" />
       <header class="wr-head">
-        <Link to="/" class="wr-home"><BrandMark size={32} /><span class="wr-home-name">{brand}</span></Link>
+        <Brand />
         <span aria-hidden="true" class="wr-head-rule" />
         <span class="wr-head-title">{t('Wrapped')} <span>{w.year}</span></span>
         <span style="flex: 1" />
@@ -251,7 +264,7 @@ function Viewer({ w }: { w: WrappedData }) {
         </button>
         <Link to="/" class="wr-head-back">{t('Back to Seedy')}</Link>
       </header>
-      <main class="wr-stage" aria-label={title}>
+      <main class={'wr-stage' + (dir < 0 ? ' is-back' : '')} aria-label={title} style={`--wr-shift: ${Math.round(shift)}px; --wr-small: ${(side / scale).toFixed(4)}; --wr-big: ${(scale / side).toFixed(4)}`}>
         {neighbour(index - 1)}
         <button type="button" class="wr-arrow" aria-label={t('Previous story')} onClick={prev} disabled={index === 0}>
           <svg viewBox="0 0 24 24" width="24" height="24" style="fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>

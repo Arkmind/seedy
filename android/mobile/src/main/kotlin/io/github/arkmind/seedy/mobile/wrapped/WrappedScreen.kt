@@ -68,6 +68,7 @@ import io.github.arkmind.seedy.ui.wrapped.Segments
 import io.github.arkmind.seedy.ui.wrapped.WrappedIcons
 import io.github.arkmind.seedy.ui.wrapped.loopSeconds
 import io.github.arkmind.seedy.ui.wrapped.rememberStoryPlayer
+import io.github.arkmind.seedy.ui.wrapped.storySlide
 import io.github.arkmind.seedy.ui.wrapped.storyBackdrop
 import io.github.arkmind.seedy.ui.wrapped.storyLook
 import io.github.arkmind.seedy.ui.wrapped.storyTime
@@ -115,7 +116,7 @@ fun WrappedScreen(
     StoryBars(pale = !look.dark)
 
     Box(
-        Modifier.fillMaxSize().background(look.bg)
+        Modifier.fillMaxSize().background(StoryGap)
             .pointerInput(player) {
                 // A finger down holds the story; a quick tap goes on (back on the left third). A long hold only holds,
                 // and a tap a button took (Let's go, Share…) isn't a tap on the story.
@@ -139,7 +140,7 @@ fun WrappedScreen(
     ) {
         CompositionLocalProvider(LocalStoryTime provides player.storyTime(), LocalStoryLoop provides loop) {
             // What "Share this story" shares: the story with its brand, without the bar and the buttons.
-            Box(Modifier.fillMaxSize().record(storyLayer).background(look.bg)) {
+            Box(Modifier.fillMaxSize().storySlide(player.index).record(storyLayer).background(look.bg)) {
                 look.brush?.let { b -> Box(Modifier.fillMaxSize().background(b)) }
                 BoardCanvas(Modifier.fillMaxSize()) { w, h -> storyBackdrop(story, accent, w, h, loop.loopSeconds(), wrapped.clock?.kind) }
                 Brand(wrapped.year, look, Modifier.padding(start = 14.dp, top = statusTop + 13.dp))
@@ -155,6 +156,9 @@ fun WrappedScreen(
         Toast(message, onMessageShown, Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp + navBottom))
     }
 }
+
+/** What shows behind a story while the next one slides in. */
+private val StoryGap = androidx.compose.ui.graphics.Color(0xFF0E0E0E)
 
 /** Draws the content into [layer] as well, so it can be turned into a picture. */
 internal fun Modifier.record(layer: GraphicsLayer): Modifier = drawWithContent {

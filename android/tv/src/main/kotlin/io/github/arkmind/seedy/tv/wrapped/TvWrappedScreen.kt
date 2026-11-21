@@ -99,6 +99,7 @@ import io.github.arkmind.seedy.ui.components.rememberLoopClock
 import io.github.arkmind.seedy.ui.icons.SIcon
 import io.github.arkmind.seedy.ui.theme.LocalAccent
 import io.github.arkmind.seedy.ui.theme.SText
+import io.github.arkmind.seedy.ui.wrapped.storySlide
 import io.github.arkmind.seedy.ui.wrapped.BoardCanvas
 import io.github.arkmind.seedy.ui.wrapped.ClockDial
 import io.github.arkmind.seedy.ui.wrapped.Heading
@@ -159,7 +160,7 @@ fun TvWrappedScreen(wrapped: Wrapped, onClose: () -> Unit, start: Int = 0, fixed
     LaunchedEffect(Unit) { focus.focusSoon() }
 
     Box(
-        Modifier.fillMaxSize().background(look.bg).focusRequester(focus)
+        Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF0E0E0E)).focusRequester(focus)
             .onKeyEvent { e ->
                 if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when (e.key) {
@@ -179,17 +180,20 @@ fun TvWrappedScreen(wrapped: Wrapped, onClose: () -> Unit, start: Int = 0, fixed
             }
             .focusable(),
     ) {
-        look.brush?.let { b -> Box(Modifier.fillMaxSize().background(b)) }
-        BoardCanvas(Modifier.fillMaxSize(), unit = BackdropScale / 2f) { w, h ->
-            val turn = when (story) {
-                StoryKey.Cover -> Offset(w / 2f, h * .52f)
-                StoryKey.Movie -> Offset(w * .71f, h * .5f)
-                else -> null
+        // The story slides in when it changes; the bar and the key hints stay put.
+        Box(Modifier.fillMaxSize().storySlide(player.index).background(look.bg)) {
+            look.brush?.let { b -> Box(Modifier.fillMaxSize().background(b)) }
+            BoardCanvas(Modifier.fillMaxSize(), unit = BackdropScale / 2f) { w, h ->
+                val turn = when (story) {
+                    StoryKey.Cover -> Offset(w / 2f, h * .52f)
+                    StoryKey.Movie -> Offset(w * .71f, h * .5f)
+                    else -> null
+                }
+                storyBackdrop(story, accent, w, h, loop.loopSeconds(), wrapped.clock?.kind, bubbles = false, bottomShift = 70.7f, focus = turn)
             }
-            storyBackdrop(story, accent, w, h, loop.loopSeconds(), wrapped.clock?.kind, bubbles = false, bottomShift = 70.7f, focus = turn)
-        }
-        CompositionLocalProvider(LocalStoryTime provides player.storyTime(), LocalStoryLoop provides loop) {
-            key(player.index) { TvStory(story, wrapped, look) }
+            CompositionLocalProvider(LocalStoryTime provides player.storyTime(), LocalStoryLoop provides loop) {
+                key(player.index) { TvStory(story, wrapped, look) }
+            }
         }
         Header(wrapped.year, player, story, look)
     }

@@ -5,7 +5,8 @@
 .wr-story button { font-family: inherit; }
 .wr-story h1, .wr-story h2, .wr-story p, .wr-story ol, .wr-story ul { margin: 0; }
 
-/* Board motion: things come in when a story opens. */
+/* Board motion: things come in when a story opens. The odometer keeps room either side for glyphs that overhang
+   its tight tracking (the last digit was clipped). */
 .wr-story .in{animation:wr-in .7s cubic-bezier(.2,.8,.2,1) both}
 @keyframes wr-in{from{opacity:0;transform:translateY(26px)}}
 .wr-story .pop{animation:wr-pop .8s cubic-bezier(.2,.9,.25,1.3) both}
@@ -14,7 +15,7 @@
 @keyframes wr-grow{from{transform:scaleX(0)}}
 .wr-story .seg-now{transform-origin:0 50%;animation:wr-seg 8s linear both}
 @keyframes wr-seg{from{transform:scaleX(0)}}
-.wr-story .odo{display:inline-flex;height:1em;line-height:1em;overflow:hidden;vertical-align:top;-webkit-mask:linear-gradient(transparent,#000 9%,#000 91%,transparent);mask:linear-gradient(transparent,#000 9%,#000 91%,transparent)}
+.wr-story .odo{display:inline-flex;height:1em;line-height:1em;overflow:hidden;vertical-align:top;padding:0 .12em;margin:0 -.12em;-webkit-mask:linear-gradient(transparent,#000 9%,#000 91%,transparent);mask:linear-gradient(transparent,#000 9%,#000 91%,transparent)}
 .wr-story .odo>span{display:flex;flex-direction:column;animation:wr-odo 1.8s cubic-bezier(.15,.85,.2,1) both}
 .wr-story .odo>span>span{height:1em}
 @keyframes wr-odo{from{transform:translateY(0)}}
@@ -52,9 +53,8 @@
 /* ── Viewer (/wrapped/:year) ── */
 .wr-page { position: fixed; inset: 0; overflow: hidden; background: #0a0a0a; color: #e0e0e0; font-family: var(--font); }
 .wr-page .glow{animation:wr-glow 4s ease-in-out infinite}
-.wr-head { position: absolute; z-index: 3; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 14px; padding: 22px 32px; }
-.wr-home { display: flex; align-items: center; gap: 9px; color: #ffffff; text-decoration: none; }
-.wr-home-name { font-weight: 900; font-size: 20px; }
+/* Lined up with the app's navbar (.site-header): the brand stays put when Wrapped opens. */
+.wr-head { position: absolute; z-index: 3; top: 0; left: 0; right: 0; height: 88px; box-sizing: border-box; display: flex; align-items: center; gap: 14px; padding: 20px var(--gutter); }
 .wr-head-rule { width: 1px; height: 22px; background: #333333; }
 .wr-head-title { font-size: 16px; font-weight: 800; color: #ffffff; }
 .wr-head-title span { color: var(--seedy-accent); }
@@ -75,6 +75,32 @@
 .wr-keys { position: absolute; left: 0; right: 0; bottom: 18px; display: flex; justify-content: center; gap: 18px; font-size: 12px; color: #8c8c8c; }
 .wr-keys > span { display: flex; align-items: center; gap: 6px; }
 .wr-keys kbd { padding: 2px 7px; border-radius: 6px; box-shadow: inset 0 0 0 1.5px #444444; font: inherit; font-weight: 800; color: #c8c8c8; }
+
+/* Moving between stories: the stories slide one place along (board order), neighbours included. */
+.wr-stage { --wr-ease: cubic-bezier(.2, .8, .2, 1); }
+/* The stories pass over the arrows while they slide. */
+.wr-arrow { position: relative; z-index: 1; }
+.wr-frame.is-current, .wr-frame.is-side.was-current { z-index: 2; }
+.wr-frame.is-current.from-next { animation: wr-cur-next .55s var(--wr-ease) both; }
+.wr-frame.is-current.from-prev { animation: wr-cur-prev .55s var(--wr-ease) both; }
+@keyframes wr-cur-next { from { transform: translateX(var(--wr-shift)) scale(var(--wr-small)); opacity: .38; } }
+@keyframes wr-cur-prev { from { transform: translateX(calc(-1 * var(--wr-shift))) scale(var(--wr-small)); opacity: .38; } }
+.wr-frame.is-side.was-current { animation: wr-side-was .55s var(--wr-ease) both; }
+.wr-stage.is-back .wr-frame.is-side.was-current { animation-name: wr-side-was-back; }
+@keyframes wr-side-was { from { transform: translateX(var(--wr-shift)) scale(var(--wr-big)); opacity: 1; } }
+@keyframes wr-side-was-back { from { transform: translateX(calc(-1 * var(--wr-shift))) scale(var(--wr-big)); opacity: 1; } }
+.wr-frame.is-side.from-far { animation: wr-side-far .55s var(--wr-ease) both; }
+.wr-stage.is-back .wr-frame.is-side.from-far { animation-name: wr-side-far-back; }
+@keyframes wr-side-far { from { transform: translateX(var(--wr-shift)); opacity: 0; } }
+@keyframes wr-side-far-back { from { transform: translateX(calc(-1 * var(--wr-shift))); opacity: 0; } }
+/* Phones: the next story slides in over the screen. */
+.wr-page.is-full .wr-frame.is-current.from-next { animation-name: wr-full-next; animation-duration: .45s; }
+.wr-page.is-full .wr-frame.is-current.from-prev { animation-name: wr-full-prev; animation-duration: .45s; }
+@keyframes wr-full-next { from { transform: translateX(35%); opacity: 0; } }
+@keyframes wr-full-prev { from { transform: translateX(-35%); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .wr-frame.is-current, .wr-frame.is-side { animation: none !important; }
+}
 
 /* Tap zones over the current story: back on the left third, on everywhere else. */
 .wr-tap { position: absolute; z-index: 4; border: 0; padding: 0; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }

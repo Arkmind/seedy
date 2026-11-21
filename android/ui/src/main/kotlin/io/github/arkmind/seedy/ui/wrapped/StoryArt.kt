@@ -412,7 +412,8 @@ fun Odometer(text: String, size: TextUnit, color: Color, modifier: Modifier = Mo
     val whole = remember(text, style, density) { measurer.measure(text, style, maxLines = 1, softWrap = false) }
     val glyphs = remember(style, density) { (0..9).map { measurer.measure(it.toString(), style.copy(letterSpacing = TextUnit.Unspecified)) } }
     val em = with(density) { size.toPx() }
-    val widthDp = with(density) { whole.size.width.toDp() }
+    // Room on the right for the last glyph, which overhangs its box under tight tracking (it was clipped).
+    val widthDp = with(density) { (whole.size.width + em * .12f).toDp() }
     val heightDp = with(density) { size.toDp() }
     Canvas(modifier.size(widthDp, heightDp).graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }) {
         // The line box is one em: the glyphs sit centred in it as CSS centres them in a short line.
