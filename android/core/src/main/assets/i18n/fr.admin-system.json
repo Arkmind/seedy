@@ -13,7 +13,7 @@
  "Makes the weekly backup set in Backups and removes old ones": "Fait la sauvegarde hebdomadaire réglée dans Sauvegardes et supprime les anciennes",
  "Movies and shows": "Films et séries",
  "Notifications": "Notifications",
- "Opens in Jellyfin’s web app": "S’ouvre dans l’appli web de Jellyfin",
+ "Opens Seedy in your browser": "Ouvre Seedy dans votre navigateur",
  "Seedy: trim play log": "Seedy : élaguer le journal de lecture",
  "Seedy: weekly backup": "Seedy : sauvegarde hebdomadaire",
  "Sign-ins, playback, changes and server events.": "Connexions, lectures, modifications et événements du serveur.",

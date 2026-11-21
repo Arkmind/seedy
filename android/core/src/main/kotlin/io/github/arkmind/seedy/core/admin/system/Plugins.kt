@@ -317,8 +317,8 @@ class PluginsViewModel(private val session: UserSession) : ViewModel(), PluginsA
         }
     }
 
-    private fun configUrl(page: ConfigPage): String =
-        session.api.serverBase + "/web/#/configurationpage?name=" + URLEncoder.encode(page.name, "UTF-8").replace("+", "%20")
+    /* The plugin's page inside Seedy's web admin; /seedy/… also works where Seedy replaced Jellyfin's app (it redirects). */
+    private fun settingsUrl(p: PluginInfo): String = session.api.serverBase + "/seedy/admin/plugins/" + normId(p.id)
 
     private fun row(v: PluginView): PluginRow {
         val p = v.plugin
@@ -331,7 +331,7 @@ class PluginsViewModel(private val session: UserSession) : ViewModel(), PluginsA
         val canToggle = !v.self && p.status != "Deleted"
         val off = p.status == "Disabled"
         val canUninstall = !v.self && p.canUninstall && p.status != "Deleted"
-        val settings = v.page?.takeIf { !v.self }?.let(::configUrl)
+        val settings = v.page?.takeIf { !v.self }?.let { settingsUrl(p) }
         val menu = buildList {
             if (v.update != null) add(PluginMenuItem("update", t("Update to {version}", "version" to shortVersion(v.update.version)), t("Restart the server to finish.")))
             if (v.self) {
@@ -339,7 +339,7 @@ class PluginsViewModel(private val session: UserSession) : ViewModel(), PluginsA
                 add(PluginMenuItem("none", t("Can’t be disabled here"), t("Seedy is the app you’re using"), enabled = false))
             }
             if (canToggle) add(if (off) PluginMenuItem("enable", t("Enable"), t("Loads after a restart")) else PluginMenuItem("disable", t("Disable"), t("Unloads after a restart")))
-            if (settings != null) add(PluginMenuItem("settings", t("Open settings"), t("Opens in Jellyfin’s web app")))
+            if (settings != null) add(PluginMenuItem("settings", t("Open settings"), t("Opens Seedy in your browser")))
             if (canUninstall) add(PluginMenuItem("uninstall", t("Uninstall"), danger = true))
             if (!canUninstall && !v.self && v.builtIn) add(PluginMenuItem("none", t("Comes with Jellyfin"), t("Built-in plugins can’t be uninstalled"), enabled = false))
         }

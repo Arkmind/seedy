@@ -133,6 +133,7 @@ const ROUTES: Route[] = [
   { pattern: '/admin/devices', render: () => <Admin render={(m) => <m.ServerDevices />} />, admin: true },
   { pattern: '/admin/activity', render: () => <Admin render={(m) => <m.ServerActivity />} />, admin: true },
   { pattern: '/admin/plugins', render: () => <Admin render={(m) => <m.ServerPlugins />} />, admin: true },
+  { pattern: '/admin/plugins/:id', render: (p) => <Admin render={(m) => <m.ServerPluginSettings id={p.id} />} />, admin: true },
   { pattern: '/admin/tasks', render: () => <Admin render={(m) => <m.ServerTasks />} />, admin: true },
   { pattern: '/admin/backups', render: () => <Admin render={(m) => <m.ServerBackups />} />, admin: true },
   { pattern: '/admin/logs', render: () => <Admin render={(m) => <m.ServerLogs />} />, admin: true },

@@ -5,7 +5,7 @@ import { t, tn } from '../../lib/i18n';
 import { Icon } from '../../ui/icons';
 import { MenuButton, MenuItem, confirm, toast } from '../../ui/overlay';
 import { AdminLayout } from '../admin/AdminLayout';
-import { configPageUrl, disablePlugin, enablePlugin, getPluginManifest, installPackage, reasonText, uninstallPlugin } from './api';
+import { disablePlugin, enablePlugin, getPluginManifest, installPackage, normId, type PluginInfo, reasonText, uninstallPlugin } from './api';
 import { majorMinor } from './format';
 import { catalogStore, describe, initials, installedStore, loadCatalog, loadInstalled, needsRestart, type PluginView, sourceLabel, statusOf, versionLabel } from './plugins';
 import { ListEmpty, ListError, ListSkeleton } from './advanced-parts';
@@ -126,7 +126,7 @@ export function ServerPlugins() {
       {view === 'installed' && (
         <>
           <InstalledList rows={rows} server={server} busy={busy} onUpdate={(v) => void update(v).then((ok) => { if (ok) void loadInstalled(); })} setBusy={setRowBusy} />
-          <p class="adv-foot">{t("A plugin's own settings page comes from the plugin itself and opens in Jellyfin's web app.")}</p>
+          <p class="adv-foot">{t('Settings pages come from the plugins themselves, so some look a little different.')}</p>
         </>
       )}
       {view === 'catalog' && <PluginCatalog server={server} />}
@@ -150,6 +150,7 @@ function InstalledList({ rows, server, busy, onUpdate, setBusy }: {
 }
 
 const abiCache = new Map<string, string>();
+const settingsPath = (p: PluginInfo) => '/admin/plugins/' + normId(p.Id);
 
 function PluginRow({ v, server, busy, onUpdate, setBusy }: {
   v: PluginView; server: string; busy?: string; onUpdate: (v: PluginView) => void; setBusy: (id: string, label?: string) => void;
@@ -228,9 +229,9 @@ function PluginRow({ v, server, busy, onUpdate, setBusy }: {
           </button>
         )}
         {v.page && !v.self && (
-          <a class="btn btn-secondary is-sm" href={configPageUrl(v.page.Name)} target="_blank" rel="noreferrer" aria-label={t('{plugin} settings (opens Jellyfin’s web app)', { plugin: p.Name })}>
+          <Link class="btn btn-secondary is-sm" to={settingsPath(p)} aria-label={t('{plugin} settings', { plugin: p.Name })}>
             {t('Settings')}
-          </a>
+          </Link>
         )}
         <MenuButton
           width={240}
@@ -256,7 +257,7 @@ function PluginRow({ v, server, busy, onUpdate, setBusy }: {
               {canToggle && (isOff
                 ? <MenuItem label={t('Enable')} sub={t('Loads after a restart')} onSelect={() => { close(); void toggle(true); }} />
                 : <MenuItem label={t('Disable')} sub={t('Unloads after a restart')} onSelect={() => { close(); void toggle(false); }} />)}
-              {v.page && !v.self && <MenuItem label={t('Open settings')} trailing={<Icon name="external" size={16} />} href={configPageUrl(v.page.Name)} />}
+              {v.page && !v.self && <MenuItem label={t('Open settings')} onSelect={() => { close(); navigate(settingsPath(p)); }} />}
               {canUninstall && <div class="menu-sep" />}
               {canUninstall && <MenuItem label={t('Uninstall')} danger onSelect={() => { close(); void uninstall(); }} />}
               {!canUninstall && !v.self && v.builtIn && <MenuItem label={t('Comes with Jellyfin')} sub={t('Built-in plugins can’t be uninstalled')} disabled />}

@@ -796,7 +796,7 @@ export const uninstallPlugin = (p: PluginInfo) => del<void>(`/Plugins/${p.Id}/${
 export const installPackage = (name: string, guid: string, version: string, repositoryUrl: string) =>
   post<void>(`/Packages/Installed/${encodeURIComponent(name)}`, undefined, { assemblyGuid: guid, version, repositoryUrl });
 
-/* A plugin's own settings page is Jellyfin web-app HTML, so it opens there. */
+/* A plugin's page in Jellyfin's web app: the way out when it doesn't work inside Seedy (PluginSettings.tsx). */
 export const configPageUrl = (name: string) => JELLYFIN_WEB + '#/configurationpage?name=' + encodeURIComponent(name);
 
 /* ── Scheduled tasks ── */
