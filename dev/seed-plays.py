@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Fills the test server's play log with about two months of made-up plays so the admin Statistics pages have something to
 show: every profile, evenings busier than mornings, weekends busier than weekdays, shows, movies, songs, audiobooks, books
-and Live TV, on a few named devices, some of them transcoded. Run it after installing a Seedy build that has Statistics
+and Live TV, on a few named devices, some of them transcoded, plus intro skips and "Still watching?" answers for Wrapped
+(DAYS=330 covers the whole year). Run it after installing a Seedy build that has Statistics
 (the play log needs its newer columns). Safe to run again: it replaces the plays it added before and leaves real ones alone.
 Prints nothing secret."""
 import json, os, random, sqlite3, sys, urllib.parse, urllib.request, urllib.error, uuid
@@ -96,9 +97,12 @@ for n, u in enumerate(users):
     weight = 0 if n == len(users) - 1 and len(users) > 2 else [1.0, 0.7, 0.5, 0.35, 0.25][min(n, 4)]
     taste = random.choice([{'show': 5, 'movie': 3, 'music': 2, 'livetv': 1, 'book': 1}, {'show': 3, 'movie': 4, 'music': 3, 'book': 2}, {'show': 6, 'movie': 2, 'livetv': 2}])
     profiles.append((u, devs, weight, taste))
+# Everyone has a favourite movie they put on again now and then (Wrapped's "the one you couldn't let go").
+favourites = {u['Id']: random.choice(movies) for u, *_ in profiles} if movies else {}
 
 REASONS = ['VideoCodecNotSupported', 'VideoCodecNotSupported', 'VideoCodecNotSupported, AudioCodecNotSupported', 'ContainerBitrateExceedsLimit', 'SubtitleCodecNotSupported', 'AudioCodecNotSupported']
 rows = []
+moments = []
 now = datetime.now(timezone.utc)
 ms = lambda d: int(d.timestamp() * 1000)
 
@@ -138,17 +142,24 @@ for back in range(DAYS, -1, -1):
             reasons = random.choice(REASONS) if method == 'Transcode' else None
             if kind == 'show' and episodes:
                 ep = random.choice(episodes)
-                for k in range(random.choice([1, 1, 2, 3])):
+                # Mostly one to three episodes; now and then a whole evening of them (Wrapped's biggest binge).
+                run_of = random.choices([1, 2, 3, 6, 9], weights=[40, 30, 20, 4, 1])[0]
+                for k in range(run_of):
                     e = episodes[(episodes.index(ep) + k) % len(episodes)]
                     run = random.choice([24, 42, 52]) * 60 * 10_000_000  # the test files are short clips: pretend a real length
                     full = random.random() < 0.8
                     watched = run / 10_000_000 * (1 if full else random.uniform(0.2, 0.8))
                     vcodec = 'hevc' if method == 'ClientDecode' or (method == 'Transcode' and 'Video' in (reasons or '')) else 'h264'
+                    if random.random() < 0.6:
+                        moments.append((user['Id'].replace('-', ''), 'introSkipped', e['Id'], random.randint(40, 95) * 1000, ms(start) + 90_000))
+                    if k == 3:
+                        moments.append((user['Id'].replace('-', ''), 'stillAsked', e['Id'], 0, ms(start)))
+                        moments.append((user['Id'].replace('-', ''), 'stillYes', e['Id'], 0, ms(start) + 20_000))
                     start = add(user, e, 'show', start, watched, dev, e.get('SeriesId') or e['Id'], e.get('SeriesName') or e['Name'], 'Episode', run,
                                 int(run * (1 if full else watched * 10_000_000 / run)), full, lib(e), method, reasons,
                                 random.choice([4, 8, 12, 20]) * 1_000_000, vcodec, 'pgssub' if 'Subtitle' in (reasons or '') else None) + timedelta(minutes=random.randint(1, 6))
             elif kind == 'movie' and movies:
-                m = random.choice(movies)
+                m = favourites[user['Id']] if random.random() < 0.08 else random.choice(movies)
                 run = random.randint(85, 140) * 60 * 10_000_000
                 full = random.random() < 0.7
                 watched = run / 10_000_000 * (1 if full else random.uniform(0.15, 0.7))
@@ -177,4 +188,8 @@ cols = 'id, user_id, item_id, title_id, item_type, title_name, item_name, starte
 with db:
     gone = db.execute(f"DELETE FROM plays WHERE play_session_id LIKE '{TAG}-%'").rowcount
     db.executemany(f'INSERT INTO plays ({cols}) VALUES ({", ".join("?" * 23)})', rows)
-print(f'replaced {gone} seeded plays with {len(rows)} over the last {DAYS} days')
+    if db.execute("SELECT 1 FROM sqlite_master WHERE name = 'moments'").fetchone():
+        # Intro skips and "Still watching?" answers for Wrapped; the test server has no real ones worth keeping.
+        db.execute('DELETE FROM moments')
+        db.executemany('INSERT INTO moments (user_id, kind, item_id, value, at) VALUES (?, ?, ?, ?, ?)', moments)
+print(f'replaced {gone} seeded plays with {len(rows)} over the last {DAYS} days, and {len(moments)} player moments')

@@ -284,6 +284,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                                         TvHomeScreen(
                                             state, onOpen = nav::open, onPlay = nav::play, onSeerr = { nav.openSeerr(it.mediaType, it.tmdbId, it.jellyfinItemId) },
                                             onFinish = home::finishWatching,
+                                            onWrapped = { nav.go(TvRoute.Wrapped(it)) },
                                         )
                                     }
                                     TvPlace.Search -> TvSearchPlace()
@@ -309,6 +310,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                     entry<TvRoute.Player> { TvPlayerRoute(it.id, it.startTicks) }
                     entry<TvRoute.Settings> { TvSettingsRoute(appVersion, onPlace = { place = it; nav.back() }) }
                     entry<TvRoute.SeerrTitle> { TvSeerrTitleRoute(it.mediaType, it.tmdbId) }
+                    entry<TvRoute.Wrapped> { io.github.arkmind.seedy.tv.wrapped.TvWrappedRoute(it.year) }
                 },
             )
             // Board "Android TV · Update ready": a newer Seedy, offered over the places (never over a page, nor on a return

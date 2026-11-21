@@ -72,6 +72,8 @@ data class SettingsState(
     val passwordChanged: String? = null,
     val devices: Int? = null,
     val openRequests: Int? = null,
+    /** The Seedy Wrapped years the profile can open, newest first (Settings › More › Seedy Wrapped). */
+    val wrappedYears: List<Int> = emptyList(),
     /** Settings › Server, for admins: "seedy-server · 3 playing · 2 plugin updates". */
     val serverSummary: String? = null,
     val saving: Boolean = false,

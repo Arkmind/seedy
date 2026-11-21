@@ -51,6 +51,8 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.MediaSegmentDto
+import io.github.arkmind.seedy.core.wrapped.MomentKind
+import io.github.arkmind.seedy.core.wrapped.Moments
 import org.jellyfin.sdk.model.api.MediaSegmentType
 import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaType
@@ -240,6 +242,7 @@ class PlayerController(private val context: Context, private val session: UserSe
     /** "Still watching?" › Keep watching: on to what it held back, the runs started over. */
     fun keepWatching() {
         val upcoming = _state.value.asked ?: _state.value.next ?: return
+        if (_state.value.ask != null) moment(MomentKind.StillYes)
         touched()
         _state.update { it.copy(ask = null, asked = null) }
         play(upcoming)
@@ -247,6 +250,7 @@ class PlayerController(private val context: Context, private val session: UserSe
 
     /** Leaving now ("I’m done for now", Back to browse): from the credits, this one counts as watched. */
     fun doneForNow() {
+        if (_state.value.ask != null) moment(MomentKind.StillStop)
         if (_state.value.ended || inEndZone()) finishOnRelease = true
     }
 
@@ -525,7 +529,17 @@ class PlayerController(private val context: Context, private val session: UserSe
     fun skip() {
         val seg = _state.value.skip ?: return
         skipped += seg.id
+        introSkipped(seg)
         seekTo(seg.endTicks / 10_000)
+    }
+
+    /** Seedy Wrapped counts the intros skipped (by the button or by themselves) and the time they gave back. */
+    private fun introSkipped(seg: MediaSegmentDto) {
+        if (seg.type == MediaSegmentType.INTRO) moment(MomentKind.IntroSkipped, (seg.endTicks - seg.startTicks) / 10_000)
+    }
+
+    private fun moment(kind: MomentKind, ms: Long? = null) {
+        Moments.record(session, kind, _state.value.item?.id?.toString()?.replace("-", ""), ms)
     }
 
     fun playNext() {
@@ -603,6 +617,7 @@ class PlayerController(private val context: Context, private val session: UserSe
             exo.playWhenReady = false
             endFlow = EndFlow.Dismissed
             _state.update { it.copy(ask = ask, asked = upcoming, endShown = false, pickLeft = null) }
+            moment(MomentKind.StillAsked)
             return
         }
         autoStart = true
@@ -682,6 +697,7 @@ class PlayerController(private val context: Context, private val session: UserSe
         }
         if (seg != null && skipMode(seg.type) == "auto" && seg.id !in skipped) {
             skipped += seg.id
+            introSkipped(seg)
             seekTo(seg.endTicks / 10_000)
             return
         }

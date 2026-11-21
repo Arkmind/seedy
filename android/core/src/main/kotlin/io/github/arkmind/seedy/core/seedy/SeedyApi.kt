@@ -53,6 +53,19 @@ class SeedyApi(private val api: ApiClient) {
         api.delete<Unit>("/Seedy/Home/Continue/{id}", mapOf("id" to id))
     }
 
+    /** Which Wrapped years the person has, and this year's while it's December ([tz]: the device's IANA zone). */
+    suspend fun wrappedStatus(tz: String): io.github.arkmind.seedy.core.wrapped.WrappedStatus =
+        api.get<io.github.arkmind.seedy.core.wrapped.WrappedStatus>("/Seedy/Me/Wrapped", queryParameters = mapOf("tz" to tz)).content
+
+    /** One year's Wrapped. */
+    suspend fun wrapped(year: Int, tz: String): io.github.arkmind.seedy.core.wrapped.Wrapped =
+        api.get<io.github.arkmind.seedy.core.wrapped.Wrapped>("/Seedy/Me/Wrapped/$year", queryParameters = mapOf("tz" to tz)).content
+
+    /** A player moment Wrapped counts (see core/wrapped/Wrapped.kt). */
+    suspend fun moment(kind: String, itemId: String?, ms: Long?) {
+        api.post<Unit>("/Seedy/Me/Moments", requestBody = io.github.arkmind.seedy.core.wrapped.Moment(kind, itemId, ms))
+    }
+
     companion object {
         /**
          * Asks a server whether it runs Seedy: its public client info, or null for plain Jellyfin (404) and for a

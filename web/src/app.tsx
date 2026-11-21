@@ -64,12 +64,18 @@ function lazyModule<M>(load: () => Promise<M>): () => M | null {
 const usePlayer = lazyModule(() => import('./player/Player'));
 const useReader = lazyModule(() => import('./screens/books/reader/Reader'));
 const useAdmin = lazyModule(() => import('./screens/admin-routes'));
+const useWrapped = lazyModule(() => import('./screens/wrapped/Wrapped'));
 
 const Spinner = ({ background }: { background?: string }) => <div class="boot" style={background ? { background } : undefined}><div class="spinner" /></div>;
 
 function LazyPlayer(props: { id: string }) {
   const m = usePlayer();
   return m ? <m.Player {...props} /> : <Spinner background="#000" />;
+}
+
+function LazyWrapped(props: { year?: string }) {
+  const m = useWrapped();
+  return m ? <m.WrappedScreen {...props} /> : <Spinner background="#0a0a0a" />;
 }
 
 function LazyReader(props: { id: string }) {
@@ -100,6 +106,8 @@ const ROUTES: Route[] = [
   { pattern: '/livetv/guide', render: () => <LiveGuide /> },
   { pattern: '/livetv/channels', render: () => <LiveChannels /> },
   { pattern: '/livetv/recordings', render: () => <LiveRecordings /> },
+  { pattern: '/wrapped', render: () => <LazyWrapped /> },
+  { pattern: '/wrapped/:year', render: (p) => <LazyWrapped year={p.year} /> },
   { pattern: '/settings', render: () => <MeProfile /> },
   { pattern: '/settings/devices', render: () => <MeDevices /> },
   { pattern: '/settings/home', render: () => <MeHome /> },

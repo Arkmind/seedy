@@ -99,6 +99,7 @@ import io.github.arkmind.seedy.mobile.signin.SignInFor
 import io.github.arkmind.seedy.mobile.signin.UnreachableScreen
 import io.github.arkmind.seedy.mobile.update.UpdatedNotice
 import io.github.arkmind.seedy.mobile.update.UpdatePrompt
+import io.github.arkmind.seedy.mobile.wrapped.WrappedRoute
 import io.github.arkmind.seedy.player.Network
 import io.github.arkmind.seedy.player.audio.AudioEngine
 import io.github.arkmind.seedy.ui.components.LocalOverlayHost
@@ -323,6 +324,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                                                 onRefresh = vm::refresh,
                                                 onCast = { if (remoteState.controlling) nav.showRemote() else picking = true },
                                                 controlling = remoteState.controlling,
+                                                onWrapped = { nav.go(Route.Wrapped(it)) },
                                             )
                                             if (picking) ControlScreenPicker(onControl = { picking = false; nav.showRemote() }, onDismiss = { picking = false })
                                         }
@@ -362,6 +364,7 @@ private fun SignedIn(core: SeedyCore, session: UserSession, appVersion: String) 
                         entry<Route.MediaRequestsRow> { WithTabBar(tabs, tab, nav, reserve = true) { MediaRowRoute(it.music, it.row) } }
                         entry<Route.Admin> { WithOverlay { AdminRoute(it.page, it.id) } }
                         entry<Route.Remote> { RemoteRoute() }
+                        entry<Route.Wrapped> { WrappedRoute(it.year) }
                     },
                 )
                 asking?.let { r ->

@@ -12,6 +12,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.arkmind.seedy.core.feature.SettingsViewModel
 import io.github.arkmind.seedy.tv.nav.LocalTvNav
+import io.github.arkmind.seedy.tv.nav.TvRoute
 import io.github.arkmind.seedy.tv.shell.TvPlace
 import io.github.arkmind.seedy.tv.shell.TvRail
 import io.github.arkmind.seedy.tv.shell.tvPlaces
@@ -29,13 +30,13 @@ fun TvSettingsRoute(appVersion: String, onPlace: (TvPlace) -> Unit = {}) {
     val nav = LocalTvNav.current
     val vm = viewModel { SettingsViewModel(core, session) }
     val state by vm.state.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { vm.load("profile", "homescreen", "playback", "subtitles") }
+    LaunchedEffect(Unit) { vm.load("profile", "homescreen", "playback", "subtitles", "wrapped") }
     val places = tvPlaces(LocalViewer.current.requests)
     // The page's panels (Ask “Are you still watching?”) are drawn over the rail too.
     val overlay = remember { OverlayHost() }
     Box(Modifier.fillMaxSize()) {
         CompositionLocalProvider(LocalOverlayHost provides overlay) {
-            TvSettingsScreen(state, vm, appVersion, onLeave = nav::back)
+            TvSettingsScreen(state, vm, appVersion, onLeave = nav::back, onWrapped = { state.wrappedYears.firstOrNull()?.let { nav.go(TvRoute.Wrapped(it)) } })
         }
         // The rail's places are the shell's: picking one leaves Settings for it.
         TvRail(places, current = null, onPlace = onPlace, onProfile = vm::switchProfile, onSettings = {}, settingsCurrent = true) // no-op: already on Settings

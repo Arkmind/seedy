@@ -68,6 +68,12 @@ fun tn(n: Int, one: String, other: String, vararg vars: Pair<String, Any?>): Str
     return t(if (form == "one") one else other, "n" to formatNumber(n), *vars)
 }
 
+/** Plural forms for a number that may have decimals: tn(4.2, "{n} day", "{n} days") → "4.2 days". */
+fun tn(n: Double, one: String, other: String, vararg vars: Pair<String, Any?>): String {
+    val form = runCatching { PluralRules.forLocale(I18n.locale).select(n) }.getOrElse { if (n == 1.0) "one" else "other" }
+    return t(if (form == "one") one else other, "n" to formatNumber(n), *vars)
+}
+
 /** A word whose translation depends on where it stands ("Series|tab" is plural in French); [text] when there's none. */
 fun tc(text: String, context: String): String {
     val key = "$text|$context"

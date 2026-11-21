@@ -136,10 +136,19 @@ public sealed partial class Statistics
     // end once it had played what it played, plus room for pauses, so it doesn't stay open all night.
     private static Row ToRow(PlayRecord p)
     {
+        var (watched, end) = Span(p);
+        return new Row(p, KindOf(p.ItemType), watched, p.StartedAt, end);
+    }
+
+    /// <summary>How long a play actually played, and when its stream is taken to have ended.</summary>
+    /// <param name="p">The play.</param>
+    /// <returns>Milliseconds played (pauses left out) and the end (UTC).</returns>
+    internal static (long Watched, DateTime End) Span(PlayRecord p)
+    {
         var watched = Math.Max(0, WatchedOf(p));
         var span = p.StoppedAt is { } stop ? Math.Max(0, (stop - p.StartedAt).TotalMilliseconds) : watched;
         var open = Math.Min(span, watched + Math.Max(PauseRoom.TotalMilliseconds, watched / 2.0));
-        return new Row(p, KindOf(p.ItemType), watched, p.StartedAt, p.StartedAt.AddMilliseconds(open));
+        return (watched, p.StartedAt.AddMilliseconds(open));
     }
 
     private List<Row> Load(DateTime from, DateTime to, StatsQuery? q)
