@@ -205,11 +205,14 @@ public sealed class SeerrService
     private static string TitlePath(string mediaType, int tmdbId) =>
         (mediaType == "tv" ? "/tv/" : "/movie/") + tmdbId.ToString(CultureInfo.InvariantCulture) + "?language=en";
 
-    private Task<JsonNode?> CachedTitle(string mediaType, int tmdbId, CancellationToken ct) => Cached(TitlePath(mediaType, tmdbId), DetailsTtl, ct);
+    /* `changedAt`: when the title last changed in Seerr; a cached answer older than that is fetched again. */
+    private Task<JsonNode?> CachedTitle(string mediaType, int tmdbId, CancellationToken ct, DateTime? changedAt = null) =>
+        Cached(TitlePath(mediaType, tmdbId), DetailsTtl, ct, changedAt);
 
-    private async Task<JsonNode?> Cached(string path, TimeSpan ttl, CancellationToken ct)
+    private async Task<JsonNode?> Cached(string path, TimeSpan ttl, CancellationToken ct, DateTime? changedAt = null)
     {
-        if (_cache.TryGetValue(path, out var hit) && DateTime.UtcNow - hit.At < ttl)
+        var now = DateTime.UtcNow;
+        if (_cache.TryGetValue(path, out var hit) && now - hit.At < ttl && !(changedAt > hit.At && changedAt <= now))
         {
             return hit.Node;
         }
@@ -744,16 +747,24 @@ public sealed class SeerrService
     /// <returns>Requests and the total.</returns>
     public async Task<RequestListDto> RequestListAsync(int me, bool all, string? filter, string? sort, int skip, int take, CancellationToken ct)
     {
-        var f = filter is "pending" or "processing" or "available" or "failed" ? filter : "all";
+        // Seerr's "available" only lists titles that are entirely on the server; a request for one season of a longer
+        // show is done once that season is. So ask for every completed request and keep the ones whose seasons are in.
+        var available = filter == "available";
+        var f = available ? "completed" : filter is "pending" or "processing" or "failed" ? filter : "all";
         var s = sort == "modified" ? "modified" : "added";
         var path = string.Create(CultureInfo.InvariantCulture, $"/request?take={Math.Clamp(take, 1, 100)}&skip={Math.Max(0, skip)}&filter={f}&sort={s}");
         var node = await Api(HttpMethod.Get, all ? path : path + "&requestedBy=" + me.ToString(CultureInfo.InvariantCulture), asUser: me, ct: ct).ConfigureAwait(false);
         var list = (node?["results"]?.AsArray() ?? []).Where(r => r is not null && (all || J.Int(r["requestedBy"]?["id"]) is not { } by || by == me)).ToList();
-        return new RequestListDto
+        var results = await MapRequestsAsync(list, me, ct).ConfigureAwait(false);
+        var total = J.Int(node?["pageInfo"]?["results"]) ?? list.Count;
+        if (available)
         {
-            Results = await MapRequestsAsync(list, me, ct).ConfigureAwait(false),
-            Total = J.Int(node?["pageInfo"]?["results"]) ?? list.Count
-        };
+            var kept = results.Where(r => r.Status == "available").ToList();
+            total -= results.Count - kept.Count;
+            results = kept;
+        }
+
+        return new RequestListDto { Results = results, Total = Math.Max(total, results.Count) };
     }
 
     /// <summary>The Requests page's tabs and counts for the person.</summary>
@@ -1063,7 +1074,8 @@ public sealed class SeerrService
         JsonNode? details = null;
         try
         {
-            details = await CachedTitle(type, tmdb, ct).ConfigureAwait(false);
+            // Seerr moves lastSeasonChange when a season lands, so the seasons' statuses below are never older than that.
+            details = await CachedTitle(type, tmdb, ct, type == "tv" ? J.Date(media?["lastSeasonChange"]) : null).ConfigureAwait(false);
         }
         catch (SeerrException)
         {
@@ -1073,6 +1085,11 @@ public sealed class SeerrService
         var is4k = J.Bool(r["is4k"]);
         var basic = MapResult(details, me, type) ?? new SeerrItemDto { TmdbId = tmdb, MediaType = type, Title = "Unknown title" };
         var mediaStatus = MediaStatus(media, is4k);
+        if (type == "tv")
+        {
+            mediaStatus = RequestedSeasonsStatus(r, details, mediaStatus, is4k);
+        }
+
         var requestStatus = J.Int(r["status"]) switch { 2 => "approved", 3 => "declined", 4 => "failed", 5 => "completed", _ => "pending" };
         var by = r["requestedBy"];
         var request = As<RequestDto>(basic);
@@ -1086,8 +1103,8 @@ public sealed class SeerrService
         request.RequestStatus = requestStatus;
         request.Is4k = is4k;
         request.Seasons = type == "tv" ? (r["seasons"]?.AsArray() ?? []).Select(s => J.Int(s?["seasonNumber"]) ?? 0).Where(n => n > 0).ToList() : null;
-        request.AvailableAt = mediaStatus is "available" or "partial" ? J.Date(media?["mediaAddedAt"]) ?? J.Date(media?["updatedAt"]) : null;
-        request.Download = Download(media?[is4k ? "downloadStatus4k" : "downloadStatus"]);
+        request.AvailableAt = request.Status is "available" or "partial" ? J.Date(media?["mediaAddedAt"]) ?? J.Date(media?["updatedAt"]) : null;
+        request.Download = Download(media?[is4k ? "downloadStatus4k" : "downloadStatus"], request.Seasons);
 
         // Approved and still to come: which requested seasons haven't aired, or when the movie comes out.
         if (requestStatus == "approved" && request.Status is not "available")
@@ -1110,10 +1127,50 @@ public sealed class SeerrService
         return request;
     }
 
-    /* Sonarr/Radarr's queue for a title, as Seerr tracks it: overall progress, and the season when it's just one. */
-    private static RequestDownloadDto? Download(JsonNode? status)
+    /* A series request's own availability: the seasons it asked for, not the whole show (season 1 of a five-season
+       show is ready once season 1 is in). Seerr marks each asked-for season completed when it lands; the title's
+       season statuses cover requests it didn't mark. Nothing of the show on the server: the show's status stands. */
+    private static string? RequestedSeasonsStatus(JsonNode r, JsonNode? details, string? showStatus, bool is4k)
     {
-        var items = (status as JsonArray ?? []).Where(d => d is not null).ToList();
+        var asked = (r["seasons"]?.AsArray() ?? []).Where(s => J.Int(s?["seasonNumber"]) > 0).ToList();
+        if (asked.Count == 0 || showStatus != "partial")
+        {
+            return showStatus;
+        }
+
+        var onServer = new Dictionary<int, int?>();
+        foreach (var s in details?["mediaInfo"]?["seasons"]?.AsArray() ?? [])
+        {
+            if (J.Int(s?["seasonNumber"]) is { } n)
+            {
+                onServer[n] = J.Int(s![is4k ? "status4k" : "status"]);
+            }
+        }
+
+        int ready = 0, some = 0;
+        foreach (var s in asked)
+        {
+            var status = onServer.GetValueOrDefault(J.Int(s!["seasonNumber"])!.Value);
+            if (J.Int(s["status"]) == 5 || status == 5)
+            {
+                ready++;
+            }
+            else if (status == 4)
+            {
+                some++;
+            }
+        }
+
+        return ready == asked.Count ? "available" : ready + some > 0 ? "partial" : "processing";
+    }
+
+    /* Sonarr/Radarr's queue for a title, as Seerr tracks it: overall progress, and the season when it's just one.
+       With `seasons`, only those seasons' downloads count (another request's season isn't this one's progress). */
+    private static RequestDownloadDto? Download(JsonNode? status, IReadOnlyCollection<int>? seasons)
+    {
+        var items = (status as JsonArray ?? [])
+            .Where(d => d is not null && (seasons is not { Count: > 0 } || J.Int(d["episode"]?["seasonNumber"]) is not { } n || seasons.Contains(n)))
+            .ToList();
         if (items.Count == 0)
         {
             return null;
@@ -1126,11 +1183,11 @@ public sealed class SeerrService
             left += J.Double(d["sizeLeft"]) ?? 0;
         }
 
-        var seasons = items.Select(d => J.Int(d!["episode"]?["seasonNumber"])).Distinct().ToList();
+        var queued = items.Select(d => J.Int(d!["episode"]?["seasonNumber"])).Distinct().ToList();
         return new RequestDownloadDto
         {
             Fraction = size > 0 ? Math.Clamp((size - left) / size, 0, 1) : 0,
-            Season = seasons.Count == 1 ? seasons[0] : null
+            Season = queued.Count == 1 ? queued[0] : null
         };
     }
 

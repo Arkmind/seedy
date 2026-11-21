@@ -330,7 +330,8 @@ public sealed class SeerrCrewDto
     [JsonPropertyName("job")] public string Job { get; set; } = string.Empty;
 }
 
-/* One Seerr request: the title, who asked and when, and where it is now. */
+/* One Seerr request: the title, who asked and when, and where it is now. A series request's status is its seasons'
+   (available once the requested seasons are in), not the whole show's. */
 public sealed class RequestDto : SeerrItemDto
 {
     [JsonPropertyName("requestId")] public int RequestId { get; set; }
