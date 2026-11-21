@@ -147,9 +147,25 @@ public sealed class Wrapped
     /// <returns>The year that's out, or null.</returns>
     public int? OpenYear(string userId)
     {
-        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ZoneOf(userId));
+        var now = LocalNow(userId);
         return now.Month == 12 ? now.Year : null;
     }
+
+    private DateTime LocalNow(string userId) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ZoneOf(userId));
+
+    /// <summary>Gets whether a year's Wrapped is out for a profile: a past year, or this one once December has started
+    /// where they are. Before that, only an administrator sees this year's (when one was built early, to preview it).</summary>
+    /// <param name="user">The profile.</param>
+    /// <param name="year">Year.</param>
+    /// <returns>Whether it can be listed and opened.</returns>
+    public bool IsOut(User user, int year)
+    {
+        var now = LocalNow(user.Id.ToString("N"));
+        return year < now.Year || (year == now.Year && now.Month == 12) || (year == now.Year && user.IsAdmin());
+    }
+
+    // Built before 1 December where the profile is: November wasn't over yet, so December builds it again.
+    private bool Stale(string userId, int year, DateTime builtAt) => Local(builtAt, ZoneOf(userId)) < new DateTime(year, 12, 1);
 
     /// <summary>The years a profile can open, and this year's banner while it's December.</summary>
     /// <param name="user">The profile.</param>
@@ -164,7 +180,7 @@ public sealed class Wrapped
             dto.Current = new WrappedTeaserDto { Year = year, WatchMs = current.WatchMs, Stories = current.Stories.Count };
         }
 
-        dto.Years = _db.WrappedYears(uid);
+        dto.Years = _db.WrappedYears(uid).Where(y => IsOut(user, y)).ToList();
         return dto;
     }
 
@@ -176,15 +192,22 @@ public sealed class Wrapped
     public WrappedDto? Get(User user, int year, bool withItems = true)
     {
         var uid = user.Id.ToString("N");
-        WrappedDto? dto = null;
-        if (_db.ReadWrapped(uid, year) is { } stored)
+        if (!IsOut(user, year))
         {
-            dto = JsonSerializer.Deserialize<WrappedDto>(stored.Json, Json);
+            return null;
         }
-        else if (OpenYear(uid) == year && !(_nothing.TryGetValue($"{uid}:{year}", out var tried) && DateTime.UtcNow - tried < TimeSpan.FromHours(6)))
+
+        WrappedDto? dto = null;
+        var stored = _db.ReadWrapped(uid, year);
+        var open = OpenYear(uid) == year;
+        if (stored is { } s && !(open && Stale(uid, year, s.BuiltAt)))
         {
-            // Wrapped is out but the December task hasn't reached this profile yet.
-            if (BuildYear(year, [user], false) == 0)
+            dto = JsonSerializer.Deserialize<WrappedDto>(s.Json, Json);
+        }
+        else if (open && !(_nothing.TryGetValue($"{uid}:{year}", out var tried) && DateTime.UtcNow - tried < TimeSpan.FromHours(6)))
+        {
+            // Wrapped is out but the December task hasn't reached this profile yet (or built it before December).
+            if (BuildYear(year, [user], false) == 0 && stored is null)
             {
                 _nothing[$"{uid}:{year}"] = DateTime.UtcNow;
             }
@@ -211,7 +234,7 @@ public sealed class Wrapped
         {
             var everyone = _users.GetUsers().ToList();
             var targets = (users ?? everyone)
-                .Where(u => replace || _db.ReadWrapped(u.Id.ToString("N"), year) is null)
+                .Where(u => replace || _db.ReadWrapped(u.Id.ToString("N"), year) is not { } had || Stale(u.Id.ToString("N"), year, had.BuiltAt))
                 .ToList();
             if (targets.Count == 0)
             {
