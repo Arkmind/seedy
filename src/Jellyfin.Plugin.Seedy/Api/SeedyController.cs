@@ -223,7 +223,7 @@ public class SeedyController : ControllerBase
         {
             try
             {
-                var accountTask = _seerr.AccountFor(user, ct);
+                var accountTask = _seerr.AccountOrCreateFor(user, ct);
                 var urlTask = _seerr.PublicUrlAsync(ct);
                 var lookup = Task.WhenAll(accountTask, urlTask);
                 if (await Task.WhenAny(lookup, Task.Delay(TimeSpan.FromSeconds(2), ct)).ConfigureAwait(false) == lookup)

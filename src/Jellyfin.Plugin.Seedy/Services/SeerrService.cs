@@ -64,6 +64,12 @@ public sealed class SeerrService
     private (DateTime At, List<SeerrUserDto> Users)? _users;
     private DateTime _unreachableUntil = DateTime.MinValue;
 
+    /* One Seerr account made at a time, so a profile's first calls can't make two. */
+    private static readonly SemaphoreSlim Creating = new(1, 1);
+
+    /* Profiles Seedy couldn't make a Seerr account for, and until when it won't try again. */
+    private readonly ConcurrentDictionary<string, DateTime> _noNewAccount = new(StringComparer.Ordinal);
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SeerrService"/> class.
     /// </summary>
@@ -94,6 +100,7 @@ public sealed class SeerrService
         _cache.Clear();
         _users = null;
         _unreachableUntil = DateTime.MinValue;
+        _noNewAccount.Clear();
         State = new SeerrStateDto { State = IsConfigured ? "error" : "off", Message = IsConfigured ? "Not checked yet" : null };
     }
 
@@ -413,6 +420,119 @@ public sealed class SeerrService
 
         var matched = users.FirstOrDefault(u => u.JellyfinUserId == uid);
         return matched is null ? (null, null) : (matched, "jellyfin");
+    }
+
+    /// <summary>
+    /// Finds the profile's Seerr account and, when it has none, makes one the way Seerr's own Jellyfin sign-in would: only
+    /// when Seerr lets new Jellyfin users in (Settings › Users › "Enable New Jellyfin Sign-In") and the profile may request
+    /// in Seedy. The account gets Seerr's default permissions.
+    /// </summary>
+    /// <param name="user">The profile.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Seerr user and how it was matched.</returns>
+    public async Task<(SeerrUserDto? User, string? MatchedBy)> AccountOrCreateFor(User user, CancellationToken ct)
+    {
+        var found = await AccountFor(user, ct).ConfigureAwait(false);
+        var uid = user.Id.ToString("N");
+        if (found.User is not null || !IsConfigured || user.MaxParentalRatingScore is not null || !CanRequest(user, true)
+            || (_noNewAccount.TryGetValue(uid, out var until) && DateTime.UtcNow < until))
+        {
+            return found;
+        }
+
+        // The app gives Seerr two seconds before it carries on without it: the account still gets made after that.
+        return await CreateAccountAsync(user, uid).WaitAsync(ct).ConfigureAwait(false);
+    }
+
+    private async Task<(SeerrUserDto? User, string? MatchedBy)> CreateAccountAsync(User user, string uid)
+    {
+        if (!await Creating.WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(false))
+        {
+            return (null, null);
+        }
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var ct = cts.Token;
+        try
+        {
+            var users = await UsersAsync(true, ct).ConfigureAwait(false);
+            var existing = users.FirstOrDefault(u => u.JellyfinUserId == uid);
+            if (existing is not null)
+            {
+                return (existing, "jellyfin");
+            }
+
+            var why = await WhyNoNewAccountAsync(uid, users, ct).ConfigureAwait(false);
+            if (why is not null)
+            {
+                _logger.LogInformation("Seedy didn't make a Seerr account for {User}: {Reason}", user.Username, why);
+                _noNewAccount[uid] = DateTime.UtcNow.AddMinutes(10);
+                return (null, null);
+            }
+
+            await Api(HttpMethod.Post, "/user/import-from-jellyfin", new { jellyfinUserIds = new[] { uid } }, ct: ct).ConfigureAwait(false);
+            var made = (await UsersAsync(true, ct).ConfigureAwait(false)).FirstOrDefault(u => u.JellyfinUserId == uid);
+            if (made is null)
+            {
+                _logger.LogWarning("Seerr didn't make an account for {User}", user.Username);
+                _noNewAccount[uid] = DateTime.UtcNow.AddMinutes(10);
+                return (null, null);
+            }
+
+            _logger.LogInformation("Made a Seerr account for {User} (Seerr user {Id})", user.Username, made.Id);
+            return (made, "jellyfin");
+        }
+#pragma warning disable CA1031 // Any Seerr trouble means "no account yet", never a broken page.
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogWarning("Couldn't make a Seerr account for {User}: {Message}", user.Username, ex.Message);
+            _noNewAccount[uid] = DateTime.UtcNow.AddMinutes(2);
+            return (null, null);
+        }
+        finally
+        {
+            Creating.Release();
+        }
+    }
+
+    /* Why Seerr wouldn't let this profile in with its Jellyfin sign-in (the rules of Seerr's POST /auth/jellyfin), or null. */
+    private async Task<string?> WhyNoNewAccountAsync(string uid, List<SeerrUserDto> users, CancellationToken ct)
+    {
+        var main = await Cached("/settings/main", ListTtl, ct).ConfigureAwait(false);
+        if (J.Int(main?["mediaServerType"]) is not (2 or 3))
+        {
+            return "Seerr doesn't use Jellyfin accounts";
+        }
+
+        if (main?["mediaServerLogin"] is JsonValue login && login.TryGetValue<bool>(out var on) && !on)
+        {
+            return "Jellyfin sign-in is off in Seerr";
+        }
+
+        if (!J.Bool(main?["newPlexLogin"]))
+        {
+            return "new Jellyfin sign-ins are off in Seerr";
+        }
+
+        // Seerr imports from the Jellyfin server it's connected to, and names the account after the Jellyfin user.
+        var people = await Api(HttpMethod.Get, "/settings/jellyfin/users", ct: ct).ConfigureAwait(false);
+        var me = people?.AsArray().FirstOrDefault(p => NormalizeId(Str(p?["id"])) == uid);
+        if (me is null)
+        {
+            return "Seerr's Jellyfin server doesn't list this profile";
+        }
+
+        var name = Str(me["username"]);
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "the profile has no name";
+        }
+
+        // Seerr's account email is the Jellyfin name, and two accounts can't share one.
+        return users.Any(u => string.Equals(u.Email, name, StringComparison.OrdinalIgnoreCase))
+            ? $"Seerr already has an account called {name}; link it in Seedy · Requests"
+            : null;
     }
 
     /// <summary>Gets whether a profile may request, given its Seerr account.</summary>
