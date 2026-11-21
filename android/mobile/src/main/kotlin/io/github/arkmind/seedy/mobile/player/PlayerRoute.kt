@@ -58,6 +58,7 @@ import io.github.arkmind.seedy.mobile.nav.LocalMobileNav
 import io.github.arkmind.seedy.mobile.parts.PrimaryButton
 import io.github.arkmind.seedy.player.PlayerViewModel
 import io.github.arkmind.seedy.player.StillWatchingStopMs
+import io.github.arkmind.seedy.ui.components.VideoSpinner
 import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import io.github.arkmind.seedy.ui.theme.currentSession
@@ -225,6 +226,12 @@ fun PlayerRoute(id: UUID, startTicks: Long? = null, maxBitrate: Int? = null) {
             },
         )
 
+        // The picture held up (opening, the stream running dry, reconnecting): the web player's spinner, so a frozen
+        // frame doesn't pass for a pause. Not over the controls' play button, nor over a panel.
+        val controlsUp = controls && !pip && panel == null && state.problem == null && !state.endShown
+        if (state.waiting && !controlsUp && panel == null) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { VideoSpinner(if (pip) 24.dp else 40.dp) }
+        }
         state.problem?.let { problem -> Problem(problem, onBack = { nav.back() }) }
         val item = state.item
         if (state.endShown && item != null && !pip) {

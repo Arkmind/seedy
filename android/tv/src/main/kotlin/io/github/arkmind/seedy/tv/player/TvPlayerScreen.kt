@@ -219,7 +219,7 @@ private fun Controls(state: PlayerState, seekBack: Int, seekForward: Int, action
                             Modifier.size(68.bp).focusRing(focused, radius = 17.bp, gap = 4.bp, ring = 5.bp, gapColor = Color.Black)
                                 .clip(RoundedCornerShape(17.bp)).background(SeedyColors.Inverse),
                             contentAlignment = Alignment.Center,
-                        ) { SIcon(if (state.playing) WebIcons.Pause else WebIcons.Play, size = 28.bp, color = SeedyColors.InkInverse) }
+                        ) { SIcon(if (state.playing || state.wantsPlay) WebIcons.Pause else WebIcons.Play, size = 28.bp, color = SeedyColors.InkInverse) }
                     }
                     if (!state.live) {
                         ToolButton({ actions.onSeekBy(-seekBack * 1000L) }) { ink -> SeekGlyph(back = true, seconds = seekBack, size = 34.bp, color = ink) }
