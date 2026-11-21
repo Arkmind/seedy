@@ -392,15 +392,32 @@ public class SeedyController : ControllerBase
         return c.PlayLogEnabled && c.UseForHistory && ConfigMapper.PlayLogProfile(c, uid).History;
     }
 
-    /// <summary>The person's viewing history, newest first: each movie or episode once, as its latest play left it.</summary>
+    /// <summary>The person's viewing history: each movie or episode once, as its latest play left it.</summary>
     /// <param name="startIndex">Rows to skip.</param>
-    /// <param name="limit">Rows to return.</param>
+    /// <param name="limit">Rows to return (0 = only the total).</param>
     /// <param name="type">all, movies or shows.</param>
     /// <param name="search">Text in the title.</param>
     /// <param name="includeHidden">Include hidden titles.</param>
+    /// <param name="state">finished or inprogress (both when absent).</param>
+    /// <param name="from">Plays from this time on.</param>
+    /// <param name="to">Plays before this time.</param>
+    /// <param name="devices">Devices the plays were on, separated by |.</param>
+    /// <param name="sort">date (when watched, the default) or title.</param>
+    /// <param name="order">asc or desc (newest first for date, A to Z for title).</param>
     /// <returns>History.</returns>
     [HttpGet("Plays")]
-    public ActionResult<HistoryDto> GetPlays([FromQuery] int startIndex = 0, [FromQuery] int limit = 30, [FromQuery] string type = "all", [FromQuery] string? search = null, [FromQuery] bool includeHidden = false)
+    public ActionResult<HistoryDto> GetPlays(
+        [FromQuery] int startIndex = 0,
+        [FromQuery] int limit = 30,
+        [FromQuery] string type = "all",
+        [FromQuery] string? search = null,
+        [FromQuery] bool includeHidden = false,
+        [FromQuery] string? state = null,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        [FromQuery] string? devices = null,
+        [FromQuery] string? sort = null,
+        [FromQuery] string? order = null)
     {
         var user = User.GetUser(_users);
         if (user is null)
@@ -414,13 +431,20 @@ public class SeedyController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new { message = "Viewing history is off for this profile." });
         }
 
-        string[] types = type switch
+        var byTitle = string.Equals(sort, "title", StringComparison.OrdinalIgnoreCase);
+        var query = new HistoryQuery
         {
-            "movies" => ["Movie"],
-            "shows" => ["Episode"],
-            _ => []
+            Types = HistoryTypes(type),
+            Search = search,
+            IncludeHidden = includeHidden,
+            State = state is "finished" or "inprogress" ? state : null,
+            From = from?.ToUniversalTime(),
+            To = to?.ToUniversalTime(),
+            Devices = (devices ?? string.Empty).Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.Ordinal).Take(50).ToList(),
+            Sort = byTitle ? "title" : "date",
+            Ascending = order is null ? byTitle : string.Equals(order, "asc", StringComparison.OrdinalIgnoreCase)
         };
-        var rows = _db.History(uid, types, search, includeHidden, Math.Max(0, startIndex), Math.Clamp(limit, 1, 200), out var total);
+        var rows = _db.History(uid, query, Math.Max(0, startIndex), Math.Clamp(limit, 0, 200), out var total);
 
         var items = new Dictionary<string, BaseItem>(StringComparer.Ordinal);
         foreach (var (play, _) in rows)
@@ -462,6 +486,35 @@ public class SeedyController : ControllerBase
             }).ToList()
         };
     }
+
+    /// <summary>What the history's filters offer: years with plays and the devices played on.</summary>
+    /// <param name="type">all, movies or shows.</param>
+    /// <returns>Years (newest first) and devices (last used first).</returns>
+    [HttpGet("Plays/Filters")]
+    public ActionResult<HistoryOptionsDto> GetPlayFilters([FromQuery] string type = "all")
+    {
+        var user = User.GetUser(_users);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var uid = user.Id.ToString("N");
+        if (!HistoryAllowed(uid))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Viewing history is off for this profile." });
+        }
+
+        var (years, devices) = _db.HistoryOptions(uid, HistoryTypes(type));
+        return new HistoryOptionsDto { Years = years, Devices = devices };
+    }
+
+    private static string[] HistoryTypes(string type) => type switch
+    {
+        "movies" => ["Movie"],
+        "shows" => ["Episode"],
+        _ => []
+    };
 
     /// <summary>Hides or unhides a title from history, recommendations and the Top 10.</summary>
     /// <param name="titleId">Movie or series id.</param>

@@ -278,7 +278,7 @@ const fr: Record<string, string> = {
   'Advanced': 'Avancé',
   'Codec and streaming tweaks for when something won’t play. {n} settings.': 'Réglages de codecs et de streaming, pour quand une vidéo refuse de se lire. {n} paramètres.',
   'Hide': 'Masquer',
-  'Show (verb)': 'Afficher',
+  'Show|verb': 'Afficher',
   'Prefer fMP4 when converting': 'Préférer le fMP4 en conversion',
   'Newer HLS segments; turn off if converted video stutters or won’t start': 'Segments HLS plus récents ; désactivez si la vidéo convertie saccade ou ne démarre pas',
   'Play HEVC directly': 'Lire le HEVC directement',

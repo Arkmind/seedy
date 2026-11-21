@@ -22,7 +22,7 @@ import {
 import { CUSTOM, readCustom } from '../me/prefs';
 import './library.css';
 import { headerHeight } from '../../ui/sticky';
-import { t } from '../../lib/i18n';
+import { t, tc } from '../../lib/i18n';
 import { SelectionBar, useSelection } from './library-select';
 import { manageChanged } from './manage/host';
 import { BooksLibrary } from '../books/BooksLibrary';
@@ -31,6 +31,7 @@ import { PhotosLibrary } from '../photos/PhotosLibrary';
 import { isPhotoLibrary } from '../photos/api';
 import { LibraryMenuItems } from '../../ui/library-menu';
 import { useTitle } from '../../lib/title';
+import { FilterChips, FilterGroup, FilterOption, FiltersButton, SortButton, type FilterChip, type SortOption } from './sort-filter';
 
 /* ───────── Tabs, sorts and filters ───────── */
 
@@ -80,13 +81,13 @@ function playableTypesFor(ct?: string): string[] | undefined {
 
 const SORTS = [
   { id: 'DateCreated', label: 'Date added', fields: ['DateCreated', 'SortName'], order: 'desc' },
-  { id: 'SortName', label: 'Title', fields: ['SortName'], order: 'asc' },
+  { id: 'SortName', label: 'Title', fields: ['SortName'], order: 'asc', asc: 'A to Z', desc: 'Z to A' },
   { id: 'PremiereDate', label: 'Release date', fields: ['PremiereDate', 'ProductionYear', 'SortName'], order: 'desc' },
   { id: 'CommunityRating', label: 'Rating', fields: ['CommunityRating', 'SortName'], order: 'desc' },
-  { id: 'Runtime', label: 'Runtime', fields: ['Runtime', 'SortName'], order: 'asc' },
+  { id: 'Runtime', label: 'Runtime', fields: ['Runtime', 'SortName'], order: 'asc', asc: 'Shortest first', desc: 'Longest first' },
   { id: 'DatePlayed', label: 'Recently played', fields: ['DatePlayed', 'SortName'], order: 'desc' },
-  { id: 'Random', label: 'Random', fields: ['Random'], order: 'asc' }
-] as const;
+  { id: 'Random', label: 'Random', fields: ['Random'], order: 'asc', fixed: true }
+] as const satisfies readonly (SortOption & { fields: readonly string[] })[];
 type SortId = (typeof SORTS)[number]['id'];
 
 const FLAGS = [
@@ -272,7 +273,7 @@ function LibraryView({ view }: { view: BaseItem }) {
     const next: Filters = { ...filters, [kind]: (filters[kind] as (string | number)[]).filter((x) => x !== value) } as Filters;
     setFilters(next);
   };
-  const chips: { key: string; label: string; remove: () => void }[] = [
+  const chips: FilterChip[] = [
     ...filters.flags.map((f) => ({ key: 'f' + f, label: t(FLAGS.find((x) => x.id === f)!.label), remove: () => removeFlag('flags', f) })),
     ...filters.genres.map((g) => ({ key: 'g' + g, label: g, remove: () => removeFlag('genres', g) })),
     ...filters.decades.map((d) => ({ key: 'd' + d, label: t('{decade}s', { decade: d }), remove: () => removeFlag('decades', d) })),
@@ -338,12 +339,8 @@ function LibraryView({ view }: { view: BaseItem }) {
           </nav>
           {isGrid && (
             <div class="lib-tools">
-              <SortButton sort={sort.id} order={order} onChange={(s, o) => setQuery({ sort: s, order: o })} />
-              <button type="button" class="btn btn-secondary lib-filters" aria-haspopup="dialog" onClick={() => setSheet(true)}>
-                <Icon name="filters" size={18} />
-                {t('Filters')}
-                {filterCount(filters) > 0 && <span class="accent-badge" aria-label={t('{n} active', { n: filterCount(filters) })}>{filterCount(filters)}</span>}
-              </button>
+              <SortButton sorts={SORTS} sort={sort.id} order={order} onChange={(s, o) => setQuery({ sort: s, order: o })} />
+              <FiltersButton count={filterCount(filters)} onClick={() => setSheet(true)} />
               <div role="group" aria-label={t('Layout')} class="seg is-icons">
                 <button type="button" class="seg-btn" aria-label={t('Poster grid')} aria-pressed={layout === 'grid' ? 'true' : 'false'} onClick={() => setLayout('grid')}>
                   <Icon name="grid" size={18} />
@@ -356,17 +353,7 @@ function LibraryView({ view }: { view: BaseItem }) {
           )}
         </div>
 
-        {chips.length > 0 && isGrid && (
-          <div class="lib-chips" aria-label={t('Active filters')}>
-            {chips.map((c) => (
-              <span key={c.key} class="fchip">
-                {c.label}
-                <button type="button" aria-label={t('Remove {name} filter', { name: c.label })} onClick={c.remove}><Icon name="close" size={14} stroke={2.6} /></button>
-              </span>
-            ))}
-            <button type="button" class="btn btn-ghost is-sm" onClick={() => setFilters({ flags: [], genres: [], decades: [], ratings: [] })}>{t('Clear all')}</button>
-          </div>
-        )}
+        {isGrid && <FilterChips chips={chips} onClear={() => setFilters({ flags: [], genres: [], decades: [], ratings: [] })} />}
 
         {tab === 'suggestions' ? <Suggestions view={view} />
           : tab === 'genres' ? <GenreTiles view={view} />
@@ -383,40 +370,6 @@ function LibraryView({ view }: { view: BaseItem }) {
         />
       )}
     </div>
-  );
-}
-
-/* ───────── Sort ───────── */
-
-function SortButton({ sort, order, onChange }: { sort: SortId; order: 'asc' | 'desc'; onChange: (s: SortId, o: 'asc' | 'desc') => void }) {
-  const cur = SORTS.find((s) => s.id === sort) ?? SORTS[0];
-  return (
-    <MenuButton
-      width={240}
-      button={({ ref, open, toggle }) => (
-        <button ref={ref} type="button" class="btn btn-secondary lib-sort" aria-haspopup="menu" aria-expanded={open ? 'true' : 'false'} aria-label={order === 'asc' ? t('Sort by {name}, ascending', { name: t(cur.label) }) : t('Sort by {name}, descending', { name: t(cur.label) })} onClick={toggle}>
-          <Icon name="sort" size={18} />
-          <span class="lib-sort-k">{t('Sort')}</span> {t(cur.label)}
-          <Icon name="chevronDown" size={16} stroke={2.2} />
-        </button>
-      )}
-    >
-      {(close) => (
-        <>
-          <span class="menu-label">{t('Sort by')}</span>
-          {SORTS.map((s) => (
-            <MenuItem key={s.id} label={t(s.label)} pressed={s.id === sort} onSelect={() => { close(); onChange(s.id, s.id === sort ? order : s.order); }} />
-          ))}
-          {sort !== 'Random' && (
-            <>
-              <div class="menu-sep" />
-              <MenuItem icon="sortEpisodes" label={t('Ascending')} sub={sort === 'SortName' ? t('A to Z') : sort === 'Runtime' ? t('Shortest first') : t('Oldest or lowest first')} pressed={order === 'asc'} onSelect={() => { close(); onChange(sort, 'asc'); }} />
-              <MenuItem icon="sortEpisodes" label={t('Descending')} sub={sort === 'SortName' ? t('Z to A') : sort === 'Runtime' ? t('Longest first') : t('Newest or highest first')} pressed={order === 'desc'} onSelect={() => { close(); onChange(sort, 'desc'); }} />
-            </>
-          )}
-        </>
-      )}
-    </MenuButton>
   );
 }
 
@@ -600,17 +553,9 @@ function FilterSheet({ view, base, initial, onClose, onApply }: { view: BaseItem
   const ratings = opts.data?.OfficialRatings ?? [];
   const on = (kind: keyof Filters, v: string | number) => (draft[kind] as (string | number)[]).includes(v);
 
-  const group = (label: string, children: ComponentChildren) => (
-    <fieldset class="fgroup">
-      <legend class="menu-label">{label}</legend>
-      <div class="fopts">{children}</div>
-    </fieldset>
-  );
+  const group = (label: string, children: ComponentChildren) => <FilterGroup label={label}>{children}</FilterGroup>;
   const opt = (kind: keyof Filters, value: string | number, label: string) => (
-    <button key={String(value)} type="button" class="fopt" aria-pressed={on(kind, value) ? 'true' : 'false'} onClick={() => toggle(kind, value)}>
-      {on(kind, value) && <Icon name="check" size={14} stroke={2.8} />}
-      {label}
-    </button>
+    <FilterOption key={String(value)} on={on(kind, value)} label={label} onClick={() => toggle(kind, value)} />
   );
 
   return (
@@ -619,7 +564,7 @@ function FilterSheet({ view, base, initial, onClose, onApply }: { view: BaseItem
         <h2 class="sheet-title">{t('Filters')}</h2>
         <button type="button" class="btn icon-btn is-bare is-40" aria-label={t('Close filters')} onClick={onClose}><Icon name="close" size={18} /></button>
       </div>
-      {group(t('Show (verb)'), FLAGS.slice(0, 4).map((f) => opt('flags', f.id, t(f.label))))}
+      {group(tc('Show', 'verb'), FLAGS.slice(0, 4).map((f) => opt('flags', f.id, t(f.label))))}
       {group(t('Quality'), FLAGS.slice(4).map((f) => opt('flags', f.id, t(f.label))))}
       {opts.loading && !opts.data ? (
         <div class="fopts" aria-busy="true">{Array.from({ length: 8 }, (_, i) => <span key={i} class="skel" style={{ width: '90px', height: '36px', borderRadius: '999px' }} />)}</div>
