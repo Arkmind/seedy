@@ -123,6 +123,15 @@ import io.github.arkmind.seedy.ui.wrapped.storyIn
 import io.github.arkmind.seedy.ui.wrapped.storyPop
 import io.github.arkmind.seedy.ui.wrapped.storySay
 import io.github.arkmind.seedy.ui.wrapped.waves
+import io.github.arkmind.seedy.core.wrapped.loverChips
+import io.github.arkmind.seedy.core.wrapped.loverMedu
+import io.github.arkmind.seedy.core.wrapped.loverOther
+import io.github.arkmind.seedy.core.wrapped.loverPct
+import io.github.arkmind.seedy.core.wrapped.loverShows
+import io.github.arkmind.seedy.core.wrapped.loverSplitLabel
+import io.github.arkmind.seedy.core.wrapped.loverTitle
+import io.github.arkmind.seedy.core.wrapped.loverUnit
+import androidx.compose.foundation.layout.fillMaxHeight
 
 /* The phone boards' stories (Wrapped{Intro,Hours,Genres,Shows,Movie,Binge,Night,Personality,Summary}), each in the
    space between the header and the share button, 24 px from the sides. */
@@ -229,6 +238,58 @@ internal fun HoursStory(w: Wrapped) {
         MeduSays(
             MeduMood.Popcorn, 150.dp, 198.dp, t("I made popcorn for every single one of them."), Color.White, Ink,
             meduFirst = false, gap = 26.dp, lift = 120.dp, meduDelay = 1.5f, sayDelay = 1.8f, modifier = Modifier.margin(end = (-14).dp),
+        )
+    }
+}
+
+// ── 3 · Shows or movies? ──
+
+@Composable
+internal fun LoverStory(w: Wrapped) {
+    val shows = loverShows(w)
+    val count = if (shows) w.showsWatched else w.moviesPlayed
+    val pct = loverPct(w)
+    val (otherCount, otherLine) = loverOther(w)
+    val (lead, kind) = loverTitle(w)
+    val (win, lose) = if (shows) t("Shows") to t("Movies") else t("Movies") to t("Shows")
+    Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
+        SText(t("Shows or movies?"), Modifier.storyIn(.1f).padding(top = 16.dp), size = 18.sp, weight = 800, color = Ink)
+        Heading("$lead\n$kind", 40.sp, Ink, Modifier.storyIn(.2f).padding(top = 6.dp), lineHeight = .95f)
+        Row(
+            Modifier.padding(top = 16.dp).semantics(mergeDescendants = true) { contentDescription = "${formatNumber(count)} ${loverUnit(count, shows)}" },
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            // The odometer keeps .12 em spare on its right for an overhanging last digit: the word sits that much closer.
+            Box(Modifier.height(92.dp).margin(end = (-11).dp), contentAlignment = Alignment.BottomStart) { Odometer(formatNumber(count), 92.sp, Ink, tracking = -.06f, delay = .45f) }
+            SText(loverUnit(count, shows), Modifier.storyIn(.9f).padding(bottom = 6.dp), size = 28.sp, weight = 900, color = Ink, lineHeight = 1f, maxLines = 1)
+        }
+        FlowRow(Modifier.storyIn(1f).padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (chip in loverChips(w)) {
+                SText(chip, Modifier.clip(RoundedCornerShape(999.dp)).background(Ink).padding(horizontal = 10.dp, vertical = 6.dp), size = 12.sp, weight = 800, color = Color.White, maxLines = 1)
+            }
+        }
+        Column(Modifier.padding(top = 22.dp).semantics(mergeDescendants = true) { contentDescription = loverSplitLabel(w) }) {
+            Box(Modifier.fillMaxWidth().height(30.dp).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = .55f))) {
+                Box(Modifier.fillMaxWidth(pct / 100f).fillMaxHeight().storyGrow(1.1f).background(Ink), contentAlignment = Alignment.CenterStart) {
+                    SText("${formatNumber(pct)}%", Modifier.padding(start = 12.dp), size = 14.sp, weight = 900, color = Color.White, maxLines = 1)
+                }
+                SText("${formatNumber(100 - pct)}%", Modifier.align(Alignment.CenterEnd).padding(end = 10.dp), size = 14.sp, weight = 900, color = Ink, maxLines = 1)
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                SText(win, size = 12.sp, weight = 800, color = Ink, maxLines = 1)
+                SText(lose, size = 12.sp, weight = 800, color = Ink, maxLines = 1)
+            }
+        }
+        Row(Modifier.storyIn(1.5f).padding(top = 116.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SText(formatNumber(otherCount), size = 52.sp, weight = 900, tracking = -.05f, lineHeight = .9f, color = Ink, maxLines = 1)
+            SText(loverUnit(otherCount, !shows), Modifier.padding(bottom = 2.dp), size = 22.sp, weight = 900, color = Ink, maxLines = 1)
+        }
+        SText(otherLine, Modifier.storyIn(1.6f).padding(top = 4.dp), size = 14.sp, weight = 700, color = Ink.copy(alpha = .75f))
+        Spacer(Modifier.weight(1f))
+        MeduSays(
+            MeduMood.Sad, 74.dp, 98.dp, loverMedu(w), Ink, Color.White,
+            meduFirst = false, gap = 12.dp, lift = 48.dp, meduDelay = 1.8f, sayDelay = 2.1f, modifier = Modifier.margin(end = (-10).dp, bottom = (-6).dp),
         )
     }
 }

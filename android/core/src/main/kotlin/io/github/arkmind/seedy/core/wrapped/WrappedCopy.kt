@@ -53,6 +53,74 @@ fun hourChips(w: Wrapped): List<Chip> {
     return chips
 }
 
+// ── Shows or movies? ──
+
+/** Which side won the year, by time: shows, unless movies took longer. */
+fun loverShows(w: Wrapped): Boolean = w.showMs >= w.movieMs
+
+private fun isOne(n: Int): Boolean =
+    runCatching { android.icu.text.PluralRules.forLocale(I18n.locale).select(n.toDouble()) == "one" }.getOrElse { n == 1 }
+
+/** "shows" or "movies" after a big number, in the number's form. */
+fun loverUnit(n: Int, shows: Boolean): String = tc(if (shows) (if (isOne(n)) "show" else "shows") else (if (isOne(n)) "movie" else "movies"), "unit")
+
+/** "1 h 52" (or "48 min"): a movie's average length. */
+fun averageTime(ms: Double): String {
+    val min = max(1L, round(ms / 60_000.0))
+    val h = min / 60
+    return if (h > 0) t("{h} h {mm}", "h" to formatNumber(h), "mm" to (min % 60).toString().padStart(2, '0')) else t("{m} min", "m" to formatNumber(min))
+}
+
+fun loverTitle(w: Wrapped): Pair<String, String> = t("You’re a") to (if (loverShows(w)) t("TV show lover") else t("movie lover"))
+
+fun loverChips(w: Wrapped): List<String> {
+    val hours = { ms: Long -> tn(hoursOf(ms).toInt(), "{n} hour", "{n} hours") }
+    if (loverShows(w)) {
+        return listOfNotNull(
+            tn(w.episodes, "{n} episode", "{n} episodes"),
+            hours(w.showMs),
+            if (w.showsFinished > 0) tn(w.showsFinished, "{n} show finished", "{n} shows finished") else null,
+        )
+    }
+    return listOfNotNull(
+        hours(w.movieMs),
+        if (w.moviesPlayed > 0) t("{time} on average", "time" to averageTime(w.movieMs.toDouble() / w.moviesPlayed)) else null,
+        // English says "23 rewatched" either way; French agrees with the number (revu, revus).
+        if (w.moviesRewatched > 0) rewatched(w.moviesRewatched) else null,
+    )
+}
+
+private fun rewatched(n: Int): String {
+    val key = "{n} rewatched|" + (if (isOne(n)) "one" else "other")
+    val out = t(key, "n" to formatNumber(n))
+    return if (out.endsWith("|one") || out.endsWith("|other")) t("{n} rewatched", "n" to formatNumber(n)) else out
+}
+
+/** The winner's share of the time, 0–100. */
+fun loverPct(w: Wrapped): Int {
+    val all = w.showMs + w.movieMs
+    return if (all > 0) round((if (loverShows(w)) w.showMs else w.movieMs) * 100.0 / all).toInt() else 100
+}
+
+/** The other side, on the band: its count and what it took. */
+fun loverOther(w: Wrapped): Pair<Int, String> {
+    if (loverShows(w)) {
+        val n = w.moviesPlayed
+        return n to if (n > 0) "${tn(hoursOf(w.movieMs).toInt(), "{n} hour", "{n} hours")} · ${t("{time} on average", "time" to averageTime(w.movieMs.toDouble() / n))}" else t("Not one movie this year.")
+    }
+    val n = w.showsWatched
+    return n to if (n > 0) "${tn(w.episodes, "{n} episode", "{n} episodes")} · ${tn(hoursOf(w.showMs).toInt(), "{n} hour", "{n} hours")}" else t("Not one show this year.")
+}
+
+fun loverMedu(w: Wrapped): String = if (loverShows(w)) t("Movies miss you a little.") else t("Shows miss you a little.")
+
+/** What a screen reader hears for the split bar. */
+fun loverSplitLabel(w: Wrapped): String {
+    val pct = loverPct(w)
+    val (win, lose) = if (loverShows(w)) t("Shows") to t("Movies") else t("Movies") to t("Shows")
+    return t("{a} {pa}%, {b} {pb}% of your hours", "a" to win, "pa" to pct, "b" to lose, "pb" to 100 - pct)
+}
+
 // ── Genres ──
 
 private val GenreNames: Map<String, () -> String> = mapOf(

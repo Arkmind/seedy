@@ -69,10 +69,12 @@ data class StoryLook(val bg: Color, val ink: Color, val brush: Brush? = null) {
     val dark: Boolean get() = ink != WrappedInk
 }
 
-/** What each story looks like (boards Wrapped*); the clock's sky follows the part of the day the peak falls in. */
-fun storyLook(story: StoryKey, accent: Color, clockKind: String? = null): StoryLook = when (story) {
+/** What each story looks like (boards Wrapped*); the clock's sky follows the part of the day the peak falls in, and
+ * Shows or movies? takes the winner's colour ([showsWon]). */
+fun storyLook(story: StoryKey, accent: Color, clockKind: String? = null, showsWon: Boolean = true): StoryLook = when (story) {
     StoryKey.Cover, StoryKey.Summary -> StoryLook(Color(0xFF0E0E0E), Color.White)
     StoryKey.Hours -> StoryLook(accent, WrappedInk)
+    StoryKey.Lover -> StoryLook(if (showsWon) WrappedBlue else WrappedPeach, WrappedInk)
     StoryKey.Genres -> StoryLook(Color(0xFF121212), Color.White)
     StoryKey.Shows -> StoryLook(WrappedGreen, WrappedInk)
     StoryKey.Movie -> StoryLook(WrappedPeach, WrappedInk)
@@ -143,6 +145,7 @@ private fun bubblesOf(xs: List<Float>, sizes: List<Float>) = xs.indices.map { i 
 private val HoursBubbles = bubblesOf(Bubbles1, listOf(12f, 8f, 18f, 14f, 10f, 6f, 16f))
 private val GenresBubbles = bubblesOf(listOf(195f, 256f, 317f, 18f, 79f, 140f, 201f), listOf(16f, 12f, 8f, 18f, 14f, 10f, 6f))
 private val ShowsBubbles = bubblesOf(listOf(306f, 367f, 68f, 129f, 190f), listOf(8f, 18f, 14f, 10f, 6f))
+private val LoverBubbles = bubblesOf(listOf(158f, 219f, 280f, 341f, 42f), listOf(14f, 10f, 6f, 16f, 12f))
 private val BingeBubbles = bubblesOf(listOf(57f, 118f, 179f, 240f, 301f, 362f), listOf(14f, 10f, 6f, 16f, 12f, 8f))
 private val PersonalityBubbles = bubblesOf(listOf(84f, 145f, 206f, 267f, 328f, 29f), listOf(10f, 6f, 16f, 12f, 8f, 18f))
 private val SummaryBubbles = bubblesOf(listOf(232f, 293f, 354f, 55f, 116f, 177f, 238f), listOf(18f, 14f, 10f, 6f, 16f, 12f, 8f))
@@ -170,7 +173,7 @@ private val Stars = (0 until 22).map { i ->
  */
 fun DrawScope.storyBackdrop(
     story: StoryKey, accent: Color, w: Float, h: Float, t: Double?, clockKind: String? = null, bubbles: Boolean = true, bottomShift: Float = 0f,
-    focus: Offset? = null,
+    focus: Offset? = null, showsWon: Boolean = true, topShift: Float = 0f, band: Boolean = true,
 ) {
     val low = h - 844f + bottomShift
     val driftA = { p: Float -> Triple(-18f * p, 14f * p, 4f * p) }
@@ -204,6 +207,19 @@ fun DrawScope.storyBackdrop(
             drift(low, false) { waves(listOf(560f, 622f, 684f, 746f), 26f, 40f, WrappedInk.copy(alpha = .08f)) }
             drift(0f, true) { waves(listOf(120f, 168f), 20f, 22f, Color.White.copy(alpha = .18f)) }
             if (bubbles) translate(0f, low) { bubbles(HoursBubbles, WrappedInk.copy(alpha = .25f), t) }
+        }
+        StoryKey.Lover -> {
+            drift(0f, true) { waves(listOf(170f, 210f), 18f, 18f, Color.White.copy(alpha = .2f)) }
+            // The other side's slanted band, from 548 on the left up to 486 on the right; it follows the content when
+            // the status bar is taller than the board's ([topShift]). The TV draws its own layout ([band] off).
+            if (band) {
+                val left = 548f + topShift
+                val right = 486f + topShift
+                val p = Path().apply { moveTo(0f, left); lineTo(w, right); lineTo(w, h); lineTo(0f, h); close() }
+                drawPath(p, if (showsWon) WrappedPeach else WrappedBlue)
+                drawLine(WrappedInk, Offset(0f, left), Offset(w, right), 4f)
+            }
+            if (bubbles) translate(0f, low) { bubbles(LoverBubbles, WrappedInk.copy(alpha = .2f), t) }
         }
         StoryKey.Genres -> {
             light(w - 280f, -80f, 420f, accent, .18f)

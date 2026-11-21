@@ -386,6 +386,14 @@ public sealed class Wrapped
         // ── Shows ──
         var episodes = video.Where(r => r.Kind == "show").ToList();
         dto.ShowsWatched = episodes.Select(r => r.Play.TitleId).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        // Shows whose last episode in the library was watched to the end this year.
+        dto.ShowsFinished = episodes
+            .Where(Completed)
+            .Where(r => cache.Episode(_library, r.Play.ItemId) is { ParentIndexNumber: int s, IndexNumber: int n } && s > 0
+                && cache.LastSeason(_library, r.Play.TitleId) == s && cache.LastEpisode(_library, r.Play.TitleId, s) == n)
+            .Select(r => r.Play.TitleId)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
         dto.Episodes = episodes.Select(r => r.Play.ItemId).Distinct(StringComparer.OrdinalIgnoreCase).Count();
         dto.ShowMs = episodes.Sum(r => r.Watched);
         dto.Shows = episodes
@@ -445,6 +453,8 @@ public sealed class Wrapped
             .ToList();
         dto.Movies = movieViews.Count(m => m.Days.Count > 0);
         dto.MovieMs = movieRows.Sum(r => r.Watched);
+        dto.MoviesPlayed = movieViews.Count;
+        dto.MoviesRewatched = movieViews.Count(m => m.Days.Count >= 2);
         var top = movieViews.Where(m => m.Days.Count > 0).OrderByDescending(m => m.Days.Count).ThenByDescending(m => m.Ms).FirstOrDefault();
         if (top is not null)
         {
@@ -625,6 +635,11 @@ public sealed class Wrapped
         // ── Stories, in order ──
         dto.Stories.Add("cover");
         dto.Stories.Add("hours");
+        if (dto.ShowsWatched + dto.MoviesPlayed > 0)
+        {
+            dto.Stories.Add("lover");
+        }
+
         if (dto.Genres.Count > 0)
         {
             dto.Stories.Add("genres");
@@ -794,6 +809,14 @@ public sealed class Wrapped
             }
 
             return ends.TryGetValue(season, out var last) ? last : null;
+        }
+
+        // The last season in the library (specials left out), so its last episode is the show's last.
+        public int? LastSeason(ILibraryManager library, string seriesId)
+        {
+            LastEpisode(library, seriesId, 0);
+            var seasons = _seasonEnds[seriesId].Keys.Where(s => s > 0).ToList();
+            return seasons.Count > 0 ? seasons.Max() : null;
         }
 
         // Each season finished counts once per profile, however often its finale was played. Reset per profile.
