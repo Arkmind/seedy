@@ -82,7 +82,7 @@ dev-arr: ## Connect the test Sonarr, Sonarr 4K and Radarr to the test Seerr (aft
 dev-media-requests: ## Set up the test Lidarr, Shelfarr and Librarr, connect Seedy to them, add sample requests (after dev-install)
 	cd dev && python3 setup-media-requests.py && python3 setup-seedy-requests.py
 
-dev-plays: ## Fill the play log with two months of made-up plays for the Statistics pages (after dev-install; DAYS=60)
+dev-plays: ## Fill the play log with made-up plays for Statistics and Wrapped (after dev-install; DAYS=60, 330 for a year)
 	cd dev && python3 seed-plays.py
 
 # Personal targets (a deploy to your own server, say) can go in local.mk, which git ignores.

@@ -175,6 +175,7 @@ public sealed partial class SeedyDatabase : IDisposable
         MigrateRequests(c);
         MigrateStats(c);
         MigrateDevices(c);
+        MigrateWrapped(c);
     }
 
     private static long Ms(DateTime d) => new DateTimeOffset(DateTime.SpecifyKind(d, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
@@ -566,18 +567,18 @@ public sealed partial class SeedyDatabase : IDisposable
         return n > 0;
     }
 
-    /// <summary>Deletes a user's plays, hidden titles and learned row order; or everyone's.</summary>
+    /// <summary>Deletes a user's plays, hidden titles, learned row order, moments and Wrapped; or everyone's.</summary>
     /// <param name="userId">User id, or null for everyone.</param>
     public void ClearPlays(string? userId) => Write(c =>
     {
         using var cmd = c.CreateCommand();
         if (userId is null)
         {
-            cmd.CommandText = "DELETE FROM plays; DELETE FROM hidden_titles; DELETE FROM row_order;";
+            cmd.CommandText = "DELETE FROM plays; DELETE FROM hidden_titles; DELETE FROM row_order; DELETE FROM moments; DELETE FROM wrapped;";
         }
         else
         {
-            cmd.CommandText = "DELETE FROM plays WHERE user_id = $user; DELETE FROM hidden_titles WHERE user_id = $user; DELETE FROM row_order WHERE user_id = $user;";
+            cmd.CommandText = "DELETE FROM plays WHERE user_id = $user; DELETE FROM hidden_titles WHERE user_id = $user; DELETE FROM row_order WHERE user_id = $user; DELETE FROM moments WHERE user_id = $user; DELETE FROM wrapped WHERE user_id = $user;";
             Bind(cmd, "$user", userId);
         }
 
@@ -596,6 +597,10 @@ public sealed partial class SeedyDatabase : IDisposable
             cmd.CommandText = "DELETE FROM plays WHERE started_at < $before";
             Bind(cmd, "$before", Ms(before));
             n = cmd.ExecuteNonQuery();
+            using var moments = c.CreateCommand();
+            moments.CommandText = "DELETE FROM moments WHERE at < $before";
+            Bind(moments, "$before", Ms(before));
+            moments.ExecuteNonQuery();
         });
         return n;
     }
