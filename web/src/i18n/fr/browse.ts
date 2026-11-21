@@ -196,7 +196,7 @@ const fr: Record<string, string> = {
   "Nothing played yet": "Rien n’a encore été lu",
   "Every movie and episode you play on this profile shows up here, newest first.": "Chaque film et épisode lu sur ce profil apparaît ici, du plus récent au plus ancien.",
   "Find something to watch": "Trouver quelque chose à regarder",
-  "Every play on this profile, newest first. Hidden titles stop shaping your recommendations and the Top 10.": "Chaque lecture sur ce profil, de la plus récente à la plus ancienne. Les titres masqués n’influencent plus vos recommandations ni le Top 10.",
+  "What you've watched on this profile and where you left off, newest first. Hidden titles stop shaping your recommendations and the Top 10.": "Ce que vous avez regardé sur ce profil et où vous en êtes, du plus récent au plus ancien. Les titres masqués n’influencent plus vos recommandations ni le Top 10.",
   "Unhide {name}": "Afficher {name}",
   "Hide {name} from history": "Masquer {name} de l’historique",
   "Unhide": "Afficher",

@@ -113,12 +113,22 @@ export interface PluginView {
   page?: ConfigPage;
 }
 
+/* A plugin's pages, without the scripts and styles it serves the same way ("fanartjs", "Chart.bundle.min.js"). */
+export function settingsPages(pages: ConfigPage[] | undefined, pluginId: string): ConfigPage[] {
+  const own = (pages ?? []).filter((pg) => normId(pg.PluginId) === normId(pluginId));
+  const names = new Set(own.map((pg) => pg.Name.toLowerCase()));
+  return own.filter((pg) => {
+    const n = pg.Name.toLowerCase();
+    return !/\.(js|mjs|css|json|map)$/.test(n) && !(n.endsWith('js') && names.has(n.slice(0, -2)));
+  });
+}
+
 export function describe(p: PluginInfo, packages: PackageInfo[] | undefined, pages: ConfigPage[] | undefined, server: string): PluginView {
   const id = normId(p.Id);
   const pkg = packages?.find((x) => normId(x.guid) === id);
   const latest = pkg ? latestCompatible(pkg, server) : undefined;
   const update = latest && cmpVersion(latest.version, p.Version) > 0 && p.Status !== 'Deleted' ? latest : undefined;
-  const own = (pages ?? []).filter((pg) => normId(pg.PluginId) === id);
+  const own = settingsPages(pages, id);
   const page = own.find((pg) => pg.Name === p.Name) ?? own.find((pg) => pg.EnableInMainMenu) ?? own[0];
   return {
     plugin: p,

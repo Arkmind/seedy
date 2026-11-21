@@ -8,7 +8,7 @@ import { t } from '../lib/i18n';
 import { Icon } from '../ui/icons';
 import { MenuButton, MenuItem, toast } from '../ui/overlay';
 import type { ExternalApp } from './external';
-import { createGroup, joinGroup, leaveGroup, syncAccess, syncStore } from './syncplay';
+import { createGroup, groupLoading, joinGroup, leaveGroup, syncAccess, syncStore } from './syncplay';
 import { CastTargets, sendToDevice, useCastSessions } from '../ui/cast-menu';
 
 /* Top-right player menus: Watch together (SyncPlay) and Cast. */
@@ -28,7 +28,9 @@ export function WatchTogether({ itemId, position }: { itemId: string; position: 
       {sync.group && (
         <span class="status-pill pl-together" role="status">
           <Icon name="users" size={14} />
-          {others > 0 ? t('Watching with {n}', { n: others, total: others + 1 }) : t('Waiting for others')}
+          {others === 0 ? t('Waiting for others')
+            : groupLoading(sync) ? t('Waiting for everyone')
+              : t('Watching with {n}', { n: others, total: others + 1 })}
         </span>
       )}
       <MenuButton

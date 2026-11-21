@@ -226,12 +226,15 @@ export const loadProfiles = profiles.load;
 /* ── Leaving a page with unsaved changes ── */
 
 let leaveGuard: (() => boolean) | null = null;
+let leaveText: string | null = null;
 
 let removeNavGuard: (() => void) | null = null;
 
-/* Also holds the account menu, header links and the browser's Back button, not just links on the page. */
-export function setLeaveGuard(fn: (() => boolean) | null) {
+/* Also holds the account menu, header links and the browser's Back button, not just links on the page. `text` says what
+   would be lost (the home screen's wording otherwise). */
+export function setLeaveGuard(fn: (() => boolean) | null, text?: string) {
   leaveGuard = fn;
+  leaveText = text ?? null;
   removeNavGuard?.();
   removeNavGuard = null;
   if (!fn) return;
@@ -248,7 +251,7 @@ export async function canLeave(): Promise<boolean> {
   if (!hasUnsavedChanges()) return true;
   return confirm({
     title: t('Leave without saving?'),
-    text: t('Your changes to the home screen haven’t been saved yet. If you leave now, they’re lost.'),
+    text: leaveText ?? t('Your changes to the home screen haven’t been saved yet. If you leave now, they’re lost.'),
     action: t('Leave without saving'),
     danger: true
   });

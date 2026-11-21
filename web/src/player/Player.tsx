@@ -51,7 +51,8 @@ import { StillWatching } from './StillWatching';
 import { SubtitleLayer, type LoadedSubtitles } from './SubtitleLayer';
 import { loadCues, type Cue } from './subtitles';
 import {
-  bindSyncPlayer, inGroup, leaveGroup, reportBuffering, reportReady, requestPause, requestQueue, requestSeek, requestUnpause
+  bindSyncPlayer, groupLoading, groupPaused, inGroup, leaveGroup, reportBuffering, reportReady, requestPause, requestQueue,
+  requestSeek, requestUnpause, syncStore
 } from './syncplay';
 import { CastMenu, WatchTogether } from './TopMenus';
 import { TracksPanel, channelsLabel, subtitleTitle, type TracksTab } from './TracksPanel';
@@ -344,6 +345,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const me = useStore(meStore);
   const user = useStore(userStore);
   const dev = useStore(deviceStore);
+  const sync = useStore(syncStore);
   const prefs: PlaybackPrefs = playbackPrefs(me.prefs);
   const custom = customPlayback(me.prefs?.custom);
   const steps = seekSteps(dev, prefs);
@@ -528,6 +530,12 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   };
   const onFatalRef = useRef(onFatal);
   onFatalRef.current = onFatal;
+  /* A player that can't play mustn't hold the group: the others would wait for it until it leaves. */
+  useEffect(() => {
+    if (!fatal || !inGroup()) return;
+    void leaveGroup();
+    toast(tr('You left the group so the others can go on'));
+  }, [fatal]);
 
   /* ── Session (re-created on "Try again") ── */
   useEffect(() => {
@@ -559,7 +567,8 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
         onStream: (st) => setStream(st),
         onFatal: (code, st, part) => onFatalRef.current(code, st, part),
         softHost: () => softRef.current,
-        isolate: isolateReload
+        isolate: isolateReload,
+        together: inGroup
       }, opts);
       s = sess;
       sessRef.current = sess;
@@ -750,15 +759,25 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
 
   const play = () => {
     wantPlay.current = true;
-    if (inGroup()) { void requestUnpause(); return; }
+    if (inGroup()) {
+      if (!groupLoading()) void requestUnpause();
+      return;
+    }
     sess()?.play();
   };
   const pause = () => {
     wantPlay.current = false;
-    if (inGroup()) { void requestPause(); return; }
+    if (inGroup()) {
+      // The group pauses once everyone has loaded; this player stops at once.
+      if (groupLoading()) el().pause();
+      void requestPause();
+      return;
+    }
     el().pause();
   };
-  const togglePlay = () => (el().paused ? play() : pause());
+  const isPaused = () => groupPaused() ?? el().paused;
+  const togglePlay = () => (isPaused() ? play() : pause());
+  const shownPaused = groupPaused(sync) ?? m.paused;
   const seekTo = (seconds: number) => {
     const t = Math.max(0, Math.min(seconds, duration || seconds));
     if (inGroup()) { void requestSeek(t); return; }
@@ -988,12 +1007,12 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   /* ── Pause screen ── */
   useEffect(() => {
     setPauseScreen(false);
-    if (!m.paused || m.ended || !stream || fatal || panel || upNext === 'shown' || endFlow === 'shown' || scrubbing || ask) return;
+    if (!shownPaused || m.ended || !stream || fatal || panel || upNext === 'shown' || endFlow === 'shown' || scrubbing || ask) return;
     if (prefs.pauseScreenSeconds <= 0) return;
     const t = window.setTimeout(() => setPauseScreen(true), prefs.pauseScreenSeconds * 1000);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [m.paused, m.ended, wake, !!stream, !!fatal, panel, upNext, endFlow, scrubbing, prefs.pauseScreenSeconds, !!ask]);
+  }, [shownPaused, m.ended, wake, !!stream, !!fatal, panel, upNext, endFlow, scrubbing, prefs.pauseScreenSeconds, !!ask]);
 
   /* The screen stays on while a video plays; paused, the computer may sleep as usual. */
   useWakeLock(!isAudio && !!stream && !fatal && !m.paused && !m.ended);
@@ -1183,7 +1202,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
       switch (d?.Command) {
         case 'Pause': pause(); break;
         case 'Unpause': remotePlay(); break;
-        case 'PlayPause': if (el().paused) remotePlay(); else pause(); break;
+        case 'PlayPause': if (isPaused()) remotePlay(); else pause(); break;
         case 'Stop': exit(); break;
         case 'Seek': if (d.SeekPositionTicks !== undefined) seekTo(ticksToSeconds(d.SeekPositionTicks)); break;
         case 'NextTrack': goNext(false); break;
@@ -1426,7 +1445,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
         />
       )}
 
-      {!fatal && !endShown && (!stream || busy || (m.waiting && !m.paused)) && <div class="pl-spinner spinner" aria-label={tr('Loading')} />}
+      {!fatal && !endShown && (!stream || busy || (m.waiting && !m.paused) || groupLoading(sync)) && <div class="pl-spinner spinner" aria-label={tr('Loading')} />}
 
       {!endShown && !upNextShown && (
         <header class="pl-top">
@@ -1499,8 +1518,8 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
 
           <div class="pl-controls pl-fade">
             <div class="pl-left">
-              <button type="button" class="btn player-btn is-primary" aria-label={m.paused ? tr('Play') : tr('Pause')} onClick={togglePlay}>
-                <Icon name={m.paused ? 'play' : 'pause'} size={22} />
+              <button type="button" class="btn player-btn is-primary" aria-label={shownPaused ? tr('Play') : tr('Pause')} onClick={togglePlay}>
+                <Icon name={shownPaused ? 'play' : 'pause'} size={22} />
               </button>
               <PBtn label={tr('Back {n} seconds', { n: steps.back })} onClick={() => seekBy(-steps.back)}>
                 <SeekIcon dir="back" seconds={steps.back} />

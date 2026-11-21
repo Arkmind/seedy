@@ -329,6 +329,9 @@ const isSafari = () => /Safari\//.test(navigator.userAgent) && !/Chrome\/|Chromi
 /* Seconds a playing stream may stand still, with no more data coming in, before it is opened again where it stopped
    (what reloading the page did). Starting or seeking a conversion takes a few of them. */
 const STALL_SECONDS = 20;
+/* The same in a watch-together group, where everyone waits for this player meanwhile (a stream opened again still
+   gets STALL_SECONDS to start playing). */
+const TOGETHER_STALL_SECONDS = 10;
 
 function bufferedEnd(r: TimeRanges): number {
   try { return r.length ? r.end(r.length - 1) : 0; } catch { return 0; }
@@ -343,6 +346,8 @@ export interface SessionEvents {
   /* The experimental player decodes on several threads only in a cross-origin isolated page: reload into one at this
      position. True when the page is reloading. */
   isolate?(seconds: number): boolean;
+  /* Whether a watch-together group waits on this player. */
+  together?(): boolean;
 }
 
 /* One playback of one item. Owns the stream on the media element (or the experimental player) and every report
@@ -669,7 +674,8 @@ export class PlaybackSession {
       w.still = 0;
       return;
     }
-    if (++w.still < STALL_SECONDS) return;
+    const limit = !w.reopens && this.events.together?.() ? TOGETHER_STALL_SECONDS : STALL_SECONDS;
+    if (++w.still < limit) return;
     w.still = 0;
     const s = this.stream;
     if (w.reopens >= 1) {
