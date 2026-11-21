@@ -337,19 +337,22 @@ public sealed partial class SeedyDatabase : IDisposable
         return r.Read() ? ReadPlay(r) : null;
     }
 
-    /// <summary>Lists a user's plays, newest first.</summary>
+    /// <summary>
+    /// Lists what a user watched, newest first: one row per movie or episode, its latest play, so pausing, stopping
+    /// and coming back doesn't stack up rows. Every play stays in the log for Statistics and recommendations.
+    /// </summary>
     /// <param name="userId">User id.</param>
     /// <param name="types">Item types to include (empty = all).</param>
     /// <param name="search">Text to match in title or item name.</param>
     /// <param name="includeHidden">Whether hidden titles are included.</param>
     /// <param name="skip">Rows to skip.</param>
     /// <param name="take">Rows to take.</param>
-    /// <param name="total">Total matching rows.</param>
-    /// <returns>Plays plus whether each title is hidden.</returns>
+    /// <param name="total">Total matching items.</param>
+    /// <returns>Each item's latest play plus whether its title is hidden.</returns>
     public List<(PlayRecord Play, bool Hidden)> History(string userId, IReadOnlyList<string> types, string? search, bool includeHidden, int skip, int take, out int total)
     {
         using var c = Open();
-        var where = "p.user_id = $user AND p." + WatchingOnly;
+        var where = "p.rn = 1";
         if (types.Count > 0)
         {
             var names = new List<string>();
@@ -386,16 +389,18 @@ public sealed partial class SeedyDatabase : IDisposable
             }
         }
 
-        const string Join = "FROM plays p LEFT JOIN hidden_titles h ON h.user_id = p.user_id AND h.title_id = p.title_id";
+        // Each item's latest play (rn = 1), then the filters on it.
+        var latest = $"WITH latest AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY item_id ORDER BY started_at DESC, id) AS rn FROM plays WHERE user_id = $user AND {WatchingOnly})";
+        var from = $"FROM latest p LEFT JOIN hidden_titles h ON h.user_id = p.user_id AND h.title_id = p.title_id WHERE {where}";
         using (var count = c.CreateCommand())
         {
-            count.CommandText = $"SELECT COUNT(*) {Join} WHERE {where}";
+            count.CommandText = $"{latest} SELECT COUNT(*) {from}";
             BindAll(count);
             total = Convert.ToInt32(count.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
 
         using var cmd = c.CreateCommand();
-        cmd.CommandText = $"SELECT {PlayColumnsP}, h.title_id IS NOT NULL {Join} WHERE {where} ORDER BY p.started_at DESC LIMIT $take OFFSET $skip";
+        cmd.CommandText = $"{latest} SELECT {PlayColumnsP}, h.title_id IS NOT NULL {from} ORDER BY p.started_at DESC, p.id LIMIT $take OFFSET $skip";
         BindAll(cmd);
         Bind(cmd, "$take", take);
         Bind(cmd, "$skip", skip);
@@ -548,7 +553,7 @@ public sealed partial class SeedyDatabase : IDisposable
         return ReadAll(cmd, ReadPlay);
     }
 
-    /// <summary>Deletes one of a user's plays.</summary>
+    /// <summary>Deletes a history entry: the play and the user's other plays of the same movie or episode.</summary>
     /// <param name="userId">User id.</param>
     /// <param name="id">Play id.</param>
     /// <returns>Whether a row was deleted.</returns>
@@ -558,7 +563,7 @@ public sealed partial class SeedyDatabase : IDisposable
         Write(c =>
         {
             using var cmd = c.CreateCommand();
-            cmd.CommandText = "DELETE FROM plays WHERE id = $id AND user_id = $user";
+            cmd.CommandText = "DELETE FROM plays WHERE user_id = $user AND item_id = (SELECT item_id FROM plays WHERE id = $id AND user_id = $user)";
             Bind(cmd, "$id", id);
             Bind(cmd, "$user", userId);
             n = cmd.ExecuteNonQuery();

@@ -114,7 +114,7 @@ class HistoryViewModel(private val session: UserSession) : ViewModel(), HistoryA
             val page = ioOrNull { api.page(s.items.size, PAGE, s.filter, s.search, s.showHidden) }
             if (id != request) return@launch
             if (page == null) return@launch _state.update { it.copy(status = "ready", message = t("Couldn't load earlier plays")) }
-            _state.update { st -> st.copy(items = st.items.plusNew(page.items) { it.id }, total = page.total, status = "ready") }
+            _state.update { st -> st.copy(items = st.items.plusNew(page.items) { it.itemId }, total = page.total, status = "ready") }
         }
     }
 

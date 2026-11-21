@@ -113,6 +113,7 @@ export type TrailerInfo =
   | { source: 'local'; itemId: string; name?: string; from?: string; alternates: TrailerAlternate[] }
   | { source: 'youtube'; key: string; name?: string; from?: 'jellyfin' | 'tmdb'; alternates: TrailerAlternate[] };
 
+/* A movie or episode in the person's history, as its latest play left it (every play stays in the play log). */
 export interface HistoryEntry {
   id: string;
   itemId: string;

@@ -105,7 +105,7 @@ fun HistoryScreen(state: HistoryState, actions: HistoryActions, today: LocalDate
     var clearing by remember { mutableStateOf(false) }
     SettingsPage(
         t("Viewing history"),
-        t("Every play on this profile, newest first. Hidden titles stop shaping your recommendations and the Top 10."),
+        t("What you've watched on this profile and where you left off, newest first. Hidden titles stop shaping your recommendations and the Top 10."),
         nav.back,
         overlay = {
             Toast(state.message, actions::messageShown, Modifier.align(Alignment.BottomCenter))
