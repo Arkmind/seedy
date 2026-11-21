@@ -250,6 +250,8 @@ const fr: Record<string, string> = {
   // Home banner and Settings
   'New · Seedy Wrapped': 'Nouveau · Seedy Wrapped',
   'Your {year} is ready': 'Votre {year} est prêt',
+  '{n} story': '{n} story',
+  '{n} stories': '{n} stories',
   '{hours} in {stories}. Medu took notes.': '{hours} en {stories}. Medu a pris des notes.',
   'Open Seedy Wrapped {year}': 'Ouvrir Seedy Wrapped {year}',
   'Your year on Seedy, ready every December': 'Votre année sur Seedy, prête chaque décembre'

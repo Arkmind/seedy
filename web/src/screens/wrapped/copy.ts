@@ -97,8 +97,10 @@ export function genreMedu(w: Wrapped): string {
 
 // ── Top shows ──
 
-export const showMeta = (s: { episodes: number; watchMs: number }) =>
-  `${tn(s.episodes, '{n} episode', '{n} episodes')} · ${t('{n} h', { n: formatNumber(hoursOf(s.watchMs)) })}`;
+/* "51 h", or minutes under an hour. */
+export const showTime = (ms: number) => (ms >= 3_600_000 ? t('{n} h', { n: formatNumber(hoursOf(ms)) }) : duration(ms));
+
+export const showMeta = (s: { episodes: number; watchMs: number }) => `${tn(s.episodes, '{n} episode', '{n} episodes')} · ${showTime(s.watchMs)}`;
 
 export function showsFootnote(w: Wrapped): string {
   const f = w.seasonsFinished;

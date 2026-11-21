@@ -24,6 +24,7 @@ import {
 } from './parts';
 import { TrailerLayer, useHeroTrailer } from './trailer';
 import { ArrivedNotice } from '../me/arrivals';
+import { WrappedBanner } from '../wrapped/banner';
 import { CUSTOM, getNextUpForMe, savePrefsPatch as queuePrefs, readCustom, userConfig } from '../me/prefs';
 import './home.css';
 import { t } from '../../lib/i18n';
@@ -93,6 +94,7 @@ export function Home() {
       <Header variant={overlay ? 'overlay' : 'plain'} active="home" />
       {rows === null ? <HeroSkeleton /> : featured && <Featured onState={setHeroState} />}
       <main class={'home-main' + (overlay ? '' : ' is-plain')}>
+        {rows !== null && <WrappedBanner />}
         {rows !== null && <ArrivedNotice />}
         {rows === null && (
           <>

@@ -32,6 +32,8 @@ export interface Wrapped {
   binge?: {
     id: string; name: string; episodes: number; season?: number | null; seasonTo?: number | null;
     lastSeason?: number | null; lastEpisode?: number | null; start: string; end: string; item?: BaseItem | null;
+    /** Minutes watched of each episode, in order. */
+    minutes?: number[];
   } | null;
   still: { asked: number; yes: number };
   clock?: { hours: number[]; peak: string; kind: 'night' | 'morning' | 'afternoon' | 'evening'; pct: number; day: number } | null;

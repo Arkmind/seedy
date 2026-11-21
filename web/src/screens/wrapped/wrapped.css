@@ -1,0 +1,89 @@
+/* Seedy Wrapped (boards Wrapped · 1–9 and Web · Wrapped viewer). Stories are drawn at the boards' 390 px width and
+   scaled to fit; their own styles are inline, as on the boards. Prefix: wr-. */
+
+.wr-story { position: relative; width: 390px; overflow: hidden; font-family: var(--font); -webkit-font-smoothing: antialiased; user-select: none; }
+.wr-story button { font-family: inherit; }
+.wr-story h1, .wr-story h2, .wr-story p, .wr-story ol, .wr-story ul { margin: 0; }
+
+/* Board motion: things come in when a story opens. */
+.wr-story .in{animation:wr-in .7s cubic-bezier(.2,.8,.2,1) both}
+@keyframes wr-in{from{opacity:0;transform:translateY(26px)}}
+.wr-story .pop{animation:wr-pop .8s cubic-bezier(.2,.9,.25,1.3) both}
+@keyframes wr-pop{from{opacity:0;transform:scale(.5) rotate(-6deg)}}
+.wr-story .grow{transform-origin:0 50%;animation:wr-grow 1.1s cubic-bezier(.2,.8,.2,1) both}
+@keyframes wr-grow{from{transform:scaleX(0)}}
+.wr-story .seg-now{transform-origin:0 50%;animation:wr-seg 8s linear both}
+@keyframes wr-seg{from{transform:scaleX(0)}}
+.wr-story .odo{display:inline-flex;height:1em;line-height:1em;overflow:hidden;vertical-align:top;-webkit-mask:linear-gradient(transparent,#000 9%,#000 91%,transparent);mask:linear-gradient(transparent,#000 9%,#000 91%,transparent)}
+.wr-story .odo>span{display:flex;flex-direction:column;animation:wr-odo 1.8s cubic-bezier(.15,.85,.2,1) both}
+.wr-story .odo>span>span{height:1em}
+@keyframes wr-odo{from{transform:translateY(0)}}
+.wr-story .draw{animation:wr-draw .9s cubic-bezier(.2,.8,.2,1) both}
+@keyframes wr-draw{from{stroke-dashoffset:1}}
+.wr-story .drift{animation:wr-drift 9s ease-in-out infinite alternate}
+@keyframes wr-drift{to{transform:translate(-18px,14px) rotate(4deg)}}
+.wr-story .drift2{animation:wr-drift2 11s ease-in-out infinite alternate}
+@keyframes wr-drift2{to{transform:translate(16px,-12px) rotate(-5deg)}}
+.wr-story .spin{transform-box:fill-box;transform-origin:50% 50%;animation:wr-spin 40s linear infinite}
+@keyframes wr-spin{to{transform:rotate(360deg)}}
+.wr-story .twinkle{animation:wr-twinkle 2.6s ease-in-out infinite}
+@keyframes wr-twinkle{0%,100%{opacity:.25}50%{opacity:1}}
+.wr-story .bub{animation:wr-bub 7s ease-in infinite}
+@keyframes wr-bub{0%{transform:translateY(0);opacity:0}15%{opacity:.6}100%{transform:translateY(-260px);opacity:0}}
+.wr-story .say{transform-origin:100% 100%;animation:wr-say .6s cubic-bezier(.2,.9,.25,1.3) both}
+@keyframes wr-say{from{opacity:0;transform:scale(.4)}}
+.wr-story .fan{animation:wr-fan .8s cubic-bezier(.2,.9,.25,1.2) both}
+@keyframes wr-fan{from{opacity:0;transform:translateY(40px) rotate(0deg)}}
+.wr-story .glow{animation:wr-glow 4s ease-in-out infinite}
+@keyframes wr-glow{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:.9;transform:scale(1.06)}}
+.wr-story button{transition:transform .18s cubic-bezier(.2,.8,.2,1)}
+.wr-story button:active{transform:scale(.96)}
+.wr-story button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+/* Paused: the story holds still where it is. Previews and pictures show the finished story. */
+.wr-story.is-paused, .wr-story.is-paused *, .wr-story.is-paused .medu * { animation-play-state: paused !important; }
+.wr-story.is-still *, .wr-story.is-still .medu * { animation: none !important; }
+.wr-story.is-still .seg-now { transform: scaleX(0); }
+.wr-story.is-done .seg-now { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .wr-story *:not(.seg-now) { animation: none !important; }
+}
+
+/* ── Viewer (/wrapped/:year) ── */
+.wr-page { position: fixed; inset: 0; overflow: hidden; background: #0a0a0a; color: #e0e0e0; font-family: var(--font); }
+.wr-page .glow{animation:wr-glow 4s ease-in-out infinite}
+.wr-head { position: absolute; z-index: 3; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 14px; padding: 22px 32px; }
+.wr-home { display: flex; align-items: center; gap: 9px; color: #ffffff; text-decoration: none; }
+.wr-home-name { font-weight: 900; font-size: 20px; }
+.wr-head-rule { width: 1px; height: 22px; background: #333333; }
+.wr-head-title { font-size: 16px; font-weight: 800; color: #ffffff; }
+.wr-head-title span { color: var(--seedy-accent); }
+.wr-head-share { display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 18px; border: 0; border-radius: 13px; background: #f0f0f0; color: #1e1e1e; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.wr-head-back { display: flex; align-items: center; height: 42px; padding: 0 14px; border-radius: 13px; background: #1f1f1f; font-size: 14px; font-weight: 700; color: #ffffff; text-decoration: none; }
+.wr-head-share:hover { background: #ffffff; }
+.wr-head-back:hover { background: #2a2a2a; color: #ffffff; }
+.wr-stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 26px; }
+.wr-frame { position: relative; flex: none; overflow: hidden; }
+.wr-frame > .wr-scale { transform-origin: 0 0; }
+.wr-frame.is-current { border-radius: 26px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.wr-frame.is-side { border-radius: 21px; opacity: 0.38; filter: saturate(0.85); cursor: pointer; transition: opacity .2s; }
+.wr-frame.is-side:hover { opacity: 0.55; }
+.wr-frame.is-blank { visibility: hidden; }
+.wr-arrow { flex: none; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: #f0f0f0; color: #1e1e1e; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); cursor: pointer; }
+.wr-arrow:disabled { visibility: hidden; }
+.wr-arrow:hover { background: #ffffff; }
+.wr-keys { position: absolute; left: 0; right: 0; bottom: 18px; display: flex; justify-content: center; gap: 18px; font-size: 12px; color: #8c8c8c; }
+.wr-keys > span { display: flex; align-items: center; gap: 6px; }
+.wr-keys kbd { padding: 2px 7px; border-radius: 6px; box-shadow: inset 0 0 0 1.5px #444444; font: inherit; font-weight: 800; color: #c8c8c8; }
+
+/* Tap zones over the current story: back on the left third, on everywhere else. */
+.wr-tap { position: absolute; z-index: 4; border: 0; padding: 0; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.wr-tap.is-prev { left: 0; width: 33%; }
+.wr-tap.is-next { right: 0; width: 67%; }
+.wr-tap:focus-visible { outline: none; }
+
+/* Phones: one story, full screen. */
+.wr-page.is-full .wr-stage { gap: 0; align-items: flex-start; justify-content: flex-start; }
+.wr-page.is-full .wr-frame.is-current { border-radius: 0; box-shadow: none; }
+
+.wr-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; }

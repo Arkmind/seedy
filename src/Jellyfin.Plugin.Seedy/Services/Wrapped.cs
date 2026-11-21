@@ -465,6 +465,7 @@ public sealed class Wrapped
                 Id = b[0].Play.TitleId,
                 Name = b[0].Play.TitleName,
                 Episodes = b.Select(r => r.Play.ItemId).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                Minutes = b.GroupBy(r => r.Play.ItemId, StringComparer.OrdinalIgnoreCase).Select(g => (int)Math.Max(1, Math.Round(g.Sum(r => r.Watched) / 60_000.0))).ToList(),
                 Season = seasons.Count > 0 ? seasons.Min() : null,
                 SeasonTo = seasons.Count > 0 && seasons.Max() != seasons.Min() ? seasons.Max() : null,
                 LastSeason = last?.ParentIndexNumber,

@@ -25,6 +25,7 @@
   background: var(--seedy-surface); color: var(--seedy-text); font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer;
   transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
 }
+.me-chip-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .me-chip-link:hover:not(:disabled) { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
 .me-chip-link:disabled { cursor: default; color: var(--seedy-text-3); }
 

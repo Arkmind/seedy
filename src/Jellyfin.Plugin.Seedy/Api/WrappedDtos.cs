@@ -150,6 +150,9 @@ public sealed class WrappedBingeDto
     /// <summary>Gets or sets the different episodes watched in one go.</summary>
     [JsonPropertyName("episodes")] public int Episodes { get; set; }
 
+    /// <summary>Gets or sets the minutes watched of each episode, in the order they played.</summary>
+    [JsonPropertyName("minutes")] public List<int> Minutes { get; set; } = [];
+
     /// <summary>Gets or sets the first season played in it.</summary>
     [JsonPropertyName("season")] public int? Season { get; set; }
 

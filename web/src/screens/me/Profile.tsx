@@ -13,6 +13,7 @@ import { confirm, toast } from '../../ui/overlay';
 import { DeviceTag, MeLayout } from './MeLayout';
 import { reloadUser, removeUserImage, savePrefsPatch, uploadUserImage } from './prefs';
 import { MeRow, MeSection, SaveLine } from './parts';
+import { useWrappedStatus } from '../wrapped/banner';
 import './parts.css';
 import { t, tn, tx } from '../../lib/i18n';
 
@@ -26,6 +27,7 @@ export function MeProfile() {
   const requests = useAsync(() => (me.requests.connected ? myRequests() : Promise.resolve(null)), [me.requests.connected]);
   const seerrName = requests.data?.results.find((r) => r.requestedBy)?.requestedBy ?? user?.Name ?? '';
   const devices = useAsync(() => myDevices().then((r) => r.devices.length), []);
+  const wrappedYears = useWrappedStatus()?.years;
 
   return (
     <MeLayout
@@ -66,6 +68,13 @@ export function MeProfile() {
         {me.historyEnabled && (
           <MeRow name={t('Viewing history')} help={t('See, hide or clear what you watched')}>
             <Link to="/history" class="me-chip-link">{t('Open history')}</Link>
+          </MeRow>
+        )}
+        {!!wrappedYears?.length && (
+          <MeRow name={t('Seedy Wrapped')} help={t('Your year on Seedy, ready every December')}>
+            <span class="me-chip-links">
+              {wrappedYears.map((y) => <Link key={y} to={`/wrapped/${y}`} class="me-chip-link">{t('Wrapped {year}', { year: y })}</Link>)}
+            </span>
           </MeRow>
         )}
       </MeSection>

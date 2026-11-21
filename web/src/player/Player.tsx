@@ -46,6 +46,7 @@ import {
   resolveStyle, seekSteps, stillRule, segmentMode, setSubtitleStyle, SIZE_FROM_PREFS, SIZE_TO_PREFS, softPlayerSlow, type DeviceSettings,
   type NetworkLocation, type SubtitleStyle
 } from './settings';
+import { recordMoment } from '../screens/wrapped/api';
 import { StillWatching } from './StillWatching';
 import { SubtitleLayer, type LoadedSubtitles } from './SubtitleLayer';
 import { loadCues, type Cue } from './subtitles';
@@ -817,6 +818,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     setEndFlow('dismissed');
     setPanel(null);
     setAsk({ next: upcoming, pick, byTime: byTime && !byCount, count, movies, minutes: Math.round(minutes) });
+    recordMoment('stillAsked', item.Id);
     return true;
   };
   /* Auto-play, unless it's time to ask whether anyone is still there. */
@@ -1025,6 +1027,7 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     if (!stream || m.ended) return;
     if (skippable && skipMode(skippable.Type) === 'auto' && !skipped.current.has(skippable.Id)) {
       skipped.current.add(skippable.Id);
+      if (skippable.Type === 'Intro') recordMoment('introSkipped', item.Id, (ticksToSeconds(skippable.EndTicks) - t) * 1000);
       seekTo(ticksToSeconds(skippable.EndTicks));
       toast(skippedCopy(skippable.Type));
       return;
@@ -1283,7 +1286,10 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
   const skipBtn: { label: string; go: () => void; pinned: boolean } | null = isPreroll
     ? { label: tr('Skip trailers'), go: skipTrailers, pinned: true }
     : skippable && skipMode(skippable.Type) === 'button'
-      ? { label: skipLabel(skippable.Type), go: () => seekTo(ticksToSeconds(skippable.EndTicks)), pinned: t - ticksToSeconds(skippable.StartTicks) < 8 }
+      ? { label: skipLabel(skippable.Type), go: () => {
+        if (skippable.Type === 'Intro') recordMoment('introSkipped', item.Id, (ticksToSeconds(skippable.EndTicks) - t) * 1000);
+        seekTo(ticksToSeconds(skippable.EndTicks));
+      }, pinned: t - ticksToSeconds(skippable.StartTicks) < 8 }
       : creditsSkip && outro
         ? { label: tr('Skip credits'), go: () => seekTo(ticksToSeconds(outro.EndTicks)), pinned: t - ticksToSeconds(outro.StartTicks) < 8 }
         : null;
@@ -1604,13 +1610,14 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
           byTime={ask.byTime}
           fraction={fraction}
           onContinue={() => {
+            recordMoment('stillYes', item.Id);
             resetPresence();
             setAsk(null);
             if (ask.pick) playItem(ask.next);
             else goNext(true);
           }}
-          onLeave={() => doneForNow()}
-          onSettings={() => doneForNow('/settings/playback')}
+          onLeave={() => { recordMoment('stillStop', item.Id); doneForNow(); }}
+          onSettings={() => { recordMoment('stillStop', item.Id); doneForNow('/settings/playback'); }}
         />
       )}
 

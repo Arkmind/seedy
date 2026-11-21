@@ -5,6 +5,7 @@ import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
 import { useTitle } from '../../lib/title';
 import { Header } from '../../ui/navbar/Header';
+import { useWrappedStatus } from '../wrapped/banner';
 import './me.css';
 
 type MePage = 'profile' | 'devices' | 'home' | 'playback' | 'subtitles' | 'display' | 'controls';
@@ -49,6 +50,7 @@ export function MeLayout({ page, title, lede, children, actions }: {
   actions?: ComponentChildren;
 }) {
   const me = useStore(meStore);
+  const wrappedYears = useWrappedStatus()?.years;
   useTitle(t(ME_NAV.flatMap((g) => g.items).find((i) => i.id === page)!.label), t('Settings'));
   const leave = () => signOut().then(() => navigate('/', { replace: true, force: true }));
   return (
@@ -67,6 +69,7 @@ export function MeLayout({ page, title, lede, children, actions }: {
           <div aria-hidden="true" class="me-nav-sep" />
           <div class="me-nav-group is-links">
             {me.historyEnabled && <Link to="/history">{t('Viewing history')}</Link>}
+            {!!wrappedYears?.length && <Link to={`/wrapped/${wrappedYears[0]}`}>{t('Seedy Wrapped')}</Link>}
             {me.requests.connected && <Link to="/requests/my">{t('My requests')}</Link>}
             {me.isAdmin && <Link to="/admin">{t('Admin dashboard')}</Link>}
             <button type="button" class="me-nav-btn is-danger" onClick={leave}>{t('Sign out')}</button>
