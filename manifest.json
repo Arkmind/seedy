@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.5.2.0",
+        "changelog": "# What's Changed\n- See what you’ve watched\n  A Watched chip with the date, or how far along you are in a show\n- Play again or start over\n  Replay what you’ve finished, or restart what you’re watching from the beginning\n- Watched and favorite at a glance\n  Their buttons fill in once they’re on, on the web, phone and TV\n- Know when the next episode lands\n  Shows you’re up to date on say when their next episode arrives\n\n## Fixes\n- On the web, “Still watching?” shows up again when it should: moving the mouse no longer counts as someone being there.\n- On the web, Requests no longer shows the previous profile’s counts after switching profiles.\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play).\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart Jellyfin: the web changes come with it.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.5.1...v0.5.2",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.5.2/seedy_0.5.2.0.zip",
+        "checksum": "3109b72464807bba3545d80d7c4f4597",
+        "timestamp": "2026-11-22T00:46:12Z"
+      },
+      {
         "version": "0.5.1.0",
         "changelog": "# What's Changed\n- Sort and filter your history\n  By date or title, finished or in progress, when, and on which device\n- Steadier playback on weak Wi-Fi\n  The phone and TV apps buffer further ahead and reconnect by themselves\n- Request right away\n  Your Seerr account is set up for you, no need to ask your admin\n- Requested seasons show Ready\n  As soon as the season is on the server, not once the whole show is\n\n## Fixes\n- On the web, search becomes a button on narrower windows instead of a second row under the bar.\n- Settings pages no longer jump sideways when you move between them.\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play).\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart Jellyfin: the history and requests changes come with it.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.5.0...v0.5.1",
         "targetAbi": "12.0.0.0",
