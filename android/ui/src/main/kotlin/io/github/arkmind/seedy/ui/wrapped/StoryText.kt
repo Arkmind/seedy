@@ -251,7 +251,9 @@ fun StoryArea(modifier: Modifier, content: @Composable () -> Unit) {
     SubcomposeLayout(modifier) { c ->
         val loose = c.copy(minHeight = 0, maxHeight = Constraints.Infinity)
         var placeables = subcompose(true) { CompositionLocalProvider(LocalRoom provides true, content = content) }.map { it.measure(loose) }
-        if ((placeables.maxOfOrNull { it.height } ?: 0) > c.maxHeight) {
+        // Up to Medu's box, 14 dp below the area (the boards' "other x%" line sits there), plus the 10 dp before her art
+        // and bubble start: Compose's line boxes run a little taller than the boards'.
+        if ((placeables.maxOfOrNull { it.height } ?: 0) > c.maxHeight + 24.dp.roundToPx()) {
             placeables = subcompose(false) { CompositionLocalProvider(LocalRoom provides false, content = content) }.map { it.measure(loose) }
         }
         layout(c.maxWidth, c.maxHeight) { placeables.forEach { it.place(0, 0) } }

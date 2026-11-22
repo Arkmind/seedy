@@ -257,7 +257,8 @@ function IfRoom({ children }: { children: ComponentChildren }) {
     const el = ref.current;
     const area = el?.offsetParent as HTMLElement | null;
     if (!el || !area) return;
-    const check = () => setRoom(el.offsetTop + el.offsetHeight <= area.clientHeight + 1);
+    // Up to Medu's top, 14 px below the text area (the boards' "other x%" line sits there).
+    const check = () => setRoom(el.offsetTop + el.offsetHeight <= area.clientHeight + 14 + 1);
     check();
     document.fonts?.ready.then(check).catch(() => { /* checked already */ });
   });
