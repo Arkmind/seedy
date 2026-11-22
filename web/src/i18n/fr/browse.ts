@@ -472,7 +472,23 @@ const fr: Record<string, string> = {
   "Fridays": "le vendredi",
   "Saturdays": "le samedi",
   "Sundays": "le dimanche",
-  "Unreleased": "Pas encore sorti"
+  "Unreleased": "Pas encore sorti",
+  // Watched state on details pages (chips, toggles, play again)
+  "Watched {date}": "Vu le {date}",
+  "Up to date": "À jour",
+  "{watched} of {total} watched": "{watched} vus sur {total}",
+  "{watched} of {total}": "{watched} sur {total}",
+  "All {n} aired": "Les {n} diffusés",
+  "All {n} watched": "Les {n} vus",
+  "Play again": "Revoir",
+  "Start over": "Reprendre au début",
+  "Watched. Mark as not watched": "Vu. Marquer comme non vu",
+  "Watched. Mark series as not watched": "Vue. Marquer la série comme non vue",
+  "Season watched": "Saison vue",
+  "Season watched. Mark season as not watched": "Saison vue. Marquer la saison comme non vue",
+  "{name}, watched": "{name}, vue",
+  "Next episode, {name}, arrives {date}": "Prochain épisode, {name}, le {date}",
+  "Next episode arrives {date}": "Prochain épisode le {date}"
 };
 
 export default fr;

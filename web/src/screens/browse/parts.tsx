@@ -97,7 +97,7 @@ export async function togglePlayed(item: BaseItem, apply: (next: BaseItem) => vo
   // Unwatching a whole show makes every episode unwatched again.
   const unplayedAfter = on ? 0 : item.Type === 'Series' || item.Type === 'Season' ? item.RecursiveItemCount ?? item.UserData?.UnplayedItemCount : item.UserData?.UnplayedItemCount;
   apply(patchUserData(item, {
-    Played: on, PlaybackPositionTicks: 0, PlayedPercentage: 0,
+    Played: on, PlaybackPositionTicks: 0, PlayedPercentage: 0, LastPlayedDate: on ? new Date().toISOString() : undefined,
     UnplayedItemCount: unplayedAfter
   }));
   try {
