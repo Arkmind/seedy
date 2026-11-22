@@ -186,14 +186,17 @@ const fr: Record<string, string> = {
   'Starting genres': 'Genres de départ',
   'For new profiles, until they have watched enough': 'Pour les nouveaux profils, tant qu’ils n’ont pas assez regardé',
   'What the hero shows': 'Contenu de la bannière',
-  '5 titles in rotation': '5 titres en rotation',
+  'Picked for each person from what they watch, what’s popular and what’s new': 'Choisi pour chacun d’après ce qu’il regarde, ce qui est populaire et les nouveautés',
+  'Only your picks': 'Uniquement vos choix',
+  'Your picks, then each person’s recommendations': 'Vos choix, puis les recommandations de chacun',
+  'Titles in rotation': 'Titres en rotation',
+  'Fewer when not enough titles have a backdrop': 'Moins s’il n’y a pas assez de titres avec un arrière-plan',
   'Automatic': 'Automatique',
   'Your picks': 'Vos choix',
   'Both': 'Les deux',
-  'Shown in this order; recently added titles fill in if there are fewer than 5':
-    'Affichés dans cet ordre ; des ajouts récents complètent s’il y en a moins de 5',
-  'Shown first; recently added and in-progress titles fill the rest':
-    'Affichés en premier ; des ajouts récents et des titres en cours complètent le reste',
+  'Shown in this order; recommendations stand in when none is available':
+    'Affichés dans cet ordre ; des recommandations les remplacent si aucun n’est disponible',
+  'Shown first; recommendations fill the rest': 'Affichés en premier ; des recommandations complètent le reste',
   'Unsaved changes': 'Modifications non enregistrées',
   '{n} unsaved change': '{n} modification non enregistrée',
   '{n} unsaved changes': '{n} modifications non enregistrées',

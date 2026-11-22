@@ -39,7 +39,7 @@ const fr: Record<string, string> = {
   'Privacy': 'Confidentialité',
   'What Seedy does with what you watch. Your admin can turn these off for everyone.': 'Ce que Seedy fait de ce que vous regardez. Votre administrateur peut désactiver ces options pour tout le monde.',
   'Personal recommendations': 'Recommandations personnalisées',
-  'Because you watched, genre rows and row order learn from your plays': '« Parce que vous avez regardé », les rangées par genre et leur ordre s’adaptent à vos lectures',
+  'Featured, Because you watched, genre rows and row order learn from your plays': 'À la une, « Parce que vous avez regardé », les rangées par genre et leur ordre s’adaptent à vos lectures',
   'Count my plays in the Top 10': 'Compter mes lectures dans le Top 10',
   'Others see totals only, never who watched': 'Les autres ne voient que les totaux, jamais qui a regardé',
   'See, hide or clear what you watched': 'Consulter, masquer ou effacer ce que vous avez regardé',

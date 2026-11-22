@@ -158,7 +158,7 @@ function Slot({ id, kind, children }: { id: string; kind: string; children: Comp
 
 async function loadFeatured(): Promise<FeaturedEntry[]> {
   const fromPlugin = await getFeatured().catch(() => null);
-  if (fromPlugin && fromPlugin.length) return fromPlugin.slice(0, 5);
+  if (fromPlugin && fromPlugin.length) return fromPlugin.slice(0, 10);
   /* Fallback: the newest titles that have backdrops. */
   const r = await getItems({
     includeItemTypes: ['Movie', 'Series'], sortBy: ['DateCreated'], sortOrder: 'Descending', limit: 12,
@@ -170,6 +170,11 @@ async function loadFeatured(): Promise<FeaturedEntry[]> {
     if (item.Type === 'Series') play = (await getNextUp(1, item.Id).catch(() => null))?.Items[0];
     return { item, reason: item.Type === 'Series' ? t('New episodes') : t('Just added'), play };
   }));
+}
+
+/* "Because you watched Dune" for a recommendation like a recent watch, else the reason Seedy gave. */
+function heroReason(entry: FeaturedEntry): string {
+  return entry.because ? t('Because you watched {title}', { title: entry.because }) : t(entry.reason);
 }
 
 function playLabel(entry: FeaturedEntry): string {
@@ -281,7 +286,7 @@ function Featured({ onState }: { onState: (s: 'loading' | 'shown' | 'none') => v
 
       <div class="hero-body">
         <div key={item.Id} class="hero-info" role="group" aria-roledescription="slide" aria-label={t('{n} of {total}: {name}', { n: idx + 1, total: n, name: item.Name })}>
-          <div class="overline hero-over"><span class="hero-dot" aria-hidden="true" /><span>{cur.reason ? t('{reason} · Featured', { reason: t(cur.reason) }) : t('Featured')}</span></div>
+          <div class="overline hero-over"><span class="hero-dot" aria-hidden="true" /><span>{cur.reason ? t('{reason} · Featured', { reason: heroReason(cur) }) : t('Featured')}</span></div>
           <h1 class="hero-title fit-title" style={fitTitle(item.Name)}>{item.Name}</h1>
           <div class="hero-meta">
             {yearRange(item) && <span>{yearRange(item)}</span>}
