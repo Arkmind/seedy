@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.5.3.0",
+        "changelog": "# What's Changed\n- Featured, picked for you\n  Titles like the ones you watch, what’s popular here and what’s new\n- Know why a title is featured\n  “Because you watched Dune”, “Popular here” or “New season”\n- Featured respects your privacy\n  Turn off personal recommendations and it stops using what you watch\n- The same buttons everywhere\n  On the web, watched and favorite look alike on home, people, books and music\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play).\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart Jellyfin: the web changes come with it.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.5.2...v0.5.3",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.5.3/seedy_0.5.3.0.zip",
+        "checksum": "60986dc3a36eb0dd0541b173e011b80b",
+        "timestamp": "2026-11-22T11:45:45Z"
+      },
+      {
         "version": "0.5.2.0",
         "changelog": "# What's Changed\n- See what you’ve watched\n  A Watched chip with the date, or how far along you are in a show\n- Play again or start over\n  Replay what you’ve finished, or restart what you’re watching from the beginning\n- Watched and favorite at a glance\n  Their buttons fill in once they’re on, on the web, phone and TV\n- Know when the next episode lands\n  Shows you’re up to date on say when their next episode arrives\n\n## Fixes\n- On the web, “Still watching?” shows up again when it should: moving the mouse no longer counts as someone being there.\n- On the web, Requests no longer shows the previous profile’s counts after switching profiles.\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play).\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart Jellyfin: the web changes come with it.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.5.1...v0.5.2",
         "targetAbi": "12.0.0.0",
