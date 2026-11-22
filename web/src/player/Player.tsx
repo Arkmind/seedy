@@ -989,19 +989,16 @@ function PlayerView({ item: initialItem, params }: { item: BaseItem; params: Par
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* Someone is there whenever the player gets real input; an auto-played episode adds to the run. */
+  /* Someone is there whenever the player gets a click, a scroll or a key (a mouse that only moves can be a nudge on
+     the desk, as on Android where only taps and keys count); an auto-played episode adds to the run. */
   useEffect(() => {
     if (!presence.auto) resetPresence();
     else if (item.Type === 'Movie') presence.movies++;
     else presence.episodes++;
     presence.auto = false;
-    const here = (e: Event) => {
-      if (e.type === 'pointermove' && !(e as PointerEvent).movementX && !(e as PointerEvent).movementY) return;
-      resetPresence();
-    };
-    const types = ['pointermove', 'pointerdown', 'wheel', 'keydown'];
-    types.forEach((t) => window.addEventListener(t, here, { passive: true }));
-    return () => types.forEach((t) => window.removeEventListener(t, here));
+    const types = ['pointerdown', 'wheel', 'keydown'];
+    types.forEach((t) => window.addEventListener(t, resetPresence, { passive: true }));
+    return () => types.forEach((t) => window.removeEventListener(t, resetPresence));
   }, []);
 
   /* ── Pause screen ── */
