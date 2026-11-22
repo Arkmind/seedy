@@ -63,7 +63,13 @@ class BrowseShots {
 
     @Test
     fun details() = shot("AndroidDetails", Tab.Home) {
-        DetailsScreen(BrowseSamples.details, DetailsActions(onMore = {}), canRequest = true, bottomPadding = tabBarHeight())
+        DetailsScreen(BrowseSamples.details, DetailsActions(onMore = {}), canRequest = true, bottomPadding = tabBarHeight(), today = BrowseSamples.today)
+    }
+
+    /** No board (web's Series details · up to date): Play again, the next episode's day, every season checked. */
+    @Test
+    fun detailsUpToDate() = shot("AndroidDetailsUpToDate", Tab.Home) {
+        DetailsScreen(BrowseSamples.upToDate, DetailsActions(onMore = {}), canRequest = true, bottomPadding = tabBarHeight(), today = BrowseSamples.today)
     }
 
     @Test
@@ -112,7 +118,13 @@ class BrowseShots {
     /** No board: the series page without seasons. */
     @Test
     fun movieDetails() = shot("AndroidMovieDetails") {
-        DetailsScreen(BrowseSamples.movieDetails, DetailsActions(onMore = {}), canRequest = true, bottomPadding = 0.dp)
+        DetailsScreen(BrowseSamples.movieDetails, DetailsActions(onMore = {}), canRequest = true, bottomPadding = 0.dp, today = BrowseSamples.today)
+    }
+
+    /** No board (web's Movie details · watched): the Watched chip, Play again, Watched and Favorite on. */
+    @Test
+    fun movieWatched() = shot("AndroidMovieDetailsWatched") {
+        DetailsScreen(BrowseSamples.movieWatched, DetailsActions(onMore = {}), canRequest = true, bottomPadding = 0.dp, today = BrowseSamples.today)
     }
 
     /** No board: the library's Filters sheet, in Request seasons' frame. */

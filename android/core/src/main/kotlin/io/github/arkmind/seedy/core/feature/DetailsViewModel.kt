@@ -32,6 +32,7 @@ import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.SortOrder
 import org.jellyfin.sdk.model.api.UserItemDataDto
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.UUID
 
 /**
@@ -99,8 +100,15 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
         val children: List<BaseItemDto>? = null,
         val hasTrailer: Boolean = false,
         val busy: Boolean = false,
+        /** Up to date on a show still airing: its next episode, when the server knows it. */
+        val nextToAir: BaseItemDto? = null,
     ) {
         val isSeries: Boolean get() = item?.type == BaseItemKind.SERIES
+
+        /** Everything watched and nothing started again: the main button is "Play again" (from the first episode). */
+        val again: Boolean
+            get() = item?.userData?.played == true && target?.resume != true &&
+                item.type in setOf(BaseItemKind.MOVIE, BaseItemKind.EPISODE, BaseItemKind.VIDEO, BaseItemKind.SERIES)
         val tmdbId: Int get() = item?.providerIds?.entries?.firstOrNull { it.key.equals("Tmdb", ignoreCase = true) }?.value?.toIntOrNull() ?: 0
 
         /** Season numbers with files on the server. */
@@ -197,9 +205,9 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
         }
         val item = _state.value.item ?: return
         viewModelScope.launch {
+            if (item.type == BaseItemKind.SERIES) return@launch refreshSeries()
             val fresh = runCatching { browse.item(item.id) }.getOrNull() ?: return@launch
             _state.update { it.copy(item = fresh) }
-            if (fresh.type == BaseItemKind.SERIES) refreshSeries()
         }
     }
 
@@ -208,6 +216,7 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
         viewModelScope.launch {
             val target = browse.seriesTarget(series.id)
             _state.update { it.copy(target = target) }
+            loadNextToAir()
             val streams = target?.let { runCatching { browse.withStreams(it.item.id) }.getOrNull() }
             _state.update { it.copy(badges = techBadges(streams)) }
             pickSeason()
@@ -282,12 +291,27 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
         _state.update { it.copy(children = films) }
     }
 
-    /** What the main button plays: the series' episode, or the title (a collection's first title). */
-    fun play(onPlay: (BaseItemDto) -> Unit) {
+    /**
+     * What the main button plays: the series' episode, or the title (a collection's first title). Once everything is
+     * watched it plays again from the start ([onStart]): a show from its first episode.
+     */
+    fun play(onPlay: (BaseItemDto) -> Unit, onStart: (BaseItemDto) -> Unit = onPlay) {
         val s = _state.value
         val item = s.item ?: return
+        if (s.again) {
+            if (item.type == BaseItemKind.SERIES) viewModelScope.launch { browse.firstEpisode(item.id)?.let(onStart) } else onStart(item)
+            return
+        }
         s.target?.let { return onPlay(it.item) }
         viewModelScope.launch { browse.playable(item)?.let(onPlay) }
+    }
+
+    /** Up to date on a show still airing: when its next episode comes. */
+    private suspend fun loadNextToAir() {
+        val s = _state.value
+        val item = s.item ?: return
+        val next = if (s.isSeries && s.again && item.status != "Ended") runCatching { browse.nextToAir(item.id) }.getOrNull() else null
+        _state.update { it.copy(nextToAir = next) }
     }
 
     fun shuffle(onPlay: (BaseItemDto) -> Unit) {
@@ -313,10 +337,14 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
     fun togglePlayed() {
         val item = _state.value.item ?: return
         val on = item.userData?.played != true
-        patch(item) { it.copy(played = on, playbackPositionTicks = 0, playedPercentage = 0.0) }
+        // Jellyfin dates the mark (the "Watched 22 Nov" chip); unwatching a whole show makes every episode unwatched again.
+        val unplayed = if (on) 0 else if (item.type == BaseItemKind.SERIES || item.type == BaseItemKind.SEASON) item.recursiveItemCount else item.userData?.unplayedItemCount
+        patch(item) {
+            it.copy(played = on, playbackPositionTicks = 0, playedPercentage = 0.0, lastPlayedDate = if (on) LocalDateTime.now() else null, unplayedItemCount = unplayed)
+        }
         viewModelScope.launch {
             if (runCatching { browse.setPlayed(item.id, on) }.isFailure) {
-                patch(item) { it.copy(played = !on) }
+                patch(item) { item.userData ?: it.copy(played = !on) }
             } else if (item.type == BaseItemKind.SERIES) {
                 refreshSeries()
             }
@@ -333,10 +361,19 @@ class DetailsViewModel(private val session: UserSession, private val id: UUID) :
         }
     }
 
+    /** After a watched mark: the show's counts, its seasons' checks, what Play starts and the open season's episodes. */
     private suspend fun refreshSeries() {
         val item = _state.value.item ?: return
         val target = browse.seriesTarget(item.id)
-        _state.update { it.copy(target = target) }
+        val fresh = runCatching { browse.item(item.id) }.getOrNull()
+        val seasons = runCatching { browse.seasons(item.id) }.getOrNull()
+        _state.update { s ->
+            s.copy(
+                target = target, item = fresh ?: s.item,
+                seasons = seasons?.let { list -> list.filter { (it.indexNumber ?: 1) != 0 } + list.filter { it.indexNumber == 0 } } ?: s.seasons,
+            )
+        }
+        loadNextToAir()
         _state.value.selected?.let { open(it) }
     }
 

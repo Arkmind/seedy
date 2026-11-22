@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -38,21 +39,26 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.arkmind.seedy.core.feature.DetailsViewModel
+import io.github.arkmind.seedy.core.format.detailsChip
 import io.github.arkmind.seedy.core.format.episodeNumber
 import io.github.arkmind.seedy.core.format.inProgress
 import io.github.arkmind.seedy.core.format.isVirtual
 import io.github.arkmind.seedy.core.format.join
+import io.github.arkmind.seedy.core.format.nextToAirLine
 import io.github.arkmind.seedy.core.format.playLabel
 import io.github.arkmind.seedy.core.format.progress
 import io.github.arkmind.seedy.core.format.rating
 import io.github.arkmind.seedy.core.format.remainingSeconds
 import io.github.arkmind.seedy.core.format.runtime
 import io.github.arkmind.seedy.core.format.score
+import io.github.arkmind.seedy.core.format.seasonChip
 import io.github.arkmind.seedy.core.format.seasonEpisodeMeta
 import io.github.arkmind.seedy.core.format.timeLeft
 import io.github.arkmind.seedy.core.format.year
@@ -81,6 +87,7 @@ import io.github.arkmind.seedy.ui.theme.SText
 import io.github.arkmind.seedy.ui.theme.SeedyColors
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import java.time.LocalDate
 import java.util.UUID
 import kotlin.math.min
 
@@ -94,6 +101,8 @@ class DetailsActions(
     val onPlayed: () -> Unit = {},
     val onFavorite: () -> Unit = {},
     val onShuffle: () -> Unit = {},
+    /** A movie or episode in progress, from the beginning. */
+    val onStartOver: () -> Unit = {},
     val onSeason: (UUID) -> Unit = {},
     /** Opens the request sheet: the seasons to tick first (empty: every open one). */
     val onRequest: (List<Int>) -> Unit = {},
@@ -108,7 +117,7 @@ class DetailsActions(
  * their titles.
  */
 @Composable
-fun DetailsScreen(state: DetailsViewModel.State, actions: DetailsActions, canRequest: Boolean, bottomPadding: Dp) {
+fun DetailsScreen(state: DetailsViewModel.State, actions: DetailsActions, canRequest: Boolean, bottomPadding: Dp, today: LocalDate = LocalDate.now()) {
     val item = state.item
     LazyColumn(Modifier.fillMaxSize().background(SeedyColors.Bg), contentPadding = PaddingValues(bottom = bottomPadding + 24.dp)) {
         if (item == null) {
@@ -123,7 +132,7 @@ fun DetailsScreen(state: DetailsViewModel.State, actions: DetailsActions, canReq
             }
             return@LazyColumn
         }
-        item(key = "top") { Top(state, item, actions, canRequest) }
+        item(key = "top") { Top(state, item, actions, canRequest, today) }
         when (item.type) {
             BaseItemKind.SERIES -> {
                 val eps = state.shownEpisodes
@@ -131,7 +140,7 @@ fun DetailsScreen(state: DetailsViewModel.State, actions: DetailsActions, canReq
                     items(3) { Box(Modifier.padding(horizontal = 20.dp, vertical = 6.dp).fillMaxWidth().height(72.dp).clip(RoundedCornerShape(12.dp)).background(SeedyColors.Panel)) }
                 } else if (eps != null) {
                     if (eps.isEmpty()) item { SText(t("No episodes in this season yet."), Modifier.padding(20.dp), size = 13.sp, color = SeedyColors.Text2) }
-                    items(eps, key = { it.id }) { ep -> EpisodeRow(ep, upNext = ep.id == state.target?.item?.id, onPlay = { actions.onEpisode(ep) }) }
+                    items(eps, key = { it.id }) { ep -> EpisodeRow(ep, upNext = !state.again && ep.id == state.target?.item?.id, onPlay = { actions.onEpisode(ep) }) }
                 }
                 similar(state, actions)
             }
@@ -186,7 +195,7 @@ private fun TopButtons(actions: DetailsActions, onMore: (() -> Unit)?) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Top(state: DetailsViewModel.State, item: BaseItemDto, actions: DetailsActions, canRequest: Boolean) {
+private fun Top(state: DetailsViewModel.State, item: BaseItemDto, actions: DetailsActions, canRequest: Boolean, today: LocalDate) {
     val viewer = LocalViewer.current
     val isSeries = item.type == BaseItemKind.SERIES
     val isPerson = item.type == BaseItemKind.PERSON
@@ -204,7 +213,7 @@ private fun Top(state: DetailsViewModel.State, item: BaseItemDto, actions: Detai
                 val name = item.name.orEmpty()
                 SText(name, size = fitTitleSize(name, maxWidth), weight = 900, lineHeight = 0.95f, tracking = -0.02f, color = SeedyColors.White, uppercase = true, maxLines = 3)
             }
-            Meta(state, item)
+            Meta(state, item, today)
             if (state.badges.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     for (b in state.badges) {
@@ -232,14 +241,14 @@ private fun Top(state: DetailsViewModel.State, item: BaseItemDto, actions: Detai
                     }
                 }
             }
-            if (isSeries && !state.seasons.isNullOrEmpty()) SeasonBar(state, actions)
+            if (isSeries && !state.seasons.isNullOrEmpty()) SeasonBar(state, actions, today)
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Meta(state: DetailsViewModel.State, item: BaseItemDto) {
+private fun Meta(state: DetailsViewModel.State, item: BaseItemDto, today: LocalDate) {
     val first = when (item.type) {
         BaseItemKind.SERIES -> item.yearRange
         BaseItemKind.PERSON -> null
@@ -252,6 +261,7 @@ private fun Meta(state: DetailsViewModel.State, item: BaseItemDto) {
         else -> item.runtime
     }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+        if (item.type != BaseItemKind.PERSON) detailsChip(item, today)?.let { WatchedChip(it) }
         if (!first.isNullOrEmpty()) SText(first, size = 13.sp, color = SeedyColors.TextHero)
         if (item.rating.isNotEmpty()) {
             SText(item.rating, Modifier.border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(5.dp)).padding(horizontal = 7.dp, vertical = 1.dp), size = 11.sp, weight = 700, color = SeedyColors.TextHero)
@@ -270,6 +280,7 @@ private fun Meta(state: DetailsViewModel.State, item: BaseItemDto) {
 private fun PlayButton(state: DetailsViewModel.State, item: BaseItemDto, onPlay: () -> Unit, enabled: Boolean) {
     val target = state.target?.item
     val label = when {
+        state.again -> t("Play again")
         target != null -> playLabel(target)
         item.type == BaseItemKind.SERIES -> t("Play")
         else -> if (item.inProgress) t("Resume") else t("Play")
@@ -280,7 +291,7 @@ private fun PlayButton(state: DetailsViewModel.State, item: BaseItemDto, onPlay:
         horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically,
     ) {
         val ink = if (enabled) SeedyColors.InkInverse else SeedyColors.Text3
-        SIcon(WebIcons.Play, size = 20.dp, color = ink)
+        if (state.again) SIcon(WebIcons.Restart, size = 20.dp, color = ink, stroke = 2.4f) else SIcon(WebIcons.Play, size = 20.dp, color = ink)
         SText(label, size = 14.sp, weight = 800, color = ink, maxLines = 1)
     }
 }
@@ -288,6 +299,8 @@ private fun PlayButton(state: DetailsViewModel.State, item: BaseItemDto, onPlay:
 @Composable
 private fun Progress(state: DetailsViewModel.State, item: BaseItemDto) {
     val target = state.target
+    val next = state.nextToAir?.takeIf { state.again }?.let { nextToAirLine(it) }
+    if (next != null) return SText(next, size = 12.sp, color = SeedyColors.Text2, maxLines = 2)
     val (fraction, text) = when {
         target != null && target.resume -> target.item.progress to t("{time} of {name}", "time" to timeLeft(target.item.remainingSeconds), "name" to target.item.name.orEmpty())
         item.type != BaseItemKind.SERIES && item.inProgress -> item.progress to timeLeft(item.remainingSeconds)
@@ -305,33 +318,55 @@ private fun Progress(state: DetailsViewModel.State, item: BaseItemDto) {
 private fun ActionGrid(state: DetailsViewModel.State, item: BaseItemDto, actions: DetailsActions) {
     val played = item.userData?.played == true
     val fav = item.userData?.isFavorite == true
-    val accent = LocalAccent.current
+    val video = item.type == BaseItemKind.MOVIE || item.type == BaseItemKind.EPISODE || item.type == BaseItemKind.VIDEO
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (item.type == BaseItemKind.MOVIE || item.type == BaseItemKind.SERIES || item.type == BaseItemKind.EPISODE || item.type == BaseItemKind.VIDEO) {
+        if (video || item.type == BaseItemKind.SERIES) {
             Action(WebIcons.Trailer, t("Trailer"), actions.onTrailer, Modifier.weight(1f), enabled = state.hasTrailer)
         }
-        Action(WebIcons.Check, t("Watched"), actions.onPlayed, Modifier.weight(1f), color = if (played) accent else SeedyColors.Text, stroke = if (played) 3f else 2.2f)
-        Action(if (fav) AppIcons.HeartFilled else WebIcons.Heart, t("Favorite"), actions.onFavorite, Modifier.weight(1f), color = if (fav) accent else SeedyColors.Text)
+        if (video && !played && item.inProgress) Action(WebIcons.Restart, t("Start over"), actions.onStartOver, Modifier.weight(1f))
+        // Watched and Favorite (as the web's Movie details · watched board): a light disc behind the icon once on.
+        Action(WebIcons.Check, t("Watched"), actions.onPlayed, Modifier.weight(1f), stroke = if (played) 2.6f else 2.2f, on = played)
+        Action(if (fav) AppIcons.HeartFilled else WebIcons.Heart, t("Favorite"), actions.onFavorite, Modifier.weight(1f), on = fav)
         if (item.type == BaseItemKind.SERIES || item.type == BaseItemKind.BOX_SET || item.type == BaseItemKind.PLAYLIST || item.type == BaseItemKind.FOLDER) {
             Action(WebIcons.Shuffle, t("Shuffle"), actions.onShuffle, Modifier.weight(1f))
         }
     }
 }
 
+/** One of the labelled actions; a toggle ([on] not null) sits on a light disc while it's on. */
 @Composable
-private fun Action(icon: IconDef, label: String, onClick: () -> Unit, modifier: Modifier, color: Color = SeedyColors.Text, stroke: Float = icon.stroke, enabled: Boolean = true) {
+private fun Action(icon: IconDef, label: String, onClick: () -> Unit, modifier: Modifier, stroke: Float = icon.stroke, enabled: Boolean = true, on: Boolean? = null) {
     Column(
-        modifier.heightIn(min = 56.dp).clip(RoundedCornerShape(12.dp)).tap(enabled = enabled, onClick = onClick).padding(vertical = 6.dp).alpha(if (enabled) 1f else 0.4f),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier.heightIn(min = 56.dp).clip(RoundedCornerShape(12.dp))
+            .then(if (on != null) Modifier.semantics { selected = on } else Modifier)
+            .tap(enabled = enabled, onClick = onClick).padding(vertical = 2.dp).alpha(if (enabled) 1f else 0.4f),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        SIcon(icon, size = 22.dp, color = color, stroke = stroke)
+        Box(Modifier.size(36.dp).clip(CircleShape).background(if (on == true) SeedyColors.Inverse else Color.Transparent), contentAlignment = Alignment.Center) {
+            SIcon(icon, size = 22.dp, color = if (on == true) SeedyColors.InkInverse else SeedyColors.Text, stroke = stroke)
+        }
         SText(label, size = 12.sp, weight = 600, color = SeedyColors.Text, maxLines = 1)
     }
 }
 
-/** "Season 3 ▾" and "1 of 10 watched". The menu lists the seasons, missing ones too (they open the request sheet). */
+/** "✓ Watched 2 Nov", "✓ 9 of 18 watched", "✓ Up to date": the rating badge's outline with a check. */
 @Composable
-private fun SeasonBar(state: DetailsViewModel.State, actions: DetailsActions) {
+private fun WatchedChip(text: String) {
+    Row(
+        Modifier.border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(5.dp)).padding(start = 4.dp, end = 7.dp, top = 1.dp, bottom = 1.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        SIcon(WebIcons.Check, size = 11.dp, color = SeedyColors.Text, stroke = 3f)
+        SText(text, size = 11.sp, weight = 700, color = SeedyColors.Text, maxLines = 1)
+    }
+}
+
+/**
+ * "Season 3 ▾" (a check on a season watched) and its chip ("1 of 10", "All 4 aired"). The menu lists the seasons,
+ * missing ones too (they open the request sheet).
+ */
+@Composable
+private fun SeasonBar(state: DetailsViewModel.State, actions: DetailsActions, today: LocalDate) {
     var open by remember { mutableStateOf(false) }
     val eps = state.shownEpisodes.orEmpty()
     Row(Modifier.padding(top = 4.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -340,6 +375,7 @@ private fun SeasonBar(state: DetailsViewModel.State, actions: DetailsActions) {
                 Modifier.height(44.dp).clip(RoundedCornerShape(13.dp)).background(SeedyColors.Surface).tap { open = true }.padding(start = 16.dp, end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                if (state.selectedSeason?.userData?.played == true) SIcon(WebIcons.Check, size = 14.dp, color = SeedyColors.White, stroke = 3f)
                 SText(state.selectedSeason?.name.orEmpty(), size = 14.sp, weight = 800, color = SeedyColors.White, maxLines = 1)
                 SIcon(WebIcons.ChevronDown, size = 16.dp, color = SeedyColors.White, stroke = 2.4f)
             }
@@ -348,6 +384,7 @@ private fun SeasonBar(state: DetailsViewModel.State, actions: DetailsActions) {
                     when (tab) {
                         is DetailsViewModel.SeasonTab.OnServer -> DropdownMenuItem(
                             text = { SText(tab.season.name.orEmpty(), size = 14.sp, weight = if (tab.season.id == state.selected) 800 else 600, color = SeedyColors.White) },
+                            leadingIcon = if (tab.season.userData?.played == true) ({ SIcon(WebIcons.Check, size = 14.dp, color = SeedyColors.White, stroke = 3f) }) else null,
                             trailingIcon = if (tab.season.id == state.selected) ({ SIcon(WebIcons.Check, size = 16.dp, color = LocalAccent.current) }) else null,
                             onClick = { open = false; actions.onSeason(tab.season.id) },
                         )
@@ -369,9 +406,7 @@ private fun SeasonBar(state: DetailsViewModel.State, actions: DetailsActions) {
                 }
             }
         }
-        if (eps.isNotEmpty()) {
-            SText(t("{n} of {total} watched", "n" to eps.count { it.userData?.played == true }, "total" to eps.size), size = 12.sp, color = SeedyColors.Text3)
-        }
+        seasonChip(eps, today)?.let { WatchedChip(it) }
     }
 }
 

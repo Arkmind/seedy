@@ -22,7 +22,9 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.CollectionType
 import org.jellyfin.sdk.model.api.UserItemDataDto
+import java.time.LocalDate
 import java.time.LocalDateTime
+import org.jellyfin.sdk.model.api.LocationType
 import java.util.UUID
 
 /** The browse boards' sample data (Series details, Request seasons, Libraries, Movies library, Search). */
@@ -39,12 +41,16 @@ object BrowseSamples {
         genres = listOf("Drama", "Thriller", "Mystery"), status = "Continuing", communityRating = 8.4f, childCount = 2,
         providerIds = mapOf("Tmdb" to "4242"),
         overview = "A search-and-rescue pilot follows a distress signal across the northern range, and finds a town that should not still be there. Season three picks up the winter after the crash, with the pass closing and the radio going quiet.",
-        userData = data(id("Northbound"), favorite = true),
+        userData = data(id("Northbound"), favorite = true).copy(unplayedItemCount = 9), recursiveItemCount = 18,
     )
 
-    private fun season(n: Int) = BaseItemDto(id = id("Northbound S$n"), type = BaseItemKind.SEASON, name = "Season $n", indexNumber = n, seriesId = northbound.id)
+    private fun season(n: Int, played: Boolean = false) =
+        BaseItemDto(id = id("Northbound S$n"), type = BaseItemKind.SEASON, name = "Season $n", indexNumber = n, seriesId = northbound.id, userData = data(id("Northbound S$n"), played = played))
 
-    val seasons = listOf(season(1), season(3))
+    val seasons = listOf(season(1, played = true), season(3))
+
+    /** The shots' today: "False Summit" (23 Oct) hasn't aired yet. */
+    val today: LocalDate = LocalDate.of(2026, 10, 21)
 
     private val episodeData = listOf(
         Triple("Thaw", 54, "2026-09-25"), Triple("The Pass", 52, "2026-10-02"), Triple("Whiteout", 49, "2026-10-09"),
@@ -75,6 +81,17 @@ object BrowseSamples {
     val details = DetailsViewModel.State(
         item = northbound, loading = false, seasons = seasons, selected = seasons[1].id, episodes = episodes, episodesFor = seasons[1].id,
         target = Browse.Target(episodes[1], resume = true), badges = listOf("4K", "HDR10", "Atmos", "CC"), seerr = seerrNorthbound, hasTrailer = true,
+    )
+
+    /** No board (web's Series details · up to date): every aired episode watched, the next one due Fri 23 Oct. */
+    val upToDate = details.copy(
+        item = northbound.copy(userData = data(id("Northbound"), played = true, favorite = true).copy(unplayedItemCount = 0)),
+        seasons = listOf(season(1, played = true), season(3, played = true)),
+        episodes = episodes.mapIndexed { i, ep ->
+            if (i < 4) ep.copy(userData = data(ep.id, played = true)) else ep.copy(locationType = LocationType.VIRTUAL, userData = data(ep.id))
+        },
+        target = Browse.Target(episodes[0], resume = false),
+        nextToAir = episodes[4].copy(locationType = LocationType.VIRTUAL),
     )
 
     val harrowgate = RequestSeasonsViewModel.State(
@@ -169,6 +186,13 @@ object BrowseSamples {
             overview = "Two sisters reopen their late father's lantern workshop for one last festival, and find the letters he never sent.",
         ),
         loading = false, badges = listOf("1080p", "CC"), hasTrailer = false, similar = movies.drop(6).take(4),
+    )
+
+    /** No board (web's Movie details · watched): watched on 19 Oct, in favorites. */
+    val movieWatched = movieDetails.copy(
+        item = movieDetails.item!!.copy(
+            userData = data(id("Paper Lanterns"), played = true, favorite = true).copy(lastPlayedDate = LocalDateTime.parse("2026-10-19T21:30:00")),
+        ),
     )
 
     val filterOptions = LibraryViewModel.FilterOptions(

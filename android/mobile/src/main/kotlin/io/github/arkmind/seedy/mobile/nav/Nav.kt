@@ -128,6 +128,9 @@ class MobileNav(private val stack: SnapshotStateList<Any>, private val selectTab
         if (audio != null && isAudioItem(item)) audio.playItem(item) else go(Route.Player(item.id))
     }
 
+    /** Play from the beginning, not where the person left off ("Play again", "Start over"). */
+    fun playFromStart(item: BaseItemDto) = go(Route.Player(item.id, startTicks = 0))
+
     /** The app's audio player, set by the shell. */
     var audio: AudioEngine? = null
 }

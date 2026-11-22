@@ -37,9 +37,13 @@ a.dhero-back:hover { color: #ffffff; }
   display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;
 }
 .dhero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 4px; }
+.btn-primary.is-movie { padding: 0 40px; }
 .dhero-progress { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--seedy-text-2); }
 .dhero-bar { flex: none; width: 160px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.18); overflow: hidden; }
+.dhero-bar.is-wide { width: 200px; }
 .dhero-bar > i { display: block; height: 100%; border-radius: 3px; background: #ffffff; }
+/* Up to date: "Next episode, False Summit, arrives Fri 23 Oct". */
+.dhero-next { font-size: 13px; color: var(--seedy-text-2); }
 
 /* Missing seasons, under the actions: "Seasons 2 and 4 aren't on the server · Request 2 seasons". */
 .dhero-missing {
@@ -91,8 +95,8 @@ a.dhero-back:hover { color: #ffffff; }
 .tab-year { font-size: 12px; font-weight: 600; color: #6f6f6f; }
 .tab.is-missing:hover .tab-year { color: var(--seedy-text-3); }
 .tab-pending { width: 6px; height: 6px; border-radius: 50%; background: var(--seedy-pending); }
+.seasons-bar .tab { gap: 7px; }
 .seasons-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.seasons-count { font-size: 13px; color: var(--seedy-text-3); }
 .seasons-more { align-self: center; padding: 0 20px; }
 .seasons-empty { font-size: 14px; color: var(--seedy-text-2); }
 
@@ -178,7 +182,7 @@ a.ep-row:hover .ep-hover, a.ep-row:focus-visible .ep-hover { opacity: 1; }
   .ep-title { font-size: 15px; }
   .ep-synopsis { font-size: 13px; }
   .seasons-tools { width: 100%; flex-wrap: nowrap; gap: 8px; }
-  .seasons-count { flex: 1; min-width: 0; }
+  .seasons-tools .watched-chip { margin-right: auto; }
   .seasons-tools .btn-secondary { padding: 0 12px; font-size: 13px; }
   .dhero-shade-x { background: linear-gradient(0deg, rgba(14, 14, 14, 0.97) 0%, rgba(14, 14, 14, 0.82) 55%, rgba(14, 14, 14, 0.25) 100%); }
   .person-portrait { width: 140px; }

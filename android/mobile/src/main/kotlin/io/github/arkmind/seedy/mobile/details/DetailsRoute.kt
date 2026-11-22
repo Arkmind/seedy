@@ -73,7 +73,8 @@ fun DetailsRoute(id: UUID) {
             state = state,
             actions = DetailsActions(
                 onBack = nav::back,
-                onPlay = { vm.play(nav::play) },
+                onPlay = { vm.play(nav::play, nav::playFromStart) },
+                onStartOver = { item?.let(nav::playFromStart) },
                 onEpisode = nav::play,
                 onOpen = nav::open,
                 onTrailer = {

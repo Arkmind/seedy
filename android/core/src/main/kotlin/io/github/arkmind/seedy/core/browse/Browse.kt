@@ -1,6 +1,8 @@
 package io.github.arkmind.seedy.core.browse
 
 import io.github.arkmind.seedy.core.data.io
+import io.github.arkmind.seedy.core.format.isVirtual
+import io.github.arkmind.seedy.core.format.premiereDay
 import io.github.arkmind.seedy.core.session.UserSession
 import kotlinx.serialization.Serializable
 import org.jellyfin.sdk.api.client.extensions.get
@@ -15,6 +17,7 @@ import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.SortOrder
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -76,9 +79,19 @@ class Browse(private val session: UserSession) {
     suspend fun seriesTarget(seriesId: UUID): Target? {
         runCatching { resume(seriesId) }.getOrNull()?.let { return Target(it, resume = true) }
         runCatching { nextUp(seriesId) }.getOrNull()?.let { return Target(it, resume = false) }
+        return firstEpisode(seriesId)?.let { Target(it, resume = false) }
+    }
+
+    /** A show's first real episode (a regular season's, on the server), else whatever comes first. */
+    suspend fun firstEpisode(seriesId: UUID): BaseItemDto? {
         val eps = runCatching { episodes(seriesId, null, limit = 40, isMissing = false) }.getOrDefault(emptyList())
-        val first = eps.firstOrNull { (it.parentIndexNumber ?: 1) > 0 && it.locationType != org.jellyfin.sdk.model.api.LocationType.VIRTUAL } ?: eps.firstOrNull()
-        return first?.let { Target(it, resume = false) }
+        return eps.firstOrNull { (it.parentIndexNumber ?: 1) > 0 && it.locationType != org.jellyfin.sdk.model.api.LocationType.VIRTUAL } ?: eps.firstOrNull()
+    }
+
+    /** The show's next episode that isn't out yet (Jellyfin lists announced ones as placeholder episodes). */
+    suspend fun nextToAir(seriesId: UUID, today: LocalDate = LocalDate.now()): BaseItemDto? = io {
+        api.showApi.getUpcomingEpisodes(userId = userId, parentId = seriesId, limit = 8, enableUserData = false, enableImageTypes = emptyList())
+            .content.items.firstOrNull { it.seriesId == seriesId && it.isVirtual && it.premiereDay?.isBefore(today) == false }
     }
 
     /** What Play means for any title: a show's episode, a collection's first title, the title itself. */

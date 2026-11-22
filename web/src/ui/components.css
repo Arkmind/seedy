@@ -44,6 +44,16 @@ a.btn-primary:hover, a.btn-square:hover { color: var(--seedy-text); }
   background: var(--seedy-inverse); color: var(--seedy-ink-inverse);
 }
 
+/* Watched and favorite toggles (Movie details · watched board): a glass outline while off, solid light once on. */
+.btn.is-toggle[aria-pressed='false'] {
+  background: rgba(14, 14, 14, 0.4); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.45); color: var(--seedy-white);
+}
+.btn.is-toggle[aria-pressed='false']:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.1); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.75); color: var(--seedy-white);
+}
+.btn-secondary.is-toggle[aria-pressed='true'] { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-weight: 800; }
+.btn-secondary.is-toggle[aria-pressed='true']:not(:disabled):hover { background: var(--seedy-white); }
+
 .btn-ghost {
   height: 44px; padding: 0 16px; border-radius: var(--r-card);
   background: transparent; color: var(--seedy-text-2);
@@ -238,6 +248,11 @@ a.btn-primary:hover, a.btn-square:hover { color: var(--seedy-text); }
 .rating-badge {
   display: inline-flex; padding: 1px 7px; border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: var(--r-xs); font-size: 12px; font-weight: 700; line-height: 1.5;
+}
+/* "✓ Watched 2 Nov", "✓ 9 of 18 watched", "✓ Up to date": the rating badge's outline with a check. */
+.watched-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px 1px 5px; border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--r-xs); font-size: 12px; font-weight: 700; line-height: 1.5; color: var(--seedy-text); white-space: nowrap;
 }
 .score { display: inline-flex; align-items: center; gap: 5px; }
 .score svg { color: var(--seedy-accent); }

@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { JELLYFIN_WEB } from '../../api/client';
-import { getEpisodes, getItem, getItems, getNextUp, getResume, getSeasons } from '../../api/jellyfin';
+import { getEpisodes, getItem, getItems, getNextUp, getResume, getSeasons, getUpcomingEpisodes } from '../../api/jellyfin';
 import { backdropUrl, personImageUrl, primaryUrl } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { seerrDetails, type SeerrDetails } from '../../api/seedy';
 import { canDownload, meStore, viewsStore } from '../../lib/app-state';
 import { downloadItems, hasEpisodes, isVideoFile, mayDownload } from '../../lib/download';
-import { dayOf, episodeTag, fmtDate, initials, plural, progressFraction, remainingSeconds, runtime, timeLeft, yearRange } from '../../lib/format';
+import {
+  dayOf, episodeTag, fmtDate, fmtWeekdayDate, initials, plural, progressFraction, remainingSeconds, runtime, startOfDay, timeLeft, yearRange
+} from '../../lib/format';
 import { back, navigate, setQuery, useLocation } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { manageChanged } from './manage/host';
@@ -20,8 +22,8 @@ import {
   seasonsLabel, toggleFavorite, togglePlayed, useItemList, yearOf
 } from './parts';
 import {
-  CastRow, DetailsHero, DetailsSkeleton, MetaLine, MoreActions, SeasonEpisodes, SimilarRow, SquareToggle, TrailerButton,
-  fallbackLibraryName, heroArt, names, orderSeasons, peopleOf, seriesStatus, useView, type InfoRow, type MissingSeason
+  CastRow, DetailsHero, DetailsSkeleton, MetaLine, MoreActions, SeasonEpisodes, SimilarRow, SquareToggle, StartOverButton, TrailerButton,
+  fallbackLibraryName, heroArt, names, orderSeasons, peopleOf, seriesChip, seriesStatus, useView, watchedChip, type InfoRow, type MissingSeason
 } from './details-parts';
 import { RequestSeasonsDialog, markRequested, seasonList } from './request-seasons';
 import { techBadges, techLines } from './media-info';
@@ -182,6 +184,12 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
   );
   const refresh = () => { setTick((n) => n + 1); onChanged(); };
   const gaps = useMissingSeasons(item, seasons.data);
+  // Every episode watched (and none started again): "Play again" from the first, and when the next one airs.
+  const again = !!item.UserData?.Played && !target.data?.resume;
+  const next = useAsync(
+    () => (again && item.Status !== 'Ended' ? nextToAir(item.Id).catch(() => undefined) : Promise.resolve(undefined)),
+    [item.Id, again]
+  );
 
   const list = gaps.list;
   const requested = loc.query.get('season');
@@ -246,17 +254,17 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
         overline={back.label}
         overlineTo={back.to}
         title={item.Name}
-        meta={<MetaLine parts={[yearRange(item), seasonCount]} rating={item.OfficialRating} score={item.CommunityRating} genres={item.Genres?.slice(0, 3)} />}
+        meta={<MetaLine chip={seriesChip(item)} parts={[yearRange(item), seasonCount]} rating={item.OfficialRating} score={item.CommunityRating} genres={item.Genres?.slice(0, 3)} />}
         badges={techBadges(tech.data)}
         overview={item.Overview}
         info={info}
         progress={pt?.resume ? { fraction: progressFraction(pt.ep), text: t('{time} of {name}', { time: timeLeft(remainingSeconds(pt.ep)), name: pt.ep.Name }) } : undefined}
-        notice={gaps.notice}
+        notice={<>{again && next.data && <NextToAir ep={next.data} />}{gaps.notice}</>}
         actions={
           <>
-            <button type="button" class="btn btn-primary" onClick={() => play()}>
-              <Icon name="play" size={20} />
-              {pt ? `${pt.resume ? t('Resume') : t('Play')} ${episodeLabel(pt.ep)}`.trim() : t('Play')}
+            <button type="button" class="btn btn-primary" onClick={() => (again ? playFirst() : play())}>
+              {again ? <Icon name="restart" size={20} stroke={2.4} /> : <Icon name="play" size={20} />}
+              {again ? t('Play again') : pt ? `${pt.resume ? t('Resume') : t('Play')} ${episodeLabel(pt.ep)}`.trim() : t('Play')}
             </button>
             <TrailerButton item={item} />
             <button type="button" class="btn btn-square" aria-label={t('Shuffle episodes')} onClick={shuffle}>
@@ -265,7 +273,7 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
             <SquareToggle
               icon="check"
               on={!!item.UserData?.Played}
-              onLabel="Mark series as unwatched"
+              onLabel="Watched. Mark series as not watched"
               offLabel="Mark series as watched"
               onClick={() => togglePlayed(item, setItem).then(refresh)}
             />
@@ -290,7 +298,7 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
             seasons={list}
             selected={selected}
             onSelect={(sid) => setQuery({ season: sid })}
-            upNextId={pt?.ep.Id}
+            upNextId={again ? undefined : pt?.ep.Id}
             onChanged={refresh}
             version={tick}
             missing={gaps.missing}
@@ -304,6 +312,19 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
       {gaps.dialog}
     </Shell>
   );
+}
+
+/* The show's next episode that isn't out yet (Jellyfin lists announced ones as virtual episodes). */
+async function nextToAir(seriesId: string): Promise<BaseItem | undefined> {
+  const today = startOfDay(new Date()).getTime();
+  const list = (await getUpcomingEpisodes(8, seriesId)).Items;
+  return list.find((e) => e.SeriesId === seriesId && e.LocationType === 'Virtual' && (dayOf(e.PremiereDate)?.getTime() ?? 0) >= today);
+}
+
+/* Series details · up to date: "Next episode, False Summit, arrives Fri 23 Oct". */
+function NextToAir({ ep }: { ep: BaseItem }) {
+  const date = fmtWeekdayDate(dayOf(ep.PremiereDate)!);
+  return <div class="dhero-next">{ep.Name ? t('Next episode, {name}, arrives {date}', { name: ep.Name, date }) : t('Next episode arrives {date}', { date })}</div>;
 }
 
 /* Seasons Seerr knows that aren't on the server (Series details · request missing seasons board): a banner in the
@@ -396,7 +417,8 @@ function MoviePage({ item: initial }: { item: BaseItem }) {
   const [item, setItem] = useLocal(initial);
   const view = useView(item);
   const back = backTo(item, view);
-  const fraction = item.UserData?.Played ? 0 : progressFraction(item);
+  const played = !!item.UserData?.Played;
+  const fraction = played ? 0 : progressFraction(item);
   const resume = fraction > 0;
   const lines = techLines(item);
   const released = item.PremiereDate ? fmtDate(dayOf(item.PremiereDate)!) : item.ProductionYear ? String(item.ProductionYear) : undefined;
@@ -417,23 +439,22 @@ function MoviePage({ item: initial }: { item: BaseItem }) {
         overline={back.label}
         overlineTo={back.to}
         title={item.Name}
-        meta={<MetaLine parts={[yearOf(item), runtime(item)]} rating={item.OfficialRating} score={item.CommunityRating} genres={item.Genres?.slice(0, 3)} />}
+        meta={<MetaLine chip={watchedChip(item)} parts={[yearOf(item), runtime(item)]} rating={item.OfficialRating} score={item.CommunityRating} genres={item.Genres?.slice(0, 3)} />}
         badges={techBadges(item)}
         overview={item.Overview}
         info={info}
-        progress={resume ? { fraction, text: timeLeft(remainingSeconds(item)) } : undefined}
+        progress={resume ? { fraction, text: timeLeft(remainingSeconds(item)), wide: true } : undefined}
         actions={
           <>
-            <button type="button" class="btn btn-primary" onClick={() => navigate(playPath(item))}>
-              <Icon name="play" size={20} />
-              {resume ? t('Resume') : t('Play')}
+            <button type="button" class="btn btn-primary is-movie" onClick={() => navigate(playPath(item, { restart: played }))}>
+              {played ? <Icon name="restart" size={20} stroke={2.4} /> : <Icon name="play" size={20} />}
+              {played ? t('Play again') : resume ? t('Resume') : t('Play')}
             </button>
+            {resume && <StartOverButton item={item} />}
             <TrailerButton item={item} />
-            <SquareToggle icon="check" on={!!item.UserData?.Played} onLabel="Mark as unwatched" offLabel="Mark as watched" onClick={() => togglePlayed(item, setItem)} />
+            <SquareToggle icon="check" on={played} onLabel="Watched. Mark as not watched" offLabel="Mark as watched" onClick={() => togglePlayed(item, setItem)} />
             <SquareToggle icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
-            <MoreActions item={item}>
-              {(close) => resume && <MenuItem icon="refresh" label={t('Play from the beginning')} onSelect={() => { close(); navigate(playPath(item, { restart: true })); }} />}
-            </MoreActions>
+            <MoreActions item={item} />
           </>
         }
       />
@@ -454,7 +475,8 @@ function EpisodePage({ item: initial, onChanged }: { item: BaseItem; onChanged: 
   const series = useAsync(() => (item.SeriesId ? getItem(item.SeriesId, ['Overview', 'Genres']) : Promise.resolve(null)), [item.SeriesId]);
   const seasons = useAsync(() => (item.SeriesId ? getSeasons(item.SeriesId).then((r) => orderSeasons(r.Items)) : Promise.resolve([] as BaseItem[])), [item.SeriesId]);
   const [season, setSeason] = useState(item.SeasonId);
-  const fraction = item.UserData?.Played ? 0 : progressFraction(item);
+  const played = !!item.UserData?.Played;
+  const fraction = played ? 0 : progressFraction(item);
   const resume = fraction > 0;
   const lines = techLines(item);
   const aired = item.PremiereDate ? fmtDate(dayOf(item.PremiereDate)!) : undefined;
@@ -477,23 +499,23 @@ function EpisodePage({ item: initial, onChanged }: { item: BaseItem; onChanged: 
         overline={item.SeriesName ?? t('Series')}
         overlineTo={item.SeriesId ? `/details/${item.SeriesId}` : undefined}
         title={item.Name}
-        meta={<MetaLine parts={[episodeTag(item), item.PremiereDate ? String(dayOf(item.PremiereDate)!.getFullYear()) : undefined, runtime(item)]} rating={item.OfficialRating} score={item.CommunityRating} />}
+        meta={<MetaLine chip={watchedChip(item)} parts={[episodeTag(item), item.PremiereDate ? String(dayOf(item.PremiereDate)!.getFullYear()) : undefined, runtime(item)]} rating={item.OfficialRating} score={item.CommunityRating} />}
         badges={techBadges(item)}
         overview={item.Overview}
         info={info}
-        progress={resume ? { fraction, text: t('{time} of {name}', { time: timeLeft(remainingSeconds(item)), name: item.Name }) } : undefined}
+        progress={resume ? { fraction, text: t('{time} of {name}', { time: timeLeft(remainingSeconds(item)), name: item.Name }), wide: true } : undefined}
         actions={
           <>
-            <button type="button" class="btn btn-primary" onClick={() => navigate(playPath(item))}>
-              <Icon name="play" size={20} />
-              {`${resume ? t('Resume') : t('Play')} ${episodeLabel(item)}`.trim()}
+            <button type="button" class="btn btn-primary" onClick={() => navigate(playPath(item, { restart: played }))}>
+              {played ? <Icon name="restart" size={20} stroke={2.4} /> : <Icon name="play" size={20} />}
+              {`${played ? t('Play again') : resume ? t('Resume') : t('Play')} ${episodeLabel(item)}`.trim()}
             </button>
-            <SquareToggle icon="check" on={!!item.UserData?.Played} onLabel="Mark as unwatched" offLabel="Mark as watched" onClick={() => togglePlayed(item, setItem).then(changed)} />
+            {resume && <StartOverButton item={item} />}
+            <SquareToggle icon="check" on={played} onLabel="Watched. Mark as not watched" offLabel="Mark as watched" onClick={() => togglePlayed(item, setItem).then(changed)} />
             <SquareToggle icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
             <MoreActions item={item}>
               {(close) => (
                 <>
-                  {resume && <MenuItem icon="refresh" label={t('Play from the beginning')} onSelect={() => { close(); navigate(playPath(item, { restart: true })); }} />}
                   {item.SeriesId && <MenuItem icon="tv" label={item.SeriesName ? t('Go to {name}', { name: item.SeriesName }) : t('Go to series')} onSelect={() => { close(); navigate(`/details/${item.SeriesId}?season=${item.SeasonId ?? ''}`); }} />}
                 </>
               )}
@@ -611,7 +633,7 @@ function CollectionPage({ item: initial }: { item: BaseItem }) {
               {t('Play')}
             </button>
             <button type="button" class="btn btn-square" aria-label={t('Shuffle')} disabled={!first} onClick={shuffle}><Icon name="shuffle" size={22} /></button>
-            <SquareToggle icon="check" on={!!item.UserData?.Played} onLabel="Mark as unwatched" offLabel="Mark as watched" onClick={() => togglePlayed(item, setItem).then(kids.reload)} />
+            <SquareToggle icon="check" on={!!item.UserData?.Played} onLabel="Watched. Mark as not watched" offLabel="Mark as watched" onClick={() => togglePlayed(item, setItem).then(kids.reload)} />
             <SquareToggle icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
             <MoreActions item={item} />
           </>

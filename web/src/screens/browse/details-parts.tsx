@@ -5,8 +5,8 @@ import { backdropUrl, cardArt } from '../../api/images';
 import type { BaseItem, Person } from '../../api/types';
 import { viewsStore } from '../../lib/app-state';
 import {
-  dayOf, fitTitle, fmtDate, fmtWeekdayDate, listText, pct, plural, progressFraction, ratingLabel, remainingSeconds, runtime, score as fmtScore,
-  timeLeft
+  dayOf, fitTitle, fmtDate, fmtDayMonth, fmtWeekdayDate, listText, pct, plural, progressFraction, ratingLabel, remainingSeconds, runtime,
+  score as fmtScore, timeLeft
 } from '../../lib/format';
 import { Link, href, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
@@ -70,7 +70,8 @@ export function DetailsHero({ art: artIn, itemId, overline, overlineTo, title, m
   badges?: string[];
   overview?: string;
   actions?: ComponentChildren;
-  progress?: { fraction: number; text: string };
+  /* wide: the 200 px bar of the movie boards (series keep 160 px). */
+  progress?: { fraction: number; text: string; wide?: boolean };
   /* Under the actions: "Seasons 2 and 4 aren't on the server · Request 2 seasons". */
   notice?: ComponentChildren;
   info?: InfoRow[];
@@ -122,7 +123,7 @@ export function DetailsHero({ art: artIn, itemId, overline, overlineTo, title, m
             {actions && <div class="dhero-actions">{actions}</div>}
             {progress && (
               <div class="dhero-progress">
-                <div class="dhero-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress.fraction * 100)} aria-label={t('Progress')}>
+                <div class={'dhero-bar' + (progress.wide ? ' is-wide' : '')} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress.fraction * 100)} aria-label={t('Progress')}>
                   <i style={{ width: pct(progress.fraction) }} />
                 </div>
                 <span>{progress.text}</span>
@@ -169,11 +170,12 @@ export function DetailsSkeleton() {
   );
 }
 
-/* Meta line: "2024–2026  [TV-MA]  3 seasons  ★ 8.4  Drama · Thriller · Mystery". */
-export function MetaLine({ parts, rating, score, genres }: { parts: (string | undefined | false)[]; rating?: string; score?: number; genres?: string[] }) {
+/* Meta line: "[✓ 9 of 18 watched]  2024–2026  [TV-MA]  3 seasons  ★ 8.4  Drama · Thriller · Mystery". */
+export function MetaLine({ parts, rating, score, genres, chip }: { parts: (string | undefined | false)[]; rating?: string; score?: number; genres?: string[]; chip?: string }) {
   const [first, ...rest] = parts.filter(Boolean) as string[];
   return (
     <>
+      {chip && <WatchedChip text={chip} />}
       {first && <span>{first}</span>}
       {rating && <span class="rating-badge">{ratingLabel(rating)}</span>}
       {rest.map((p) => <span key={p}>{p}</span>)}
@@ -181,6 +183,27 @@ export function MetaLine({ parts, rating, score, genres }: { parts: (string | un
       {genres && genres.length > 0 && <span>{genres.join(' · ')}</span>}
     </>
   );
+}
+
+export function WatchedChip({ text }: { text: string }) {
+  return <span class="watched-chip"><Icon name="check" size={13} stroke={3} />{text}</span>;
+}
+
+/* A watched title's chip: "Watched 2 Nov" (with the year when it isn't this one), "Watched" without a date. */
+export function watchedChip(item: BaseItem): string | undefined {
+  if (!item.UserData?.Played) return undefined;
+  const at = item.UserData.LastPlayedDate ? new Date(item.UserData.LastPlayedDate) : undefined;
+  if (!at || Number.isNaN(at.getTime())) return t('Watched');
+  return t('Watched {date}', { date: at.getFullYear() === new Date().getFullYear() ? fmtDayMonth(at) : fmtDate(at) });
+}
+
+/* A series' chip: "9 of 18 watched", then "Up to date" (or "Watched" once it has ended); nothing before the first episode. */
+export function seriesChip(item: BaseItem): string | undefined {
+  const ud = item.UserData;
+  if (ud?.Played) return item.Status === 'Ended' ? t('Watched') : t('Up to date');
+  const total = item.RecursiveItemCount ?? 0;
+  const watched = total - (ud?.UnplayedItemCount ?? total);
+  return watched > 0 && watched < total ? t('{watched} of {total} watched', { watched, total }) : undefined;
 }
 
 /* ───────── People ───────── */
@@ -263,10 +286,20 @@ export function TrailerButton({ item }: { item: BaseItem }) {
   );
 }
 
+/* Watched / favorite: a glass outline while off, solid once on (Movie details boards). */
 export function SquareToggle({ on, onLabel, offLabel, icon, onClick }: { on: boolean; onLabel: string; offLabel: string; icon: 'heart' | 'check'; onClick: () => void }) {
   return (
-    <button type="button" class="btn btn-square" aria-label={t(on ? onLabel : offLabel)} aria-pressed={on ? 'true' : 'false'} onClick={onClick}>
-      {icon === 'heart' ? <Icon name="heart" size={22} filled={on} /> : <Icon name="check" size={22} stroke={on ? 3 : 2.2} />}
+    <button type="button" class="btn btn-square is-toggle" aria-label={t(on ? onLabel : offLabel)} aria-pressed={on ? 'true' : 'false'} onClick={onClick}>
+      {icon === 'heart' ? <Icon name="heart" size={22} filled={on} /> : <Icon name="check" size={22} stroke={on ? 2.6 : 2.2} />}
+    </button>
+  );
+}
+
+/* Start a title in progress over (Movie details · in progress board). */
+export function StartOverButton({ item }: { item: BaseItem }) {
+  return (
+    <button type="button" class="btn btn-square" aria-label={t('Start over')} onClick={() => navigate(playPath(item, { restart: true }))}>
+      <Icon name="restart" size={20} stroke={2.4} />
     </button>
   );
 }
@@ -352,6 +385,11 @@ export function SeasonEpisodes({ series, seasons, selected, onSelect, upNextId, 
   const available = episodes.filter((e) => e.LocationType !== 'Virtual');
   const allWatched = available.length > 0 && available.every((e) => e.UserData?.Played);
   const season = seasons.find((s) => s.Id === selected);
+  // "1 of 10" while watching, "All 4 aired" once caught up on a season still airing, "All 10 watched" on a finished one.
+  const airing = episodes.some((e) => e.LocationType === 'Virtual' && (dayOf(e.PremiereDate)?.getTime() ?? Infinity) > Date.now());
+  const chip = allWatched
+    ? (airing ? t('All {n} aired', { n: available.length }) : t('All {n} watched', { n: available.length }))
+    : watched > 0 ? t('{watched} of {total}', { watched, total }) : undefined;
 
   /* Show six, starting near the episode to watch next. */
   const focusId = currentId ?? upNextId;
@@ -411,16 +449,25 @@ export function SeasonEpisodes({ series, seasons, selected, onSelect, upNextId, 
                 requestAnimationFrame(() => (document.querySelector(`[data-season="${n.Id}"]`) as HTMLElement | null)?.focus());
               }}
               data-season={s.Id}
+              aria-label={s.UserData?.Played ? t('{name}, watched', { name: s.Name ?? '' }) : undefined}
             >
+              {s.UserData?.Played && <Icon name="check" size={14} stroke={3} />}
               {s.Name}
             </button>
           ))}
         </div>
         <div class="seasons-tools">
-          {total > 0 && <span class="seasons-count">{watched} of {total} watched</span>}
-          <button type="button" class="btn btn-secondary" disabled={busy || !available.length} aria-pressed={allWatched ? 'true' : 'false'} onClick={markSeason}>
+          {chip && <WatchedChip text={chip} />}
+          <button
+            type="button"
+            class="btn btn-secondary is-toggle"
+            disabled={busy || !available.length}
+            aria-pressed={allWatched ? 'true' : 'false'}
+            aria-label={allWatched ? t('Season watched. Mark season as not watched') : undefined}
+            onClick={markSeason}
+          >
             <Icon name="check" size={18} stroke={2.2} />
-            {allWatched ? t('Mark season unwatched') : t('Mark season watched')}
+            {allWatched ? t('Season watched') : t('Mark season watched')}
           </button>
           <button
             type="button"

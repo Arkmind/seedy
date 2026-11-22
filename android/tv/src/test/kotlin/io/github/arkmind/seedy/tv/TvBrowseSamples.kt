@@ -42,12 +42,13 @@ object TvBrowseSamples {
         genres = listOf("Drama", "Thriller", "Mystery"), status = "Continuing", communityRating = 8.4f, childCount = 3,
         providerIds = mapOf("Tmdb" to "4242"),
         overview = "A search-and-rescue pilot follows a distress signal across the northern range, and finds a town that should not still be there. Season three picks up the winter after the crash, with the pass closing and the radio going quiet.",
-        userData = data(id("Northbound"), favorite = true),
+        userData = data(id("Northbound"), favorite = true).copy(unplayedItemCount = 9), recursiveItemCount = 18,
     )
 
-    private fun season(n: Int, name: String = "Season $n") = BaseItemDto(id = id("Northbound S$n"), type = BaseItemKind.SEASON, name = name, indexNumber = n, seriesId = northbound.id)
+    private fun season(n: Int, name: String = "Season $n", played: Boolean = false) =
+        BaseItemDto(id = id("Northbound S$n"), type = BaseItemKind.SEASON, name = name, indexNumber = n, seriesId = northbound.id, userData = data(id("Northbound S$n"), played = played))
 
-    private val seasons = listOf(season(1), season(3), season(0, "Specials"))
+    private val seasons = listOf(season(1, played = true), season(3), season(0, "Specials"))
 
     /** The shots' today: "False Summit" (23 Oct) hasn't aired yet. */
     val today: LocalDate = LocalDate.of(2026, 10, 21)
@@ -84,6 +85,15 @@ object TvBrowseSamples {
                 SeerrSeason(4, "Season 4", 0, "2027-03-01"),
             ),
         ),
+    )
+
+    /** No board (web's Series details · up to date): every aired episode watched, False Summit due Fri 23 Oct. */
+    val upToDate = details.copy(
+        item = northbound.copy(userData = data(id("Northbound"), played = true, favorite = true).copy(unplayedItemCount = 0)),
+        seasons = listOf(season(1, played = true), season(3, played = true), season(0, "Specials")),
+        episodes = episodes.map { if (it.locationType == LocationType.VIRTUAL) it else it.copy(userData = data(it.id, played = true)) },
+        target = Browse.Target(episodes[0], resume = false),
+        nextToAir = episodes[4],
     )
 
     val harrowgate = RequestSeasonsViewModel.State(
@@ -167,6 +177,11 @@ object TvBrowseSamples {
             overview = "Two sisters reopen their late father's lantern workshop for one last festival, and find the letters he never sent.",
         ),
         loading = false, badges = listOf("1080p", "CC"), hasTrailer = true, similar = movies.drop(6).take(6),
+    )
+
+    /** No board (web's Movie details · watched): watched on 19 Oct, not in favorites. */
+    val movieWatched = movieDetails.copy(
+        item = movieDetails.item!!.copy(userData = data(movieDetails.item!!.id, played = true).copy(lastPlayedDate = LocalDateTime.parse("2026-10-19T21:30:00"))),
     )
 
     val favorites = FavoritesViewModel.State(

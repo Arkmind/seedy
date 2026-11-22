@@ -46,16 +46,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.arkmind.seedy.core.feature.DetailsViewModel
+import io.github.arkmind.seedy.core.format.detailsChip
 import io.github.arkmind.seedy.core.format.episodeNumber
 import io.github.arkmind.seedy.core.format.inProgress
 import io.github.arkmind.seedy.core.format.isNewEpisode
 import io.github.arkmind.seedy.core.format.isVirtual
 import io.github.arkmind.seedy.core.format.join
+import io.github.arkmind.seedy.core.format.nextToAirLine
 import io.github.arkmind.seedy.core.format.playLabel
 import io.github.arkmind.seedy.core.format.progress
 import io.github.arkmind.seedy.core.format.rating
@@ -98,6 +102,8 @@ class TvDetailsActions(
     val onPlayed: () -> Unit = {},
     val onFavorite: () -> Unit = {},
     val onShuffle: () -> Unit = {},
+    /** A movie or episode in progress, from the beginning. */
+    val onStartOver: () -> Unit = {},
     val onSeason: (UUID) -> Unit = {},
     val onRequest: (List<Int>) -> Unit = {},
 )
@@ -128,7 +134,7 @@ fun TvDetailsScreen(state: DetailsViewModel.State, actions: TvDetailsActions, ca
         val episodesList = rememberLazyListState()
         val scope = rememberCoroutineScope()
         val upNext = state.shownEpisodes.orEmpty().indexOfFirst { it.id == state.target?.item?.id }.coerceAtLeast(0)
-        Hero(state, item, actions, canRequest, playFocus, onEpisodes = {
+        Hero(state, item, actions, canRequest, playFocus, today, onEpisodes = {
             // Episodes: the remote goes to the episode to watch next.
             scope.launch {
                 episodesList.scrollToItem((upNext - 1).coerceAtLeast(0))
@@ -155,6 +161,7 @@ private fun Hero(
     actions: TvDetailsActions,
     canRequest: Boolean,
     playFocus: FocusRequester,
+    today: LocalDate,
     onEpisodes: () -> Unit,
 ) {
     val accent = LocalAccent.current
@@ -165,6 +172,7 @@ private fun Hero(
         val name = item.name.orEmpty()
         SText(name, size = tvHeroTitleSize(name), weight = 900, lineHeight = 0.9f, tracking = -0.02f, color = SeedyColors.White, uppercase = true, maxLines = 2)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(18.bp), verticalArrangement = Arrangement.spacedBy(8.bp), itemVerticalAlignment = Alignment.CenterVertically) {
+            if (item.type != BaseItemKind.PERSON) detailsChip(item, today)?.let { WatchedChip(it) }
             val first = if (isSeries) item.yearRange else item.year?.toString()
             if (!first.isNullOrEmpty()) SText(first, size = 21.bsp, weight = 500, color = SeedyColors.TextHero)
             if (item.rating.isNotEmpty()) {
@@ -196,19 +204,24 @@ private fun Hero(
         if (item.type != BaseItemKind.PERSON) {
             Row(Modifier.padding(top = 10.bp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.bp)) {
                 val target = state.target?.item
+                val played = item.userData?.played == true
                 val label = when {
+                    state.again -> t("Play again")
                     target != null -> playLabel(target)
                     !isSeries && item.inProgress -> t("Resume")
                     else -> t("Play")
                 }
-                HeroButton(label, WebIcons.Play, actions.onPlay, Modifier.focusRequester(playFocus), primary = true)
+                HeroButton(label, if (state.again) WebIcons.Restart else WebIcons.Play, actions.onPlay, Modifier.focusRequester(playFocus), primary = true)
+                if (!isSeries && !isList && !played && item.inProgress) HeroButton(t("Start over"), WebIcons.Restart, actions.onStartOver)
                 if (isSeries) HeroButton(t("Episodes"), AppIcons.Episodes, onEpisodes)
                 if (state.hasTrailer) HeroButton(t("Trailer"), WebIcons.Trailer, actions.onTrailer)
                 if (isSeries && canRequest && gaps.open.isNotEmpty()) {
                     HeroButton(tn(gaps.open.size, "Request {n} season", "Request {n} seasons"), WebIcons.Request, { actions.onRequest(emptyList()) })
                 }
+                // Watched and the heart (as the web's Movie details · watched board): an outline while off, light once on.
+                HeroButton(null, WebIcons.Check, actions.onPlayed, on = played)
                 val fav = item.userData?.isFavorite == true
-                HeroButton(null, if (fav) AppIcons.HeartFilled else WebIcons.Heart, actions.onFavorite)
+                HeroButton(null, if (fav) AppIcons.HeartFilled else WebIcons.Heart, actions.onFavorite, on = fav)
             }
             Progress(state, item, canRequest)
         }
@@ -235,19 +248,24 @@ internal fun tvHeroTitleSize(title: String): TextUnit {
     return (fit.coerceIn(60f, 92f) / 2f).sp
 }
 
-/** The board's 66 px hero buttons: translucent, the main one light; light with the white ring when focused. */
+/**
+ * The board's 66 px hero buttons: translucent, the main one light; light with the white ring when focused. A toggle
+ * ([on] not null) is a glass outline while off and light while on.
+ */
 @Composable
-private fun HeroButton(label: String?, icon: IconDef, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false) {
-    TvPressable(onClick, modifier) { focused ->
-        val light = primary || focused
+private fun HeroButton(label: String?, icon: IconDef, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false, on: Boolean? = null) {
+    TvPressable(onClick, modifier.then(if (on != null) Modifier.semantics { selected = on } else Modifier)) { focused ->
+        val light = primary || focused || on == true
+        val shape = RoundedCornerShape(19.bp)
         Row(
-            Modifier.focusScale(focused, 1.04f).focusRing(focused, radius = 19.bp, gap = 5.bp, ring = 5.bp).height(66.bp).clip(RoundedCornerShape(19.bp))
-                .background(if (light) SeedyColors.Inverse else Color.White.copy(alpha = 0.14f))
+            Modifier.focusScale(focused, 1.04f).focusRing(focused, radius = 19.bp, gap = 5.bp, ring = 5.bp).height(66.bp).clip(shape)
+                .background(if (light) SeedyColors.Inverse else if (on == false) SeedyColors.Bg.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.14f))
+                .then(if (on == false && !focused) Modifier.border(3.bp, Color.White.copy(alpha = 0.45f), shape) else Modifier)
                 .padding(horizontal = if (primary && label != null) 34.bp else 26.bp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.bp),
         ) {
             val ink = if (light) SeedyColors.InkInverse else SeedyColors.White
-            SIcon(icon, size = 26.bp, color = ink, stroke = if (icon.stroke > 0f) 2.2f else 0f)
+            SIcon(icon, size = 26.bp, color = ink, stroke = if (icon.stroke <= 0f) 0f else if (on == true && icon == WebIcons.Check) 2.6f else 2.2f)
             if (label != null) SText(label, size = 22.bsp, weight = if (primary) 800 else 700, color = ink, maxLines = 1)
         }
     }
@@ -262,14 +280,15 @@ private fun Progress(state: DetailsViewModel.State, item: BaseItemDto, canReques
         else -> null to null
     }
     val gaps = if (canRequest) state.gaps.line.takeIf { it.isNotEmpty() } else null
-    if (fraction == null && gaps == null) return
+    val next = state.nextToAir?.takeIf { state.again }?.let { nextToAirLine(it) }
+    if (fraction == null && gaps == null && next == null) return
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.bp)) {
         if (fraction != null) {
             Box(Modifier.width(280.bp).height(6.bp).clip(RoundedCornerShape(4.bp)).background(Color.White.copy(alpha = 0.2f))) {
                 Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(SeedyColors.White))
             }
         }
-        SText(join(text, gaps), size = 18.bsp, color = SeedyColors.Text2, maxLines = 1)
+        SText(join(text, next, gaps), size = 18.bsp, color = SeedyColors.Text2, maxLines = 1)
     }
 }
 
@@ -288,6 +307,7 @@ private fun Episodes(state: DetailsViewModel.State, actions: TvDetailsActions, f
             when (tab) {
                 is DetailsViewModel.SeasonTab.OnServer -> SeasonTab(
                     tab.season.name.orEmpty(), null, tab.season.id == state.selected, missing = false, onClick = { actions.onSeason(tab.season.id) },
+                    watched = tab.season.userData?.played == true,
                     modifier = if (tab.season.id == state.selected) Modifier.focusRequester(currentTab) else Modifier,
                 )
                 is DetailsViewModel.SeasonTab.Missing -> SeasonTab(
@@ -318,9 +338,9 @@ private val DetailsViewModel.SeasonTab.key: String
         is DetailsViewModel.SeasonTab.Missing -> "missing:${season.n}"
     }
 
-/** A season tab; a missing season's is dashed, with its year or "Not on the server". */
+/** A season tab (a check once it's watched); a missing season's is dashed, with its year or "Not on the server". */
 @Composable
-private fun SeasonTab(label: String, note: String?, current: Boolean, missing: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun SeasonTab(label: String, note: String?, current: Boolean, missing: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, watched: Boolean = false) {
     TvPressable(onClick, modifier) { focused ->
         val shape = RoundedCornerShape(16.bp)
         Row(
@@ -343,9 +363,22 @@ private fun SeasonTab(label: String, note: String?, current: Boolean, missing: B
                 missing -> SeedyColors.Text3
                 else -> SeedyColors.White
             }
+            if (watched) SIcon(WebIcons.Check, size = 18.bp, color = ink, stroke = 3f)
             SText(label, size = 20.bsp, weight = if (current || focused) 800 else 600, color = ink, maxLines = 1)
             if (note != null) SText(note, size = 16.bsp, weight = 600, color = if (focused) Color(0xFF5A5A5A) else SeedyColors.Text3, maxLines = 1)
         }
+    }
+}
+
+/** "✓ Watched 2 Nov", "✓ 9 of 18 watched", "✓ Up to date": the rating badge's outline with a check. */
+@Composable
+private fun WatchedChip(text: String) {
+    Row(
+        Modifier.border(2.bp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(7.bp)).padding(start = 9.bp, end = 12.bp, top = 2.bp, bottom = 2.bp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.bp),
+    ) {
+        SIcon(WebIcons.Check, size = 18.bp, color = SeedyColors.Text, stroke = 3f)
+        SText(text, size = 16.bsp, weight = 700, color = SeedyColors.Text, maxLines = 1)
     }
 }
 
