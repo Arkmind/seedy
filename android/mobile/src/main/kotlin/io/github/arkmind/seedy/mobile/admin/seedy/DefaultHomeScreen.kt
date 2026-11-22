@@ -216,15 +216,26 @@ private fun HomeBody(h: HomeConfig, state: HomeAdminState, actions: HomeAdminAct
 
     Section(t("Featured")) {
         row {
-            SegRow(t("What the hero shows"), t("5 titles in rotation"), listOf(Choice("auto", t("Automatic")), Choice("picks", t("Your picks")), Choice("both", t("Both"))), h.featured.mode) { v ->
+            val help = when (h.featured.mode) {
+                "auto" -> t("Picked for each person from what they watch, what’s popular and what’s new")
+                "picks" -> t("Only your picks")
+                else -> t("Your picks, then each person’s recommendations")
+            }
+            SegRow(t("What the hero shows"), help, listOf(Choice("auto", t("Automatic")), Choice("picks", t("Your picks")), Choice("both", t("Both"))), h.featured.mode) { v ->
                 actions.edit { it.copy(featured = it.featured.copy(mode = v)) }
+            }
+        }
+        row {
+            val n = h.featured.count
+            PickRow(t("Titles in rotation"), t("Fewer when not enough titles have a backdrop"), tn(n, "{n} title", "{n} titles")) {
+                sheet.open(t("Titles in rotation"), choices((1..10).toList()) { tn(it, "{n} title", "{n} titles") }, n) { v -> actions.edit { it.copy(featured = it.featured.copy(count = v)) } }
             }
         }
         if (h.featured.mode != "auto") {
             row {
                 StackRow(
                     t("Your picks"),
-                    if (h.featured.mode == "picks") t("Shown in this order; recently added titles fill in if there are fewer than 5") else t("Shown first; recently added and in-progress titles fill the rest"),
+                    if (h.featured.mode == "picks") t("Shown in this order; recommendations stand in when none is available") else t("Shown first; recommendations fill the rest"),
                     gap = 12.dp,
                 ) {
                     for (id in h.featured.picks) {

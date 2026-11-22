@@ -127,7 +127,7 @@ fun ProfilePage(state: SettingsState, actions: SettingsActions, nav: SettingsNav
         if (state.seedy) {
             Section(t("Privacy"), t("Your admin can turn these off for everyone.")) {
                 val p = state.prefs.privacy
-                row { SwitchRow(t("Personal recommendations"), t("Because you watched, genre rows and row order learn from your plays"), p.personalRecs) { actions.setPrivacy(it, p.countInTop10) } }
+                row { SwitchRow(t("Personal recommendations"), t("Featured, Because you watched, genre rows and row order learn from your plays"), p.personalRecs) { actions.setPrivacy(it, p.countInTop10) } }
                 row { SwitchRow(t("Count my plays in the Top 10"), t("Others see totals only, never who watched"), p.countInTop10) { actions.setPrivacy(p.personalRecs, it) } }
                 if (state.historyEnabled) row { PickRow(t("Viewing history"), t("See, hide or clear what you watched"), t("Open"), onClick = nav.history) }
             }

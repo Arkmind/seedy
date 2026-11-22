@@ -1,5 +1,6 @@
 package io.github.arkmind.seedy.core.seedy
 
+import io.github.arkmind.seedy.core.i18n.t
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -152,9 +153,15 @@ data class HomeRow(
 @Serializable
 internal data class HomeRows(val rows: List<HomeRow> = emptyList())
 
-/** A title for the hero: [reason] is why it's there, in English for t() ("Continue watching", "New episodes"…); [play] is what Play starts. */
+/**
+ * A title for the hero: [reason] is why it's there, in English for t() ("New episodes", "Recommended for you"…);
+ * [because] is the recent watch a recommendation is like; [play] is what Play starts.
+ */
 @Serializable
-data class FeaturedEntry(val item: BaseItemDto, val reason: String = "", val play: BaseItemDto? = null)
+data class FeaturedEntry(val item: BaseItemDto, val reason: String = "", val because: String? = null, val play: BaseItemDto? = null) {
+    /** The hero's line above the title: "Because you watched Dune", or the reason. */
+    val reasonText: String get() = because?.let { t("Because you watched {title}", "title" to it) } ?: t(reason)
+}
 
 @Serializable
 data class Top10(val items: List<Top10Entry> = emptyList(), val quiet: Boolean = false)
