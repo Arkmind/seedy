@@ -68,7 +68,19 @@ class TvBrowseShots {
     /** No board: the series page without seasons, "More like this" in their place. */
     @Test
     fun movieDetails() = shot("TVMovieDetails") {
-        TvDetailsScreen(TvBrowseSamples.movieDetails, TvDetailsActions(), canRequest = true)
+        TvDetailsScreen(TvBrowseSamples.movieDetails, TvDetailsActions(), canRequest = true, today = TvBrowseSamples.today)
+    }
+
+    /** No board (web's Movie details · watched): the Watched chip, Play again, the check on. */
+    @Test
+    fun movieWatched() = shot("TVMovieDetailsWatched") {
+        TvDetailsScreen(TvBrowseSamples.movieWatched, TvDetailsActions(), canRequest = true, today = TvBrowseSamples.today)
+    }
+
+    /** No board (web's Series details · up to date): Play again, the next episode's day, the seasons checked. */
+    @Test
+    fun detailsUpToDate() = shot("TVDetailsUpToDate") {
+        TvDetailsScreen(TvBrowseSamples.upToDate, TvDetailsActions(), canRequest = true, today = TvBrowseSamples.today)
     }
 
     /** No board: the library's Sort choices. */

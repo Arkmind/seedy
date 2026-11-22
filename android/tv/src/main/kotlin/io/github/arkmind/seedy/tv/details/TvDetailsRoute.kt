@@ -40,7 +40,8 @@ fun TvDetailsRoute(id: UUID) {
         TvDetailsScreen(
             state,
             TvDetailsActions(
-                onPlay = { vm.play(nav::play) },
+                onPlay = { vm.play(nav::play, nav::playFromStart) },
+                onStartOver = { state.item?.let(nav::playFromStart) },
                 onEpisode = nav::play,
                 onOpen = nav::open,
                 onTrailer = {

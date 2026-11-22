@@ -38,6 +38,9 @@ class TvNav(private val stack: SnapshotStateList<Any>) {
     }
 
     fun play(item: BaseItemDto) = go(TvRoute.Player(item.id))
+
+    /** Play from the beginning, not where the person left off ("Play again", "Start over"). */
+    fun playFromStart(item: BaseItemDto) = go(TvRoute.Player(item.id, startTicks = 0))
 }
 
 val LocalTvNav = staticCompositionLocalOf<TvNav> { error("No TV navigation here") }
