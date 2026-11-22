@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -108,6 +109,10 @@ import io.github.arkmind.seedy.ui.wrapped.StoryLook
 import io.github.arkmind.seedy.ui.wrapped.StoryPlayer
 import io.github.arkmind.seedy.ui.wrapped.SummaryCard
 import io.github.arkmind.seedy.ui.wrapped.TightText
+import io.github.arkmind.seedy.ui.wrapped.FitText
+import io.github.arkmind.seedy.ui.wrapped.FlexBar
+import io.github.arkmind.seedy.ui.wrapped.fitHeight
+import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.ui.wrapped.WrappedIcons
 import io.github.arkmind.seedy.ui.wrapped.WrappedInk
 import io.github.arkmind.seedy.ui.wrapped.WrappedPeach
@@ -275,9 +280,11 @@ private fun Right(gap: Dp = 30.bp, content: @Composable ColumnScope.() -> Unit) 
     Column(Modifier.fillMaxSize().padding(start = 900.bp, end = 96.bp, top = 230.bp), verticalArrangement = Arrangement.spacedBy(gap), content = content)
 }
 
+/** A story's title on its own lines (two at least), a size down when a line doesn't fit the column ("TON ANNÉE"). */
 @Composable
 private fun Title(text: String, ink: Color, size: Int = 128) {
-    Heading(text, size.bsp, ink, Modifier.storyIn(.1f, 40.bp), lineHeight = .92f, tracking = -.035f)
+    val lines = maxOf(2, text.count { it == '\n' } + 1)
+    FitText(text.uppercase(), size.bsp, (size * 7 / 10).bsp, lines, 900, ink, Modifier.storyIn(.1f, 40.bp).fillMaxWidth(), lineHeight = .92f, tracking = -.035f, step = .5.sp)
 }
 
 @Composable
@@ -351,7 +358,10 @@ private fun Hours(w: Wrapped) {
     val hours = hoursOf(w.watchMs)
     Left {
         SText(t("This year you watched"), Modifier.storyIn(.1f, 40.bp), size = 44.bsp, weight = 800, color = Ink)
-        Box(Modifier.margin(start = (-12).bp, top = 8.bp).height((240 * 1.362).bp)) { Odometer(formatNumber(hours), 240.bsp, Ink, tracking = -.06f) }
+        // Six characters ("12,345") a size down, as on the phone.
+        val text = formatNumber(hours)
+        val big = if (text.length > 5) 188 else 240
+        Box(Modifier.margin(start = (-12).bp, top = 8.bp).height((big * 1.362).bp)) { Odometer(text, big.bsp, Ink, tracking = -.06f) }
         Heading(tn(hours.toInt(), "hour", "hours"), 116.bsp, Ink, Modifier.storyIn(.9f, 40.bp).margin(top = (-44).bp), lineHeight = 1f)
         TvMedu(meduLine(StoryKey.Hours, w), dark = false, top = 50)
     }
@@ -441,7 +451,7 @@ private fun Genres(w: Wrapped) {
             Row(Modifier.storyIn(.5f + .12f * i, 40.bp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(26.bp)) {
                 SText("${formatNumber(g.pct)}%", Modifier.width(170.bp), size = 76.bsp, weight = 900, tracking = -.04f, color = colours[i], maxLines = 1)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.bp)) {
-                    SText(genreName(g), size = 32.bsp, weight = 800, color = Color.White, maxLines = 1)
+                    FitText(genreName(g), 32.bsp, 24.bsp, 1, 800, Color.White, step = .5.sp)
                     Box(Modifier.fillMaxWidth().height(26.bp).clip(RoundedCornerShape(13.bp)).background(Color(0xFF262626))) {
                         Box(Modifier.fillMaxWidth(g.pct.toFloat() / top).height(26.bp).storyGrow(.6f + .12f * i).clip(RoundedCornerShape(13.bp)).background(colours[i]))
                     }
@@ -472,7 +482,7 @@ private fun Shows(w: Wrapped) {
                 OutlineText("1", 230.bsp, Color.White, 2.5.bp * 2, Modifier.align(Alignment.TopEnd).padding(end = 34.bp, top = 4.bp), tracking = -.05f)
                 Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 40.bp, end = 40.bp, bottom = 34.bp), verticalAlignment = Alignment.Bottom) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.bp)) {
-                        SText(first.name, size = 64.bsp, weight = 900, lineHeight = 1f, tracking = -.02f, color = Color.White, maxLines = 1)
+                        FitText(first.name, 64.bsp, 44.bsp, 2, 900, Color.White, lineHeight = 1f, tracking = -.02f, step = .5.sp)
                         SText(showMeta(first), size = 26.bsp, color = Color(0xFFD0D0D0), maxLines = 1)
                     }
                     Box(Modifier.clip(RoundedCornerShape(999.bp)).background(accent).padding(horizontal = 18.bp, vertical = 8.bp)) {
@@ -491,7 +501,7 @@ private fun Shows(w: Wrapped) {
                             SText("${i + 2}", Modifier.width(40.bp), size = 50.bsp, weight = 900, tracking = -.04f, color = Ink, maxLines = 1)
                             ShowArt(s, i + 1, wide = false, modifier = Modifier.size(120.bp, 68.bp).clip(RoundedCornerShape(14.bp)))
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.bp)) {
-                                SText(s.name, size = 28.bsp, weight = 900, color = Ink, maxLines = 1)
+                                FitText(s.name, 28.bsp, 22.bsp, 2, 900, Ink, lineHeight = 1.15f, step = .5.sp)
                                 SText(showMeta(s), size = 21.bsp, color = Ink.copy(alpha = .7f), maxLines = 1)
                             }
                         }
@@ -522,7 +532,7 @@ private fun Movie(w: Wrapped) {
     val m = w.movie ?: return
     Left {
         Title(movieTitle(w), Ink, size = 80)
-        SText(m.name, Modifier.storyIn(1f, 40.bp).padding(top = 34.bp), size = 56.bsp, weight = 900, tracking = -.02f, color = Ink, maxLines = 2)
+        FitText(m.name, 56.bsp, 36.bsp, 2, 900, Ink, Modifier.storyIn(1f, 40.bp).padding(top = 34.bp).fillMaxWidth(), lineHeight = 1.1f, tracking = -.02f, step = .5.sp)
         SText(movieMeta(w), Modifier.storyIn(1f, 40.bp).padding(top = 6.bp), size = 28.bsp, weight = 600, color = Ink.copy(alpha = .75f))
         TvMedu(meduLine(StoryKey.Movie, w), dark = false, top = 50)
     }
@@ -579,7 +589,7 @@ private fun Binge(w: Wrapped, look: StoryLook) {
         }
         Row(Modifier.storyIn(1.2f, 40.bp).padding(top = 12.bp).fillMaxWidth()) {
             SText(timeOf(b.start), size = 22.bsp, weight = 800, color = Ink, maxLines = 1)
-            SText(bingeLine(w), Modifier.weight(1f).padding(horizontal = 12.bp), size = 22.bsp, weight = 800, color = Ink.copy(alpha = .7f), align = TextAlign.Center, maxLines = 1)
+            FitText(bingeLine(w), 22.bsp, 18.bsp, 2, 800, Ink.copy(alpha = .7f), Modifier.weight(1f).padding(horizontal = 12.bp), align = TextAlign.Center, step = .5.sp)
             SText(timeOf(b.end), size = 22.bsp, weight = 800, color = Ink, maxLines = 1)
         }
         // "Still watching?" cards fanned out, 1.6 × the phone's.
@@ -627,13 +637,13 @@ private fun Clock(w: Wrapped, look: StoryLook) {
     val light = !look.dark
     val (lead, kind) = clockTitle(w)
     Left {
-        TightText(
+        FitText(
             buildAnnotatedString {
                 append(lead.uppercase())
                 append("\n")
                 withStyle(SpanStyle(color = if (light) Color.White else accent)) { append(kind.uppercase()) }
             },
-            112.bsp, 900, look.ink, .92f, Modifier.storyIn(.1f, 40.bp), tracking = -.035f,
+            112.bsp, 76.bsp, 3, 900, look.ink, Modifier.storyIn(.1f, 40.bp).fillMaxWidth(), lineHeight = .92f, tracking = -.035f, step = .5.sp,
         )
         val share = clockShare(w)
         val at = share.indexOf("{pct}")
@@ -680,7 +690,10 @@ private fun Requests(w: Wrapped) {
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(24.bp),
         ) {
-            Box(Modifier.height(240.bp).margin(end = (-29).bp), contentAlignment = Alignment.BottomStart) { Odometer(formatNumber(r.count), 240.bsp, Ink, tracking = -.06f, delay = .3f) }
+            // The phone's 112, 100 and 72 px by the count's length, so "titles requested" stays in the column.
+            val digits = formatNumber(r.count).length
+            val big = if (digits <= 2) 240 else if (digits == 3) 214 else 154
+            Box(Modifier.height(big.bp).margin(end = (-big * .143f / 2f).dp), contentAlignment = Alignment.BottomStart) { Odometer(formatNumber(r.count), big.bsp, Ink, tracking = -.06f, delay = .3f) }
             TightText(
                 AnnotatedString(tc(if (one) "title" else "titles", "count") + "\n" + tc("requested", if (one) "one" else "other")),
                 60.bsp, 900, Ink, .95f, Modifier.storyIn(.8f, 40.bp).padding(bottom = 18.bp),
@@ -690,26 +703,23 @@ private fun Requests(w: Wrapped) {
     }
     Right(gap = 0.bp) {
         // Each part 40 px of padding plus its share of the rest, as on the phone.
-        androidx.compose.foundation.layout.BoxWithConstraints(
+        FlexBar(
+            parts.map { it.n }, 6.bp, 40.bp,
             Modifier.fillMaxWidth().height(72.bp)
                 .semantics { contentDescription = t("{a} arrived, {b} on the way, {c} declined", "a" to r.here, "b" to r.coming, "c" to r.declined) },
         ) {
-            val free = maxWidth - 6.bp * (parts.size - 1) - 40.bp * parts.size
-            val all = parts.sumOf { it.n }.coerceAtLeast(1)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.bp)) {
-                parts.forEachIndexed { i, x ->
-                    Box(
-                        Modifier.width(40.bp + free * (x.n.toFloat() / all)).fillMaxHeight().storyGrow(.7f + .15f * i).then(x.look(18.bp)).padding(horizontal = 20.bp),
-                        contentAlignment = if (x.kind == 0) Alignment.CenterStart else Alignment.Center,
-                    ) { SText(x.label, size = 28.bsp, weight = 900, color = if (x.kind == 2) Ink else Color.White, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Clip) }
-                }
+            parts.forEachIndexed { i, x ->
+                Box(
+                    Modifier.storyGrow(.7f + .15f * i).then(x.look(18.bp)).padding(horizontal = 20.bp),
+                    contentAlignment = if (x.kind == 0) Alignment.CenterStart else Alignment.Center,
+                ) { SText(x.label, size = 28.bsp, weight = 900, color = if (x.kind == 2) Ink else Color.White, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Clip) }
             }
         }
         Column(Modifier.storyIn(1.2f, 40.bp).padding(top = 34.bp), verticalArrangement = Arrangement.spacedBy(18.bp)) {
             for (x in parts) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.bp)) {
                     Box(Modifier.size(26.bp).then(x.look(8.bp)))
-                    SText(formatNumber(x.n), Modifier.width(56.bp), size = 34.bsp, weight = 900, color = Ink, maxLines = 1)
+                    SText(formatNumber(x.n), Modifier.widthIn(min = 56.bp), size = 34.bsp, weight = 900, color = Ink, maxLines = 1)
                     SText(x.line, size = 34.bsp, weight = 700, color = Ink, maxLines = 1)
                 }
             }
@@ -722,7 +732,7 @@ private fun Requests(w: Wrapped) {
             Row(Modifier.storyIn(1.4f, 40.bp).padding(top = 44.bp).fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(18.bp)) {
                 for ((big, small) in cards) {
                     Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(36.bp)).background(Ink).padding(30.bp), verticalArrangement = Arrangement.spacedBy(6.bp)) {
-                        SText(big, size = 56.bsp, weight = 900, lineHeight = 1f, tracking = -.02f, color = Color.White, maxLines = 1)
+                        FitText(big, 56.bsp, 36.bsp, 2, 900, Color.White, lineHeight = 1.05f, tracking = -.02f, step = .5.sp)
                         SText(small, size = 26.bsp, lineHeight = 1.35f, color = Color(0xFFC8C8C8))
                     }
                 }
@@ -748,10 +758,9 @@ private class RequestPart(val n: Int, val label: String, val line: String, val k
 @Composable
 private fun Oddest(w: Wrapped) {
     val o = w.oddest ?: return
-    val titleSize = if (o.name.length > 26) 72 else if (o.name.length > 16) 88 else 104
     Left {
         SText(t("Your oddest request"), Modifier.storyIn(.1f, 40.bp), size = 36.bsp, weight = 800, color = Ink)
-        Heading(o.name, titleSize.bsp, Ink, Modifier.storyIn(.2f, 40.bp).padding(top = 14.bp), lineHeight = .92f, tracking = -.035f, maxLines = 3)
+        FitText(o.name.uppercase(), 104.bsp, 56.bsp, 3, 900, Ink, Modifier.storyIn(.2f, 40.bp).padding(top = 14.bp).fillMaxWidth(), lineHeight = .92f, tracking = -.035f, step = .5.sp)
         TvMedu(meduLine(StoryKey.Oddest, w), dark = false)
     }
     Right(gap = 0.bp) {
@@ -805,12 +814,9 @@ private fun Personality(w: Wrapped) {
     val accent = LocalAccent.current
     val key = w.personality.key
     val name = personalityName(key)
-    // The longest word stays on one line ("The Completionist").
-    val longest = name.split(Regex("\\s+")).maxOf { it.length }
-    val nameSize = if (longest > 11) 88 else if (name.length > 19) 94 else 104
     Left {
         SText(t("Your watch personality"), Modifier.storyIn(.1f, 40.bp), size = 36.bsp, weight = 800, color = Ink)
-        Heading(name, nameSize.bsp, Ink, Modifier.storyPop(.4f).padding(top = 18.bp), lineHeight = .92f, tracking = -.035f)
+        FitText(name.uppercase(), 104.bsp, 64.bsp, 2, 900, Ink, Modifier.storyPop(.4f).padding(top = 18.bp).fillMaxWidth(), lineHeight = .92f, tracking = -.035f, step = .5.sp)
         SText(personalityText(key), Modifier.storyIn(.6f, 40.bp).padding(top = 26.bp).widthIn(max = 620.bp), size = 30.bsp, weight = 600, lineHeight = 1.45f, color = Ink.copy(alpha = .8f))
         TvMedu(meduLine(StoryKey.Personality, w), dark = false, top = 50)
     }
@@ -827,7 +833,7 @@ private fun Personality(w: Wrapped) {
                 }.padding(top = 29.bp, bottom = 26.bp),
                 horizontalArrangement = Arrangement.spacedBy(24.bp),
             ) {
-                SText(line.big, Modifier.width(320.bp).alignByBaseline(), size = 52.bsp, weight = 900, tracking = -.02f, color = Ink, maxLines = 1)
+                SText(line.big, Modifier.statWidth(320.bp).alignByBaseline(), size = 52.bsp, weight = 900, lineHeight = 1.1f, tracking = -.02f, color = Ink)
                 SText(line.small, Modifier.weight(1f).alignByBaseline(), size = 28.bsp, weight = 600, lineHeight = 1.35f, color = Ink)
             }
         }
@@ -845,8 +851,16 @@ private fun Summary(w: Wrapped) {
     }
     // The phone's card, three quarters of its size (it's drawn in the phone's units).
     Box(Modifier.fillMaxSize().padding(start = 900.bp, end = 96.bp, top = 190.bp), contentAlignment = Alignment.TopCenter) {
-        Box(Modifier.wrapContentHeight(Alignment.Top, unbounded = true).storyPop(.3f).graphicsLayer { scaleX = .75f; scaleY = .75f; transformOrigin = TransformOrigin(.5f, 0f) }) {
+        // Smaller still when a long year makes it taller than the screen.
+        Box(Modifier.storyPop(.3f).padding(bottom = 48.bp).fitHeight(.75f)) {
             SummaryCard(w, accent, Modifier.width(342.dp))
         }
     }
+}
+
+/** The board's stat figure: at least [min] wide, at most 58 % of the row, its own width in between. */
+private fun Modifier.statWidth(min: Dp): Modifier = layout { m, c ->
+    val max = (c.maxWidth * .58f).toInt()
+    val p = m.measure(c.copy(minWidth = min.roundToPx().coerceAtMost(max), maxWidth = max))
+    layout(p.width, p.height) { p.place(0, 0) }
 }

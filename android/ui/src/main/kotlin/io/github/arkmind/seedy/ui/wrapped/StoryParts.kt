@@ -125,7 +125,7 @@ fun SummaryCard(w: Wrapped, accent: Color, modifier: Modifier = Modifier) {
                             w.shows.take(5).forEachIndexed { i, s ->
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     SText("${i + 1}", Modifier.width(12.dp).alignByBaseline(), size = 14.sp, weight = 900, color = Ink.copy(alpha = .55f), maxLines = 1)
-                                    SText(s.name, Modifier.alignByBaseline(), size = 14.sp, weight = 800, color = Ink, maxLines = 1)
+                                    FitText(s.name, 14.sp, 12.sp, 2, 800, Ink, Modifier.weight(1f).alignByBaseline(), lineHeight = 1.2f)
                                 }
                             }
                         }
@@ -136,18 +136,18 @@ fun SummaryCard(w: Wrapped, accent: Color, modifier: Modifier = Modifier) {
                         label(t("Hours"))
                         SText(formatNumber(hoursOf(w.watchMs)), size = 30.sp, weight = 900, lineHeight = 1.05f, tracking = -.02f, color = Ink, maxLines = 1)
                         val counts = summaryCounts(w)
-                        if (counts.isNotEmpty()) SText(counts, Modifier.padding(top = 2.dp), size = 11.sp, weight = 800, color = Ink.copy(alpha = .7f), maxLines = 1)
+                        if (counts.isNotEmpty()) SText(counts, Modifier.padding(top = 2.dp), size = 11.sp, weight = 800, color = Ink.copy(alpha = .7f))
                     }
                     w.genres.firstOrNull()?.let { g ->
                         Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                             label(t("Top genre"))
-                            TightText(AnnotatedString(genreName(g)), 18.sp, 900, Ink, 1.05f, tracking = -.02f)
+                            FitText(genreName(g), 18.sp, 13.sp, 2, 900, Ink, Modifier.fillMaxWidth(), lineHeight = 1.05f, tracking = -.02f)
                         }
                     }
                     w.movie?.let { m ->
                         Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                             label(t("Top movie"))
-                            TightText(AnnotatedString(m.name), 18.sp, 900, Ink, 1.05f, tracking = -.02f)
+                            FitText(m.name, 18.sp, 12.sp, 3, 900, Ink, Modifier.fillMaxWidth(), lineHeight = 1.05f, tracking = -.02f)
                         }
                     }
                 }
@@ -159,12 +159,12 @@ fun SummaryCard(w: Wrapped, accent: Color, modifier: Modifier = Modifier) {
             ) {
                 Column(Modifier.weight(1f)) {
                     SText(t("Watch personality"), size = 10.sp, weight = 800, tracking = .1f, color = accent, uppercase = true, maxLines = 1)
-                    SText(personalityName(w.personality.key), size = 17.sp, weight = 900, color = Color.White, maxLines = 1)
+                    FitText(personalityName(w.personality.key), 17.sp, 13.sp, 1, 900, Color.White, Modifier.fillMaxWidth())
                 }
                 SIcon(WrappedIcons.personality(w.personality.key), size = 24.dp, color = Color.White)
             }
-            Row(Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                SText(summaryAlso(w), size = 12.sp, weight = 800, color = Ink, maxLines = 1)
+            Row(Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SText(summaryAlso(w), Modifier.weight(1f), size = 12.sp, weight = 800, color = Ink)
                 SText("seedy", size = 12.sp, weight = 800, color = Ink.copy(alpha = .6f), maxLines = 1)
             }
         }

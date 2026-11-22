@@ -33,7 +33,11 @@ import io.github.arkmind.seedy.tv.wrapped.TvWrappedScreen
 import io.github.arkmind.seedy.ui.theme.LocalViewer
 import io.github.arkmind.seedy.ui.theme.SeedyTheme
 import io.github.arkmind.seedy.ui.theme.Viewer
+import org.junit.After
 import org.junit.Rule
+import io.github.arkmind.seedy.core.i18n.I18n
+import io.github.arkmind.seedy.core.i18n.Lang
+import org.robolectric.RuntimeEnvironment
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -84,6 +88,51 @@ class TvWrappedShots {
         oddest = WrappedOddest(18_123, "movie", "Mole Men of Venus", 1958, 3.9, 27, 1, 92),
     )
 
+    /** Long names and big numbers, to check every text fits its space. */
+    private val stressYear: Wrapped = year.copy(
+        watchMs = 12_345 * h,
+        prevWatchMs = 1_234 * h,
+        rank = 12,
+        genres = listOf(
+            WrappedGenre("Science Fiction & Fantasy", null, 34), WrappedGenre("Telenovela Romántica Histórica", null, 22),
+            WrappedGenre("Documentary", "documentary", 15), WrappedGenre("Comedy", "comedy", 12), WrappedGenre("Animation", "animation", 8),
+        ),
+        shows = listOf(
+            WrappedTitle("1", "The Lord of the Rings: The Rings of Power", 1_234, 1_234 * h),
+            WrappedTitle("2", "Enquêtes criminelles : le magazine des faits divers", 412, 345 * h),
+            WrappedTitle("3", "Star Wars: The Clone Wars", 133, 99 * h),
+            WrappedTitle("4", "Avatar: The Last Airbender", 61, 42 * h),
+            WrappedTitle("5", "Les Brigades du Tigre et autres histoires de la Belle Époque", 22, 17 * h),
+        ),
+        seasonsFinished = 123,
+        showsStarted = 45,
+        movie = WrappedMovie(
+            "6", "Dr. Strangelove or: How I Learned to Stop Worrying and Love the Bomb", 12, 1_234 * 60_000L,
+            listOf("2026-01-07", "2026-03-19", "2026-05-11", "2026-07-02", "2026-09-02", "2026-11-02"), genres = listOf("comedy"),
+        ),
+        moviesPlayed = 1_234,
+        moviesRewatched = 234,
+        movieMs = 2_345 * h,
+        showsWatched = 345,
+        showsFinished = 123,
+        episodes = 12_345,
+        showMs = 9_999 * h,
+        binge = WrappedBinge(
+            "2", "Enquêtes criminelles : le magazine des faits divers", 24, season = 12, seasonTo = 14, lastSeason = 14, lastEpisode = 22,
+            start = "2026-03-14T08:02", end = "2026-03-15T03:47", minutes = List(24) { 40 + it % 7 },
+        ),
+        still = WrappedStill(1_234, 1_000),
+        personality = WrappedPersonality("regular", listOf(WrappedStat("streak", 123.0), WrappedStat("activeDays", 334.0), WrappedStat("introsSkipped", 12_345.0, 1_234.0 * h))),
+        musicMs = 1_234 * h,
+        books = 123,
+        requests = WrappedRequests(
+            1_234, 1_000, 200, 34, WrappedArrival("The Lord of the Rings: The Rings of Power", 1, 2, 3 * 86_400_000L),
+            WrappedGenre("Telenovela Romántica Histórica", null, 40),
+        ),
+        oddest = WrappedOddest(1, "movie", "The Incredibly Strange Creatures Who Stopped Living and Became Mixed-Up Zombies", 1964, 3.2, 12_345, 23, 100),
+    )
+
+
     private fun shot(name: String, content: @Composable () -> Unit) {
         compose.setContent {
             val inputMode = LocalInputModeManager.current
@@ -95,6 +144,20 @@ class TvWrappedShots {
     }
 
     private fun story(index: Int, name: String) = shot(name) { TvWrappedScreen(year, onClose = {}, start = index, fixedProgress = .4f) }
+
+    @After fun english() = I18n.load(RuntimeEnvironment.getApplication(), Lang.En)
+
+    /** The stress year's story [key] in French. */
+    private fun stress(key: String, name: String) {
+        I18n.load(RuntimeEnvironment.getApplication(), Lang.Fr)
+        shot(name) { TvWrappedScreen(stressYear, onClose = {}, start = stressYear.stories.indexOf(key), fixedProgress = .6f) }
+    }
+
+    @Test fun stressGenres() = stress("genres", "WrappedTVStressGenres")
+    @Test fun stressShows() = stress("shows", "WrappedTVStressShows")
+    @Test fun stressRequests() = stress("requests", "WrappedTVStressRequests")
+    @Test fun stressOddest() = stress("oddest", "WrappedTVStressOddest")
+    @Test fun stressPersonality() = stress("personality", "WrappedTVStressPersonality")
 
     @Test fun shows() = story(4, "WrappedTV")
     @Test fun cover() = story(0, "WrappedTVCover")

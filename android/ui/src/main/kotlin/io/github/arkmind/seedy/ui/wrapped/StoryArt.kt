@@ -359,13 +359,11 @@ fun PosterArt(title: String, modifier: Modifier = Modifier) {
                 drawLine(Color(0xFF3A1A1F), Offset(x, y), Offset(x, y + 16f), 3f)
                 drawRoundRect(Color(0xFFFFB38A), Offset(x - 14f, y + 16f), Size(28f, 38f), CornerRadius(12f), alpha = a)
             }
-            // The title, as big as fits (40 px on the board), its baseline at 548.
-            val style = boardText(density, 40f, 900, Color.White, tracking = 1f)
-            var layout = measurer.measure(title.uppercase(), style, maxLines = 1, softWrap = false)
-            if (layout.size.width > 370f) {
-                layout = measurer.measure(title.uppercase(), boardText(density, 40f * 370f / layout.size.width, 900, Color.White, tracking = 1f), maxLines = 1, softWrap = false)
+            // The title in the bottom 360 × 100, centred: from 40 px down to 20 on two lines, then cut short.
+            val layout = fitLayout(measurer, title.uppercase(), 360, 2, 40f, 20f) {
+                boardText(density, it, 900, Color.White, tracking = 1f).copy(lineHeight = 1.05.em, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
-            drawText(layout, topLeft = Offset(200f - layout.size.width / 2f, 548f - layout.firstBaseline))
+            drawText(layout, topLeft = Offset(20f + (360f - layout.size.width) / 2f, 490f + (100f - layout.size.height) / 2f))
         }
     }
 }
@@ -377,7 +375,7 @@ private val RetroRocket by lazy { path("M60 330 l26 -60 l26 60 z") }
 
 /**
  * Board WrappedOddest's retro poster (400 × 600), for a title without one: a ringed planet and a little rocket under
- * the stars, the title in capitals across the bottom (52 px, on up to three lines).
+ * the stars, the title in capitals across the bottom.
  */
 @Composable
 fun RetroPoster(title: String, modifier: Modifier = Modifier) {
@@ -395,12 +393,9 @@ fun RetroPoster(title: String, modifier: Modifier = Modifier) {
             }
             drawPath(RetroRocket, WrappedSand)
             drawRect(WrappedSand, Offset(76f, 330f), Size(20f, 18f))
-            // The title in the bottom 360 × 180, centred, as big as fits up to the web's 52 px.
-            var px = 52f
-            var layout = measurer.measure(title.uppercase(), boardText(density, px, 900, WrappedSand, tracking = -1f).copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 1.02.em), constraints = androidx.compose.ui.unit.Constraints(maxWidth = 360), maxLines = 3)
-            while ((layout.hasVisualOverflow || layout.size.height > 180) && px > 24f) {
-                px -= 4f
-                layout = measurer.measure(title.uppercase(), boardText(density, px, 900, WrappedSand, tracking = -1f).copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 1.02.em), constraints = androidx.compose.ui.unit.Constraints(maxWidth = 360), maxLines = 3)
+            // The title in the bottom 360 × 180, centred: from 52 px down to 24 on three lines, then cut short.
+            val layout = fitLayout(measurer, title.uppercase(), 360, 3, 52f, 24f) {
+                boardText(density, it, 900, WrappedSand, tracking = -1f).copy(lineHeight = 1.02.em, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
             drawText(layout, topLeft = Offset(20f + (360f - layout.size.width) / 2f, 400f + (180f - layout.size.height) / 2f))
         }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +20,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -42,6 +42,8 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
@@ -52,6 +54,7 @@ import io.github.arkmind.seedy.core.wrapped.Wrapped
 import io.github.arkmind.seedy.core.wrapped.meduLine
 import io.github.arkmind.seedy.core.wrapped.storiesOf
 import io.github.arkmind.seedy.ui.wrapped.MeduSpot
+import io.github.arkmind.seedy.ui.wrapped.StoryArea
 import io.github.arkmind.seedy.ui.wrapped.WrappedInk
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
@@ -88,6 +91,9 @@ internal class StoryFrame(val top: Dp, val bottom: Dp, val nav: Dp)
  * right goes on, on the left back; holding a finger (or the pause button) holds the story; X or Back closes. "Share this
  * story" hands [onShare] the story as a picture (without the controls); the summary shares and saves its card.
  * [fixedProgress] holds the bar (screenshot tests); [message] is a toast (picture saved…).
+ *
+ * A story is never laid out shorter than the boards' 844 px, as Medu sits at its bottom under the text: on a shorter
+ * screen it's drawn smaller (a lower density), still filling the screen.
  */
 @Composable
 fun WrappedScreen(
@@ -99,6 +105,34 @@ fun WrappedScreen(
     fixedProgress: Float? = null,
     message: String? = null,
     onMessageShown: () -> Unit = {},
+) {
+    val density = LocalDensity.current
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // The board's height here: the screen without the navigation bar, a status bar taller than the board's 32 px
+        // counting as 32. Both bars keep their real size at the lower density.
+        val nav = WindowInsets.navigationBars.getBottom(density) / density.density
+        val status = WindowInsets.statusBars.getTop(density) / density.density
+        val room = maxHeight.value - nav
+        val k = (if (status <= 32f * room / StoryHeight) room / StoryHeight else (room - status) / (StoryHeight - 32f)).coerceIn(.5f, 1f)
+        CompositionLocalProvider(LocalDensity provides Density(density.density * k, density.fontScale)) {
+            Stories(wrapped, onClose, onShare, onSave, start, fixedProgress, message, onMessageShown)
+        }
+    }
+}
+
+/** The phone boards' height, status bar included. */
+private const val StoryHeight = 844f
+
+@Composable
+private fun Stories(
+    wrapped: Wrapped,
+    onClose: () -> Unit,
+    onShare: (ImageBitmap) -> Unit,
+    onSave: (ImageBitmap) -> Unit,
+    start: Int,
+    fixedProgress: Float?,
+    message: String?,
+    onMessageShown: () -> Unit,
 ) {
     val stories = remember(wrapped) { storiesOf(wrapped) }
     if (stories.isEmpty()) return
@@ -243,12 +277,8 @@ private fun Story(
 ) {
     val spot = Spots[story]
     // With Medu at the bottom, the story keeps clear of her (the boards' 214 px).
-    Box(
-        Modifier.fillMaxSize().padding(top = frame.top, bottom = if (spot != null) 214.dp + frame.nav else frame.bottom)
-            // A story a little longer than its space runs on behind Medu, as on the boards; the cover and the hours
-            // centre themselves in it.
-            .then(if (story == StoryKey.Cover || story == StoryKey.Hours) Modifier else Modifier.wrapContentHeight(Alignment.Top, unbounded = true)),
-    ) {
+    val area = Modifier.fillMaxSize().padding(top = frame.top, bottom = if (spot != null) 214.dp + frame.nav else frame.bottom)
+    val content: @Composable () -> Unit = {
         when (story) {
             StoryKey.Cover -> CoverStory(w, player.count, onGo = player::next)
             StoryKey.Hours -> HoursStory(w)
@@ -264,6 +294,10 @@ private fun Story(
             StoryKey.Summary -> SummaryStory(w, cardLayer)
         }
     }
+    // The cover, the hours, Shows or movies? and the summary lay themselves out in the space; the others start at its
+    // top, drop their last line when it has no room (IfRoom), and run on behind Medu if they still must, as on the boards.
+    val fixed = story == StoryKey.Cover || story == StoryKey.Hours || story == StoryKey.Lover || story == StoryKey.Summary
+    if (fixed) Box(area) { content() } else StoryArea(area, content)
     val line = if (spot != null) meduLine(story, w) else null
     if (spot != null && line != null) {
         // Medu 84 px above the bottom, 14 px from her side: a dark bubble on light stories, a white one on dark.
