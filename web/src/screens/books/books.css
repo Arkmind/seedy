@@ -65,8 +65,6 @@
   transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
 }
 .bk-icon-btn:hover, .bk-icon-btn[aria-expanded='true'] { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
-.bk-icon-btn[aria-pressed='true'] { color: var(--seedy-accent); }
-.bk-icon-btn[aria-pressed='true']:hover { color: var(--seedy-ink-inverse); }
 
 .bk-tabs { display: flex; gap: 8px; overflow-x: auto; max-width: 100%; }
 .bk-tab {

@@ -11,6 +11,7 @@ import {
 import { Link, href, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { Art, CastCard, ItemCard, WatchedCheck, playPath } from '../../ui/cards';
+import { ToggleButton } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { toast } from '../../ui/overlay';
 import { Row } from '../../ui/Row';
@@ -286,15 +287,6 @@ export function TrailerButton({ item }: { item: BaseItem }) {
   );
 }
 
-/* Watched / favorite: a glass outline while off, solid once on (Movie details boards). */
-export function SquareToggle({ on, onLabel, offLabel, icon, onClick }: { on: boolean; onLabel: string; offLabel: string; icon: 'heart' | 'check'; onClick: () => void }) {
-  return (
-    <button type="button" class="btn btn-square is-toggle" aria-label={t(on ? onLabel : offLabel)} aria-pressed={on ? 'true' : 'false'} onClick={onClick}>
-      {icon === 'heart' ? <Icon name="heart" size={22} filled={on} /> : <Icon name="check" size={22} stroke={on ? 2.6 : 2.2} />}
-    </button>
-  );
-}
-
 /* Start a title in progress over (Movie details · in progress board). */
 export function StartOverButton({ item }: { item: BaseItem }) {
   return (
@@ -458,17 +450,15 @@ export function SeasonEpisodes({ series, seasons, selected, onSelect, upNextId, 
         </div>
         <div class="seasons-tools">
           {chip && <WatchedChip text={chip} />}
-          <button
-            type="button"
-            class="btn btn-secondary is-toggle"
+          <ToggleButton
+            icon="check"
+            on={allWatched}
+            onLabel="Season watched. Mark season as not watched"
+            offLabel="Mark season watched"
+            text={allWatched ? t('Season watched') : t('Mark season watched')}
             disabled={busy || !available.length}
-            aria-pressed={allWatched ? 'true' : 'false'}
-            aria-label={allWatched ? t('Season watched. Mark season as not watched') : undefined}
             onClick={markSeason}
-          >
-            <Icon name="check" size={18} stroke={2.2} />
-            {allWatched ? t('Season watched') : t('Mark season watched')}
-          </button>
+          />
           <button
             type="button"
             class="btn icon-btn"

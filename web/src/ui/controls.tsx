@@ -144,6 +144,28 @@ export function Stepper({ label, valueLabel, onDec, onInc, decLabel, incLabel, d
   );
 }
 
+/* Watched and favorite, on every page (Movie details · watched board): a glass outline while off, solid light once on.
+   A square holding the icon (`size="md"`: the 48 px square of the music and book pages), or a button when given `text`.
+   The labels are English keys. */
+export function ToggleButton({ icon, on, onLabel, offLabel, text, size, disabled, onClick }: {
+  icon: 'check' | 'heart'; on: boolean; onLabel: string; offLabel: string; text?: string; size?: 'md'; disabled?: boolean; onClick: () => void;
+}) {
+  const px = text ? 18 : size === 'md' ? 20 : 22;
+  return (
+    <button
+      type="button"
+      class={'btn is-toggle ' + (text ? 'btn-secondary' : 'btn-square' + (size ? ' is-' + size : ''))}
+      aria-label={text && !on ? undefined : t(on ? onLabel : offLabel)}
+      aria-pressed={on ? 'true' : 'false'}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {icon === 'heart' ? <Icon name="heart" size={px} filled={on} /> : <Icon name="check" size={px} stroke={on && !text ? 2.6 : 2.2} />}
+      {text}
+    </button>
+  );
+}
+
 /* Admin and settings building blocks: a 16px panel of label/control rows split by hairlines. */
 
 export function Panel({ title, text, id, children, gap, class: cls }: { title?: string; text?: ComponentChildren; id?: string; children: ComponentChildren; gap?: number; class?: string }) {

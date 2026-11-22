@@ -15,6 +15,7 @@ import { navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { ItemCard, LibraryTile, PosterCard, Top10Card, UpcomingCard, detailsPath, playPath, seerrPath } from '../../ui/cards';
 import { Header } from '../../ui/navbar/Header';
+import { ToggleButton } from '../../ui/controls';
 import { Icon } from '../../ui/icons';
 import { MenuButton, MenuItem, toast } from '../../ui/overlay';
 import { Row } from '../../ui/Row';
@@ -244,8 +245,6 @@ function Featured({ onState }: { onState: (s: 'loading' | 'shown' | 'none') => v
   const item = cur.item;
   const go = (d: number) => setIdx((i) => (i + d + n) % n);
   const update = (next: BaseItem) => setEntries(list.map((e) => (e.item.Id === next.Id ? { ...e, item: next } : e)));
-  const fav = !!item.UserData?.IsFavorite;
-  const played = !!item.UserData?.Played;
   const genres = (item.Genres ?? []).slice(0, 2).join(' · ');
 
   const play = async () => {
@@ -299,12 +298,14 @@ function Featured({ onState }: { onState: (s: 'loading' | 'shown' | 'none') => v
             <button type="button" class="btn btn-square" aria-label={t('More information')} onClick={more}>
               <Icon name="info" size={22} />
             </button>
-            <button type="button" class="btn btn-square" aria-label={fav ? t('Remove from favorites') : t('Add to favorites')} aria-pressed={fav ? 'true' : 'false'} onClick={() => toggleFavorite(item, update)}>
-              <Icon name="heart" size={22} filled={fav} />
-            </button>
-            <button type="button" class="btn btn-square" aria-label={played ? t('Mark as unwatched') : t('Mark as watched')} aria-pressed={played ? 'true' : 'false'} onClick={() => togglePlayed(item, update)}>
-              <Icon name="check" size={22} stroke={played ? 3 : 2.2} />
-            </button>
+            <ToggleButton
+              icon="check"
+              on={!!item.UserData?.Played}
+              onLabel={item.Type === 'Series' ? 'Watched. Mark series as not watched' : 'Watched. Mark as not watched'}
+              offLabel={item.Type === 'Series' ? 'Mark series as watched' : 'Mark as watched'}
+              onClick={() => togglePlayed(item, update)}
+            />
+            <ToggleButton icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, update)} />
           </div>
         </div>
         {(n > 1 || trailer.allowed) && (

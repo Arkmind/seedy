@@ -51,6 +51,12 @@ a.btn-primary:hover, a.btn-square:hover { color: var(--seedy-text); }
 .btn.is-toggle[aria-pressed='false']:not(:disabled):hover {
   background: rgba(255, 255, 255, 0.1); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.75); color: var(--seedy-white);
 }
+/* On, a light square flips dark on hover like the others; set here so a page's own square colours (music, books) don't win. */
+.btn-square.is-toggle[aria-pressed='true'] { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); box-shadow: none; }
+.btn-square.is-toggle[aria-pressed='true']:not(:disabled):hover {
+  background: var(--seedy-bg); color: var(--seedy-text); box-shadow: inset 0 0 0 1px var(--seedy-surface-2);
+}
+.btn-square.is-md { width: 48px; height: 48px; }
 .btn-secondary.is-toggle[aria-pressed='true'] { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-weight: 800; }
 .btn-secondary.is-toggle[aria-pressed='true']:not(:disabled):hover { background: var(--seedy-white); }
 

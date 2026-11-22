@@ -486,6 +486,7 @@ const fr: Record<string, string> = {
   "Watched. Mark series as not watched": "Vue. Marquer la série comme non vue",
   "Season watched": "Saison vue",
   "Season watched. Mark season as not watched": "Saison vue. Marquer la saison comme non vue",
+  "In favorites. Remove from favorites": "Dans les favoris. Retirer des favoris",
   "{name}, watched": "{name}, vue",
   "Next episode, {name}, arrives {date}": "Prochain épisode, {name}, le {date}",
   "Next episode arrives {date}": "Prochain épisode le {date}"

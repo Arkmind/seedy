@@ -11,6 +11,7 @@ import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
 import { Header } from '../../ui/navbar/Header';
+import { ToggleButton } from '../../ui/controls';
 import { MenuItem, toast } from '../../ui/overlay';
 import { EmptyPlaylist, EmptyState, toggleFavorite } from '../browse/parts';
 import { MoreActions, useView } from '../browse/details-parts';
@@ -133,10 +134,7 @@ export function MusicAlbumPage({ item: initial, playlist }: { item: BaseItem; pl
               <button type="button" class="mu-btn" disabled={!list.length} onClick={() => void mix()}>
                 <AIcon name="mix" size={18} />{t('Instant mix')}
               </button>
-              <button type="button" class={'mu-btn is-icon' + (fav ? ' is-on' : '')} aria-pressed={fav ? 'true' : 'false'}
-                aria-label={fav ? t('Remove from favorites') : t('Add to favorites')} onClick={() => void toggleFavorite(item, setItem)}>
-                <AIcon name="heart" size={20} filled={fav} />
-              </button>
+              <ToggleButton icon="heart" size="md" on={fav} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => void toggleFavorite(item, setItem)} />
               {mayDownload && !playlist && (
                 <button type="button" class="mu-btn is-icon" aria-label={t('Download album')} disabled={!list.length} onClick={() => downloadAll(list)}>
                   <AIcon name="download" size={20} />

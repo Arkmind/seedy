@@ -11,6 +11,7 @@ import { Link, navigate } from '../../lib/router';
 import { useAsync, useStore } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
 import { Header } from '../../ui/navbar/Header';
+import { ToggleButton } from '../../ui/controls';
 import { toast } from '../../ui/overlay';
 import { MoreActions, useView } from '../browse/details-parts';
 import { toggleFavorite } from '../browse/parts';
@@ -234,12 +235,15 @@ export function BookDetails({ item: initial, onChanged }: { item: BaseItem; onCh
                   )}
                 </>
               )}
-              <button type="button" class="bk-icon-btn" aria-pressed={played ? 'true' : 'false'} aria-label={audio ? (played ? t('Mark as not listened') : t('Mark as listened')) : played ? t('Mark as unread') : t('Mark as read')} onClick={togglePlayedState}>
-                <svg viewBox="0 0 24 24" width="20" height="20" class="bk-ic" aria-hidden="true" style={{ strokeWidth: played ? 3 : 2.2 }}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
-              </button>
-              <button type="button" class="bk-icon-btn" aria-pressed={fav ? 'true' : 'false'} aria-label={fav ? t('Remove from favorites') : t('Add to favorites')} onClick={() => toggleFavorite(item, setItem)}>
-                <svg viewBox="0 0 24 24" width="20" height="20" class="bk-ic" aria-hidden="true" style={{ fill: fav ? 'currentColor' : 'none' }}><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>
-              </button>
+              <ToggleButton
+                icon="check"
+                size="md"
+                on={played}
+                onLabel={audio ? 'Mark as not listened' : 'Mark as unread'}
+                offLabel={audio ? 'Mark as listened' : 'Mark as read'}
+                onClick={togglePlayedState}
+              />
+              <ToggleButton icon="heart" size="md" on={fav} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
               {mayDownload && (
                 <a class="bk-icon-btn" href={downloadUrl(item.Id)} download aria-label={t('Download {format}', { format: formatName(self) })}>
                   <svg viewBox="0 0 24 24" width="20" height="20" class="bk-ic" aria-hidden="true"><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M5 20h14" /></svg>
