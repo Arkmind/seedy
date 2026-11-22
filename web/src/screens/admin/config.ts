@@ -65,7 +65,7 @@ function normaliseConfig(c: AdminConfig): AdminConfig {
       because: { ...DEF_BECAUSE, ...h.because },
       top10: { ...DEF_TOP10, ...h.top10 },
       genres: { windowDays: h.genres?.windowDays ?? 90, starting: h.genres?.starting ?? [] },
-      featured: { mode: h.featured?.mode ?? 'both', picks: h.featured?.picks ?? [] }
+      featured: { mode: h.featured?.mode ?? 'both', picks: h.featured?.picks ?? [], count: h.featured?.count ?? 5 }
     },
     requests: { ...DEF_REQUESTS, ...c.requests },
     playLog: { ...DEF_PLAYLOG, ...c.playLog }

@@ -69,6 +69,9 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Gets or sets the admin's featured item ids.</summary>
     public string[] FeaturedPicks { get; set; } = [];
 
+    /// <summary>Gets or sets how many titles the hero rotates through.</summary>
+    public int FeaturedCount { get; set; } = 5;
+
     // Requests (Seerr)
 
     /// <summary>Gets or sets the Seerr address as this server reaches it.</summary>

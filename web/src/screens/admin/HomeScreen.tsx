@@ -37,6 +37,12 @@ const LOOK_BACK = [
   { value: 0, label: 'No limit' }
 ];
 
+const FEATURED_HELP = {
+  auto: 'Picked for each person from what they watch, what’s popular and what’s new',
+  picks: 'Only your picks',
+  both: 'Your picks, then each person’s recommendations'
+} as const;
+
 const GENRE_WINDOW = [
   { value: 30, label: 'Last 30 days' },
   { value: 90, label: 'Last 90 days' },
@@ -63,7 +69,8 @@ function countChanges(a: Home, b: Home): number {
     [a.genres.windowDays, b.genres.windowDays],
     [a.genres.starting.join('\u0000'), b.genres.starting.join('\u0000')],
     [a.featured.mode, b.featured.mode],
-    [a.featured.picks.join(), b.featured.picks.join()]
+    [a.featured.picks.join(), b.featured.picks.join()],
+    [a.featured.count, b.featured.count]
   ];
   for (const [x, y] of pairs) if (x !== y) n++;
   return n;
@@ -195,7 +202,7 @@ export function AdminHome() {
           </Panel>
 
           <Panel id="feat" title={t('Featured')}>
-            <SettingRow name={t('What the hero shows')} help={t('5 titles in rotation')} last={home.featured.mode === 'auto'}>
+            <SettingRow name={t('What the hero shows')} help={t(FEATURED_HELP[home.featured.mode])}>
               <Segmented
                 label={t('What the hero shows')}
                 value={home.featured.mode}
@@ -203,10 +210,21 @@ export function AdminHome() {
                 onChange={(v) => edit((h) => ({ ...h, featured: { ...h.featured, mode: v } }))}
               />
             </SettingRow>
+            <SettingRow name={t('Titles in rotation')} help={t('Fewer when not enough titles have a backdrop')} last={home.featured.mode === 'auto'}>
+              <NumField
+                suffix={t('titles')}
+                width={44}
+                min={1}
+                max={10}
+                value={home.featured.count}
+                ariaLabel={t('Titles in rotation')}
+                onChange={(v) => edit((h) => ({ ...h, featured: { ...h.featured, count: v } }))}
+              />
+            </SettingRow>
             {home.featured.mode !== 'auto' && (
               <SettingRow
                 name={t('Your picks')}
-                help={home.featured.mode === 'picks' ? t('Shown in this order; recently added titles fill in if there are fewer than 5') : t('Shown first; recently added and in-progress titles fill the rest')}
+                help={home.featured.mode === 'picks' ? t('Shown in this order; recommendations stand in when none is available') : t('Shown first; recommendations fill the rest')}
                 stack
                 last
               >

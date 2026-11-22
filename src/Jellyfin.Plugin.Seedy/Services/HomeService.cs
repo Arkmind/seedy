@@ -29,7 +29,7 @@ namespace Jellyfin.Plugin.Seedy.Services;
 /// Builds each person's home screen: which rows, in what order, and the server-side rows
 /// (Featured, Top 10). The browser fetches the contents of the other rows from Jellyfin directly.
 /// </summary>
-public sealed class HomeService
+public sealed partial class HomeService
 {
     private static readonly string[] Fixed = ["featured", "continue"];
     private static readonly string[] MultiKinds = ["because", "genres", "latest"];
@@ -478,179 +478,6 @@ public sealed class HomeService
         }).Select(b => new HomeRowDto { Id = "collection:" + b.Id.ToString("N"), Kind = "collections", CollectionId = b.Id.ToString("N"), Title = b.Name }).ToList();
     }
 
-    // ── Featured ──
-
-    /// <summary>Gets the hero rotation: the admin's picks, then new seasons, things in progress and recent additions.</summary>
-    /// <param name="user">The person.</param>
-    /// <returns>Up to five entries.</returns>
-    public async Task<List<FeaturedEntryDto>> FeaturedAsync(User user)
-    {
-        var c = ConfigMapper.Current;
-        var picked = new List<(BaseItem Item, string Reason)>();
-        void Add(BaseItem? item, string reason)
-        {
-            if (item is null || picked.Count >= 5 || picked.Any(p => p.Item.Id == item.Id) || !HasBackdrop(item))
-            {
-                return;
-            }
-
-            picked.Add((item, reason));
-        }
-
-        if (c.FeaturedMode != "auto")
-        {
-            foreach (var id in c.FeaturedPicks ?? [])
-            {
-                if (Guid.TryParse(id, out var g))
-                {
-                    Add(_library.GetItemById<BaseItem>(g, user), "Picked for you");
-                }
-            }
-        }
-
-        // "Your picks" alone still needs something to show when no pick is available to this person.
-        if (c.FeaturedMode != "picks" || picked.Count == 0)
-        {
-            var hidden = _db.HiddenTitles(user.Id.ToString("N"));
-            var since = DateTime.UtcNow.AddDays(-21);
-
-            // Shows with episodes added in the last three weeks.
-            var newEpisodes = _library.GetItemList(new InternalItemsQuery(user)
-            {
-                IncludeItemTypes = [BaseItemKind.Episode],
-                Recursive = true,
-                IsVirtualItem = false,
-                MinDateCreated = since,
-                OrderBy = [(ItemSortBy.DateCreated, SortOrder.Descending)],
-                Limit = 80,
-                DtoOptions = new DtoOptions(false)
-            }).OfType<Episode>();
-            foreach (var group in newEpisodes.GroupBy(e => e.SeriesId).Take(4))
-            {
-                var series = _library.GetItemById<Series>(group.Key, user);
-                if (series is null || hidden.Contains(series.Id.ToString("N")))
-                {
-                    continue;
-                }
-
-                var firstOfSeason = group.Any(e => e.IndexNumber == 1 && (e.ParentIndexNumber ?? 0) > 1);
-                Add(series, firstOfSeason ? "New season" : "New episodes");
-                if (picked.Count >= 2)
-                {
-                    break;
-                }
-            }
-
-            // Something already in progress, as Continue watching shows it (not an episode the person moved past).
-            foreach (var r in await _continue.ItemsAsync(user, Guid.Empty, 2).ConfigureAwait(false))
-            {
-                if (r is Movie or Episode)
-                {
-                    Add(r is Episode e ? _library.GetItemById<Series>(e.SeriesId, user) : r, "Continue watching");
-                }
-            }
-
-            // Recently added titles.
-            var recent = _library.GetItemList(new InternalItemsQuery(user)
-            {
-                IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Series],
-                Recursive = true,
-                ImageTypes = [ImageType.Backdrop],
-                OrderBy = [(ItemSortBy.DateCreated, SortOrder.Descending)],
-                Limit = 12,
-                DtoOptions = new DtoOptions(false)
-            });
-            foreach (var r in recent)
-            {
-                if (!hidden.Contains(r.Id.ToString("N")))
-                {
-                    Add(r, DateTime.UtcNow - r.DateCreated < TimeSpan.FromDays(14) ? "Just added" : "From your library");
-                }
-            }
-
-            // Fill with well-rated titles the person hasn't finished.
-            if (picked.Count < 5)
-            {
-                foreach (var r in _library.GetItemList(new InternalItemsQuery(user)
-                {
-                    IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Series],
-                    Recursive = true,
-                    IsPlayed = false,
-                    ImageTypes = [ImageType.Backdrop],
-                    OrderBy = [(ItemSortBy.Random, SortOrder.Ascending)],
-                    Limit = 10,
-                    DtoOptions = new DtoOptions(false)
-                }))
-                {
-                    Add(r, "From your library");
-                }
-            }
-        }
-
-        var options = CardOptions;
-        var dtos = _dto.GetBaseItemDtos(picked.Select(p => p.Item).ToList(), options, user);
-        var list = new List<FeaturedEntryDto>();
-        for (var i = 0; i < picked.Count; i++)
-        {
-            var play = await PlayTargetAsync(user, picked[i].Item).ConfigureAwait(false);
-            list.Add(new FeaturedEntryDto
-            {
-                Item = dtos[i],
-                Reason = picked[i].Reason,
-                Play = play is null ? null : (play.Id == picked[i].Item.Id ? dtos[i] : _dto.GetBaseItemDto(play, options, user))
-            });
-        }
-
-        return list;
-    }
-
-    private static bool HasBackdrop(BaseItem item) => item.GetImageInfo(ImageType.Backdrop, 0) is not null;
-
-    /// <summary>
-    /// What the hero's Play button plays: for a series, the episode in progress (as its details page resumes it), else
-    /// the next one; the title itself otherwise.
-    /// </summary>
-    private async Task<BaseItem?> PlayTargetAsync(User user, BaseItem item)
-    {
-        if (item is not Series series)
-        {
-            return item;
-        }
-
-        var resume = (await _continue.ItemsAsync(user, series.Id, 1).ConfigureAwait(false)).FirstOrDefault();
-        if (resume is not null)
-        {
-            return resume;
-        }
-
-        var next = _tv.GetNextUp(
-            new NextUpQuery
-            {
-                User = user,
-                SeriesId = series.Id,
-                Limit = 1,
-                EnableResumable = true,
-                EnableTotalRecordCount = false,
-                NextUpDateCutoff = DateTime.MinValue
-            },
-            new DtoOptions(false)).Items.FirstOrDefault();
-        if (next is not null)
-        {
-            return next;
-        }
-
-        return _library.GetItemList(new InternalItemsQuery(user)
-        {
-            AncestorIds = [series.Id],
-            IncludeItemTypes = [BaseItemKind.Episode],
-            IsVirtualItem = false,
-            Recursive = true,
-            OrderBy = [(ItemSortBy.ParentIndexNumber, SortOrder.Ascending), (ItemSortBy.IndexNumber, SortOrder.Ascending)],
-            Limit = 1,
-            DtoOptions = new DtoOptions(false)
-        }).FirstOrDefault();
-    }
-
     // ── Top 10 ──
 
     /// <summary>Gets the most watched titles on the server, counting each profile once per title.</summary>
@@ -665,11 +492,7 @@ public sealed class HomeService
         }
 
         var since = DateTime.UtcNow.AddDays(-(c.Top10PeriodDays == 30 ? 30 : 7));
-        // Left out: profiles the admin switched off, and people who turned "Count my plays in the Top 10" off.
-        var excluded = (c.PlayLogProfiles ?? []).Where(p => !p.Top10).Select(p => p.UserId)
-            .Concat(_users.GetUsers().Select(u => u.Id.ToString("N")).Where(id => !(_prefs.Get(id).Privacy?.CountInTop10 ?? true)))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var excluded = Top10Excluded(c);
         var quiet = _db.ActiveProfiles(since, excluded) < Math.Max(1, c.Top10MinProfiles);
         var entries = new List<(BaseItem Item, TitleCount Count)>();
         foreach (var t in _db.TopTitles(since, excluded, 30))
@@ -692,6 +515,13 @@ public sealed class HomeService
             Items = entries.Select((e, i) => new Top10EntryDto { Item = dtos[i], Profiles = e.Count.Profiles, Plays = e.Count.Plays }).ToList()
         };
     }
+
+    /// <summary>Profiles whose plays don't count: those the admin switched off, and people who turned "Count my plays in the Top 10" off.</summary>
+    private List<string> Top10Excluded(PluginConfiguration c) =>
+        (c.PlayLogProfiles ?? []).Where(p => !p.Top10).Select(p => p.UserId)
+            .Concat(_users.GetUsers().Select(u => u.Id.ToString("N")).Where(id => !(_prefs.Get(id).Privacy?.CountInTop10 ?? true)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     /// <summary>Converts items to DTOs for the person.</summary>
     /// <param name="items">Items.</param>

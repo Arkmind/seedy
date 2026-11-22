@@ -59,7 +59,7 @@ class Home(private val session: UserSession) {
 
     /** The hero's titles: Seedy's picks, or the newest titles with backdrops. */
     suspend fun featured(): List<FeaturedEntry> = io {
-        session.seedyApi?.let { s -> runCatching { s.featured() }.getOrNull() }?.takeIf { it.isNotEmpty() }?.take(5)
+        session.seedyApi?.let { s -> runCatching { s.featured() }.getOrNull() }?.takeIf { it.isNotEmpty() }?.take(10)
             ?: api.libraryApi.getItems(
                 userId = userId,
                 includeItemTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),

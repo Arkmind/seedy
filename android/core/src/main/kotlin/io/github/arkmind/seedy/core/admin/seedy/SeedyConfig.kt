@@ -53,9 +53,9 @@ data class Top10Config(val periodDays: Int = 7, val minProfiles: Int = 3)
 @Serializable
 data class GenresConfig(val windowDays: Int = 90, val starting: List<String> = emptyList())
 
-/** [mode] is "auto", "picks" or "both"; [picks] are item ids. */
+/** [mode] is "auto", "picks" or "both"; [picks] are item ids; [count] is how many titles the hero rotates through. */
 @Serializable
-data class FeaturedConfig(val mode: String = "both", val picks: List<String> = emptyList())
+data class FeaturedConfig(val mode: String = "both", val picks: List<String> = emptyList(), val count: Int = 5)
 
 @Serializable
 data class HomeConfig(

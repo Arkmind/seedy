@@ -129,7 +129,7 @@ fun TvHomeScreen(
     val cardFocus = remember { mutableMapOf<UUID, FocusRequester>() }
     var pick by remember { mutableStateOf<HeroPick?>(null) }
     var focusedRow by remember { mutableIntStateOf(0) }
-    val featured = state.featured?.firstOrNull()?.let { HeroPick(it.item, it.reason) }
+    val featured = state.featured?.firstOrNull()?.let { HeroPick(it.item, it.reasonText) }
     val firstLoaded = rows.firstOrNull()?.items?.firstOrNull()
     val hero = pick ?: featured ?: firstLoaded?.let { HeroPick(it, rows.first().title) }
     val list = rememberLazyListState()

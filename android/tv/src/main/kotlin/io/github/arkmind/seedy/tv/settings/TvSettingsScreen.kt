@@ -261,7 +261,7 @@ private fun ProfileSection(state: SettingsState, actions: SettingsActions, f: (S
     if (state.seedy) {
         TvSectionTitle(t("Privacy"))
         val p = state.prefs.privacy
-        TvSwitchRow(t("Personal recommendations"), t("Because you watched, genre rows and row order learn from your plays"), p.personalRecs, { actions.setPrivacy(it, p.countInTop10) })
+        TvSwitchRow(t("Personal recommendations"), t("Featured, Because you watched, genre rows and row order learn from your plays"), p.personalRecs, { actions.setPrivacy(it, p.countInTop10) })
         TvSwitchRow(t("Count my plays in the Top 10"), t("Others see totals only, never who watched"), p.countInTop10, { actions.setPrivacy(p.personalRecs, it) })
     }
     TvSectionTitle(t("Devices"))

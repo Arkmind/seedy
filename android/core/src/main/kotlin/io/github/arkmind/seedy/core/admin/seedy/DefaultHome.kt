@@ -71,6 +71,7 @@ fun countChanges(a: HomeConfig, b: HomeConfig): Int {
         a.genres.starting to b.genres.starting,
         a.featured.mode to b.featured.mode,
         a.featured.picks to b.featured.picks,
+        a.featured.count to b.featured.count,
     )
     return n + pairs.count { it.first != it.second }
 }

@@ -59,7 +59,7 @@ export function MeProfile() {
       )}
 
       <MeSection id="privacy" title={t('Privacy')} help={t('What Seedy does with what you watch. Your admin can turn these off for everyone.')}>
-        <MeRow name={t('Personal recommendations')} help={t('Because you watched, genre rows and row order learn from your plays')}>
+        <MeRow name={t('Personal recommendations')} help={t('Featured, Because you watched, genre rows and row order learn from your plays')}>
           <Switch label={t('Personal recommendations')} checked={privacy.personalRecs} onChange={(v) => savePrefsPatch({ privacy: { ...privacy, personalRecs: v } })} />
         </MeRow>
         <MeRow name={t('Count my plays in the Top 10')} help={t('Others see totals only, never who watched')}>

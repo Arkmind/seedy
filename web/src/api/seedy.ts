@@ -102,7 +102,8 @@ export interface HomeRow {
   collectionId?: string;
 }
 
-export interface FeaturedEntry { item: BaseItem; reason: string; play?: BaseItem }
+/* `because`: the recent watch a recommendation is like (the hero then says "Because you watched …"). */
+export interface FeaturedEntry { item: BaseItem; reason: string; because?: string; play?: BaseItem }
 export interface Top10Entry { item: BaseItem; profiles: number; plays: number }
 
 /* The trailer behind a title in the Home carousel (GET /Seedy/Items/{id}/Trailer; 204 when there's none).
@@ -255,7 +256,7 @@ export interface AdminConfig {
     because: { watchedWhen: 'finished' | 'half'; lookBackDays: number; minTitles: number };
     top10: { periodDays: number; minProfiles: number };
     genres: { windowDays: number; starting: string[] };
-    featured: { mode: 'auto' | 'picks' | 'both'; picks: string[] };
+    featured: { mode: 'auto' | 'picks' | 'both'; picks: string[]; count: number };
   };
   requests: {
     url: string;

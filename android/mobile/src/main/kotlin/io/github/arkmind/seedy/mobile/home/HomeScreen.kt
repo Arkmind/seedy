@@ -312,7 +312,7 @@ private fun HeroPage(entry: FeaturedEntry, onOpen: (BaseItemDto) -> Unit, onPlay
             if (entry.reason.isNotBlank()) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.size(6.dp).background(LocalAccent.current, CircleShape))
-                    SText(t(entry.reason), size = 12.sp, weight = 800, tracking = 0.1f, color = LocalAccent.current, uppercase = true, maxLines = 1)
+                    SText(entry.reasonText, size = 12.sp, weight = 800, tracking = 0.1f, color = LocalAccent.current, uppercase = true, maxLines = 1)
                 }
             }
             SText(
