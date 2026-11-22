@@ -887,6 +887,80 @@ public sealed class SeerrService
         return new RequestListDto { Results = results, Total = Math.Max(total, results.Count) };
     }
 
+    /// <summary>A request, for Wrapped's stories, with what TMDB says about its title.</summary>
+    /// <param name="Request">The request, as the Requests page shows it.</param>
+    /// <param name="Votes">TMDB's vote count.</param>
+    /// <param name="Rating">TMDB's average, out of 10.</param>
+    /// <param name="Released">The year it came out.</param>
+    /// <param name="Genres">Its genres, as Seerr names them.</param>
+    /// <param name="Requesters">How many people asked Seerr for it.</param>
+    public sealed record RequestFacts(RequestDto Request, int Votes, double Rating, int? Released, IReadOnlyList<string> Genres, int Requesters);
+
+    /// <summary>The requests a person made between two times, oldest first, with their titles' details.</summary>
+    /// <param name="me">Their Seerr id.</param>
+    /// <param name="fromUtc">From (inclusive).</param>
+    /// <param name="toUtc">To (exclusive).</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Requests.</returns>
+    public async Task<List<RequestFacts>> RequestsBetweenAsync(int me, DateTime fromUtc, DateTime toUtc, CancellationToken ct)
+    {
+        var found = new List<JsonNode?>();
+        for (var skip = 0; skip < 5000; skip += 100)
+        {
+            // Newest first: stop at the first page that reaches back before the range.
+            var path = string.Create(CultureInfo.InvariantCulture, $"/request?take=100&skip={skip}&filter=all&sort=added&requestedBy={me}");
+            var page = (await Api(HttpMethod.Get, path, asUser: me, ct: ct).ConfigureAwait(false))?["results"]?.AsArray() ?? [];
+            foreach (var r in page)
+            {
+                if (J.Int(r?["requestedBy"]?["id"]) is { } by && by != me)
+                {
+                    continue;
+                }
+
+                if (J.Date(r?["createdAt"]) is { } at && at >= fromUtc && at < toUtc)
+                {
+                    found.Add(r);
+                }
+            }
+
+            if (page.Count < 100 || page.Any(r => J.Date(r?["createdAt"]) is { } at && at < fromUtc))
+            {
+                break;
+            }
+        }
+
+        var facts = new List<RequestFacts>();
+        foreach (var request in await MapRequestsAsync(found, me, ct).ConfigureAwait(false))
+        {
+            JsonNode? details = null;
+            try
+            {
+                details = await CachedTitle(request.MediaType, request.TmdbId, ct).ConfigureAwait(false);
+            }
+            catch (SeerrException)
+            {
+                // Counted without the title's details.
+            }
+
+            var date = Str(details?[request.MediaType == "tv" ? "firstAirDate" : "releaseDate"]);
+            var requesters = (details?["mediaInfo"]?["requests"]?.AsArray() ?? [])
+                .Select(q => J.Int(q?["requestedBy"]?["id"]))
+                .Where(id => id is not null)
+                .Append(me)
+                .Distinct()
+                .Count();
+            facts.Add(new RequestFacts(
+                request,
+                J.Int(details?["voteCount"]) ?? 0,
+                J.Double(details?["voteAverage"]) ?? 0,
+                date is { Length: >= 4 } && int.TryParse(date[..4], NumberStyles.None, CultureInfo.InvariantCulture, out var y) ? y : null,
+                (details?["genres"]?.AsArray() ?? []).Select(g => Str(g?["name"])).OfType<string>().ToList(),
+                requesters));
+        }
+
+        return facts.OrderBy(f => f.Request.RequestedAt).ToList();
+    }
+
     /// <summary>The Requests page's tabs and counts for the person.</summary>
     /// <param name="me">The person's Seerr id.</param>
     /// <param name="ct">Cancellation.</param>
