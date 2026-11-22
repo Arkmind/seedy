@@ -224,6 +224,8 @@ public sealed class FeaturedEntryDto
 {
     [JsonPropertyName("item")] public BaseItemDto Item { get; set; } = null!;
     [JsonPropertyName("reason")] public string Reason { get; set; } = string.Empty;
+    /// <summary>Gets or sets the recent watch a recommendation is like ("Because you watched …"); the reason stays for older apps.</summary>
+    [JsonPropertyName("because")] public string? Because { get; set; }
     [JsonPropertyName("play")] public BaseItemDto? Play { get; set; }
 }
 
@@ -618,6 +620,8 @@ public sealed class FeaturedSettingsDto
 {
     [JsonPropertyName("mode")] public string Mode { get; set; } = "both";
     [JsonPropertyName("picks")] public List<string> Picks { get; set; } = [];
+    /// <summary>Gets or sets how many titles the hero rotates through; apps that don't send it keep the stored one.</summary>
+    [JsonPropertyName("count")] public int? Count { get; set; }
 }
 
 public sealed class AdminRequestsDto

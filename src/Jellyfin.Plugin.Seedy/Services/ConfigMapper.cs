@@ -141,7 +141,7 @@ public static partial class ConfigMapper
             Because = new BecauseDto { WatchedWhen = c.BecauseWatchedWhen == "half" ? "half" : "finished", LookBackDays = c.BecauseLookBackDays, MinTitles = c.BecauseMinTitles },
             Top10 = new Top10SettingsDto { PeriodDays = c.Top10PeriodDays == 30 ? 30 : 7, MinProfiles = c.Top10MinProfiles },
             Genres = new GenreSettingsDto { WindowDays = c.GenreWindowDays, Starting = (c.StartingGenres ?? []).ToList() },
-            Featured = new FeaturedSettingsDto { Mode = c.FeaturedMode, Picks = (c.FeaturedPicks ?? []).ToList() }
+            Featured = new FeaturedSettingsDto { Mode = c.FeaturedMode, Picks = (c.FeaturedPicks ?? []).ToList(), Count = Math.Clamp(c.FeaturedCount, 1, HomeService.MaxFeatured) }
         },
         Requests = new AdminRequestsDto
         {
@@ -205,6 +205,10 @@ public static partial class ConfigMapper
         c.StartingGenres = (a.Home.Genres.Starting ?? []).Select(g => g.Trim()).Where(g => g.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Take(30).ToArray();
         c.FeaturedMode = a.Home.Featured.Mode is "auto" or "picks" ? a.Home.Featured.Mode : "both";
         c.FeaturedPicks = (a.Home.Featured.Picks ?? []).Where(p => Guid.TryParse(p, out _)).Distinct().Take(30).ToArray();
+        if (a.Home.Featured.Count is { } count)
+        {
+            c.FeaturedCount = Math.Clamp(count, 1, HomeService.MaxFeatured);
+        }
 
         c.SeerrUrl = CleanUrl(a.Requests.Url);
         c.ShowDiscover = a.Requests.ShowDiscover;

@@ -347,12 +347,13 @@ public class SeedyController : ControllerBase
     }
 
     /// <summary>The hero rotation.</summary>
+    /// <param name="ct">Cancellation.</param>
     /// <returns>Entries.</returns>
     [HttpGet("Home/Featured")]
-    public async Task<ActionResult<List<FeaturedEntryDto>>> GetFeatured()
+    public async Task<ActionResult<List<FeaturedEntryDto>>> GetFeatured(CancellationToken ct)
     {
         var user = User.GetUser(_users);
-        return user is null ? Unauthorized() : await _home.FeaturedAsync(user).ConfigureAwait(false);
+        return user is null ? Unauthorized() : await _home.FeaturedAsync(user, ct).ConfigureAwait(false);
     }
 
     /// <summary>The Top 10 this period.</summary>
