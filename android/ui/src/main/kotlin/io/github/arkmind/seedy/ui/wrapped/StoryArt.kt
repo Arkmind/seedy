@@ -63,6 +63,9 @@ val WrappedPeach = Color(0xFFFFC98A)
 val WrappedBlue = Color(0xFF9FD3FF)
 val WrappedLilac = Color(0xFFCDB4FF)
 val WrappedNight = Color(0xFF121633)
+val WrappedMint = Color(0xFFA8E6DF)
+val WrappedSand = Color(0xFFF3E3C3)
+val WrappedRust = Color(0xFFE86F4F)
 
 /** A story's colours: its background, the ink of its text and controls, and whether it's a dark story. */
 data class StoryLook(val bg: Color, val ink: Color, val brush: Brush? = null) {
@@ -85,6 +88,8 @@ fun storyLook(story: StoryKey, accent: Color, clockKind: String? = null, showsWo
         "evening" -> StoryLook(Color(0xFF2A1F4D), Color.White)
         else -> StoryLook(WrappedNight, Color.White)
     }
+    StoryKey.Requests -> StoryLook(WrappedMint, WrappedInk)
+    StoryKey.Oddest -> StoryLook(WrappedSand, WrappedInk)
     StoryKey.Personality -> StoryLook(WrappedLilac, WrappedInk, cssGradient(160f, 0f to WrappedLilac, .55f to Color(0xFFE6B8FF), 1f to Color(0xFFFF9FFF)))
 }
 
@@ -148,6 +153,7 @@ private val ShowsBubbles = bubblesOf(listOf(306f, 367f, 68f, 129f, 190f), listOf
 private val LoverBubbles = bubblesOf(listOf(158f, 219f, 280f, 341f, 42f), listOf(14f, 10f, 6f, 16f, 12f))
 private val BingeBubbles = bubblesOf(listOf(57f, 118f, 179f, 240f, 301f, 362f), listOf(14f, 10f, 6f, 16f, 12f, 8f))
 private val PersonalityBubbles = bubblesOf(listOf(84f, 145f, 206f, 267f, 328f, 29f), listOf(10f, 6f, 16f, 12f, 8f, 18f))
+private val RequestsBubbles = bubblesOf(listOf(343f, 44f, 105f, 166f, 227f), listOf(10f, 6f, 16f, 12f, 8f))
 private val SummaryBubbles = bubblesOf(listOf(232f, 293f, 354f, 55f, 116f, 177f, 238f), listOf(18f, 14f, 10f, 6f, 16f, 12f, 8f))
 
 /** Confetti on the cover: x, y, w, h, corner, colour, turn, delay. */
@@ -229,23 +235,12 @@ fun DrawScope.storyBackdrop(
             drift(low, false) { waves(listOf(700f, 760f, 820f), 24f, 36f, WrappedInk.copy(alpha = .07f)) }
             if (bubbles) translate(0f, low) { bubbles(ShowsBubbles, WrappedInk.copy(alpha = .22f), t) }
         }
-        StoryKey.Movie -> {
-            val turn = if (t == null) 0f else loopAt(t, 40.0) * 360f
-            val c = focus ?: Offset(195f, 420f)
-            rotate(turn, c) {
-                for (i in 0 until 16) {
-                    val a0 = Math.toRadians(i * 22.5).toFloat()
-                    val a1 = Math.toRadians(i * 22.5 + 11.46).toFloat()
-                    val p = Path().apply {
-                        moveTo(c.x, c.y)
-                        lineTo(c.x + 300f * cos(a0), c.y + 300f * sin(a0))
-                        arcTo(Rect(c, 300f), Math.toDegrees(a0.toDouble()).toFloat(), 11.46f, false)
-                        close()
-                    }
-                    drawPath(p, Color.White.copy(alpha = .14f))
-                }
-            }
+        StoryKey.Movie -> rays(focus ?: Offset(195f, 420f), 300f, Color.White.copy(alpha = .14f), t)
+        StoryKey.Requests -> {
+            drift(low, false) { waves(listOf(690f, 748f, 806f), 22f, 34f, WrappedInk.copy(alpha = .07f)) }
+            if (bubbles) translate(0f, low) { bubbles(RequestsBubbles, WrappedInk.copy(alpha = .2f), t) }
         }
+        StoryKey.Oddest -> rays(focus ?: Offset(195f, 470f), 320f, WrappedRust.copy(alpha = .08f), t)
         StoryKey.Binge -> {
             drift(0f, true) { waves(listOf(150f, 190f, 230f), 18f, 18f, Color.White.copy(alpha = .22f)) }
             if (bubbles) translate(0f, low) { bubbles(BingeBubbles, WrappedInk.copy(alpha = .2f), t) }
@@ -261,6 +256,23 @@ fun DrawScope.storyBackdrop(
             val (ga, gk) = glow(t)
             light(-100f, 60f, 590f, accent, .2f * ga, gk)
             if (bubbles) translate(0f, low) { bubbles(SummaryBubbles, Color.White.copy(alpha = .12f), t) }
+        }
+    }
+}
+
+/** The movie's and the oddest request's sunburst: 16 thin wedges [r] px long around [c], turning once in 40 s. */
+private fun DrawScope.rays(c: Offset, r: Float, color: Color, t: Double?) {
+    val turn = if (t == null) 0f else loopAt(t, 40.0) * 360f
+    rotate(turn, c) {
+        for (i in 0 until 16) {
+            val a0 = Math.toRadians(i * 22.5).toFloat()
+            val p = Path().apply {
+                moveTo(c.x, c.y)
+                lineTo(c.x + r * cos(a0), c.y + r * sin(a0))
+                arcTo(Rect(c, r), Math.toDegrees(a0.toDouble()).toFloat(), 11.46f, false)
+                close()
+            }
+            drawPath(p, color)
         }
     }
 }
@@ -347,13 +359,45 @@ fun PosterArt(title: String, modifier: Modifier = Modifier) {
                 drawLine(Color(0xFF3A1A1F), Offset(x, y), Offset(x, y + 16f), 3f)
                 drawRoundRect(Color(0xFFFFB38A), Offset(x - 14f, y + 16f), Size(28f, 38f), CornerRadius(12f), alpha = a)
             }
-            // The title, as big as fits (40 px on the board), its baseline at 548.
-            val style = boardText(density, 40f, 900, Color.White, tracking = 1f)
-            var layout = measurer.measure(title.uppercase(), style, maxLines = 1, softWrap = false)
-            if (layout.size.width > 370f) {
-                layout = measurer.measure(title.uppercase(), boardText(density, 40f * 370f / layout.size.width, 900, Color.White, tracking = 1f), maxLines = 1, softWrap = false)
+            // The title in the bottom 360 × 100, centred: from 40 px down to 20 on two lines, then cut short.
+            val layout = fitLayout(measurer, title.uppercase(), 360, 2, 40f, 20f) {
+                boardText(density, it, 900, Color.White, tracking = 1f).copy(lineHeight = 1.05.em, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
-            drawText(layout, topLeft = Offset(200f - layout.size.width / 2f, 548f - layout.firstBaseline))
+            drawText(layout, topLeft = Offset(20f + (360f - layout.size.width) / 2f, 490f + (100f - layout.size.height) / 2f))
+        }
+    }
+}
+
+/** Where the oddest request's poster has its stars: x, y, radius, opacity (the board's 26). */
+private val RetroStars = (0 until 26).map { i -> floatArrayOf(((i * 97) % 400).toFloat(), ((i * 61) % 330).toFloat(), listOf(1.5f, 2.5f, 3.5f)[i % 3], listOf(.4f, .6f, .8f)[i % 3]) }
+
+private val RetroRocket by lazy { path("M60 330 l26 -60 l26 60 z") }
+
+/**
+ * Board WrappedOddest's retro poster (400 × 600), for a title without one: a ringed planet and a little rocket under
+ * the stars, the title in capitals across the bottom.
+ */
+@Composable
+fun RetroPoster(title: String, modifier: Modifier = Modifier) {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    Canvas(modifier) {
+        val k = min(size.width / 400f, size.height / 600f)
+        scale(k, k, Offset.Zero) {
+            drawRect(Color(0xFF1F2A44), size = Size(400f, 600f))
+            for (s in RetroStars) drawCircle(WrappedSand, s[2], Offset(s[0], s[1]), alpha = s[3])
+            drawCircle(WrappedRust, 118f, Offset(220f, 230f))
+            drawArc(Color(0xFFC9553A), 0f, 180f, true, Offset(102f, 112f), Size(236f, 236f))
+            rotate(-14f, Offset(220f, 236f)) {
+                drawOval(WrappedSand, Offset(220f - 178f, 236f - 34f), Size(356f, 68f), style = Stroke(10f))
+            }
+            drawPath(RetroRocket, WrappedSand)
+            drawRect(WrappedSand, Offset(76f, 330f), Size(20f, 18f))
+            // The title in the bottom 360 × 180, centred: from 52 px down to 24 on three lines, then cut short.
+            val layout = fitLayout(measurer, title.uppercase(), 360, 3, 52f, 24f) {
+                boardText(density, it, 900, WrappedSand, tracking = -1f).copy(lineHeight = 1.02.em, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
+            drawText(layout, topLeft = Offset(20f + (360f - layout.size.width) / 2f, 400f + (180f - layout.size.height) / 2f))
         }
     }
 }
@@ -461,8 +505,8 @@ fun Odometer(text: String, size: TextUnit, color: Color, modifier: Modifier = Mo
 // ── Medu's speech bubble ──
 
 /**
- * What Medu says (the boards' .say): a rounded bubble with a little diamond tail under it, [tailFromEnd] px in from
- * the end (when [tailEnd]) or the start. Sizes are the phone board's unless given.
+ * What Medu says (the boards' .say): a rounded bubble, its lines balanced, with a little diamond tail halfway down the
+ * side Medu is on (the end when [tailEnd]), [tailOut] past the edge. Sizes are the phone board's unless given.
  */
 @Composable
 fun Say(
@@ -472,22 +516,22 @@ fun Say(
     tailEnd: Boolean,
     modifier: Modifier = Modifier,
     size: TextUnit = 14.sp,
-    maxWidth: Dp = 190.dp,
+    maxWidth: Dp = 206.dp,
     padX: Dp = 14.dp,
     padY: Dp = 10.dp,
     radius: Dp = 18.dp,
-    tail: Dp = 16.dp,
-    tailInset: Dp = 22.dp,
-    tailDrop: Dp = 7.dp,
+    tail: Dp = 14.dp,
+    tailOut: Dp = 5.dp,
+    tailRadius: Dp = 3.dp,
 ) {
     Box(
         modifier
             .drawBehind {
                 val s = tail.toPx()
-                val x = if (tailEnd) this.size.width - tailInset.toPx() - s else tailInset.toPx()
-                val y = this.size.height + tailDrop.toPx() - s
+                val x = if (tailEnd) this.size.width + tailOut.toPx() - s else -tailOut.toPx()
+                val y = (this.size.height - s) / 2f
                 rotate(45f, Offset(x + s / 2f, y + s / 2f)) {
-                    drawRoundRect(bg, Offset(x, y), Size(s, s), CornerRadius(3.dp.toPx()))
+                    drawRoundRect(bg, Offset(x, y), Size(s, s), CornerRadius(tailRadius.toPx()))
                 }
             }
             // CSS max-width is the text's, inside the padding.
@@ -495,7 +539,7 @@ fun Say(
             .background(bg, RoundedCornerShape(radius))
             .padding(horizontal = padX, vertical = padY),
     ) {
-        SText(text, size = size, weight = 800, color = ink, lineHeight = 1.3f)
+        SText(text, size = size, weight = 800, color = ink, lineHeight = 1.3f, balance = true)
     }
 }
 

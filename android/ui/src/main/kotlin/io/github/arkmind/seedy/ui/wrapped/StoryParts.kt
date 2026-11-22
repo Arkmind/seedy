@@ -31,6 +31,7 @@ import io.github.arkmind.seedy.core.wrapped.genreName
 import io.github.arkmind.seedy.core.wrapped.hoursOf
 import io.github.arkmind.seedy.core.wrapped.personalityName
 import io.github.arkmind.seedy.core.wrapped.summaryAlso
+import io.github.arkmind.seedy.core.wrapped.summaryCounts
 import io.github.arkmind.seedy.ui.components.Medu
 import io.github.arkmind.seedy.ui.components.MeduMood
 import io.github.arkmind.seedy.ui.icons.IconDef
@@ -51,6 +52,22 @@ object WrappedIcons {
     val Again = IconDef(2.4f, "M4 12a8 8 0 1 0 2.4-5.7", "M4 4v5h5")
     val Bolt = IconDef(2.4f, "M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z")
     val Next = IconDef(2.6f, "M9 6l6 6-6 6")
+
+    private const val Ring = "M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0z"
+    private val Personalities = mapOf(
+        "sprinter" to Bolt,
+        "rewatcher" to IconDef(2.4f, "M4 12a8 8 0 1 0 2.4-5.7", "M4 4v5h5"),
+        "cinephile" to IconDef(2.4f, "M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z", "M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"),
+        "explorer" to IconDef(2.4f, Ring, "M15.5 8.5l-2 5-5 2 2-5z"),
+        "regular" to IconDef(2.4f, "M5.5 5h13a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z", "M3.5 10h17M8 3v4M16 3v4"),
+        "slowburner" to IconDef(2.4f, "M7 3h10M7 21h10", "M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"),
+        "weekender" to IconDef(2.4f, "M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3", "M3 11a2 2 0 0 1 2 2v2h14v-2a2 2 0 1 1 2 2v3H3v-3a2 2 0 0 1 0-4z", "M6 18v2M18 18v2"),
+        "completionist" to IconDef(2.4f, Ring, "M8 12.5l2.7 2.7L16 9.5"),
+        "easygoing" to IconDef(2.4f, "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"),
+    )
+
+    /** The watch personality's icon (the web's PersonalityIcon): a bolt for the sprinter, a ticked ring for the completionist… */
+    fun personality(key: String): IconDef = Personalities[key] ?: Personalities.getValue("easygoing")
 }
 
 /** The stories' bar: 3 px segments 4 px apart, past ones full, the current one filling. */
@@ -108,7 +125,7 @@ fun SummaryCard(w: Wrapped, accent: Color, modifier: Modifier = Modifier) {
                             w.shows.take(5).forEachIndexed { i, s ->
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     SText("${i + 1}", Modifier.width(12.dp).alignByBaseline(), size = 14.sp, weight = 900, color = Ink.copy(alpha = .55f), maxLines = 1)
-                                    SText(s.name, Modifier.alignByBaseline(), size = 14.sp, weight = 800, color = Ink, maxLines = 1)
+                                    FitText(s.name, 14.sp, 12.sp, 2, 800, Ink, Modifier.weight(1f).alignByBaseline(), lineHeight = 1.2f)
                                 }
                             }
                         }
@@ -118,17 +135,19 @@ fun SummaryCard(w: Wrapped, accent: Color, modifier: Modifier = Modifier) {
                     Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         label(t("Hours"))
                         SText(formatNumber(hoursOf(w.watchMs)), size = 30.sp, weight = 900, lineHeight = 1.05f, tracking = -.02f, color = Ink, maxLines = 1)
+                        val counts = summaryCounts(w)
+                        if (counts.isNotEmpty()) SText(counts, Modifier.padding(top = 2.dp), size = 11.sp, weight = 800, color = Ink.copy(alpha = .7f))
                     }
                     w.genres.firstOrNull()?.let { g ->
                         Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                             label(t("Top genre"))
-                            TightText(AnnotatedString(genreName(g)), 18.sp, 900, Ink, 1.05f, tracking = -.02f)
+                            FitText(genreName(g), 18.sp, 13.sp, 2, 900, Ink, Modifier.fillMaxWidth(), lineHeight = 1.05f, tracking = -.02f)
                         }
                     }
                     w.movie?.let { m ->
                         Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                             label(t("Top movie"))
-                            TightText(AnnotatedString(m.name), 18.sp, 900, Ink, 1.05f, tracking = -.02f)
+                            FitText(m.name, 18.sp, 12.sp, 3, 900, Ink, Modifier.fillMaxWidth(), lineHeight = 1.05f, tracking = -.02f)
                         }
                     }
                 }
@@ -140,12 +159,12 @@ fun SummaryCard(w: Wrapped, accent: Color, modifier: Modifier = Modifier) {
             ) {
                 Column(Modifier.weight(1f)) {
                     SText(t("Watch personality"), size = 10.sp, weight = 800, tracking = .1f, color = accent, uppercase = true, maxLines = 1)
-                    SText(personalityName(w.personality.key), size = 17.sp, weight = 900, color = Color.White, maxLines = 1)
+                    FitText(personalityName(w.personality.key), 17.sp, 13.sp, 1, 900, Color.White, Modifier.fillMaxWidth())
                 }
-                SIcon(WrappedIcons.Bolt, size = 24.dp, color = Color.White)
+                SIcon(WrappedIcons.personality(w.personality.key), size = 24.dp, color = Color.White)
             }
-            Row(Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                SText(summaryAlso(w), size = 12.sp, weight = 800, color = Ink, maxLines = 1)
+            Row(Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SText(summaryAlso(w), Modifier.weight(1f), size = 12.sp, weight = 800, color = Ink)
                 SText("seedy", size = 12.sp, weight = 800, color = Ink.copy(alpha = .6f), maxLines = 1)
             }
         }

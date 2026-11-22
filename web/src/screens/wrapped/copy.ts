@@ -3,13 +3,25 @@ import type { MeduMood } from '../../ui/medu';
 import type { Wrapped, WrappedStat } from './api';
 
 /* Every sentence Seedy Wrapped says, written from the year's numbers. The Android apps say the same English (and so
-   get the same French from i18n/fr/wrapped.ts): keep both in step when changing a line here. */
+   get the same French from i18n/fr/wrapped.ts): keep both in step when changing a line here. Medu's lines follow the
+   board "Wrapped · Medu's lines": the first row whose condition matches, with the mood to show. */
 
 export const hoursOf = (ms: number) => Math.max(0, Math.round(ms / 3_600_000));
 
+/* What Medu says on a story, and how she looks saying it. */
+export interface MeduLine { text: string; mood: MeduMood }
+
+const SPELLED: (() => string)[] = [
+  () => tc('Zero', 'start'), () => tc('One', 'start'), () => tc('Two', 'start'), () => tc('Three', 'start'), () => tc('Four', 'start'),
+  () => tc('Five', 'start'), () => tc('Six', 'start'), () => tc('Seven', 'start'), () => tc('Eight', 'start'), () => tc('Nine', 'start')
+];
+
+/* A number that starts a sentence: spelled out under ten ("Nine in a row?"), in figures from ten. */
+export const startNumber = (n: number) => (n >= 0 && n < 10 ? SPELLED[n]() : formatNumber(n));
+
 // ── Cover ──
 
-/* Each story stays 16 s: nine take about two minutes. */
+/* Each story stays 16 s: twelve take about three minutes. */
 export const STORY_SECONDS = 16;
 
 export function coverHint(stories: number): string {
@@ -34,6 +46,13 @@ export function hourChips(w: Wrapped): Chip[] {
   }
   if (w.rank) chips.push({ big: `#${formatNumber(w.rank)}`, small: t('on your server') });
   return chips;
+}
+
+export function hoursMedu(w: Wrapped): MeduLine {
+  const hours = hoursOf(w.watchMs);
+  if (hours > 1000) return { text: t('I made popcorn for every single one of them.'), mood: 'popcorn' };
+  if (hours >= 200) return { text: t('That’s a lot of popcorn. Not complaining.'), mood: 'popcorn' };
+  return { text: t('Quality over quantity. I respect that.'), mood: 'idle' };
 }
 
 // ── Shows or movies? ──
@@ -99,7 +118,10 @@ export function loverOther(w: Wrapped): { count: number; line: string } {
   };
 }
 
-export const loverMedu = (w: Wrapped) => (loverShows(w) ? t('Movies miss you a little.') : t('Shows miss you a little.'));
+export function loverMedu(w: Wrapped): MeduLine {
+  if (loverPct(w) <= 55) return { text: t('Shows or movies? Why choose.'), mood: 'idle' };
+  return loverShows(w) ? { text: t('Me too. One more episode?'), mood: 'love' } : { text: t('Me too. Another movie tonight?'), mood: 'love' };
+}
 
 // ── Genres ──
 
@@ -148,20 +170,19 @@ export function genreLead(w: Wrapped): string {
 
 export const genreOther = (w: Wrapped) => (w.otherPct > 0 ? t('The other {pct}% was a bit of everything.', { pct: formatNumber(w.otherPct) }) : '');
 
-export function genreMedu(w: Wrapped): string {
+export function genreMedu(w: Wrapped): MeduLine {
   switch (w.genres[0]?.key) {
-    case 'thriller': return t('That many thrillers… should I be worried?');
-    case 'drama': return t('I cried too. Twice.');
-    case 'comedy': return t('You laughed. I heard.');
-    case 'scifi': return t('Take me with you next time.');
-    case 'documentary': return t('Fun fact: jellyfish have no brain. I’m doing fine.');
-    case 'horror': return t('I watched through my tentacles.');
-    case 'animation': return t('Cartoons are for everyone.');
-    case 'crime': return t('It wasn’t me. I was at home.');
-    case 'romance': return t('Aww. Pass the tissues.');
-    case 'fantasy': return t('Is that a dragon? Can I keep it?');
-    case 'mystery': return t('I knew it was the butler.');
-    default: return t('Good taste, if you ask me.');
+    case 'thriller': case 'crime': return { text: t('That many thrillers… should I be worried?'), mood: 'search' };
+    case 'comedy': return { text: t('You laughed a lot this year. I could hear you.'), mood: 'yay' };
+    case 'horror': return { text: t('I watched those through my tentacles.'), mood: 'oops' };
+    case 'documentary': return { text: t('You know so much now. Teach me?'), mood: 'think' };
+    case 'romance': return { text: t('Okay, I cried too.'), mood: 'love' };
+    case 'animation': case 'family': case 'kids': return { text: t('Same. Cartoons are the best.'), mood: 'yay' };
+    case 'drama': return { text: t('I cried too. Twice.'), mood: 'sad' };
+    case 'scifi': return { text: t('Take me with you next time.'), mood: 'think' };
+    case 'fantasy': return { text: t('Is that a dragon? Can I keep it?'), mood: 'think' };
+    case 'mystery': return { text: t('I knew it was the butler.'), mood: 'think' };
+    default: return { text: t('Good taste, if you ask me.'), mood: 'idle' };
   }
 }
 
@@ -183,8 +204,11 @@ export function showsFootnote(w: Wrapped): string {
   return '';
 }
 
-export const showsMedu = (w: Wrapped) =>
-  w.shows[0] ? tn(w.shows[0].episodes, '{n} episode of {show}. I counted.', '{n} episodes of {show}. I counted.', { show: w.shows[0].name }) : '';
+export function showsMedu(w: Wrapped): MeduLine {
+  const top = w.shows[0];
+  const text = top ? tn(top.episodes, '{n} episode of {show}. I counted.', '{n} episodes of {show}. I counted.', { show: top.name, n: startNumber(top.episodes) }) : '';
+  return { text, mood: 'think' };
+}
 
 // ── The movie ──
 
@@ -216,7 +240,14 @@ export function movieMeta(w: Wrapped): string {
 export const movieTickets = (w: Wrapped) =>
   (w.movie?.dates ?? []).slice(-6).map((d) => day(d, { month: 'short' }).replace('.', ''));
 
-export const movieMedu = (w: Wrapped) => ((w.movie?.views ?? 0) >= 2 ? t('Same, honestly.') : t('Good pick.'));
+export function movieMedu(w: Wrapped): MeduLine {
+  const views = w.movie?.views ?? 0;
+  if (views < 2) return { text: t('Good pick. I’d watch it again.'), mood: 'idle' };
+  const vars = { n: startNumber(views) };
+  return w.movie?.genres?.some((g) => g === 'drama' || g === 'romance')
+    ? { text: t('{n} times, and I still cry at the end.', vars), mood: 'sad' }
+    : { text: t('{n} times? You must know it by heart.', vars), mood: 'love' };
+}
 
 // ── The binge ──
 
@@ -250,6 +281,13 @@ export function bingeText(w: Wrapped): string {
   if (!b) return '';
   const ms = Date.parse(b.end + ':00Z') - Date.parse(b.start + ':00Z');
   return t('{time} from the first episode to the last.', { time: duration(Math.max(60_000, ms)) });
+}
+
+export function bingeMedu(w: Wrapped): MeduLine {
+  const n = w.binge?.episodes ?? 0;
+  return n >= 5
+    ? { text: t('{n} in a row? I had to unplug.', { n: startNumber(n) }), mood: 'oops' }
+    : { text: t('Only {n} in a row. Very civilised.', { n: formatNumber(n) }), mood: 'idle' };
 }
 
 // ── The clock ──
@@ -286,27 +324,59 @@ export function clockDay(w: Wrapped): string {
   }
 }
 
-export function clockMedu(w: Wrapped): string {
+export function clockMedu(w: Wrapped): MeduLine {
   switch (w.clock?.kind) {
-    case 'morning': return t('Coffee first? No? Okay.');
-    case 'afternoon': return t('A matinee a day keeps the boredom away.');
-    case 'evening': return t('Dinner, then a show. Classic.');
-    default: return t('Some of us need our sleep, you know.');
+    case 'morning': return { text: t('An episode with breakfast? Fancy.'), mood: 'idle' };
+    case 'afternoon': return { text: t('Lunch breaks well spent.'), mood: 'wave' };
+    case 'evening': return { text: t('Dinner, then a show. Classic.'), mood: 'popcorn' };
+    default: return { text: t('Some of us need our sleep, you know.'), mood: 'sleepy' };
   }
 }
 
-export const clockMood = (w: Wrapped): MeduMood => (w.clock?.kind === 'night' ? 'sleepy' : w.clock?.kind === 'evening' ? 'popcorn' : 'wave');
+// ── Your requests ──
+
+/* "14 min", "2 h 5 min" or "3 days": how long the quickest request took to land. */
+export function arrivalTime(ms: number): string {
+  if (ms < 86_400_000) return duration(ms);
+  const days = Math.round(ms / 86_400_000);
+  return tn(days, '{n} day', '{n} days');
+}
+
+/* The one that landed soonest: "Glass Harbor, season 2". */
+export function arrivalName(f: { name: string; season?: number | null; seasonTo?: number | null }): string {
+  if (f.season == null) return f.name;
+  return f.seasonTo ? t('{show}, seasons {from}–{to}', { show: f.name, from: f.season, to: f.seasonTo }) : t('{show}, season {n}', { show: f.name, n: f.season });
+}
+
+export function requestsMedu(w: Wrapped): MeduLine {
+  return (w.requests?.count ?? 0) >= 10
+    ? { text: t('Fetched every single one. You’re welcome.'), mood: 'wave' }
+    : { text: t('Short list, great taste.'), mood: 'idle' };
+}
+
+// ── The oddest request ──
+
+/* "★ 3.9": TMDB's rating, one decimal. */
+export const oddRating = (rating: number) => `★ ${formatNumber(rating, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+
+export function oddestMedu(w: Wrapped): MeduLine {
+  const o = w.oddest;
+  if (!o || o.rating < 5) return { text: t('I have questions.'), mood: 'think' };
+  if (o.year != null && o.year < 1970) return { text: t('Older than your parents. Respect.'), mood: 'love' };
+  return { text: tn(o.votes, 'You and {n} other person. Very exclusive.', 'You and {n} other people. Very exclusive.'), mood: 'yay' };
+}
 
 // ── The personality ──
 
 export function personalityName(key: string): string {
   switch (key) {
     case 'sprinter': return t('The Season Sprinter');
-    case 'rewatcher': return t('The Rewatcher');
+    case 'completionist': return t('The Completionist');
+    case 'rewatcher': return t('The Comfort Rewatcher');
     case 'cinephile': return t('The Movie Buff');
     case 'explorer': return t('The Explorer');
     case 'regular': return t('The Daily Regular');
-    case 'slowburner': return t('The Slow Burner');
+    case 'slowburner': return t('The Slow Savourer');
     case 'weekender': return t('The Weekend Warrior');
     default: return t('The Easygoing Viewer');
   }
@@ -315,6 +385,7 @@ export function personalityName(key: string): string {
 export function personalityText(key: string): string {
   switch (key) {
     case 'sprinter': return t('Once you start a season, nothing gets in the way. Not sleep, not intros, not Medu.');
+    case 'completionist': return t('You finish what you start. Every season, every finale, right to the last episode.');
     case 'rewatcher': return t('Why gamble on something new when you know what you love? Comfort, on repeat.');
     case 'cinephile': return t('Lights down, phone away. For you, a night in means a proper film.');
     case 'explorer': return t('A bit of everything, from everywhere. You never stayed in one place for long.');
@@ -325,16 +396,17 @@ export function personalityText(key: string): string {
   }
 }
 
-export function personalityMedu(key: string): string {
+export function personalityMedu(key: string): MeduLine {
   switch (key) {
-    case 'sprinter': return t('Teach me your ways.');
-    case 'rewatcher': return t('Again? Again!');
-    case 'cinephile': return t('Popcorn’s on me.');
-    case 'explorer': return t('Where to next?');
-    case 'regular': return t('Same time tomorrow?');
-    case 'slowburner': return t('No spoilers, I promise.');
-    case 'weekender': return t('See you Saturday!');
-    default: return t('Quality over quantity.');
+    case 'sprinter': return { text: t('Teach me your ways.'), mood: 'yay' };
+    case 'completionist': return { text: t('Not a single episode left behind.'), mood: 'yay' };
+    case 'explorer': return { text: t('So many new shows. Where to next?'), mood: 'wave' };
+    case 'rewatcher': return { text: t('Old favourites are the best favourites.'), mood: 'love' };
+    case 'slowburner': return { text: t('No rush. Good things take time.'), mood: 'sleepy' };
+    case 'cinephile': return { text: t('Popcorn’s on me.'), mood: 'popcorn' };
+    case 'regular': return { text: t('Same time tomorrow?'), mood: 'wave' };
+    case 'weekender': return { text: t('See you Saturday!'), mood: 'yay' };
+    default: return { text: t('Quality over quantity.'), mood: 'idle' };
   }
 }
 
@@ -369,6 +441,7 @@ export function statLine(s: WrappedStat): Chip {
     }
     case 'weekendPct': return { big: `${formatNumber(n)}%`, small: t('of your watching on weekends') };
     case 'showsStarted': return { big: tn(n, '{n} new show', '{n} new shows'), small: t('started from episode one') };
+    case 'showsFinished': return { big: tn(n, '{n} show', '{n} shows'), small: t('watched to the very last episode') };
     default: return { big: formatNumber(n), small: '' };
   }
 }
@@ -380,7 +453,16 @@ export function summaryAlso(w: Wrapped): string {
   const music = hoursOf(w.musicMs);
   if (music > 0) parts.push(t('{n} h of music', { n: formatNumber(music) }));
   if (w.books > 0) parts.push(tn(w.books, '{n} book', '{n} books'));
+  if ((w.requests?.count ?? 0) > 0) parts.push(tn(w.requests!.count, '{n} request', '{n} requests'));
   return parts.length ? t('Also {list}', { list: parts.join(' · ') }) : '';
+}
+
+/* Under the hours on the share card: "38 shows · 141 movies". */
+export function summaryCounts(w: Wrapped): string {
+  const parts: string[] = [];
+  if ((w.showsWatched ?? 0) > 0) parts.push(tn(w.showsWatched!, '{n} show', '{n} shows'));
+  if ((w.moviesPlayed ?? 0) > 0) parts.push(tn(w.moviesPlayed!, '{n} movie', '{n} movies'));
+  return parts.join(' · ');
 }
 
 /* What a screen reader hears for the share card. */

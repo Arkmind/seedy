@@ -62,16 +62,16 @@ private fun fill(text: String, vars: Array<out Pair<String, Any?>>): String =
 /** Translate English text. Placeholders like {n} or {name} are filled from [vars] (in both languages). */
 fun t(text: String, vararg vars: Pair<String, Any?>): String = fill(I18n.lookup(text), vars)
 
-/** Plural forms: tn(3, "{n} movie", "{n} movies"). The language's own rule picks one (French treats 0 and 1 as singular). */
+/** Plural forms: tn(3, "{n} movie", "{n} movies"). The language's own rule picks one (French treats 0 and 1 as singular); an "n" in [vars] writes the number differently ("Nine"). */
 fun tn(n: Int, one: String, other: String, vararg vars: Pair<String, Any?>): String {
     val form = runCatching { PluralRules.forLocale(I18n.locale).select(n.toDouble()) }.getOrElse { if (n == 1) "one" else "other" }
-    return t(if (form == "one") one else other, "n" to formatNumber(n), *vars)
+    return t(if (form == "one") one else other, *vars, "n" to formatNumber(n))
 }
 
 /** Plural forms for a number that may have decimals: tn(4.2, "{n} day", "{n} days") → "4.2 days". */
 fun tn(n: Double, one: String, other: String, vararg vars: Pair<String, Any?>): String {
     val form = runCatching { PluralRules.forLocale(I18n.locale).select(n) }.getOrElse { if (n == 1.0) "one" else "other" }
-    return t(if (form == "one") one else other, "n" to formatNumber(n), *vars)
+    return t(if (form == "one") one else other, *vars, "n" to formatNumber(n))
 }
 
 /** A word whose translation depends on where it stands ("Series|tab" is plural in French); [text] when there's none. */

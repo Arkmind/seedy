@@ -61,27 +61,21 @@ import io.github.arkmind.seedy.core.wrapped.bingeEpisode
 import io.github.arkmind.seedy.core.wrapped.bingeLine
 import io.github.arkmind.seedy.core.wrapped.bingeText
 import io.github.arkmind.seedy.core.wrapped.clockDay
-import io.github.arkmind.seedy.core.wrapped.clockMedu
-import io.github.arkmind.seedy.core.wrapped.clockMood
 import io.github.arkmind.seedy.core.wrapped.clockShare
 import io.github.arkmind.seedy.core.wrapped.clockTitle
 import io.github.arkmind.seedy.core.wrapped.coverHint
 import io.github.arkmind.seedy.core.wrapped.genreLead
-import io.github.arkmind.seedy.core.wrapped.genreMedu
 import io.github.arkmind.seedy.core.wrapped.genreName
 import io.github.arkmind.seedy.core.wrapped.genreOther
 import io.github.arkmind.seedy.core.wrapped.hourChips
 import io.github.arkmind.seedy.core.wrapped.hoursOf
-import io.github.arkmind.seedy.core.wrapped.movieMedu
 import io.github.arkmind.seedy.core.wrapped.movieMeta
 import io.github.arkmind.seedy.core.wrapped.movieTickets
 import io.github.arkmind.seedy.core.wrapped.movieTitle
-import io.github.arkmind.seedy.core.wrapped.personalityMedu
 import io.github.arkmind.seedy.core.wrapped.personalityName
 import io.github.arkmind.seedy.core.wrapped.personalityText
 import io.github.arkmind.seedy.core.wrapped.showMeta
 import io.github.arkmind.seedy.core.wrapped.showsFootnote
-import io.github.arkmind.seedy.core.wrapped.showsMedu
 import io.github.arkmind.seedy.core.wrapped.statLine
 import io.github.arkmind.seedy.core.wrapped.summaryAlso
 import io.github.arkmind.seedy.core.wrapped.timeOf
@@ -104,10 +98,12 @@ import io.github.arkmind.seedy.ui.wrapped.WrappedIcons
 import io.github.arkmind.seedy.ui.wrapped.Heading
 import io.github.arkmind.seedy.ui.wrapped.OutlineText
 import io.github.arkmind.seedy.ui.wrapped.TightText
+import io.github.arkmind.seedy.ui.wrapped.FitText
+import io.github.arkmind.seedy.ui.wrapped.IfRoom
+import androidx.compose.foundation.layout.heightIn
 import io.github.arkmind.seedy.ui.wrapped.margin
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import io.github.arkmind.seedy.ui.wrapped.Say
 import io.github.arkmind.seedy.ui.wrapped.ShowArt
 import io.github.arkmind.seedy.ui.wrapped.StoryLook
 import io.github.arkmind.seedy.ui.wrapped.WrappedBlue
@@ -116,15 +112,12 @@ import io.github.arkmind.seedy.ui.wrapped.WrappedInk
 import io.github.arkmind.seedy.ui.wrapped.WrappedLilac
 import io.github.arkmind.seedy.ui.wrapped.WrappedPeach
 import io.github.arkmind.seedy.ui.wrapped.enter
-import io.github.arkmind.seedy.ui.wrapped.meduMood
 import io.github.arkmind.seedy.ui.wrapped.storyGrow
 import io.github.arkmind.seedy.ui.wrapped.storyFan
 import io.github.arkmind.seedy.ui.wrapped.storyIn
 import io.github.arkmind.seedy.ui.wrapped.storyPop
-import io.github.arkmind.seedy.ui.wrapped.storySay
 import io.github.arkmind.seedy.ui.wrapped.waves
 import io.github.arkmind.seedy.core.wrapped.loverChips
-import io.github.arkmind.seedy.core.wrapped.loverMedu
 import io.github.arkmind.seedy.core.wrapped.loverOther
 import io.github.arkmind.seedy.core.wrapped.loverPct
 import io.github.arkmind.seedy.core.wrapped.loverShows
@@ -132,50 +125,23 @@ import io.github.arkmind.seedy.core.wrapped.loverSplitLabel
 import io.github.arkmind.seedy.core.wrapped.loverTitle
 import io.github.arkmind.seedy.core.wrapped.loverUnit
 import androidx.compose.foundation.layout.fillMaxHeight
+import io.github.arkmind.seedy.core.i18n.tc
+import io.github.arkmind.seedy.core.wrapped.arrivalName
+import io.github.arkmind.seedy.core.wrapped.arrivalTime
+import io.github.arkmind.seedy.core.wrapped.oddFacts
+import io.github.arkmind.seedy.ui.wrapped.OddestArt
+import io.github.arkmind.seedy.ui.wrapped.WrappedRust
+import androidx.compose.foundation.border
+import io.github.arkmind.seedy.ui.wrapped.FlexBar
+import io.github.arkmind.seedy.ui.wrapped.fitHeight
+import androidx.compose.foundation.layout.IntrinsicSize
 
-/* The phone boards' stories (Wrapped{Intro,Hours,Genres,Shows,Movie,Binge,Night,Personality,Summary}), each in the
-   space between the header and the share button, 24 px from the sides. */
+/* The phone boards' stories (Wrapped{Intro,Hours,Lover,Genres,Shows,Movie,Binge,Night,Requests,Oddest,Personality,
+   Summary}), each in the space between the header and the share button (or Medu, WrappedScreen's MeduSpot), 24 px from
+   the sides. */
 
 private val Ink = WrappedInk
 private val Hero = Color(0xFFC8C8C8)
-
-/** Medu with its line beside it: the bubble's tail points at Medu. */
-@Composable
-private fun MeduSays(
-    mood: MeduMood,
-    width: Dp,
-    height: Dp,
-    line: String,
-    bubbleBg: Color,
-    bubbleInk: Color,
-    meduFirst: Boolean,
-    gap: Dp,
-    lift: Dp,
-    meduDelay: Float,
-    sayDelay: Float,
-    modifier: Modifier = Modifier,
-    glow: Boolean = true,
-    torch: Boolean = true,
-) {
-    // When the story runs out of room Medu stays whole and runs over the bottom, as on the boards.
-    Row(
-        modifier.fillMaxWidth().wrapContentHeight(Alignment.Top, unbounded = true),
-        horizontalArrangement = if (meduFirst) Arrangement.Start else Arrangement.End,
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        val medu: @Composable () -> Unit = { Medu(mood, width, Modifier.storyPop(meduDelay), height = height, glow = glow, torch = torch) }
-        val say: @Composable (Modifier) -> Unit = { m ->
-            if (line.isNotEmpty()) Say(line, bubbleBg, bubbleInk, tailEnd = !meduFirst, modifier = m.storySay(sayDelay))
-        }
-        if (meduFirst) {
-            medu()
-            say(Modifier.margin(start = -gap, bottom = lift))
-        } else {
-            say(Modifier.margin(end = -gap, bottom = lift))
-            medu()
-        }
-    }
-}
 
 // ── 1 · Cover ──
 
@@ -187,14 +153,8 @@ internal fun CoverStory(w: Wrapped, stories: Int, onGo: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Medu(MeduMood.Party, 156.dp, Modifier.storyPop(.15f).margin(bottom = 30.dp), height = 206.dp, glow = false)
-        // The year, with two outlines climbing out of it.
-        Box(Modifier.storyIn(.45f)) {
-            val year = w.year.toString()
-            OutlineText(year, 118.sp, accent.copy(alpha = .22f), 2.dp, Modifier.offset(y = (-30).dp), lineHeight = .9f, tracking = -.05f)
-            OutlineText(year, 118.sp, accent.copy(alpha = .45f), 2.dp, Modifier.offset(y = (-15).dp), lineHeight = .9f, tracking = -.05f)
-            SText(year, size = 118.sp, weight = 900, color = accent, lineHeight = .9f, tracking = -.05f, maxLines = 1)
-        }
+        Medu(MeduMood.Party, 164.dp, Modifier.storyPop(.15f).margin(bottom = 18.dp), height = 216.dp, glow = false)
+        SText(w.year.toString(), Modifier.storyIn(.45f), size = 118.sp, weight = 900, color = accent, lineHeight = .9f, tracking = -.05f, maxLines = 1)
         Heading(t("Wrapped"), 50.sp, Color.White, Modifier.storyIn(.6f).padding(top = 8.dp), lineHeight = 1f, tracking = -.02f)
         SText(
             t("Medu took notes all year. Here’s what you watched, binged and couldn’t stop rewatching."),
@@ -219,11 +179,14 @@ internal fun CoverStory(w: Wrapped, stories: Int, onGo: () -> Unit) {
 @Composable
 internal fun HoursStory(w: Wrapped) {
     val hours = hoursOf(w.watchMs)
-    Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
-        SText(t("This year you watched"), Modifier.storyIn(.1f).padding(top = 18.dp), size = 22.sp, weight = 800, color = Ink)
+    // Centred in the space above Medu.
+    Column(Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, bottom = 20.dp), verticalArrangement = Arrangement.Center) {
+        SText(t("This year you watched"), Modifier.storyIn(.1f), size = 22.sp, weight = 800, color = Ink)
         // The number rolls up digit by digit (an odometer), in a box as tall as the line around it.
-        Box(Modifier.margin(start = (-6).dp, top = 6.dp).height((128 * 1.362).dp)) {
-            Odometer(formatNumber(hours), 128.sp, Ink, tracking = -.06f)
+        val text = formatNumber(hours)
+        val big = if (text.length > 5) 100 else 128
+        Box(Modifier.margin(start = (-6).dp, top = 6.dp).height((big * 1.362).dp)) {
+            Odometer(text, big.sp, Ink, tracking = -.06f)
         }
         Heading(tn(hours.toInt(), "hour", "hours"), 62.sp, Ink, Modifier.storyIn(.9f).margin(top = (-22).dp), lineHeight = 1f)
         FlowRow(Modifier.storyIn(1.3f).padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -234,11 +197,6 @@ internal fun HoursStory(w: Wrapped) {
                 }
             }
         }
-        Spacer(Modifier.weight(1f))
-        MeduSays(
-            MeduMood.Popcorn, 150.dp, 198.dp, t("I made popcorn for every single one of them."), Color.White, Ink,
-            meduFirst = false, gap = 26.dp, lift = 120.dp, meduDelay = 1.5f, sayDelay = 1.8f, modifier = Modifier.margin(end = (-14).dp),
-        )
     }
 }
 
@@ -281,16 +239,13 @@ internal fun LoverStory(w: Wrapped) {
                 SText(lose, size = 12.sp, weight = 800, color = Ink, maxLines = 1)
             }
         }
-        Row(Modifier.storyIn(1.5f).padding(top = 116.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // The other side at the bottom of the space, on its band.
+        Spacer(Modifier.weight(1f).heightIn(min = 24.dp))
+        Row(Modifier.storyIn(1.5f), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SText(formatNumber(otherCount), size = 52.sp, weight = 900, tracking = -.05f, lineHeight = .9f, color = Ink, maxLines = 1)
             SText(loverUnit(otherCount, !shows), Modifier.padding(bottom = 2.dp), size = 22.sp, weight = 900, color = Ink, maxLines = 1)
         }
         SText(otherLine, Modifier.storyIn(1.6f).padding(top = 4.dp), size = 14.sp, weight = 700, color = Ink.copy(alpha = .75f))
-        Spacer(Modifier.weight(1f))
-        MeduSays(
-            MeduMood.Sad, 74.dp, 98.dp, loverMedu(w), Ink, Color.White,
-            meduFirst = false, gap = 12.dp, lift = 48.dp, meduDelay = 1.8f, sayDelay = 2.1f, modifier = Modifier.margin(end = (-10).dp, bottom = (-6).dp),
-        )
     }
 }
 
@@ -311,7 +266,7 @@ internal fun GenresStory(w: Wrapped) {
                 Row(Modifier.storyIn(.5f + .12f * i), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     SText("${formatNumber(g.pct)}%", Modifier.width(82.dp), size = 38.sp, weight = 900, tracking = -.04f, color = c, maxLines = 1)
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        SText(genreName(g), size = 16.sp, weight = 800, color = Color.White, maxLines = 1)
+                        FitText(genreName(g), 16.sp, 12.sp, 1, 800, Color.White)
                         Box(Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(7.dp)).background(Color(0xFF262626))) {
                             Box(Modifier.fillMaxWidth(g.pct.toFloat() / top).height(14.dp).storyGrow(.6f + .12f * i).clip(RoundedCornerShape(7.dp)).background(c))
                         }
@@ -320,12 +275,7 @@ internal fun GenresStory(w: Wrapped) {
             }
         }
         val other = genreOther(w)
-        if (other.isNotEmpty()) SText(other, Modifier.storyIn(1.2f).padding(top = 14.dp), size = 12.sp, color = Color(0xFF8C8C8C))
-        Spacer(Modifier.weight(1f))
-        MeduSays(
-            MeduMood.Think, 104.dp, 137.dp, genreMedu(w), Color.White, Ink,
-            meduFirst = true, gap = 14.dp, lift = 92.dp, meduDelay = 1.4f, sayDelay = 1.7f, modifier = Modifier.margin(start = (-10).dp),
-        )
+        if (other.isNotEmpty()) IfRoom { SText(other, Modifier.storyIn(1.2f).padding(top = 14.dp), size = 12.sp, color = Color(0xFF8C8C8C)) }
     }
 }
 
@@ -340,7 +290,7 @@ internal fun ShowsStory(w: Wrapped) {
         if (first != null) {
             val shape = RoundedCornerShape(22.dp)
             Box(
-                Modifier.storyPop(.35f).padding(top = 18.dp).fillMaxWidth().height(158.dp)
+                Modifier.storyPop(.35f).padding(top = 18.dp).fillMaxWidth().height(146.dp)
                     .boxShadow(Color(0x401E1E1E), blur = 30.dp, y = 14.dp, radius = 22.dp).clip(shape),
             ) {
                 ShowArt(first, 0, wide = true, modifier = Modifier.fillMaxSize())
@@ -348,7 +298,7 @@ internal fun ShowsStory(w: Wrapped) {
                 OutlineText("1", 92.sp, Color.White, 2.5.dp, Modifier.align(Alignment.TopEnd).padding(end = 16.dp), tracking = -.05f)
                 Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 14.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Column(Modifier.weight(1f)) {
-                        SText(first.name, size = 26.sp, weight = 900, tracking = -.01f, color = Color.White, maxLines = 1)
+                        FitText(first.name, 26.sp, 18.sp, 2, 900, Color.White, lineHeight = 1.15f, tracking = -.01f)
                         SText(showMeta(first), size = 13.sp, color = Color(0xFFD0D0D0), maxLines = 1)
                     }
                     Box(Modifier.clip(RoundedCornerShape(999.dp)).background(accent).padding(horizontal = 10.dp, vertical = 4.dp)) {
@@ -363,7 +313,7 @@ internal fun ShowsStory(w: Wrapped) {
                     SText("${i + 2}", Modifier.width(30.dp), size = 30.sp, weight = 900, tracking = -.04f, color = Ink, maxLines = 1)
                     ShowArt(s, i + 1, wide = false, modifier = Modifier.size(70.dp, 40.dp).clip(RoundedCornerShape(9.dp)))
                     Column(Modifier.weight(1f)) {
-                        SText(s.name, size = 17.sp, weight = 900, color = Ink, maxLines = 1)
+                        FitText(s.name, 17.sp, 13.sp, 2, 900, Ink, lineHeight = 1.15f)
                         SText(tn(s.episodes, "{n} episode", "{n} episodes"), size = 13.sp, color = Ink.copy(alpha = .7f), maxLines = 1)
                     }
                     SText(t("{n} h", "n" to formatNumber(hoursOf(s.watchMs))), size = 15.sp, weight = 900, color = Ink, maxLines = 1)
@@ -371,12 +321,7 @@ internal fun ShowsStory(w: Wrapped) {
             }
         }
         val foot = showsFootnote(w)
-        if (foot.isNotEmpty()) SText(foot, Modifier.storyIn(1.3f).padding(top = 14.dp), size = 14.sp, weight = 600, lineHeight = 1.45f, color = Ink.copy(alpha = .75f))
-        Spacer(Modifier.weight(1f))
-        MeduSays(
-            MeduMood.Wave, 78.dp, 103.dp, showsMedu(w), Ink, Color.White,
-            meduFirst = false, gap = 14.dp, lift = 52.dp, meduDelay = 1.5f, sayDelay = 1.8f, modifier = Modifier.margin(end = (-10).dp, bottom = (-6).dp),
-        )
+        if (foot.isNotEmpty()) IfRoom { SText(foot, Modifier.storyIn(1.3f).padding(top = 14.dp), size = 14.sp, weight = 600, lineHeight = 1.45f, color = Ink.copy(alpha = .75f)) }
     }
 }
 
@@ -399,16 +344,16 @@ internal fun MovieStory(w: Wrapped) {
     val m = w.movie ?: return
     Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
         Heading(movieTitle(w), 40.sp, Ink, Modifier.storyIn(.1f).padding(top = 18.dp))
-        Box(Modifier.fillMaxWidth().padding(top = 26.dp), contentAlignment = Alignment.TopCenter) {
+        Box(Modifier.fillMaxWidth().padding(top = 22.dp), contentAlignment = Alignment.TopCenter) {
             val shape = RoundedCornerShape(16.dp)
             MovieArt(
                 m,
-                Modifier.storyPop(.35f, rotation = -4f).size(196.dp, 294.dp)
+                Modifier.storyPop(.35f, rotation = -4f).size(170.dp, 255.dp)
                     .boxShadow(Color(0x593C1E00), blur = 44.dp, y = 22.dp, radius = 16.dp).clip(shape),
             )
             if (m.views >= 2) {
                 Column(
-                    Modifier.align(Alignment.TopEnd).offset(x = (-6).dp, y = (-10).dp).storyPop(.8f, rotation = 8f).size(108.dp).clip(CircleShape).background(Ink),
+                    Modifier.align(Alignment.TopEnd).offset(x = (-22).dp, y = (-8).dp).storyPop(.8f, rotation = 8f).size(100.dp).clip(CircleShape).background(Ink),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
@@ -417,22 +362,20 @@ internal fun MovieStory(w: Wrapped) {
                 }
             }
         }
-        Column(Modifier.storyIn(1f).fillMaxWidth().padding(top = 22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            SText(m.name, size = 30.sp, weight = 900, tracking = -.02f, color = Ink, align = TextAlign.Center, maxLines = 2)
+        Column(Modifier.storyIn(1f).fillMaxWidth().padding(top = 18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            FitText(m.name, 30.sp, 18.sp, 2, 900, Ink, Modifier.fillMaxWidth(), lineHeight = 1.1f, tracking = -.02f, align = TextAlign.Center)
             SText(movieMeta(w), size = 14.sp, weight = 600, color = Ink.copy(alpha = .75f), align = TextAlign.Center)
         }
-        Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
-            movieTickets(w).forEachIndexed { i, month ->
-                Box(Modifier.storyPop(1.2f + .12f * i).size(58.dp, 34.dp).clip(Ticket).background(Ink), contentAlignment = Alignment.Center) {
-                    SText(month, size = 11.sp, weight = 800, lineHeight = 1.15f, color = Color.White, maxLines = 1)
+        IfRoom {
+            Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
+                movieTickets(w).forEachIndexed { i, month ->
+                    // 58 px each, narrower when six don't fit.
+                    Box(Modifier.weight(1f, fill = false).storyPop(1.2f + .12f * i).size(58.dp, 34.dp).clip(Ticket).background(Ink), contentAlignment = Alignment.Center) {
+                        SText(month, size = 11.sp, weight = 800, lineHeight = 1.15f, color = Color.White, maxLines = 1)
+                    }
                 }
             }
         }
-        Spacer(Modifier.weight(1f))
-        MeduSays(
-            MeduMood.Love, 96.dp, 127.dp, movieMedu(w), Color.White, Ink,
-            meduFirst = true, gap = 10.dp, lift = 80.dp, meduDelay = 1.7f, sayDelay = 2f, modifier = Modifier.margin(start = (-12).dp),
-        )
     }
 }
 
@@ -459,9 +402,9 @@ internal fun BingeStory(w: Wrapped, look: StoryLook) {
                 }
             }
         }
-        Row(Modifier.storyIn(1.2f).padding(top = 6.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.storyIn(1.2f).padding(top = 6.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SText(timeOf(b.start), size = 12.sp, weight = 800, color = Ink, maxLines = 1)
-            SText(bingeLine(w), Modifier.weight(1f, fill = false).padding(horizontal = 6.dp), size = 12.sp, weight = 800, color = Ink.copy(alpha = .7f), maxLines = 1)
+            FitText(bingeLine(w), 12.sp, 10.sp, 2, 800, Ink.copy(alpha = .7f), Modifier.weight(1f), align = TextAlign.Center)
             SText(timeOf(b.end), size = 12.sp, weight = 800, color = Ink, maxLines = 1)
         }
         // "Still watching?" cards fanned out, with how many times it was asked.
@@ -497,12 +440,6 @@ internal fun BingeStory(w: Wrapped, look: StoryLook) {
             }
         }
         SText(bingeText(w), Modifier.storyIn(1.9f).padding(top = 14.dp), size = 15.sp, weight = 700, lineHeight = 1.45f, color = Ink)
-        Spacer(Modifier.weight(1f))
-        MeduSays(
-            MeduMood.Search, 80.dp, 106.dp, t("Did you… blink at all?"), Ink, Color.White,
-            meduFirst = true, gap = 8.dp, lift = 56.dp, meduDelay = 2.1f, sayDelay = 2.4f, torch = false,
-            modifier = Modifier.margin(start = (-10).dp, bottom = (-6).dp),
-        )
     }
 }
 
@@ -542,11 +479,6 @@ internal fun ClockStory(w: Wrapped, look: StoryLook) {
             Modifier.storyIn(1.4f).padding(top = 6.dp),
             style = BaseText.copy(fontSize = 16.sp, lineHeight = 1.45.em, color = body),
         )
-        Spacer(Modifier.weight(1f))
-        MeduSays(
-            meduMood(clockMood(w)), 104.dp, 137.dp, clockMedu(w), Color.White, Ink,
-            meduFirst = false, gap = 18.dp, lift = 70.dp, meduDelay = 1.6f, sayDelay = 1.9f, modifier = Modifier.margin(end = (-10).dp),
-        )
     }
 }
 
@@ -557,25 +489,152 @@ private fun ClockHeading(lead: String, kind: String, highlight: Color, ink: Colo
         append("\n")
         withStyle(SpanStyle(color = highlight)) { append(kind.uppercase()) }
     }
-    TightText(text, 44.sp, 900, ink, .98f, modifier.margin(end = (-6).dp), tracking = -.03f)
+    // At most 290 px wide, clear of the sun or the moon.
+    FitText(text, 44.sp, 30.sp, 3, 900, ink, modifier.widthIn(max = 290.dp), lineHeight = .98f, tracking = -.03f)
 }
 
-// ── 8 · The personality ──
+// ── 9 · Your requests ──
+
+/** A part of the requests' bar: how many, its label on the bar, what it means, its look. */
+private class RequestPart(val n: Int, val label: String, val line: String, val bg: Color, val fg: Color, val ring: Boolean, val start: Boolean)
+
+@Composable
+internal fun RequestsStory(w: Wrapped) {
+    val r = w.requests ?: return
+    val parts = listOf(
+        RequestPart(r.here, t("{n} here", "n" to formatNumber(r.here)), t("arrived and ready to watch"), Ink, Color.White, ring = false, start = true),
+        RequestPart(r.coming, formatNumber(r.coming), t("on the way"), Ink.copy(alpha = .45f), Color.White, ring = false, start = false),
+        RequestPart(r.declined, formatNumber(r.declined), t("declined, not available yet"), Color.Transparent, Ink, ring = true, start = false),
+    ).filter { it.n > 0 }
+    val cards = listOfNotNull(
+        r.fastest?.let { arrivalTime(it.ms) to t("fastest arrival: {title}", "title" to arrivalName(it)) },
+        r.genre?.let { genreName(it) to t("what you asked for most") },
+    )
+    val one = r.count == 1
+    Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
+        SText(tc("Your requests", "wrapped"), Modifier.storyIn(.1f).padding(top = 18.dp), size = 18.sp, weight = 800, color = Ink)
+        Row(
+            Modifier.padding(top = 10.dp).semantics(mergeDescendants = true) { contentDescription = tn(r.count, "{n} title requested", "{n} titles requested") },
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // The odometer keeps .12 em spare on its right for an overhanging last digit: the words sit that much closer.
+            // The board's 112 px for two digits; "1,234" leaves room for "titles requested".
+            val digits = formatNumber(r.count).length
+            val big = if (digits <= 2) 112 else if (digits == 3) 100 else 72
+            Box(Modifier.height(big.dp).margin(end = (-big * .143f).dp), contentAlignment = Alignment.BottomStart) { Odometer(formatNumber(r.count), big.sp, Ink, tracking = -.06f, delay = .3f) }
+            TightText(
+                AnnotatedString(tc(if (one) "title" else "titles", "count") + "\n" + tc("requested", if (one) "one" else "other")),
+                28.sp, 900, Ink, .95f, Modifier.storyIn(.8f).padding(bottom = 8.dp),
+            )
+        }
+        // Each part 20 px of padding plus its share of the rest (the board's content-box flex), its number always whole.
+        FlexBar(
+            parts.map { it.n }, 3.dp, 20.dp,
+            Modifier.padding(top = 24.dp).fillMaxWidth().height(34.dp)
+                .semantics { contentDescription = t("{a} arrived, {b} on the way, {c} declined", "a" to r.here, "b" to r.coming, "c" to r.declined) },
+        ) {
+            parts.forEachIndexed { i, x ->
+                val shape = RoundedCornerShape(9.dp)
+                Box(
+                    Modifier.storyGrow(.7f + .15f * i).clip(shape).background(x.bg)
+                        .then(if (x.ring) Modifier.border(2.dp, Ink, shape) else Modifier).padding(horizontal = 10.dp),
+                    contentAlignment = if (x.start) Alignment.CenterStart else Alignment.Center,
+                ) { SText(x.label, size = 13.sp, weight = 900, color = x.fg, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Clip) }
+            }
+        }
+        Column(Modifier.storyIn(1.2f).padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (x in parts) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    val shape = RoundedCornerShape(4.dp)
+                    Box(Modifier.size(12.dp).clip(shape).background(x.bg).then(if (x.ring) Modifier.border(2.dp, Ink, shape) else Modifier))
+                    SText(formatNumber(x.n), Modifier.widthIn(min = 26.dp), size = 15.sp, weight = 900, color = Ink, maxLines = 1)
+                    SText(x.line, size = 15.sp, weight = 700, color = Ink, maxLines = 1)
+                }
+            }
+        }
+        if (cards.isNotEmpty()) {
+            Row(Modifier.storyIn(1.4f).padding(top = 20.dp).fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for ((big, small) in cards) {
+                    Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(18.dp)).background(Ink).padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        FitText(big, 26.sp, 17.sp, 2, 900, Color.White, lineHeight = 1.05f, tracking = -.02f)
+                        SText(small, size = 12.sp, lineHeight = 1.35f, color = Hero)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── 10 · The oddest request ──
+
+@Composable
+internal fun OddestStory(w: Wrapped) {
+    val o = w.oddest ?: return
+    Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
+        SText(t("Your oddest request"), Modifier.storyIn(.1f).padding(top = 18.dp), size = 18.sp, weight = 800, color = Ink)
+        FitText(o.name.uppercase(), 44.sp, 24.sp, 3, 900, Ink, Modifier.storyIn(.2f).padding(top = 6.dp).fillMaxWidth(), lineHeight = .95f, tracking = -.03f)
+        Row(Modifier.padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            OddestArt(
+                o,
+                Modifier.storyPop(.4f, rotation = -3f).size(140.dp, 210.dp)
+                    .boxShadow(Color(0x4D3C1E00), blur = 34.dp, y = 16.dp, radius = 12.dp).clip(RoundedCornerShape(12.dp)),
+            )
+            Column(Modifier.weight(1f)) {
+                oddFacts(o).forEachIndexed { i, (big, small) ->
+                    Column(
+                        Modifier.storyIn(.7f + .1f * i).fillMaxWidth().drawWithContent {
+                            drawRect(Ink.copy(alpha = .14f), size = androidx.compose.ui.geometry.Size(size.width, 2.dp.toPx()))
+                            drawContent()
+                        }.padding(top = 10.dp, bottom = 8.dp),
+                    ) {
+                        SText(big, size = 22.sp, weight = 900, lineHeight = 1.05f, tracking = -.02f, color = Ink, maxLines = 1)
+                        SText(small, size = 12.sp, weight = 700, color = Ink.copy(alpha = .7f), maxLines = 1)
+                    }
+                }
+            }
+        }
+        Column(Modifier.storyIn(1.2f).padding(top = 20.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                SText(t("Odd-o-meter"), Modifier.alignByBaseline(), size = 13.sp, weight = 900, tracking = .06f, color = Ink, uppercase = true, maxLines = 1)
+                SText(t("{n} / 100", "n" to formatNumber(o.score)), Modifier.alignByBaseline(), size = 13.sp, weight = 900, color = Ink, maxLines = 1)
+            }
+            Box(
+                Modifier.padding(top = 6.dp).fillMaxWidth().height(16.dp).clip(RoundedCornerShape(8.dp)).background(Ink.copy(alpha = .12f))
+                    .semantics { contentDescription = t("Oddness {n} out of 100", "n" to o.score) },
+            ) {
+                Box(
+                    Modifier.fillMaxWidth(o.score.coerceIn(4, 100) / 100f).fillMaxHeight().storyGrow(1.4f).clip(RoundedCornerShape(8.dp))
+                        .background(Brush.horizontalGradient(0f to Ink, .6f to Ink, 1f to WrappedRust)),
+                )
+            }
+            Row(Modifier.padding(top = 5.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                for (label in listOf(tc("Normal", "odd"), t("Curious"), t("Medu is concerned"))) {
+                    SText(label, size = 11.sp, weight = 800, color = Ink.copy(alpha = .7f), maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+// ── 11 · The personality ──
 
 @Composable
 internal fun PersonalityStory(w: Wrapped) {
     val accent = LocalAccent.current
     val key = w.personality.key
+    val name = personalityName(key)
     Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
         SText(t("Your watch personality"), Modifier.storyIn(.1f).padding(top = 18.dp), size = 20.sp, weight = 800, color = Ink)
         Box(Modifier.storyPop(.4f).padding(top = 16.dp).fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Ink).padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 20.dp)) {
             Box(Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp).size(52.dp).clip(RoundedCornerShape(16.dp)).background(accent), contentAlignment = Alignment.Center) {
-                SIcon(WrappedIcons.Bolt, size = 28.dp, color = Ink)
+                SIcon(WrappedIcons.personality(key), size = 28.dp, color = Ink)
             }
             Column {
                 // An inline label: it sits on the card's 16 px line, as on the board.
                 SText(t("You are"), Modifier.padding(top = 4.dp, bottom = 2.dp), size = 12.sp, weight = 800, tracking = .12f, color = accent, uppercase = true, maxLines = 1)
-                Heading(personalityName(key), 42.sp, Color.White, Modifier.padding(top = 6.dp), lineHeight = .95f)
+                // The boards' 40 px reads 2 px smaller here. Its first line stops 8 px short of the icon.
+                FitText(name.uppercase(), 42.sp, 28.sp, 2, 900, Color.White, Modifier.padding(top = 6.dp).fillMaxWidth(), lineHeight = .95f, tracking = -.03f, firstLineInset = 56.dp)
                 SText(personalityText(key), Modifier.padding(top = 12.dp), size = 15.sp, lineHeight = 1.45f, color = Hero)
             }
         }
@@ -589,20 +648,15 @@ internal fun PersonalityStory(w: Wrapped) {
                     }.padding(top = 14.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    SText(line.big, Modifier.width(126.dp).alignByBaseline(), size = 24.sp, weight = 900, tracking = -.02f, color = Ink)
+                    SText(line.big, Modifier.statWidth(126.dp).alignByBaseline(), size = 24.sp, weight = 900, lineHeight = 1.1f, tracking = -.02f, color = Ink)
                     SText(line.small, Modifier.weight(1f).alignByBaseline(), size = 14.sp, weight = 600, lineHeight = 1.35f, color = Ink)
                 }
             }
         }
-        Spacer(Modifier.weight(1f))
-        MeduSays(
-            MeduMood.Yay, 108.dp, 143.dp, personalityMedu(key), Ink, Color.White,
-            meduFirst = false, gap = 16.dp, lift = 84.dp, meduDelay = 1.6f, sayDelay = 1.9f, modifier = Modifier.margin(end = (-8).dp),
-        )
     }
 }
 
-// ── 9 · Summary ──
+// ── 12 · Summary ──
 
 @Composable
 internal fun SummaryStory(w: Wrapped, cardLayer: GraphicsLayer) {
@@ -612,7 +666,8 @@ internal fun SummaryStory(w: Wrapped, cardLayer: GraphicsLayer) {
             t("That’s your {year}. Thanks for watching with Medu.", "year" to w.year),
             Modifier.storyIn(.05f).padding(top = 8.dp), size = 18.sp, weight = 900, color = Color.White, align = TextAlign.Center,
         )
-        Box(Modifier.storyPop(.3f).padding(top = 14.dp).record(cardLayer)) {
+        // Smaller when a long year makes it taller than the space above the buttons; it's shared at its own size.
+        Box(Modifier.storyPop(.3f).padding(top = 14.dp).fitHeight().record(cardLayer)) {
             SummaryCard(w, accent, Modifier.width(342.dp))
         }
     }
@@ -645,4 +700,11 @@ internal fun SummaryButtons(modifier: Modifier, onShare: () -> Unit, onSave: () 
             contentAlignment = Alignment.Center,
         ) { SIcon(WrappedIcons.Again, size = 20.dp, color = Color.White) }
     }
+}
+
+/** The board's stat figure: at least [min] wide, at most 58 % of the row, its own width in between. */
+internal fun Modifier.statWidth(min: Dp): Modifier = layout { m, c ->
+    val max = (c.maxWidth * .58f).roundToInt()
+    val p = m.measure(c.copy(minWidth = min.roundToPx().coerceAtMost(max), maxWidth = max))
+    layout(p.width, p.height) { p.place(0, 0) }
 }

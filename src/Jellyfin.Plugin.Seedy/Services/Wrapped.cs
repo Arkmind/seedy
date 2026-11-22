@@ -5,6 +5,8 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Database.Implementations.Enums;
@@ -12,6 +14,7 @@ using Jellyfin.Plugin.Seedy.Api;
 using Jellyfin.Plugin.Seedy.Data;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
@@ -89,6 +92,7 @@ public sealed class Wrapped
     private readonly IUserManager _users;
     private readonly ILibraryManager _library;
     private readonly HomeService _home;
+    private readonly SeerrService _seerr;
     private readonly ILogger<Wrapped> _logger;
     private readonly ConcurrentDictionary<string, string> _zones = new(StringComparer.OrdinalIgnoreCase);
 
@@ -103,13 +107,15 @@ public sealed class Wrapped
     /// <param name="users">User manager.</param>
     /// <param name="library">Library manager.</param>
     /// <param name="home">Home service, for item DTOs.</param>
+    /// <param name="seerr">Seerr, for the year's requests.</param>
     /// <param name="logger">Logger.</param>
-    public Wrapped(SeedyDatabase db, IUserManager users, ILibraryManager library, HomeService home, ILogger<Wrapped> logger)
+    public Wrapped(SeedyDatabase db, IUserManager users, ILibraryManager library, HomeService home, SeerrService seerr, ILogger<Wrapped> logger)
     {
         _db = db;
         _users = users;
         _library = library;
         _home = home;
+        _seerr = seerr;
         _logger = logger;
         foreach (var (user, zone) in db.Zones())
         {
@@ -273,6 +279,8 @@ public sealed class Wrapped
                     {
                         continue;
                     }
+
+                    AddRequests(dto, user, year);
 
                     _db.SaveWrapped(uid, year, JsonSerializer.Serialize(dto), DateTime.UtcNow);
                     built++;
@@ -464,7 +472,8 @@ public sealed class Wrapped
                 Name = top.Name,
                 Views = top.Days.Count,
                 WatchMs = top.Ms,
-                Dates = top.Days.Select(d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).ToList()
+                Dates = top.Days.Select(d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).ToList(),
+                Genres = cache.Genres(_library, top.Id).Select(KeyOf).OfType<string>().Distinct(StringComparer.Ordinal).ToList()
             };
         }
 
@@ -605,9 +614,11 @@ public sealed class Wrapped
         var weekendPct = Math.Round((weekdays[5] + weekdays[6]) * 100 / Math.Max(1, weekdays.Sum()));
         Stat("weekendPct", weekendPct);
         Stat("showsStarted", dto.ShowsStarted);
+        Stat("showsFinished", dto.ShowsFinished);
 
         var movieShare = (double)movieRows.Sum(r => r.Watched) / watchMs;
         var key = dto.SeasonsFinished >= 2 && avgSeason <= 7 ? "sprinter"
+            : dto.ShowsFinished >= 3 && dto.ShowsFinished * 2 >= dto.ShowsWatched ? "completionist"
             : rewatches >= 5 ? "rewatcher"
             : movieShare >= 0.5 && dto.Movies >= 8 ? "cinephile"
             : titles >= 25 && genreTime.Count >= 8 ? "explorer"
@@ -618,6 +629,7 @@ public sealed class Wrapped
         string[] order = key switch
         {
             "sprinter" => ["seasonDays", "introsSkipped", "gapSeconds", "seasonsFinished", "streak", "activeDays"],
+            "completionist" => ["showsFinished", "seasonsFinished", "seasonDays", "activeDays", "titles"],
             "rewatcher" => ["rewatches", "streak", "titles", "activeDays", "bigDay"],
             "cinephile" => ["movies", "bigDay", "genres", "titles", "activeDays"],
             "explorer" => ["titles", "genres", "showsStarted", "movies", "activeDays"],
@@ -664,6 +676,158 @@ public sealed class Wrapped
         dto.Stories.Add("personality");
         dto.Stories.Add("summary");
         return dto;
+    }
+
+    // The year's requests through Seerr (1 January to 30 November, local time): two stories after the clock.
+    private void AddRequests(WrappedDto dto, User user, int year)
+    {
+        if (!SeerrService.IsConfigured)
+        {
+            return;
+        }
+
+        var zone = ZoneOf(user.Id.ToString("N"));
+        List<SeerrService.RequestFacts> facts;
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+            facts = Task.Run(
+                async () =>
+                {
+                    var (account, _) = await _seerr.AccountFor(user, cts.Token).ConfigureAwait(false);
+                    return account is null
+                        ? []
+                        : await _seerr.RequestsBetweenAsync(account.Id, TimeZoneInfo.ConvertTimeToUtc(new DateTime(year, 1, 1), zone), TimeZoneInfo.ConvertTimeToUtc(new DateTime(year, 12, 1), zone), cts.Token).ConfigureAwait(false);
+                },
+                cts.Token).GetAwaiter().GetResult();
+        }
+        catch (Exception ex) when (ex is SeerrException or OperationCanceledException)
+        {
+            _logger.LogWarning("Seedy's Wrapped {Year} for {User} goes without requests: {Message}", year, user.Username, ex.Message);
+            return;
+        }
+
+        if (facts.Count == 0)
+        {
+            return;
+        }
+
+        var requests = new WrappedRequestsDto { Count = facts.Count };
+        foreach (var f in facts)
+        {
+            if (f.Request.Status is "available" or "partial")
+            {
+                requests.Here++;
+            }
+            else if (f.Request.RequestStatus == "declined")
+            {
+                requests.Declined++;
+            }
+            else
+            {
+                requests.Coming++;
+            }
+        }
+
+        // Soonest in the library after being asked for (a show: once all the seasons asked for were).
+        foreach (var f in facts)
+        {
+            if (ArrivedAt(f.Request) is { } landed && landed >= f.Request.RequestedAt && (requests.Fastest is null || (landed - f.Request.RequestedAt).TotalMilliseconds < requests.Fastest.Ms))
+            {
+                var seasons = f.Request.Seasons ?? [];
+                requests.Fastest = new WrappedArrivalDto
+                {
+                    Name = f.Request.Title,
+                    Season = seasons.Count > 0 ? seasons.Min() : null,
+                    SeasonTo = seasons.Count > 1 ? seasons.Max() : null,
+                    Ms = Math.Max(60_000, (long)(landed - f.Request.RequestedAt).TotalMilliseconds)
+                };
+            }
+        }
+
+        var genres = facts
+            .SelectMany(f => f.Genres.Select(g => (Key: KeyOf(g) ?? "name:" + g.ToLowerInvariant(), Name: g)).DistinctBy(g => g.Key))
+            .GroupBy(g => g.Key, StringComparer.Ordinal)
+            .OrderByDescending(g => g.Count())
+            .FirstOrDefault();
+        if (genres is not null && genres.Count() >= 2)
+        {
+            requests.Genre = new WrappedGenreDto
+            {
+                Name = genres.First().Name,
+                Key = genres.Key.StartsWith("name:", StringComparison.Ordinal) ? null : genres.Key,
+                Pct = (int)Math.Round(genres.Count() * 100.0 / facts.Count)
+            };
+        }
+
+        dto.Requests = requests;
+        dto.Oddest = Oddest(facts);
+        var at = dto.Stories.IndexOf("personality");
+        dto.Stories.Insert(at < 0 ? dto.Stories.Count : at, "requests");
+        if (dto.Oddest is not null)
+        {
+            dto.Stories.Insert(dto.Stories.IndexOf("requests") + 1, "oddest");
+        }
+    }
+
+    // The oddest title asked for: badly rated, barely rated or old, and asked for by few. Only titles odd in one of those
+    // ways (rated under 5, out before 1970, fewer than 100 votes) count.
+    private static WrappedOddestDto? Oddest(List<SeerrService.RequestFacts> facts)
+    {
+        static double Clamp(double v) => Math.Clamp(v, 0, 1);
+        var best = facts
+            .Where(f => f.Votes > 0 && (f.Rating < 5 || f.Released < 1970 || f.Votes < 100))
+            .Select(f => (Facts: f, Score: (int)Math.Round(100 * (
+                (0.45 * Clamp((7.5 - f.Rating) / 3.5))
+                + (0.3 * Clamp(1 - (Math.Log10(f.Votes) / 3.5)))
+                + (0.15 * (f.Released is int y ? Clamp((1990 - y) / 30.0) : 0))
+                + (f.Requesters <= 1 ? 0.1 : 0)))))
+            .OrderByDescending(x => x.Score)
+            .ThenBy(x => x.Facts.Votes)
+            .FirstOrDefault();
+        if (best.Facts is not { } odd)
+        {
+            return null;
+        }
+
+        return new WrappedOddestDto
+        {
+            TmdbId = odd.Request.TmdbId,
+            MediaType = odd.Request.MediaType,
+            Name = odd.Request.Title,
+            Year = odd.Released,
+            Rating = Math.Round(odd.Rating, 1),
+            Votes = odd.Votes,
+            Requesters = odd.Requesters,
+            Score = Math.Clamp(best.Score, 1, 100),
+            PosterPath = odd.Request.PosterPath,
+            ItemId = odd.Request.Status is "available" or "partial" ? odd.Request.JellyfinItemId : null
+        };
+    }
+
+    // When a requested title was in the library (a show: the last episode of the seasons asked for), or null.
+    private DateTime? ArrivedAt(RequestDto r)
+    {
+        if (r.Status != "available" || !Guid.TryParse(r.JellyfinItemId, out var id) || _library.GetItemById(id) is not { } item)
+        {
+            return null;
+        }
+
+        if (r.MediaType != "tv")
+        {
+            return item is Movie ? item.DateCreated : null;
+        }
+
+        var seasons = r.Seasons ?? [];
+        var episodes = _library.GetItemList(new InternalItemsQuery
+        {
+            AncestorIds = [id],
+            IncludeItemTypes = [BaseItemKind.Episode],
+            IsVirtualItem = false,
+            Recursive = true,
+            DtoOptions = new DtoOptions(false)
+        }).OfType<Episode>().Where(e => seasons.Count == 0 || (e.ParentIndexNumber is int s && seasons.Contains(s))).ToList();
+        return episodes.Count > 0 ? episodes.Max(e => e.DateCreated) : null;
     }
 
     // Watched to the end: marked finished, or played to 90 % of its length.
@@ -728,6 +892,7 @@ public sealed class Wrapped
         var ids = dto.Shows.Select(s => s.Id)
             .Concat(dto.Movie is { } m ? [m.Id] : [])
             .Concat(dto.Binge is { } b ? [b.Id] : [])
+            .Concat(dto.Oddest?.ItemId is { } o ? [o] : [])
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(id => Guid.TryParse(id, out var g) ? _library.GetItemById(g) : null)
             .Where(i => i is not null && i.IsVisible(user))
@@ -747,6 +912,11 @@ public sealed class Wrapped
         if (dto.Binge is { } binge)
         {
             binge.Item = items.GetValueOrDefault(binge.Id);
+        }
+
+        if (dto.Oddest is { ItemId: { } oddId } oddest)
+        {
+            oddest.Item = items.GetValueOrDefault(oddId);
         }
     }
 

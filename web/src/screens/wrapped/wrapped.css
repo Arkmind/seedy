@@ -50,6 +50,8 @@
 .wr-story.is-done .seg-now { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .wr-story *:not(.seg-now) { animation: none !important; }
+  /* The bar is the story's timer: base.css zeroes every animation here, which skipped straight to the last story. */
+  .wr-story .seg-now { animation-duration: var(--wr-seg) !important; }
 }
 
 /* ── Viewer (/wrapped/:year) ── */

@@ -8,6 +8,7 @@ import io.github.arkmind.seedy.core.i18n.tn
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.math.floor
@@ -15,7 +16,8 @@ import kotlin.math.max
 
 /*
  * Every sentence Seedy Wrapped says, written from the year's numbers: the web's screens/wrapped/copy.ts, function for
- * function, with the same English (so the French comes from the web's i18n/fr/wrapped.ts). Keep both in step.
+ * function, with the same English (so the French comes from the web's i18n/fr/wrapped.ts). Keep both in step. Medu's
+ * lines follow the board "Wrapped · Medu's lines": the first row whose condition matches, with the mood to show.
  */
 
 /** JavaScript's Math.round: halves go up. */
@@ -23,9 +25,20 @@ private fun round(x: Double): Long = floor(x + 0.5).toLong()
 
 fun hoursOf(ms: Long): Long = max(0L, round(ms / 3_600_000.0))
 
+/** What Medu says on a story, and how she looks saying it ([mood]: the web's mood names, ui's meduMood). */
+data class MeduLine(val text: String, val mood: String)
+
+private val Spelled: List<() -> String> = listOf(
+    { tc("Zero", "start") }, { tc("One", "start") }, { tc("Two", "start") }, { tc("Three", "start") }, { tc("Four", "start") },
+    { tc("Five", "start") }, { tc("Six", "start") }, { tc("Seven", "start") }, { tc("Eight", "start") }, { tc("Nine", "start") },
+)
+
+/** A number that starts a sentence: spelled out under ten ("Nine in a row?"), in figures from ten. */
+fun startNumber(n: Int): String = if (n in 0..9) Spelled[n]() else formatNumber(n)
+
 // ── Cover ──
 
-/** Each story stays this long: nine take about two minutes. */
+/** Each story stays this long: twelve take about three minutes. */
 const val StorySeconds = 16
 
 fun coverHint(stories: Int): String {
@@ -51,6 +64,15 @@ fun hourChips(w: Wrapped): List<Chip> {
     }
     w.rank?.takeIf { it != 0 }?.let { chips += Chip("#${formatNumber(it)}", t("on your server")) }
     return chips
+}
+
+fun hoursMedu(w: Wrapped): MeduLine {
+    val hours = hoursOf(w.watchMs)
+    return when {
+        hours > 1000 -> MeduLine(t("I made popcorn for every single one of them."), "popcorn")
+        hours >= 200 -> MeduLine(t("That’s a lot of popcorn. Not complaining."), "popcorn")
+        else -> MeduLine(t("Quality over quantity. I respect that."), "idle")
+    }
 }
 
 // ── Shows or movies? ──
@@ -112,7 +134,11 @@ fun loverOther(w: Wrapped): Pair<Int, String> {
     return n to if (n > 0) "${tn(w.episodes, "{n} episode", "{n} episodes")} · ${tn(hoursOf(w.showMs).toInt(), "{n} hour", "{n} hours")}" else t("Not one show this year.")
 }
 
-fun loverMedu(w: Wrapped): String = if (loverShows(w)) t("Movies miss you a little.") else t("Shows miss you a little.")
+fun loverMedu(w: Wrapped): MeduLine = when {
+    loverPct(w) <= 55 -> MeduLine(t("Shows or movies? Why choose."), "idle")
+    loverShows(w) -> MeduLine(t("Me too. One more episode?"), "love")
+    else -> MeduLine(t("Me too. Another movie tonight?"), "love")
+}
 
 /** What a screen reader hears for the split bar. */
 fun loverSplitLabel(w: Wrapped): String {
@@ -167,19 +193,18 @@ fun genreLead(w: Wrapped): String {
 
 fun genreOther(w: Wrapped): String = if (w.otherPct > 0) t("The other {pct}% was a bit of everything.", "pct" to formatNumber(w.otherPct)) else ""
 
-fun genreMedu(w: Wrapped): String = when (w.genres.firstOrNull()?.key) {
-    "thriller" -> t("That many thrillers… should I be worried?")
-    "drama" -> t("I cried too. Twice.")
-    "comedy" -> t("You laughed. I heard.")
-    "scifi" -> t("Take me with you next time.")
-    "documentary" -> t("Fun fact: jellyfish have no brain. I’m doing fine.")
-    "horror" -> t("I watched through my tentacles.")
-    "animation" -> t("Cartoons are for everyone.")
-    "crime" -> t("It wasn’t me. I was at home.")
-    "romance" -> t("Aww. Pass the tissues.")
-    "fantasy" -> t("Is that a dragon? Can I keep it?")
-    "mystery" -> t("I knew it was the butler.")
-    else -> t("Good taste, if you ask me.")
+fun genreMedu(w: Wrapped): MeduLine = when (w.genres.firstOrNull()?.key) {
+    "thriller", "crime" -> MeduLine(t("That many thrillers… should I be worried?"), "search")
+    "comedy" -> MeduLine(t("You laughed a lot this year. I could hear you."), "yay")
+    "horror" -> MeduLine(t("I watched those through my tentacles."), "oops")
+    "documentary" -> MeduLine(t("You know so much now. Teach me?"), "think")
+    "romance" -> MeduLine(t("Okay, I cried too."), "love")
+    "animation", "family", "kids" -> MeduLine(t("Same. Cartoons are the best."), "yay")
+    "drama" -> MeduLine(t("I cried too. Twice."), "sad")
+    "scifi" -> MeduLine(t("Take me with you next time."), "think")
+    "fantasy" -> MeduLine(t("Is that a dragon? Can I keep it?"), "think")
+    "mystery" -> MeduLine(t("I knew it was the butler."), "think")
+    else -> MeduLine(t("Good taste, if you ask me."), "idle")
 }
 
 // ── Top shows ──
@@ -198,8 +223,11 @@ fun showsFootnote(w: Wrapped): String {
     }
 }
 
-fun showsMedu(w: Wrapped): String =
-    w.shows.firstOrNull()?.let { tn(it.episodes, "{n} episode of {show}. I counted.", "{n} episodes of {show}. I counted.", "show" to it.name) }.orEmpty()
+fun showsMedu(w: Wrapped): MeduLine {
+    val top = w.shows.firstOrNull()
+    val text = top?.let { tn(it.episodes, "{n} episode of {show}. I counted.", "{n} episodes of {show}. I counted.", "show" to it.name, "n" to startNumber(it.episodes)) }.orEmpty()
+    return MeduLine(text, "think")
+}
 
 // ── The movie ──
 
@@ -230,7 +258,13 @@ fun movieMeta(w: Wrapped): String {
 /** One ticket per view (at most six, the latest), named by its month. */
 fun movieTickets(w: Wrapped): List<String> = w.movie?.dates.orEmpty().takeLast(6).map { day(it, "LLL").replaceFirst(".", "") }
 
-fun movieMedu(w: Wrapped): String = if ((w.movie?.views ?: 0) >= 2) t("Same, honestly.") else t("Good pick.")
+fun movieMedu(w: Wrapped): MeduLine {
+    val views = w.movie?.views ?: 0
+    if (views < 2) return MeduLine(t("Good pick. I’d watch it again."), "idle")
+    val n = "n" to startNumber(views)
+    return if (w.movie?.genres.orEmpty().any { it == "drama" || it == "romance" }) MeduLine(t("{n} times, and I still cry at the end.", n), "sad")
+    else MeduLine(t("{n} times? You must know it by heart.", n), "love")
+}
 
 // ── The binge ──
 
@@ -266,6 +300,12 @@ fun bingeText(w: Wrapped): String {
     return t("{time} from the first episode to the last.", "time" to duration(max(60_000L, ms)))
 }
 
+fun bingeMedu(w: Wrapped): MeduLine {
+    val n = w.binge?.episodes ?: 0
+    return if (n >= 5) MeduLine(t("{n} in a row? I had to unplug.", "n" to startNumber(n)), "oops")
+    else MeduLine(t("Only {n} in a row. Very civilised.", "n" to formatNumber(n)), "idle")
+}
+
 // ── The clock ──
 
 /** "You’re a" and "night owl": the second part is set in the accent. */
@@ -297,35 +337,73 @@ fun clockDay(w: Wrapped): String {
     }
 }
 
-fun clockMedu(w: Wrapped): String = when (w.clock?.kind) {
-    "morning" -> t("Coffee first? No? Okay.")
-    "afternoon" -> t("A matinee a day keeps the boredom away.")
-    "evening" -> t("Dinner, then a show. Classic.")
-    else -> t("Some of us need our sleep, you know.")
+fun clockMedu(w: Wrapped): MeduLine = when (w.clock?.kind) {
+    "morning" -> MeduLine(t("An episode with breakfast? Fancy."), "idle")
+    "afternoon" -> MeduLine(t("Lunch breaks well spent."), "wave")
+    "evening" -> MeduLine(t("Dinner, then a show. Classic."), "popcorn")
+    else -> MeduLine(t("Some of us need our sleep, you know."), "sleepy")
 }
 
-/** Medu's mood on the clock story, by the web's mood names: "sleepy", "popcorn" or "wave". */
-fun clockMood(w: Wrapped): String = when (w.clock?.kind) {
-    "night" -> "sleepy"
-    "evening" -> "popcorn"
-    else -> "wave"
+// ── Your requests ──
+
+/** "14 min", "2 h 5 min" or "3 days": how long the quickest request took to land. */
+fun arrivalTime(ms: Long): String {
+    if (ms < 86_400_000L) return duration(ms)
+    val days = round(ms / 86_400_000.0).toInt()
+    return tn(days, "{n} day", "{n} days")
+}
+
+/** The one that landed soonest: "Glass Harbor, season 2". */
+fun arrivalName(f: WrappedArrival): String = when {
+    f.season == null -> f.name
+    f.seasonTo != null && f.seasonTo != 0 -> t("{show}, seasons {from}–{to}", "show" to f.name, "from" to f.season, "to" to f.seasonTo)
+    else -> t("{show}, season {n}", "show" to f.name, "n" to f.season)
+}
+
+fun requestsMedu(w: Wrapped): MeduLine =
+    if ((w.requests?.count ?: 0) >= 10) MeduLine(t("Fetched every single one. You’re welcome."), "wave")
+    else MeduLine(t("Short list, great taste."), "idle")
+
+// ── The oddest request ──
+
+/** "★ 3.9": TMDB's rating, one decimal. */
+fun oddRating(rating: Double): String =
+    "★ " + NumberFormat.getInstance(I18n.locale).apply { minimumFractionDigits = 1; maximumFractionDigits = 1 }.format(rating)
+
+/** The facts beside the oddest request's poster: the year, TMDB's rating and votes, who asked for it. */
+fun oddFacts(o: WrappedOddest): List<Chip> = listOfNotNull(
+    o.year?.takeIf { it != 0 }?.let { Chip(it.toString(), t("released")) },
+    Chip(oddRating(o.rating), t("on TMDB")),
+    Chip(formatNumber(o.votes), if (o.votes == 1) t("person rated it") else t("people rated it")),
+    Chip(if (o.requesters <= 1) t("Only you") else tn(o.requesters, "{n} person", "{n} people"), tc("asked for it", if (o.requesters <= 1) "one" else "other")),
+)
+
+fun oddestMedu(w: Wrapped): MeduLine {
+    val o = w.oddest
+    return when {
+        o == null || o.rating < 5 -> MeduLine(t("I have questions."), "think")
+        o.year != null && o.year < 1970 -> MeduLine(t("Older than your parents. Respect."), "love")
+        else -> MeduLine(tn(o.votes, "You and {n} other person. Very exclusive.", "You and {n} other people. Very exclusive."), "yay")
+    }
 }
 
 // ── The personality ──
 
 fun personalityName(key: String): String = when (key) {
     "sprinter" -> t("The Season Sprinter")
-    "rewatcher" -> t("The Rewatcher")
+    "completionist" -> t("The Completionist")
+    "rewatcher" -> t("The Comfort Rewatcher")
     "cinephile" -> t("The Movie Buff")
     "explorer" -> t("The Explorer")
     "regular" -> t("The Daily Regular")
-    "slowburner" -> t("The Slow Burner")
+    "slowburner" -> t("The Slow Savourer")
     "weekender" -> t("The Weekend Warrior")
     else -> t("The Easygoing Viewer")
 }
 
 fun personalityText(key: String): String = when (key) {
     "sprinter" -> t("Once you start a season, nothing gets in the way. Not sleep, not intros, not Medu.")
+    "completionist" -> t("You finish what you start. Every season, every finale, right to the last episode.")
     "rewatcher" -> t("Why gamble on something new when you know what you love? Comfort, on repeat.")
     "cinephile" -> t("Lights down, phone away. For you, a night in means a proper film.")
     "explorer" -> t("A bit of everything, from everywhere. You never stayed in one place for long.")
@@ -335,15 +413,16 @@ fun personalityText(key: String): String = when (key) {
     else -> t("No marathons, no pressure. You watch what you like, when you like.")
 }
 
-fun personalityMedu(key: String): String = when (key) {
-    "sprinter" -> t("Teach me your ways.")
-    "rewatcher" -> t("Again? Again!")
-    "cinephile" -> t("Popcorn’s on me.")
-    "explorer" -> t("Where to next?")
-    "regular" -> t("Same time tomorrow?")
-    "slowburner" -> t("No spoilers, I promise.")
-    "weekender" -> t("See you Saturday!")
-    else -> t("Quality over quantity.")
+fun personalityMedu(key: String): MeduLine = when (key) {
+    "sprinter" -> MeduLine(t("Teach me your ways."), "yay")
+    "completionist" -> MeduLine(t("Not a single episode left behind."), "yay")
+    "explorer" -> MeduLine(t("So many new shows. Where to next?"), "wave")
+    "rewatcher" -> MeduLine(t("Old favourites are the best favourites."), "love")
+    "slowburner" -> MeduLine(t("No rush. Good things take time."), "sleepy")
+    "cinephile" -> MeduLine(t("Popcorn’s on me."), "popcorn")
+    "regular" -> MeduLine(t("Same time tomorrow?"), "wave")
+    "weekender" -> MeduLine(t("See you Saturday!"), "yay")
+    else -> MeduLine(t("Quality over quantity."), "idle")
 }
 
 /** One number under the personality: the big part and what it means. */
@@ -376,9 +455,27 @@ fun statLine(s: WrappedStat): Chip {
         }
         "weekendPct" -> Chip("${formatNumber(n)}%", t("of your watching on weekends"))
         "showsStarted" -> Chip(tn(n, "{n} new show", "{n} new shows"), t("started from episode one"))
+        "showsFinished" -> Chip(tn(n, "{n} show", "{n} shows"), t("watched to the very last episode"))
         else -> Chip(formatNumber(n), "")
     }
 }
+
+// ── Medu ──
+
+/** What Medu says on [story] (the stories she sits on), null where she has nothing to say. */
+fun meduLine(story: StoryKey, w: Wrapped): MeduLine? = when (story) {
+    StoryKey.Hours -> hoursMedu(w)
+    StoryKey.Lover -> loverMedu(w)
+    StoryKey.Genres -> genreMedu(w)
+    StoryKey.Shows -> showsMedu(w)
+    StoryKey.Movie -> movieMedu(w)
+    StoryKey.Binge -> bingeMedu(w)
+    StoryKey.Clock -> if (w.clock != null) clockMedu(w) else null
+    StoryKey.Requests -> requestsMedu(w)
+    StoryKey.Oddest -> oddestMedu(w)
+    StoryKey.Personality -> personalityMedu(w.personality.key)
+    else -> null
+}?.takeIf { it.text.isNotEmpty() }
 
 // ── Summary ──
 
@@ -387,8 +484,15 @@ fun summaryAlso(w: Wrapped): String {
     val music = hoursOf(w.musicMs)
     if (music > 0) parts += t("{n} h of music", "n" to formatNumber(music))
     if (w.books > 0) parts += tn(w.books, "{n} book", "{n} books")
+    w.requests?.count?.takeIf { it > 0 }?.let { parts += tn(it, "{n} request", "{n} requests") }
     return if (parts.isNotEmpty()) t("Also {list}", "list" to parts.joinToString(" · ")) else ""
 }
+
+/** Under the hours on the share card: "38 shows · 141 movies". */
+fun summaryCounts(w: Wrapped): String = listOfNotNull(
+    w.showsWatched.takeIf { it > 0 }?.let { tn(it, "{n} show", "{n} shows") },
+    w.moviesPlayed.takeIf { it > 0 }?.let { tn(it, "{n} movie", "{n} movies") },
+).joinToString(" · ")
 
 /** What a screen reader hears for the share card. */
 fun summaryLabel(w: Wrapped): String {

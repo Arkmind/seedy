@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -66,26 +67,20 @@ import io.github.arkmind.seedy.core.wrapped.bingeEpisode
 import io.github.arkmind.seedy.core.wrapped.bingeLine
 import io.github.arkmind.seedy.core.wrapped.bingeText
 import io.github.arkmind.seedy.core.wrapped.clockDay
-import io.github.arkmind.seedy.core.wrapped.clockMedu
-import io.github.arkmind.seedy.core.wrapped.clockMood
 import io.github.arkmind.seedy.core.wrapped.clockShare
 import io.github.arkmind.seedy.core.wrapped.clockTitle
 import io.github.arkmind.seedy.core.wrapped.genreLead
-import io.github.arkmind.seedy.core.wrapped.genreMedu
 import io.github.arkmind.seedy.core.wrapped.genreName
 import io.github.arkmind.seedy.core.wrapped.genreOther
 import io.github.arkmind.seedy.core.wrapped.hourChips
 import io.github.arkmind.seedy.core.wrapped.hoursOf
-import io.github.arkmind.seedy.core.wrapped.movieMedu
 import io.github.arkmind.seedy.core.wrapped.movieMeta
 import io.github.arkmind.seedy.core.wrapped.movieTickets
 import io.github.arkmind.seedy.core.wrapped.movieTitle
-import io.github.arkmind.seedy.core.wrapped.personalityMedu
 import io.github.arkmind.seedy.core.wrapped.personalityName
 import io.github.arkmind.seedy.core.wrapped.personalityText
 import io.github.arkmind.seedy.core.wrapped.showMeta
 import io.github.arkmind.seedy.core.wrapped.showsFootnote
-import io.github.arkmind.seedy.core.wrapped.showsMedu
 import io.github.arkmind.seedy.core.wrapped.statLine
 import io.github.arkmind.seedy.core.wrapped.storiesOf
 import io.github.arkmind.seedy.core.wrapped.timeOf
@@ -108,13 +103,16 @@ import io.github.arkmind.seedy.ui.wrapped.LocalStoryTime
 import io.github.arkmind.seedy.ui.wrapped.MovieArt
 import io.github.arkmind.seedy.ui.wrapped.Odometer
 import io.github.arkmind.seedy.ui.wrapped.OutlineText
-import io.github.arkmind.seedy.ui.wrapped.Say
 import io.github.arkmind.seedy.ui.wrapped.Segments
 import io.github.arkmind.seedy.ui.wrapped.ShowArt
 import io.github.arkmind.seedy.ui.wrapped.StoryLook
 import io.github.arkmind.seedy.ui.wrapped.StoryPlayer
 import io.github.arkmind.seedy.ui.wrapped.SummaryCard
 import io.github.arkmind.seedy.ui.wrapped.TightText
+import io.github.arkmind.seedy.ui.wrapped.FitText
+import io.github.arkmind.seedy.ui.wrapped.FlexBar
+import io.github.arkmind.seedy.ui.wrapped.fitHeight
+import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.ui.wrapped.WrappedIcons
 import io.github.arkmind.seedy.ui.wrapped.WrappedInk
 import io.github.arkmind.seedy.ui.wrapped.WrappedPeach
@@ -123,7 +121,6 @@ import io.github.arkmind.seedy.ui.wrapped.WrappedGreen
 import io.github.arkmind.seedy.ui.wrapped.WrappedLilac
 import io.github.arkmind.seedy.ui.wrapped.loopSeconds
 import io.github.arkmind.seedy.ui.wrapped.margin
-import io.github.arkmind.seedy.ui.wrapped.meduMood
 import io.github.arkmind.seedy.ui.wrapped.rememberStoryPlayer
 import io.github.arkmind.seedy.ui.wrapped.storyBackdrop
 import io.github.arkmind.seedy.ui.wrapped.storyFan
@@ -131,10 +128,8 @@ import io.github.arkmind.seedy.ui.wrapped.storyGrow
 import io.github.arkmind.seedy.ui.wrapped.storyIn
 import io.github.arkmind.seedy.ui.wrapped.storyLook
 import io.github.arkmind.seedy.ui.wrapped.storyPop
-import io.github.arkmind.seedy.ui.wrapped.storySay
 import io.github.arkmind.seedy.ui.wrapped.storyTime
 import io.github.arkmind.seedy.core.wrapped.loverChips
-import io.github.arkmind.seedy.core.wrapped.loverMedu
 import io.github.arkmind.seedy.core.wrapped.loverOther
 import io.github.arkmind.seedy.core.wrapped.loverPct
 import io.github.arkmind.seedy.core.wrapped.loverShows
@@ -145,11 +140,22 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.IntrinsicSize
+import io.github.arkmind.seedy.core.i18n.tc
+import io.github.arkmind.seedy.core.wrapped.MeduLine
+import io.github.arkmind.seedy.core.wrapped.arrivalName
+import io.github.arkmind.seedy.core.wrapped.arrivalTime
+import io.github.arkmind.seedy.core.wrapped.meduLine
+import io.github.arkmind.seedy.core.wrapped.oddFacts
+import io.github.arkmind.seedy.ui.wrapped.MeduSpot
+import io.github.arkmind.seedy.ui.wrapped.OddestArt
+import io.github.arkmind.seedy.ui.wrapped.WrappedRust
 
 /*
  * Board "Seedy Wrapped · TV" (1920 × 1080, top shows): the stories sideways, the title and its words on the left with
- * Medu under them, the story's content on the right, the keys' hints top right. Only the top shows have a board; the
- * others are laid out the same way. ◀ ▶ move, OK holds the story (on the cover it goes on, on the summary it starts
+ * Medu under them (her line beside her), the story's content on the right, the keys' hints top right. Only the top shows
+ * have a board; the others, requests and the oddest request included, are laid out the same way. ◀ ▶ move, OK holds the story (on the cover it goes on, on the summary it starts
  * over), Back closes. Nothing to share on a TV.
  */
 
@@ -199,6 +205,7 @@ fun TvWrappedScreen(wrapped: Wrapped, onClose: () -> Unit, start: Int = 0, fixed
                 val turn = when (story) {
                     StoryKey.Cover -> Offset(w / 2f, h * .52f)
                     StoryKey.Movie -> Offset(w * .71f, h * .5f)
+                    StoryKey.Oddest -> Offset(w * .54f, h * .41f)
                     else -> null
                 }
                 storyBackdrop(story, accent, w, h, loop.loopSeconds(), wrapped.clock?.kind, bubbles = false, bottomShift = 70.7f, focus = turn, showsWon = loverShows(wrapped), band = false)
@@ -273,9 +280,11 @@ private fun Right(gap: Dp = 30.bp, content: @Composable ColumnScope.() -> Unit) 
     Column(Modifier.fillMaxSize().padding(start = 900.bp, end = 96.bp, top = 230.bp), verticalArrangement = Arrangement.spacedBy(gap), content = content)
 }
 
+/** A story's title on its own lines (two at least), a size down when a line doesn't fit the column ("TON ANNÉE"). */
 @Composable
 private fun Title(text: String, ink: Color, size: Int = 128) {
-    Heading(text, size.bsp, ink, Modifier.storyIn(.1f, 40.bp), lineHeight = .92f, tracking = -.035f)
+    val lines = maxOf(2, text.count { it == '\n' } + 1)
+    FitText(text.uppercase(), size.bsp, (size * 7 / 10).bsp, lines, 900, ink, Modifier.storyIn(.1f, 40.bp).fillMaxWidth(), lineHeight = .92f, tracking = -.035f, step = .5.sp)
 }
 
 @Composable
@@ -284,19 +293,19 @@ private fun Lede(text: String, ink: Color) {
     SText(text, Modifier.storyIn(.25f, 40.bp).padding(top = 30.bp).widthIn(max = 600.bp), size = 32.bsp, weight = 700, lineHeight = 1.4f, color = ink.copy(alpha = .8f))
 }
 
-/** Medu with its line beside it, under the words (the TV board's: 190 px, a bubble 330 px wide at most). */
+/**
+ * Medu with her line beside her, under the words (the TV board's: 180 px, a bubble 340 px wide at most centred on her
+ * bell, 20 px away). A dark bubble on light stories ([dark]: a dark story, a white one).
+ */
 @Composable
-private fun MeduLine(mood: MeduMood, line: String, bubbleBg: Color, bubbleInk: Color, size: Int = 190, top: Int = 70, torch: Boolean = true) {
-    Row(Modifier.padding(top = top.bp).margin(start = (-20).bp).wrapContentHeight(Alignment.Top, unbounded = true), verticalAlignment = Alignment.Bottom) {
-        Medu(mood, size.bp, Modifier.storyPop(1.4f), height = (size * 1.32f).bp, torch = torch, glow = mood != MeduMood.Party)
-        if (line.isNotEmpty()) {
-            Say(
-                line, bubbleBg, bubbleInk, tailEnd = false,
-                modifier = Modifier.margin(start = (-10).bp, bottom = (size * .9f).bp).storySay(1.7f),
-                size = 26.bsp, maxWidth = 330.bp, padX = 24.bp, padY = 18.bp, radius = 26.bp, tail = 16.bp, tailInset = 22.bp, tailDrop = 7.bp,
-            )
-        }
-    }
+private fun TvMedu(line: MeduLine?, dark: Boolean, top: Int = 64) {
+    if (line == null) return
+    MeduSpot(
+        line, meduFirst = true, bubbleBg = if (dark) Color.White else Ink, bubbleInk = if (dark) Ink else Color.White, at = 1.4f,
+        modifier = Modifier.padding(top = top.bp).wrapContentHeight(Alignment.Top, unbounded = true),
+        meduWidth = 180.bp, bubbleBox = 169.bp, gap = 20.bp, sayDelay = 1.7f,
+        textSize = 26.bsp, maxWidth = 340.bp, padX = 24.bp, padY = 18.bp, radius = 26.bp, tail = 22.bp, tailOut = 8.bp, tailRadius = 4.bp,
+    )
 }
 
 @Composable
@@ -310,6 +319,8 @@ private fun TvStory(story: StoryKey, w: Wrapped, look: StoryLook) {
         StoryKey.Movie -> Movie(w)
         StoryKey.Binge -> Binge(w, look)
         StoryKey.Clock -> Clock(w, look)
+        StoryKey.Requests -> Requests(w)
+        StoryKey.Oddest -> Oddest(w)
         StoryKey.Personality -> Personality(w)
         StoryKey.Summary -> Summary(w)
     }
@@ -321,13 +332,8 @@ private fun TvStory(story: StoryKey, w: Wrapped, look: StoryLook) {
 private fun Cover(w: Wrapped) {
     val accent = LocalAccent.current
     Column(Modifier.fillMaxSize().padding(top = 150.bp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Medu(MeduMood.Party, 220.bp, Modifier.storyPop(.15f).margin(bottom = 24.bp), height = 290.bp, glow = false)
-        Box(Modifier.storyIn(.45f, 40.bp)) {
-            val year = w.year.toString()
-            OutlineText(year, 200.bsp, accent.copy(alpha = .22f), 2.bp, Modifier.offset(y = (-50).bp), lineHeight = .9f, tracking = -.05f)
-            OutlineText(year, 200.bsp, accent.copy(alpha = .45f), 2.bp, Modifier.offset(y = (-25).bp), lineHeight = .9f, tracking = -.05f)
-            SText(year, size = 200.bsp, weight = 900, color = accent, lineHeight = .9f, tracking = -.05f, maxLines = 1)
-        }
+        Medu(MeduMood.Party, 232.bp, Modifier.storyPop(.15f).margin(bottom = 14.bp), height = 306.bp, glow = false)
+        SText(w.year.toString(), Modifier.storyIn(.45f, 40.bp), size = 200.bsp, weight = 900, color = accent, lineHeight = .9f, tracking = -.05f, maxLines = 1)
         Heading(t("Wrapped"), 84.bsp, Color.White, Modifier.storyIn(.6f, 40.bp).padding(top = 12.bp), lineHeight = 1f, tracking = -.02f)
         SText(
             t("Medu took notes all year. Here’s what you watched, binged and couldn’t stop rewatching."),
@@ -352,9 +358,12 @@ private fun Hours(w: Wrapped) {
     val hours = hoursOf(w.watchMs)
     Left {
         SText(t("This year you watched"), Modifier.storyIn(.1f, 40.bp), size = 44.bsp, weight = 800, color = Ink)
-        Box(Modifier.margin(start = (-12).bp, top = 8.bp).height((240 * 1.362).bp)) { Odometer(formatNumber(hours), 240.bsp, Ink, tracking = -.06f) }
+        // Six characters ("12,345") a size down, as on the phone.
+        val text = formatNumber(hours)
+        val big = if (text.length > 5) 188 else 240
+        Box(Modifier.margin(start = (-12).bp, top = 8.bp).height((big * 1.362).bp)) { Odometer(text, big.bsp, Ink, tracking = -.06f) }
         Heading(tn(hours.toInt(), "hour", "hours"), 116.bsp, Ink, Modifier.storyIn(.9f, 40.bp).margin(top = (-44).bp), lineHeight = 1f)
-        MeduLine(MeduMood.Popcorn, t("I made popcorn for every single one of them."), Color.White, Ink, size = 170, top = 50)
+        TvMedu(meduLine(StoryKey.Hours, w), dark = false, top = 50)
     }
     Right(gap = 22.bp) {
         hourChips(w).forEachIndexed { i, chip ->
@@ -392,7 +401,7 @@ private fun Lover(w: Wrapped) {
             Box(Modifier.height(184.bp).margin(end = (-22).bp), contentAlignment = Alignment.BottomStart) { Odometer(formatNumber(count), 184.bsp, Ink, tracking = -.06f, delay = .45f) }
             SText(loverUnit(count, shows), Modifier.storyIn(.9f, 40.bp).padding(bottom = 12.bp), size = 56.bsp, weight = 900, color = Ink, lineHeight = 1f, maxLines = 1)
         }
-        MeduLine(MeduMood.Sad, loverMedu(w), Ink, Color.White, size = 150, top = 40)
+        TvMedu(meduLine(StoryKey.Lover, w), dark = false, top = 40)
     }
     Right(gap = 34.bp) {
         FlowRow(Modifier.storyIn(1f, 40.bp), horizontalArrangement = Arrangement.spacedBy(12.bp), verticalArrangement = Arrangement.spacedBy(12.bp)) {
@@ -435,14 +444,14 @@ private fun Genres(w: Wrapped) {
     Left {
         Title(t("Your year") + "\n" + t("in genres"), Color.White)
         SText(genreLead(w), Modifier.storyIn(.25f, 40.bp).padding(top = 30.bp).widthIn(max = 600.bp), size = 32.bsp, lineHeight = 1.4f, color = Color(0xFFC8C8C8))
-        MeduLine(MeduMood.Think, genreMedu(w), Color.White, Ink)
+        TvMedu(meduLine(StoryKey.Genres, w), dark = true)
     }
     Right(gap = 34.bp) {
         w.genres.take(5).forEachIndexed { i, g ->
             Row(Modifier.storyIn(.5f + .12f * i, 40.bp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(26.bp)) {
                 SText("${formatNumber(g.pct)}%", Modifier.width(170.bp), size = 76.bsp, weight = 900, tracking = -.04f, color = colours[i], maxLines = 1)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.bp)) {
-                    SText(genreName(g), size = 32.bsp, weight = 800, color = Color.White, maxLines = 1)
+                    FitText(genreName(g), 32.bsp, 24.bsp, 1, 800, Color.White, step = .5.sp)
                     Box(Modifier.fillMaxWidth().height(26.bp).clip(RoundedCornerShape(13.bp)).background(Color(0xFF262626))) {
                         Box(Modifier.fillMaxWidth(g.pct.toFloat() / top).height(26.bp).storyGrow(.6f + .12f * i).clip(RoundedCornerShape(13.bp)).background(colours[i]))
                     }
@@ -462,7 +471,7 @@ private fun Shows(w: Wrapped) {
     Left {
         Title(t("Your top") + "\n" + t("shows"), Ink)
         Lede(showsFootnote(w), Ink)
-        MeduLine(MeduMood.Wave, showsMedu(w), Ink, Color.White)
+        TvMedu(meduLine(StoryKey.Shows, w), dark = false)
     }
     Right {
         w.shows.firstOrNull()?.let { first ->
@@ -473,7 +482,7 @@ private fun Shows(w: Wrapped) {
                 OutlineText("1", 230.bsp, Color.White, 2.5.bp * 2, Modifier.align(Alignment.TopEnd).padding(end = 34.bp, top = 4.bp), tracking = -.05f)
                 Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 40.bp, end = 40.bp, bottom = 34.bp), verticalAlignment = Alignment.Bottom) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.bp)) {
-                        SText(first.name, size = 64.bsp, weight = 900, lineHeight = 1f, tracking = -.02f, color = Color.White, maxLines = 1)
+                        FitText(first.name, 64.bsp, 44.bsp, 2, 900, Color.White, lineHeight = 1f, tracking = -.02f, step = .5.sp)
                         SText(showMeta(first), size = 26.bsp, color = Color(0xFFD0D0D0), maxLines = 1)
                     }
                     Box(Modifier.clip(RoundedCornerShape(999.bp)).background(accent).padding(horizontal = 18.bp, vertical = 8.bp)) {
@@ -492,7 +501,7 @@ private fun Shows(w: Wrapped) {
                             SText("${i + 2}", Modifier.width(40.bp), size = 50.bsp, weight = 900, tracking = -.04f, color = Ink, maxLines = 1)
                             ShowArt(s, i + 1, wide = false, modifier = Modifier.size(120.bp, 68.bp).clip(RoundedCornerShape(14.bp)))
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.bp)) {
-                                SText(s.name, size = 28.bsp, weight = 900, color = Ink, maxLines = 1)
+                                FitText(s.name, 28.bsp, 22.bsp, 2, 900, Ink, lineHeight = 1.15f, step = .5.sp)
                                 SText(showMeta(s), size = 21.bsp, color = Ink.copy(alpha = .7f), maxLines = 1)
                             }
                         }
@@ -523,9 +532,9 @@ private fun Movie(w: Wrapped) {
     val m = w.movie ?: return
     Left {
         Title(movieTitle(w), Ink, size = 80)
-        SText(m.name, Modifier.storyIn(1f, 40.bp).padding(top = 34.bp), size = 56.bsp, weight = 900, tracking = -.02f, color = Ink, maxLines = 2)
+        FitText(m.name, 56.bsp, 36.bsp, 2, 900, Ink, Modifier.storyIn(1f, 40.bp).padding(top = 34.bp).fillMaxWidth(), lineHeight = 1.1f, tracking = -.02f, step = .5.sp)
         SText(movieMeta(w), Modifier.storyIn(1f, 40.bp).padding(top = 6.bp), size = 28.bsp, weight = 600, color = Ink.copy(alpha = .75f))
-        MeduLine(MeduMood.Love, movieMedu(w), Color.White, Ink, size = 160, top = 50)
+        TvMedu(meduLine(StoryKey.Movie, w), dark = false, top = 50)
     }
     Column(Modifier.fillMaxSize().padding(start = 900.bp, end = 96.bp, top = 220.bp), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(contentAlignment = Alignment.TopCenter) {
@@ -561,7 +570,7 @@ private fun Binge(w: Wrapped, look: StoryLook) {
     Left {
         Title(t("Your biggest") + "\n" + t("binge"), Ink, size = 96)
         SText(bingeText(w), Modifier.storyIn(1.9f, 40.bp).padding(top = 30.bp).widthIn(max = 600.bp), size = 30.bsp, weight = 700, lineHeight = 1.45f, color = Ink)
-        MeduLine(MeduMood.Search, t("Did you… blink at all?"), Ink, Color.White, size = 170, top = 50, torch = false)
+        TvMedu(meduLine(StoryKey.Binge, w), dark = false, top = 50)
     }
     Right(gap = 0.bp) {
         Row(Modifier.storyIn(.3f, 40.bp), horizontalArrangement = Arrangement.spacedBy(20.bp)) {
@@ -580,7 +589,7 @@ private fun Binge(w: Wrapped, look: StoryLook) {
         }
         Row(Modifier.storyIn(1.2f, 40.bp).padding(top = 12.bp).fillMaxWidth()) {
             SText(timeOf(b.start), size = 22.bsp, weight = 800, color = Ink, maxLines = 1)
-            SText(bingeLine(w), Modifier.weight(1f).padding(horizontal = 12.bp), size = 22.bsp, weight = 800, color = Ink.copy(alpha = .7f), align = TextAlign.Center, maxLines = 1)
+            FitText(bingeLine(w), 22.bsp, 18.bsp, 2, 800, Ink.copy(alpha = .7f), Modifier.weight(1f).padding(horizontal = 12.bp), align = TextAlign.Center, step = .5.sp)
             SText(timeOf(b.end), size = 22.bsp, weight = 800, color = Ink, maxLines = 1)
         }
         // "Still watching?" cards fanned out, 1.6 × the phone's.
@@ -628,13 +637,13 @@ private fun Clock(w: Wrapped, look: StoryLook) {
     val light = !look.dark
     val (lead, kind) = clockTitle(w)
     Left {
-        TightText(
+        FitText(
             buildAnnotatedString {
                 append(lead.uppercase())
                 append("\n")
                 withStyle(SpanStyle(color = if (light) Color.White else accent)) { append(kind.uppercase()) }
             },
-            112.bsp, 900, look.ink, .92f, Modifier.storyIn(.1f, 40.bp), tracking = -.035f,
+            112.bsp, 76.bsp, 3, 900, look.ink, Modifier.storyIn(.1f, 40.bp).fillMaxWidth(), lineHeight = .92f, tracking = -.035f, step = .5.sp,
         )
         val share = clockShare(w)
         val at = share.indexOf("{pct}")
@@ -651,7 +660,7 @@ private fun Clock(w: Wrapped, look: StoryLook) {
             },
             32.bsp, 600, body, 1.4f, Modifier.storyIn(1.4f, 40.bp).padding(top = 30.bp).widthIn(max = 640.bp),
         )
-        MeduLine(meduMood(clockMood(w)), clockMedu(w), Color.White, Ink)
+        TvMedu(meduLine(StoryKey.Clock, w), dark = look.dark)
     }
     Box(Modifier.fillMaxSize().padding(start = 900.bp, end = 96.bp, top = 200.bp), contentAlignment = Alignment.TopCenter) {
         ClockDial(
@@ -663,21 +672,157 @@ private fun Clock(w: Wrapped, look: StoryLook) {
     }
 }
 
-// ── 8 · The personality ──
+// ── 9 · Your requests ──
+
+@Composable
+private fun Requests(w: Wrapped) {
+    val r = w.requests ?: return
+    val parts = listOf(
+        Triple(r.here, t("{n} here", "n" to formatNumber(r.here)), t("arrived and ready to watch")),
+        Triple(r.coming, formatNumber(r.coming), t("on the way")),
+        Triple(r.declined, formatNumber(r.declined), t("declined, not available yet")),
+    ).mapIndexed { i, (n, label, line) -> RequestPart(n, label, line, i) }.filter { it.n > 0 }
+    val one = r.count == 1
+    Left {
+        SText(tc("Your requests", "wrapped"), Modifier.storyIn(.1f, 40.bp), size = 44.bsp, weight = 800, color = Ink)
+        Row(
+            Modifier.padding(top = 12.bp).semantics(mergeDescendants = true) { contentDescription = tn(r.count, "{n} title requested", "{n} titles requested") },
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(24.bp),
+        ) {
+            // The phone's 112, 100 and 72 px by the count's length, so "titles requested" stays in the column.
+            val digits = formatNumber(r.count).length
+            val big = if (digits <= 2) 240 else if (digits == 3) 214 else 154
+            Box(Modifier.height(big.bp).margin(end = (-big * .143f / 2f).dp), contentAlignment = Alignment.BottomStart) { Odometer(formatNumber(r.count), big.bsp, Ink, tracking = -.06f, delay = .3f) }
+            TightText(
+                AnnotatedString(tc(if (one) "title" else "titles", "count") + "\n" + tc("requested", if (one) "one" else "other")),
+                60.bsp, 900, Ink, .95f, Modifier.storyIn(.8f, 40.bp).padding(bottom = 18.bp),
+            )
+        }
+        TvMedu(meduLine(StoryKey.Requests, w), dark = false, top = 50)
+    }
+    Right(gap = 0.bp) {
+        // Each part 40 px of padding plus its share of the rest, as on the phone.
+        FlexBar(
+            parts.map { it.n }, 6.bp, 40.bp,
+            Modifier.fillMaxWidth().height(72.bp)
+                .semantics { contentDescription = t("{a} arrived, {b} on the way, {c} declined", "a" to r.here, "b" to r.coming, "c" to r.declined) },
+        ) {
+            parts.forEachIndexed { i, x ->
+                Box(
+                    Modifier.storyGrow(.7f + .15f * i).then(x.look(18.bp)).padding(horizontal = 20.bp),
+                    contentAlignment = if (x.kind == 0) Alignment.CenterStart else Alignment.Center,
+                ) { SText(x.label, size = 28.bsp, weight = 900, color = if (x.kind == 2) Ink else Color.White, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Clip) }
+            }
+        }
+        Column(Modifier.storyIn(1.2f, 40.bp).padding(top = 34.bp), verticalArrangement = Arrangement.spacedBy(18.bp)) {
+            for (x in parts) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.bp)) {
+                    Box(Modifier.size(26.bp).then(x.look(8.bp)))
+                    SText(formatNumber(x.n), Modifier.widthIn(min = 56.bp), size = 34.bsp, weight = 900, color = Ink, maxLines = 1)
+                    SText(x.line, size = 34.bsp, weight = 700, color = Ink, maxLines = 1)
+                }
+            }
+        }
+        val cards = listOfNotNull(
+            r.fastest?.let { arrivalTime(it.ms) to t("fastest arrival: {title}", "title" to arrivalName(it)) },
+            r.genre?.let { genreName(it) to t("what you asked for most") },
+        )
+        if (cards.isNotEmpty()) {
+            Row(Modifier.storyIn(1.4f, 40.bp).padding(top = 44.bp).fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(18.bp)) {
+                for ((big, small) in cards) {
+                    Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(36.bp)).background(Ink).padding(30.bp), verticalArrangement = Arrangement.spacedBy(6.bp)) {
+                        FitText(big, 56.bsp, 36.bsp, 2, 900, Color.White, lineHeight = 1.05f, tracking = -.02f, step = .5.sp)
+                        SText(small, size = 26.bsp, lineHeight = 1.35f, color = Color(0xFFC8C8C8))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A part of the requests' bar: here (0, solid), on the way (1, faded) or declined (2, a ring). */
+private class RequestPart(val n: Int, val label: String, val line: String, val kind: Int) {
+    fun look(radius: Dp): Modifier {
+        val shape = RoundedCornerShape(radius)
+        return when (kind) {
+            0 -> Modifier.clip(shape).background(Ink)
+            1 -> Modifier.clip(shape).background(Ink.copy(alpha = .45f))
+            else -> Modifier.clip(shape).border(4.bp, Ink, shape)
+        }
+    }
+}
+
+// ── 10 · The oddest request ──
+
+@Composable
+private fun Oddest(w: Wrapped) {
+    val o = w.oddest ?: return
+    Left {
+        SText(t("Your oddest request"), Modifier.storyIn(.1f, 40.bp), size = 36.bsp, weight = 800, color = Ink)
+        FitText(o.name.uppercase(), 104.bsp, 56.bsp, 3, 900, Ink, Modifier.storyIn(.2f, 40.bp).padding(top = 14.bp).fillMaxWidth(), lineHeight = .92f, tracking = -.035f, step = .5.sp)
+        TvMedu(meduLine(StoryKey.Oddest, w), dark = false)
+    }
+    Right(gap = 0.bp) {
+        Row(horizontalArrangement = Arrangement.spacedBy(44.bp)) {
+            OddestArt(
+                o,
+                Modifier.storyPop(.4f, rotation = -3f).size(290.bp, 435.bp)
+                    .boxShadow(Color(0x4D3C1E00), blur = 68.bp, y = 32.bp, radius = 24.bp).clip(RoundedCornerShape(24.bp)),
+            )
+            Column(Modifier.weight(1f)) {
+                oddFacts(o).forEachIndexed { i, (big, small) ->
+                    Column(
+                        Modifier.storyIn(.7f + .1f * i, 40.bp).fillMaxWidth().drawWithContent {
+                            drawRect(Ink.copy(alpha = .14f), size = Size(size.width, 3.bp.toPx()))
+                            drawContent()
+                        }.padding(top = 18.bp, bottom = 16.bp),
+                    ) {
+                        SText(big, size = 50.bsp, weight = 900, lineHeight = 1.05f, tracking = -.02f, color = Ink, maxLines = 1)
+                        SText(small, size = 24.bsp, weight = 700, color = Ink.copy(alpha = .7f), maxLines = 1)
+                    }
+                }
+            }
+        }
+        Column(Modifier.storyIn(1.2f, 40.bp).padding(top = 50.bp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                SText(t("Odd-o-meter"), Modifier.alignByBaseline(), size = 26.bsp, weight = 900, tracking = .06f, color = Ink, uppercase = true, maxLines = 1)
+                SText(t("{n} / 100", "n" to formatNumber(o.score)), Modifier.alignByBaseline(), size = 26.bsp, weight = 900, color = Ink, maxLines = 1)
+            }
+            Box(
+                Modifier.padding(top = 12.bp).fillMaxWidth().height(32.bp).clip(RoundedCornerShape(16.bp)).background(Ink.copy(alpha = .12f))
+                    .semantics { contentDescription = t("Oddness {n} out of 100", "n" to o.score) },
+            ) {
+                Box(
+                    Modifier.fillMaxWidth(o.score.coerceIn(4, 100) / 100f).fillMaxHeight().storyGrow(1.4f).clip(RoundedCornerShape(16.bp))
+                        .background(Brush.horizontalGradient(0f to Ink, .6f to Ink, 1f to WrappedRust)),
+                )
+            }
+            Row(Modifier.padding(top = 10.bp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                for (label in listOf(tc("Normal", "odd"), t("Curious"), t("Medu is concerned"))) {
+                    SText(label, size = 22.bsp, weight = 800, color = Ink.copy(alpha = .7f), maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+// ── 11 · The personality ──
 
 @Composable
 private fun Personality(w: Wrapped) {
     val accent = LocalAccent.current
     val key = w.personality.key
+    val name = personalityName(key)
     Left {
         SText(t("Your watch personality"), Modifier.storyIn(.1f, 40.bp), size = 36.bsp, weight = 800, color = Ink)
-        Heading(personalityName(key), 104.bsp, Ink, Modifier.storyPop(.4f).padding(top = 18.bp), lineHeight = .92f, tracking = -.035f)
+        FitText(name.uppercase(), 104.bsp, 64.bsp, 2, 900, Ink, Modifier.storyPop(.4f).padding(top = 18.bp).fillMaxWidth(), lineHeight = .92f, tracking = -.035f, step = .5.sp)
         SText(personalityText(key), Modifier.storyIn(.6f, 40.bp).padding(top = 26.bp).widthIn(max = 620.bp), size = 30.bsp, weight = 600, lineHeight = 1.45f, color = Ink.copy(alpha = .8f))
-        MeduLine(MeduMood.Yay, personalityMedu(key), Ink, Color.White, size = 170, top = 50)
+        TvMedu(meduLine(StoryKey.Personality, w), dark = false, top = 50)
     }
     Right(gap = 0.bp) {
         Box(Modifier.storyPop(.4f).padding(bottom = 30.bp).size(104.bp).clip(RoundedCornerShape(32.bp)).background(Ink), contentAlignment = Alignment.Center) {
-            SIcon(WrappedIcons.Bolt, size = 56.bp, color = accent)
+            SIcon(WrappedIcons.personality(key), size = 56.bp, color = accent)
         }
         w.personality.stats.take(3).forEachIndexed { i, s ->
             val line = statLine(s)
@@ -688,26 +833,34 @@ private fun Personality(w: Wrapped) {
                 }.padding(top = 29.bp, bottom = 26.bp),
                 horizontalArrangement = Arrangement.spacedBy(24.bp),
             ) {
-                SText(line.big, Modifier.width(320.bp).alignByBaseline(), size = 52.bsp, weight = 900, tracking = -.02f, color = Ink, maxLines = 1)
+                SText(line.big, Modifier.statWidth(320.bp).alignByBaseline(), size = 52.bsp, weight = 900, lineHeight = 1.1f, tracking = -.02f, color = Ink)
                 SText(line.small, Modifier.weight(1f).alignByBaseline(), size = 28.bsp, weight = 600, lineHeight = 1.35f, color = Ink)
             }
         }
     }
 }
 
-// ── 9 · Summary ──
+// ── 12 · Summary ──
 
 @Composable
 private fun Summary(w: Wrapped) {
     val accent = LocalAccent.current
     Left {
         TightText(AnnotatedString(t("That’s your {year}. Thanks for watching with Medu.", "year" to w.year)), 72.bsp, 900, Color.White, 1.05f, Modifier.storyIn(.05f, 40.bp), tracking = -.02f)
-        MeduLine(MeduMood.Party, "", Color.White, Ink, size = 220, top = 60)
+        Medu(MeduMood.Party, 220.bp, Modifier.padding(top = 60.bp).margin(start = (-20).bp).storyPop(1.4f), height = (220 * 1.32f).bp, glow = false)
     }
     // The phone's card, three quarters of its size (it's drawn in the phone's units).
     Box(Modifier.fillMaxSize().padding(start = 900.bp, end = 96.bp, top = 190.bp), contentAlignment = Alignment.TopCenter) {
-        Box(Modifier.wrapContentHeight(Alignment.Top, unbounded = true).storyPop(.3f).graphicsLayer { scaleX = .75f; scaleY = .75f; transformOrigin = TransformOrigin(.5f, 0f) }) {
+        // Smaller still when a long year makes it taller than the screen.
+        Box(Modifier.storyPop(.3f).padding(bottom = 48.bp).fitHeight(.75f)) {
             SummaryCard(w, accent, Modifier.width(342.dp))
         }
     }
+}
+
+/** The board's stat figure: at least [min] wide, at most 58 % of the row, its own width in between. */
+private fun Modifier.statWidth(min: Dp): Modifier = layout { m, c ->
+    val max = (c.maxWidth * .58f).toInt()
+    val p = m.measure(c.copy(minWidth = min.roundToPx().coerceAtMost(max), maxWidth = max))
+    layout(p.width, p.height) { p.place(0, 0) }
 }

@@ -117,6 +117,71 @@ public sealed class WrappedDto
 
     /// <summary>Gets or sets the different books read or listened to.</summary>
     [JsonPropertyName("books")] public int Books { get; set; }
+
+    /// <summary>The titles asked for through Seerr this year (absent without Seerr, or from Wrapped built before it was).</summary>
+    [JsonPropertyName("requests")] public WrappedRequestsDto? Requests { get; set; }
+
+    /// <summary>The oddest of those: barely rated, badly rated or very old.</summary>
+    [JsonPropertyName("oddest")] public WrappedOddestDto? Oddest { get; set; }
+}
+
+public sealed class WrappedRequestsDto
+{
+    [JsonPropertyName("count")] public int Count { get; set; }
+
+    /// <summary>On the server now, at least the seasons asked for.</summary>
+    [JsonPropertyName("here")] public int Here { get; set; }
+
+    /// <summary>Waiting for approval, approved or downloading.</summary>
+    [JsonPropertyName("coming")] public int Coming { get; set; }
+
+    [JsonPropertyName("declined")] public int Declined { get; set; }
+
+    /// <summary>The request that landed soonest after it was made.</summary>
+    [JsonPropertyName("fastest")] public WrappedArrivalDto? Fastest { get; set; }
+
+    /// <summary>The genre asked for most, when more than one request had it.</summary>
+    [JsonPropertyName("genre")] public WrappedGenreDto? Genre { get; set; }
+}
+
+public sealed class WrappedArrivalDto
+{
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("season")] public int? Season { get; set; }
+
+    [JsonPropertyName("seasonTo")] public int? SeasonTo { get; set; }
+
+    [JsonPropertyName("ms")] public long Ms { get; set; }
+}
+
+public sealed class WrappedOddestDto
+{
+    [JsonPropertyName("tmdbId")] public int TmdbId { get; set; }
+
+    [JsonPropertyName("mediaType")] public string MediaType { get; set; } = "movie";
+
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("year")] public int? Year { get; set; }
+
+    /// <summary>TMDB's average, out of 10.</summary>
+    [JsonPropertyName("rating")] public double Rating { get; set; }
+
+    [JsonPropertyName("votes")] public int Votes { get; set; }
+
+    /// <summary>People who asked Seerr for it, this profile included.</summary>
+    [JsonPropertyName("requesters")] public int Requesters { get; set; }
+
+    /// <summary>How odd, 0–100.</summary>
+    [JsonPropertyName("score")] public int Score { get; set; }
+
+    [JsonPropertyName("posterPath")] public string? PosterPath { get; set; }
+
+    /// <summary>The title in the library, when it's there.</summary>
+    [JsonPropertyName("itemId")] public string? ItemId { get; set; }
+
+    [JsonPropertyName("item")] public BaseItemDto? Item { get; set; }
 }
 
 public sealed class WrappedGenreDto
@@ -160,6 +225,9 @@ public sealed class WrappedMovieDto
 
     /// <summary>Gets or sets the day of each view (yyyy-MM-dd), oldest first.</summary>
     [JsonPropertyName("dates")] public List<string> Dates { get; set; } = [];
+
+    /// <summary>Its genres' keys (thriller, drama…), for what Medu says about it.</summary>
+    [JsonPropertyName("genres")] public List<string>? Genres { get; set; }
 
     [JsonPropertyName("item")] public BaseItemDto? Item { get; set; }
 }

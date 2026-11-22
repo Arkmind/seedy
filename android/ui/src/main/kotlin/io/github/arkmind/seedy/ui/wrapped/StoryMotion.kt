@@ -61,8 +61,8 @@ fun Modifier.storyPop(delay: Float, rotation: Float = 0f): Modifier = composed {
     }
 }
 
-/** .say: a speech bubble growing from its bottom right corner, .6 s. */
-fun Modifier.storySay(delay: Float): Modifier = composed {
+/** .say: a speech bubble growing from the middle of the side Medu is on ([fromEnd]: its end), .6 s. */
+fun Modifier.storySay(delay: Float, fromEnd: Boolean): Modifier = composed {
     val time = LocalStoryTime.current
     graphicsLayer {
         val p = enter(time?.floatValue, delay, .6f, PopEase)
@@ -70,7 +70,7 @@ fun Modifier.storySay(delay: Float): Modifier = composed {
         val k = .4f + .6f * p
         scaleX = k
         scaleY = k
-        transformOrigin = TransformOrigin(1f, 1f)
+        transformOrigin = TransformOrigin(if (fromEnd) 1f else 0f, .5f)
     }
 }
 

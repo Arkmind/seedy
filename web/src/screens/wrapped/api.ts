@@ -4,8 +4,8 @@ import type { BaseItem } from '../../api/types';
 /* /Seedy/Me/Wrapped: each profile's year on Seedy, built once in December (1 January to 30 November, in the time zone
    the apps report) and kept. Clients write every sentence themselves from these numbers (copy.ts). */
 
-export type StoryKey = 'cover' | 'hours' | 'lover' | 'genres' | 'shows' | 'movie' | 'binge' | 'clock' | 'personality' | 'summary';
-export const STORY_KEYS: StoryKey[] = ['cover', 'hours', 'lover', 'genres', 'shows', 'movie', 'binge', 'clock', 'personality', 'summary'];
+export type StoryKey = 'cover' | 'hours' | 'lover' | 'genres' | 'shows' | 'movie' | 'binge' | 'clock' | 'requests' | 'oddest' | 'personality' | 'summary';
+export const STORY_KEYS: StoryKey[] = ['cover', 'hours', 'lover', 'genres', 'shows', 'movie', 'binge', 'clock', 'requests', 'oddest', 'personality', 'summary'];
 
 export interface WrappedTitle { id: string; name: string; episodes: number; watchMs: number; item?: BaseItem | null }
 export interface WrappedGenre { name: string; key?: string | null; pct: number }
@@ -29,7 +29,11 @@ export interface Wrapped {
   shows: WrappedTitle[];
   seasonsFinished: number;
   showsStarted: number;
-  movie?: { id: string; name: string; views: number; watchMs: number; dates: string[]; item?: BaseItem | null } | null;
+  movie?: {
+    id: string; name: string; views: number; watchMs: number; dates: string[]; item?: BaseItem | null;
+    /** Its genres' keys (drama, romance…). */
+    genres?: string[] | null;
+  } | null;
   movies: number;
   /** Time on movies and on shows, the shows watched and their episodes (absent from Wrapped built before they were). */
   movieMs?: number;
@@ -50,6 +54,39 @@ export interface Wrapped {
   personality: { key: string; stats: WrappedStat[] };
   musicMs: number;
   books: number;
+  /** The year's requests through Seerr (absent without Seerr, or from Wrapped built before they were counted). */
+  requests?: WrappedRequests | null;
+  /** The oddest of them. */
+  oddest?: WrappedOddest | null;
+}
+
+export interface WrappedRequests {
+  count: number;
+  /** On the server now. */
+  here: number;
+  /** Waiting for approval, approved or downloading. */
+  coming: number;
+  declined: number;
+  /** The one that landed soonest after it was asked for. */
+  fastest?: { name: string; season?: number | null; seasonTo?: number | null; ms: number } | null;
+  /** The genre asked for most. */
+  genre?: WrappedGenre | null;
+}
+
+export interface WrappedOddest {
+  tmdbId: number;
+  mediaType: 'movie' | 'tv';
+  name: string;
+  year?: number | null;
+  /** TMDB's average, out of 10. */
+  rating: number;
+  votes: number;
+  /** People who asked for it, this profile included. */
+  requesters: number;
+  /** How odd, 0–100. */
+  score: number;
+  posterPath?: string | null;
+  item?: BaseItem | null;
 }
 
 export interface WrappedStatus { years: number[]; current?: { year: number; watchMs: number; stories: number } | null }
