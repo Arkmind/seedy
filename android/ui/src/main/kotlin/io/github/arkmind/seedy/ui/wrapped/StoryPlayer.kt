@@ -3,7 +3,11 @@ package io.github.arkmind.seedy.ui.wrapped
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
@@ -15,12 +19,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
+import io.github.arkmind.seedy.core.seedy.tmdbImage
+import io.github.arkmind.seedy.core.wrapped.MeduLine
 import io.github.arkmind.seedy.core.wrapped.WrappedMovie
+import io.github.arkmind.seedy.core.wrapped.WrappedOddest
 import io.github.arkmind.seedy.core.wrapped.WrappedTitle
+import io.github.arkmind.seedy.ui.components.Medu
 import io.github.arkmind.seedy.ui.components.MeduMood
 import io.github.arkmind.seedy.ui.components.rememberStillMotion
 import io.github.arkmind.seedy.ui.theme.LocalViewer
@@ -119,12 +133,80 @@ fun MovieArt(movie: WrappedMovie, modifier: Modifier = Modifier) {
     }
 }
 
-/** The web's mood names (core's clockMood) as Medu's. */
+/** The oddest request's poster (the library's, else TMDB's) over the board's drawn retro one (which writes its title). */
+@Composable
+fun OddestArt(odd: WrappedOddest, modifier: Modifier = Modifier) {
+    val images = LocalViewer.current.images
+    val url = odd.item?.let { images?.poster(it, 600) } ?: tmdbImage(odd.posterPath, "w342")
+    Box(modifier) {
+        RetroPoster(odd.name, Modifier.matchParentSize())
+        if (url != null) AsyncImage(url, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop)
+    }
+}
+
+/** The web's mood names (core's MeduLine) as Medu's. */
 fun meduMood(name: String): MeduMood = when (name) {
+    "wave" -> MeduMood.Wave
+    "search" -> MeduMood.Search
     "sleepy" -> MeduMood.Sleepy
+    "yay" -> MeduMood.Yay
+    "think" -> MeduMood.Think
+    "oops" -> MeduMood.Oops
+    "love" -> MeduMood.Love
     "popcorn" -> MeduMood.Popcorn
+    "sad" -> MeduMood.Sad
     "party" -> MeduMood.Party
-    else -> MeduMood.Wave
+    else -> MeduMood.Idle
+}
+
+/**
+ * Medu and what she says beside her (the boards' Medu spot): Medu [meduWidth] wide, popping in at [at]; her bubble,
+ * its tail towards her, centred on a [bubbleBox]-tall box from her top (her bell) and following .3 s later.
+ * [meduFirst]: Medu on the left. Sizes are the phone boards'.
+ */
+@Composable
+fun MeduSpot(
+    line: MeduLine,
+    meduFirst: Boolean,
+    bubbleBg: Color,
+    bubbleInk: Color,
+    at: Float,
+    modifier: Modifier = Modifier,
+    meduWidth: Dp = 88.dp,
+    bubbleBox: Dp = 82.dp,
+    gap: Dp = 12.dp,
+    sayDelay: Float = at + .3f,
+    textSize: TextUnit = 14.sp,
+    maxWidth: Dp = 206.dp,
+    padX: Dp = 14.dp,
+    padY: Dp = 10.dp,
+    radius: Dp = 18.dp,
+    tail: Dp = 14.dp,
+    tailOut: Dp = 5.dp,
+    tailRadius: Dp = 3.dp,
+) {
+    if (line.text.isEmpty()) return
+    Row(modifier, verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(gap)) {
+        val medu: @Composable () -> Unit = {
+            Medu(meduMood(line.mood), meduWidth, Modifier.storyPop(at), height = meduWidth * 1.32f, torch = false)
+        }
+        val say: @Composable () -> Unit = {
+            Box(Modifier.height(bubbleBox), contentAlignment = Alignment.Center) {
+                Say(
+                    line.text, bubbleBg, bubbleInk, tailEnd = !meduFirst,
+                    modifier = Modifier.wrapContentHeight(Alignment.CenterVertically, unbounded = true).storySay(sayDelay, fromEnd = !meduFirst),
+                    size = textSize, maxWidth = maxWidth, padX = padX, padY = padY, radius = radius, tail = tail, tailOut = tailOut, tailRadius = tailRadius,
+                )
+            }
+        }
+        if (meduFirst) {
+            medu()
+            say()
+        } else {
+            say()
+            medu()
+        }
+    }
 }
 
 /**

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -48,7 +49,10 @@ import androidx.compose.ui.unit.sp
 import io.github.arkmind.seedy.core.i18n.t
 import io.github.arkmind.seedy.core.wrapped.StoryKey
 import io.github.arkmind.seedy.core.wrapped.Wrapped
+import io.github.arkmind.seedy.core.wrapped.meduLine
 import io.github.arkmind.seedy.core.wrapped.storiesOf
+import io.github.arkmind.seedy.ui.wrapped.MeduSpot
+import io.github.arkmind.seedy.ui.wrapped.WrappedInk
 import io.github.arkmind.seedy.mobile.parts.Toast
 import io.github.arkmind.seedy.mobile.parts.tap
 import io.github.arkmind.seedy.ui.components.Medu
@@ -75,11 +79,12 @@ import io.github.arkmind.seedy.ui.wrapped.storyTime
 import kotlinx.coroutines.launch
 import io.github.arkmind.seedy.core.wrapped.loverShows
 
-/** Where a phone story's parts sit: below the status bar and the header, above the share button. */
-internal class StoryFrame(val top: Dp, val bottom: Dp)
+/** Where a phone story's parts sit: below the status bar and the header, above the share button; [nav] is the
+ * navigation bar's height under it. */
+internal class StoryFrame(val top: Dp, val bottom: Dp, val nav: Dp)
 
 /**
- * Boards "Seedy Wrapped · 1–9": the year's stories full screen, each for 8 s under its progress bar. A tap on the
+ * Boards "Seedy Wrapped · 1–12": the year's stories full screen, each for 16 s under its progress bar. A tap on the
  * right goes on, on the left back; holding a finger (or the pause button) holds the story; X or Back closes. "Share this
  * story" hands [onShare] the story as a picture (without the controls); the summary shares and saves its card.
  * [fixedProgress] holds the bar (screenshot tests); [message] is a toast (picture saved…).
@@ -104,7 +109,7 @@ fun WrappedScreen(
     val loop = rememberLoopClock()
     val statusTop = max(32.dp, WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val frame = StoryFrame(statusTop + 64.dp, 96.dp + navBottom)
+    val frame = StoryFrame(statusTop + 64.dp, 96.dp + navBottom, navBottom)
     val storyLayer = rememberGraphicsLayer()
     val cardLayer = rememberGraphicsLayer()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -215,6 +220,15 @@ private fun ShareStory(look: StoryLook, modifier: Modifier, onClick: () -> Unit)
     }
 }
 
+/** Where Medu sits on a story (on the left, or the right) and when she pops in; her bubble follows .3 s later. */
+private class Spot(val left: Boolean, val at: Float)
+
+private val Spots = mapOf(
+    StoryKey.Hours to Spot(false, 1.5f), StoryKey.Lover to Spot(true, 1.8f), StoryKey.Genres to Spot(false, 1.3f), StoryKey.Shows to Spot(true, 1.5f),
+    StoryKey.Movie to Spot(false, 1.7f), StoryKey.Binge to Spot(true, 2f), StoryKey.Clock to Spot(false, 1.6f), StoryKey.Requests to Spot(true, 1.7f),
+    StoryKey.Oddest to Spot(false, 1.8f), StoryKey.Personality to Spot(true, 1.6f),
+)
+
 /** The story itself, in the space between the header and the share button. */
 @Composable
 private fun Story(
@@ -227,7 +241,14 @@ private fun Story(
     onSaveCard: () -> Unit,
     cardLayer: GraphicsLayer,
 ) {
-    Box(Modifier.fillMaxSize().padding(top = frame.top, bottom = frame.bottom)) {
+    val spot = Spots[story]
+    // With Medu at the bottom, the story keeps clear of her (the boards' 214 px).
+    Box(
+        Modifier.fillMaxSize().padding(top = frame.top, bottom = if (spot != null) 214.dp + frame.nav else frame.bottom)
+            // A story a little longer than its space runs on behind Medu, as on the boards; the cover and the hours
+            // centre themselves in it.
+            .then(if (story == StoryKey.Cover || story == StoryKey.Hours) Modifier else Modifier.wrapContentHeight(Alignment.Top, unbounded = true)),
+    ) {
         when (story) {
             StoryKey.Cover -> CoverStory(w, player.count, onGo = player::next)
             StoryKey.Hours -> HoursStory(w)
@@ -237,8 +258,20 @@ private fun Story(
             StoryKey.Movie -> MovieStory(w)
             StoryKey.Binge -> BingeStory(w, look)
             StoryKey.Clock -> ClockStory(w, look)
+            StoryKey.Requests -> RequestsStory(w)
+            StoryKey.Oddest -> OddestStory(w)
             StoryKey.Personality -> PersonalityStory(w)
             StoryKey.Summary -> SummaryStory(w, cardLayer)
+        }
+    }
+    val line = if (spot != null) meduLine(story, w) else null
+    if (spot != null && line != null) {
+        // Medu 84 px above the bottom, 14 px from her side: a dark bubble on light stories, a white one on dark.
+        Box(Modifier.fillMaxSize().padding(start = 14.dp, end = 14.dp, bottom = 84.dp + frame.nav)) {
+            MeduSpot(
+                line, meduFirst = spot.left, bubbleBg = if (look.dark) Color.White else WrappedInk, bubbleInk = if (look.dark) WrappedInk else Color.White,
+                at = spot.at, modifier = Modifier.align(if (spot.left) Alignment.BottomStart else Alignment.BottomEnd),
+            )
         }
     }
     if (story == StoryKey.Summary) {

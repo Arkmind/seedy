@@ -61,6 +61,47 @@ data class Wrapped(
     val personality: WrappedPersonality = WrappedPersonality(),
     val musicMs: Long = 0,
     val books: Int = 0,
+    /** The year's requests through Seerr (absent without Seerr, or from a Wrapped built before they were counted). */
+    val requests: WrappedRequests? = null,
+    /** The oddest of them: barely rated, badly rated or very old. */
+    val oddest: WrappedOddest? = null,
+)
+
+@Serializable
+data class WrappedRequests(
+    val count: Int = 0,
+    /** On the server now, at least the seasons asked for. */
+    val here: Int = 0,
+    /** Waiting for approval, approved or downloading. */
+    val coming: Int = 0,
+    val declined: Int = 0,
+    /** The request that landed soonest after it was made. */
+    val fastest: WrappedArrival? = null,
+    /** The genre asked for most, when more than one request had it. */
+    val genre: WrappedGenre? = null,
+)
+
+@Serializable
+data class WrappedArrival(val name: String = "", val season: Int? = null, val seasonTo: Int? = null, val ms: Long = 0)
+
+@Serializable
+data class WrappedOddest(
+    val tmdbId: Int = 0,
+    /** movie or tv. */
+    val mediaType: String = "movie",
+    val name: String = "",
+    val year: Int? = null,
+    /** TMDB's average, out of 10. */
+    val rating: Double = 0.0,
+    val votes: Int = 0,
+    /** People who asked Seerr for it, this profile included. */
+    val requesters: Int = 0,
+    /** How odd, 0–100. */
+    val score: Int = 0,
+    val posterPath: String? = null,
+    /** The title in the library, when it's there. */
+    val itemId: String? = null,
+    val item: BaseItemDto? = null,
 )
 
 @Serializable
@@ -78,6 +119,8 @@ data class WrappedMovie(
     val watchMs: Long = 0,
     /** The day of each view (yyyy-MM-dd), oldest first. */
     val dates: List<String> = emptyList(),
+    /** Its genres' keys (drama, romance…), for what Medu says about it. */
+    val genres: List<String>? = null,
     val item: BaseItemDto? = null,
 )
 
@@ -126,7 +169,7 @@ internal data class Moment(val kind: String, val itemId: String? = null, val ms:
 /** The stories, in the server's order. */
 enum class StoryKey(val key: String) {
     Cover("cover"), Hours("hours"), Lover("lover"), Genres("genres"), Shows("shows"), Movie("movie"), Binge("binge"), Clock("clock"),
-    Personality("personality"), Summary("summary"),
+    Requests("requests"), Oddest("oddest"), Personality("personality"), Summary("summary"),
 }
 
 /** The stories this app knows, in the server's order. */

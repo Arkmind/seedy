@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextMotion
@@ -86,6 +87,7 @@ fun SText(
     overflow: TextOverflow = TextOverflow.Ellipsis,
     decoration: TextDecoration? = null,
     uppercase: Boolean = false,
+    balance: Boolean = false,
 ) {
     val tight = lineHeight != null && lineHeight < NotoLineRatio
     // Whether the text took more than one line; it then takes the line height itself.
@@ -102,6 +104,8 @@ fun SText(
             lineHeight = if (lineHeight != null && !boxed) lineHeight.em else TextUnit.Unspecified,
             textAlign = align ?: TextAlign.Unspecified,
             textDecoration = decoration,
+            // CSS text-wrap: balance.
+            lineBreak = if (balance) LineBreak.Heading else LineBreak.Unspecified,
         ),
         onTextLayout = if (tight && maxLines != 1) { r -> if (r.lineCount > 1) wraps = true } else null,
         maxLines = maxLines,

@@ -14,11 +14,14 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.arkmind.seedy.core.feature.HomeViewModel
 import io.github.arkmind.seedy.core.seedy.HomeRow
 import io.github.arkmind.seedy.core.wrapped.Wrapped
+import io.github.arkmind.seedy.core.wrapped.WrappedArrival
 import io.github.arkmind.seedy.core.wrapped.WrappedBinge
 import io.github.arkmind.seedy.core.wrapped.WrappedClock
 import io.github.arkmind.seedy.core.wrapped.WrappedGenre
 import io.github.arkmind.seedy.core.wrapped.WrappedMovie
+import io.github.arkmind.seedy.core.wrapped.WrappedOddest
 import io.github.arkmind.seedy.core.wrapped.WrappedPersonality
+import io.github.arkmind.seedy.core.wrapped.WrappedRequests
 import io.github.arkmind.seedy.core.wrapped.WrappedStat
 import io.github.arkmind.seedy.core.wrapped.WrappedStill
 import io.github.arkmind.seedy.core.wrapped.WrappedTeaser
@@ -48,7 +51,7 @@ class TvWrappedShots {
     private val h = 3_600_000L
     private val year = Wrapped(
         year = 2026,
-        stories = listOf("cover", "hours", "lover", "genres", "shows", "movie", "binge", "clock", "personality", "summary"),
+        stories = listOf("cover", "hours", "lover", "genres", "shows", "movie", "binge", "clock", "requests", "oddest", "personality", "summary"),
         watchMs = 4_620_960_000L, plays = 2_310, prevWatchMs = 3_916_067_797L, rank = 2, viewers = 6,
         genres = listOf(
             WrappedGenre("Thriller", "thriller", 34), WrappedGenre("Drama", "drama", 22), WrappedGenre("Sci-Fi & Fantasy", "scifi", 15),
@@ -60,7 +63,7 @@ class TvWrappedShots {
             WrappedTitle("4", "Static", 22, 17 * h), WrappedTitle("5", "Moon Harbour", 18, 14 * h),
         ),
         seasonsFinished = 11, showsStarted = 7,
-        movie = WrappedMovie("6", "Paper Lanterns", 4, 448 * 60_000L, listOf("2026-03-07", "2026-07-19", "2026-10-11", "2026-11-02")),
+        movie = WrappedMovie("6", "Paper Lanterns", 4, 448 * 60_000L, listOf("2026-03-07", "2026-07-19", "2026-10-11", "2026-11-02"), genres = listOf("romance", "drama")),
         movies = 41,
         moviesPlayed = 141,
         moviesRewatched = 23,
@@ -77,6 +80,8 @@ class TvWrappedShots {
         ),
         personality = WrappedPersonality("sprinter", listOf(WrappedStat("seasonDays", 4.2), WrappedStat("introsSkipped", 312.0, 7.0 * h), WrappedStat("gapSeconds", 9.0))),
         musicMs = 312 * h, books = 6,
+        requests = WrappedRequests(27, 21, 4, 2, WrappedArrival("Glass Harbor", season = 2, ms = 14 * 60_000L), WrappedGenre("Sci-Fi & Fantasy", "scifi", 40)),
+        oddest = WrappedOddest(18_123, "movie", "Mole Men of Venus", 1958, 3.9, 27, 1, 92),
     )
 
     private fun shot(name: String, content: @Composable () -> Unit) {
@@ -99,8 +104,10 @@ class TvWrappedShots {
     @Test fun movie() = story(5, "WrappedTVMovie")
     @Test fun binge() = story(6, "WrappedTVBinge")
     @Test fun clock() = story(7, "WrappedTVNight")
-    @Test fun personality() = story(8, "WrappedTVPersonality")
-    @Test fun summary() = story(9, "WrappedTVSummary")
+    @Test fun requests() = story(8, "WrappedTVRequests")
+    @Test fun oddest() = story(9, "WrappedTVOddest")
+    @Test fun personality() = story(10, "WrappedTVPersonality")
+    @Test fun summary() = story(11, "WrappedTVSummary")
 
     /** No board: December's card over the home rows, the phone banner at TV size. */
     @Test
@@ -109,7 +116,7 @@ class TvWrappedShots {
             loading = false,
             hasHero = false,
             rows = listOf(HomeViewModel.Row(HomeRow("continue", "continue"), "Continue watching", listOf(Samples.thePass, Samples.paperLanterns, Samples.glassHarbor))),
-            wrapped = WrappedTeaser(2026, 4_620_960_000L, 9),
+            wrapped = WrappedTeaser(2026, 4_620_960_000L, 12),
         )
         Box(Modifier.fillMaxSize()) {
             TvHomeScreen(state, onOpen = {})

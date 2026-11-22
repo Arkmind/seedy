@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -44,8 +45,8 @@ fun Modifier.margin(start: Dp = 0.dp, top: Dp = 0.dp, end: Dp = 0.dp, bottom: Dp
  * boards then fits here too).
  */
 @Composable
-fun Heading(text: String, size: TextUnit, color: Color, modifier: Modifier = Modifier, lineHeight: Float = .98f, tracking: Float = -.03f) {
-    TightText(AnnotatedString(text.uppercase()), size, 900, color, lineHeight, modifier.margin(end = (-6).dp), tracking = tracking)
+fun Heading(text: String, size: TextUnit, color: Color, modifier: Modifier = Modifier, lineHeight: Float = .98f, tracking: Float = -.03f, maxLines: Int = Int.MAX_VALUE) {
+    TightText(AnnotatedString(text.uppercase()), size, 900, color, lineHeight, modifier.margin(end = (-6).dp), tracking = tracking, maxLines = maxLines)
 }
 
 /**
@@ -62,6 +63,7 @@ fun TightText(
     modifier: Modifier = Modifier,
     tracking: Float = 0f,
     align: TextAlign = TextAlign.Unspecified,
+    maxLines: Int = Int.MAX_VALUE,
 ) {
     BasicText(
         text,
@@ -74,6 +76,8 @@ fun TightText(
             fontSize = size, fontWeight = FontWeight(weight), color = color, lineHeight = lineHeight.em,
             letterSpacing = if (tracking == 0f) TextUnit.Unspecified else tracking.em, textAlign = align,
         ),
+        maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis,
     )
 }
 

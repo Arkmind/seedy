@@ -12,11 +12,14 @@ import io.github.arkmind.seedy.core.feature.HomeViewModel
 import io.github.arkmind.seedy.core.seedy.FeaturedEntry
 import io.github.arkmind.seedy.core.seedy.HomeRow
 import io.github.arkmind.seedy.core.wrapped.Wrapped
+import io.github.arkmind.seedy.core.wrapped.WrappedArrival
 import io.github.arkmind.seedy.core.wrapped.WrappedBinge
 import io.github.arkmind.seedy.core.wrapped.WrappedClock
 import io.github.arkmind.seedy.core.wrapped.WrappedGenre
 import io.github.arkmind.seedy.core.wrapped.WrappedMovie
+import io.github.arkmind.seedy.core.wrapped.WrappedOddest
 import io.github.arkmind.seedy.core.wrapped.WrappedPersonality
+import io.github.arkmind.seedy.core.wrapped.WrappedRequests
 import io.github.arkmind.seedy.core.wrapped.WrappedStat
 import io.github.arkmind.seedy.core.wrapped.WrappedStill
 import io.github.arkmind.seedy.core.wrapped.WrappedTeaser
@@ -42,7 +45,7 @@ object WrappedSamples {
     private const val H = 3_600_000L
     val year = Wrapped(
         year = 2026,
-        stories = listOf("cover", "hours", "lover", "genres", "shows", "movie", "binge", "clock", "personality", "summary"),
+        stories = listOf("cover", "hours", "lover", "genres", "shows", "movie", "binge", "clock", "requests", "oddest", "personality", "summary"),
         watchMs = 4_620_960_000L, // 1,284 hours, 53 days
         plays = 2_310,
         prevWatchMs = 3_916_067_797L,
@@ -59,7 +62,7 @@ object WrappedSamples {
         ),
         seasonsFinished = 11,
         showsStarted = 7,
-        movie = WrappedMovie("6", "Paper Lanterns", 4, 448 * 60_000L, listOf("2026-03-07", "2026-07-19", "2026-10-11", "2026-11-02")),
+        movie = WrappedMovie("6", "Paper Lanterns", 4, 448 * 60_000L, listOf("2026-03-07", "2026-07-19", "2026-10-11", "2026-11-02"), genres = listOf("romance", "drama")),
         movies = 41,
         moviesPlayed = 141,
         moviesRewatched = 23,
@@ -80,13 +83,15 @@ object WrappedSamples {
         ),
         musicMs = 312 * H,
         books = 6,
+        requests = WrappedRequests(27, 21, 4, 2, WrappedArrival("Glass Harbor", season = 2, ms = 14 * 60_000L), WrappedGenre("Sci-Fi & Fantasy", "scifi", 40)),
+        oddest = WrappedOddest(18_123, "movie", "Mole Men of Venus", 1958, 3.9, 27, 1, 92),
     )
 
     /** The movie lover board's numbers: 142 movies, 311 h, 23 rewatched; 9 shows, 120 episodes, 98 h. */
     val movieLover = year.copy(moviesPlayed = 142, movieMs = 311 * H, moviesRewatched = 23, showsWatched = 9, episodes = 120, showMs = 98 * H)
 }
 
-/** Boards "Seedy Wrapped · 1–10" (390 × 844) and the Home banner, with the boards' year and drawn pictures. */
+/** Boards "Seedy Wrapped · 1–12" (390 × 844) and the Home banner, with the boards' year and drawn pictures. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w390dp-h844dp-mdpi", sdk = [35])
@@ -107,8 +112,17 @@ class WrappedShots {
     @Test fun movie() = story(5, "WrappedMovie")
     @Test fun binge() = story(6, "WrappedBinge")
     @Test fun clock() = story(7, "WrappedNight")
-    @Test fun personality() = story(8, "WrappedPersonality")
-    @Test fun summary() = story(9, "WrappedSummary", progress = .6f)
+    @Test fun requests() = story(8, "WrappedRequests")
+    @Test fun oddest() = story(9, "WrappedOddest")
+    @Test fun personality() = story(10, "WrappedPersonality")
+
+    /** No board: the completionist's longer name a size down, so "Completionist" stays on one line. */
+    @Test
+    fun completionist() = story(
+        10, "WrappedPersonalityCompletionist",
+        year = WrappedSamples.year.copy(personality = WrappedPersonality("completionist", listOf(WrappedStat("showsFinished", 16.0), WrappedStat("seasonsFinished", 11.0), WrappedStat("streak", 23.0)))),
+    )
+    @Test fun summary() = story(11, "WrappedSummary", progress = .6f)
 
     /** Board "Android · Home · Wrapped": December's banner under the hero. */
     @Test
@@ -117,7 +131,7 @@ class WrappedShots {
             loading = false,
             featured = List(5) { FeaturedEntry(Samples.northbound, reason = "New episode Friday", play = Samples.thePass) },
             rows = listOf(HomeViewModel.Row(HomeRow("continue", "continue"), "Continue watching", listOf(Samples.thePass, Samples.paperLanterns, Samples.glassHarbor))),
-            wrapped = WrappedTeaser(2026, 4_620_960_000L, 9),
+            wrapped = WrappedTeaser(2026, 4_620_960_000L, 12),
         )
         compose.setContent {
             SeedyTheme {
