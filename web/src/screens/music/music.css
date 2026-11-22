@@ -15,7 +15,6 @@
 .mu-btn.is-light { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-weight: 800; }
 .mu-btn.is-light:not(:disabled):hover { background: var(--seedy-bg); color: var(--seedy-text); box-shadow: inset 0 0 0 1px var(--seedy-surface-2); }
 .mu-btn.is-icon { width: 48px; padding: 0; }
-.mu-btn.is-on, .mu-btn.is-on:not(:disabled):hover { color: var(--seedy-accent); background: var(--seedy-surface); }
 
 /* ───────── Library head ───────── */
 

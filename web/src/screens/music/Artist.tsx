@@ -8,6 +8,7 @@ import { t, tn } from '../../lib/i18n';
 import { useAsync, useStore } from '../../lib/store';
 import { BackBar } from '../../ui/BackBar';
 import { Header } from '../../ui/navbar/Header';
+import { ToggleButton } from '../../ui/controls';
 import { ItemCard } from '../../ui/cards';
 import { toast } from '../../ui/overlay';
 import { toggleFavorite } from '../browse/parts';
@@ -111,11 +112,7 @@ export function MusicArtistPage({ item: initial }: { item: BaseItem }) {
             </button>
             <button type="button" class="mu-btn" onClick={() => void playAll(true)}><AIcon name="shuffle" size={18} />{t('Shuffle')}</button>
             <button type="button" class="mu-btn" onClick={() => void radio()}><AIcon name="mix" size={18} />{t('Artist radio')}</button>
-            <button type="button" class={'mu-btn is-icon' + (fav ? ' is-on' : '')} aria-pressed={fav ? 'true' : 'false'}
-              aria-label={fav ? t('Remove {name} from favorites', { name: item.Name }) : t('Add {name} to favorites', { name: item.Name })}
-              onClick={() => void toggleFavorite(item, setItem)}>
-              <AIcon name="heart" size={20} filled={fav} />
-            </button>
+            <ToggleButton icon="heart" size="md" on={fav} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => void toggleFavorite(item, setItem)} />
             <MoreActions item={item} />
           </div>
         </div>

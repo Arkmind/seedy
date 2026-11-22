@@ -16,13 +16,14 @@ import { NotFound } from '../NotFound';
 import { Header } from '../../ui/navbar/Header';
 import { Icon } from '../../ui/icons';
 import { MenuItem, toast } from '../../ui/overlay';
+import { ToggleButton } from '../../ui/controls';
 import { playPath } from '../../ui/cards';
 import {
   CardGrid, EmptyPlaylist, EmptyState, episodeLabel, ErrorState, findView, GRID_FIELDS, GridSkeleton, playRandom, resolvePlayable,
   seasonsLabel, toggleFavorite, togglePlayed, useItemList, yearOf
 } from './parts';
 import {
-  CastRow, DetailsHero, DetailsSkeleton, MetaLine, MoreActions, SeasonEpisodes, SimilarRow, SquareToggle, StartOverButton, TrailerButton,
+  CastRow, DetailsHero, DetailsSkeleton, MetaLine, MoreActions, SeasonEpisodes, SimilarRow, StartOverButton, TrailerButton,
   fallbackLibraryName, heroArt, names, orderSeasons, peopleOf, seriesChip, seriesStatus, useView, watchedChip, type InfoRow, type MissingSeason
 } from './details-parts';
 import { RequestSeasonsDialog, markRequested, seasonList } from './request-seasons';
@@ -270,14 +271,14 @@ function SeriesPage({ item: initial, onChanged }: { item: BaseItem; onChanged: (
             <button type="button" class="btn btn-square" aria-label={t('Shuffle episodes')} onClick={shuffle}>
               <Icon name="shuffle" size={22} />
             </button>
-            <SquareToggle
+            <ToggleButton
               icon="check"
               on={!!item.UserData?.Played}
               onLabel="Watched. Mark series as not watched"
               offLabel="Mark series as watched"
               onClick={() => togglePlayed(item, setItem).then(refresh)}
             />
-            <SquareToggle icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
+            <ToggleButton icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
             <MoreActions item={item}>
               {(close) => (
                 <>
@@ -452,8 +453,8 @@ function MoviePage({ item: initial }: { item: BaseItem }) {
             </button>
             {resume && <StartOverButton item={item} />}
             <TrailerButton item={item} />
-            <SquareToggle icon="check" on={played} onLabel="Watched. Mark as not watched" offLabel="Mark as watched" onClick={() => togglePlayed(item, setItem)} />
-            <SquareToggle icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
+            <ToggleButton icon="check" on={played} onLabel="Watched. Mark as not watched" offLabel="Mark as watched" onClick={() => togglePlayed(item, setItem)} />
+            <ToggleButton icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
             <MoreActions item={item} />
           </>
         }
@@ -511,8 +512,8 @@ function EpisodePage({ item: initial, onChanged }: { item: BaseItem; onChanged: 
               {`${played ? t('Play again') : resume ? t('Resume') : t('Play')} ${episodeLabel(item)}`.trim()}
             </button>
             {resume && <StartOverButton item={item} />}
-            <SquareToggle icon="check" on={played} onLabel="Watched. Mark as not watched" offLabel="Mark as watched" onClick={() => togglePlayed(item, setItem).then(changed)} />
-            <SquareToggle icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
+            <ToggleButton icon="check" on={played} onLabel="Watched. Mark as not watched" offLabel="Mark as watched" onClick={() => togglePlayed(item, setItem).then(changed)} />
+            <ToggleButton icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
             <MoreActions item={item}>
               {(close) => (
                 <>
@@ -572,10 +573,14 @@ function PersonPage({ item: initial }: { item: BaseItem }) {
               </>
             )}
             <div class="person-actions">
-              <button type="button" class="btn btn-secondary" aria-pressed={fav ? 'true' : 'false'} onClick={() => toggleFavorite(item, setItem)}>
-                <Icon name="heart" size={18} filled={fav} color={fav ? 'var(--seedy-accent)' : undefined} />
-                {fav ? t('In favorites') : t('Add to favorites')}
-              </button>
+              <ToggleButton
+                icon="heart"
+                on={fav}
+                onLabel="In favorites. Remove from favorites"
+                offLabel="Add to favorites"
+                text={fav ? t('In favorites') : t('Add to favorites')}
+                onClick={() => toggleFavorite(item, setItem)}
+              />
               <a class="btn btn-ghost" href={`${JELLYFIN_WEB}#/details?id=${item.Id}`} target="_blank" rel="noreferrer"><Icon name="external" size={18} />{t('Open in Jellyfin')}</a>
             </div>
           </div>
@@ -633,8 +638,8 @@ function CollectionPage({ item: initial }: { item: BaseItem }) {
               {t('Play')}
             </button>
             <button type="button" class="btn btn-square" aria-label={t('Shuffle')} disabled={!first} onClick={shuffle}><Icon name="shuffle" size={22} /></button>
-            <SquareToggle icon="check" on={!!item.UserData?.Played} onLabel="Watched. Mark as not watched" offLabel="Mark as watched" onClick={() => togglePlayed(item, setItem).then(kids.reload)} />
-            <SquareToggle icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
+            <ToggleButton icon="check" on={!!item.UserData?.Played} onLabel="Watched. Mark as not watched" offLabel="Mark as watched" onClick={() => togglePlayed(item, setItem).then(kids.reload)} />
+            <ToggleButton icon="heart" on={!!item.UserData?.IsFavorite} onLabel="Remove from favorites" offLabel="Add to favorites" onClick={() => toggleFavorite(item, setItem)} />
             <MoreActions item={item} />
           </>
         }
