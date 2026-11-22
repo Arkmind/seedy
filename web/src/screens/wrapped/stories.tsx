@@ -1,22 +1,24 @@
 import type { ComponentChildren } from 'preact';
 import { useStore } from '../../lib/store';
 import { brandingStore } from '../../lib/app-state';
-import { formatNumber, t, tn } from '../../lib/i18n';
-import { backdropUrl, imageUrl, primaryUrl } from '../../api/images';
+import { formatNumber, t, tc, tn } from '../../lib/i18n';
+import { backdropUrl, imageUrl, primaryUrl, tmdbImage } from '../../api/images';
 import type { BaseItem } from '../../api/types';
 import { Medu, type MeduMood } from '../../ui/medu';
 import { MeduProps } from './medu-props';
 import type { StoryKey, Wrapped } from './api';
 import {
-  bingeEpisode, bingeLine, bingeText, clockDay, clockMedu, clockMood, clockShare, clockTitle, coverHint, genreLead, genreMedu,
-  genreName, genreOther, hourChips, hoursOf, loverChips, loverMedu, loverOther, loverPct, loverShows, loverTitle, loverUnit, movieMedu, movieMeta, movieTickets, movieTitle, personalityMedu, personalityName,
-  personalityText, showMeta, showTime, showsFootnote, showsMedu, statLine, STORY_SECONDS, summaryAlso, summaryLabel, timeOf
+  arrivalName, arrivalTime, bingeEpisode, bingeLine, bingeMedu, bingeText, clockDay, clockMedu, clockShare, clockTitle, coverHint, genreLead, genreMedu,
+  genreName, genreOther, hourChips, hoursMedu, hoursOf, loverChips, loverMedu, loverOther, loverPct, loverShows, loverTitle, loverUnit, type MeduLine, movieMedu,
+  movieMeta, movieTickets, movieTitle, oddestMedu, oddRating, personalityMedu, personalityName, personalityText, requestsMedu, showMeta, showTime, showsFootnote,
+  showsMedu, statLine, STORY_SECONDS, summaryAlso, summaryCounts, summaryLabel, timeOf
 } from './copy';
 import {
-  BingeBackdrop, CoverBackdrop, GenresBackdrop, HoursBackdrop, LoverBackdrop, MovieBackdrop, NightBackdrop, PersonalityBackdrop, ShowsBackdrop, SummaryBackdrop
+  BingeBackdrop, CoverBackdrop, GenresBackdrop, HoursBackdrop, LoverBackdrop, MovieBackdrop, NightBackdrop, OddestBackdrop, PersonalityBackdrop, RequestsBackdrop,
+  ShowsBackdrop, SummaryBackdrop
 } from './backdrops';
 
-/* The nine Wrapped stories (boards Wrapped · 1–9), drawn at the boards' 390 px width; the viewer scales them. Phone
+/* The Wrapped stories (boards Wrapped · 1–12), drawn at the boards' 390 px width; the viewer scales them. Phone
    boards start with a 32 px status bar; the web's stories (Web · Wrapped viewer) start 14 px down instead. */
 
 export const STORY_MS = STORY_SECONDS * 1000;
@@ -63,6 +65,8 @@ function themeOf(story: StoryKey, w: Wrapped): Theme {
       : w.clock?.kind === 'afternoon' ? { bg: '#9fd3ff', light: false }
       : w.clock?.kind === 'evening' ? { bg: '#2a1f4d', light: true }
       : { bg: '#121633', light: true };
+    case 'requests': return { bg: '#a8e6df', light: false };
+    case 'oddest': return { bg: '#f3e3c3', light: false };
     case 'personality': return { bg: 'linear-gradient(160deg, #cdb4ff 0%, #e6b8ff 55%, #ff9fff 100%)', light: false };
     default: return { bg: '#0e0e0e', light: true };
   }
@@ -79,6 +83,8 @@ const LABELS: Record<StoryKey, () => string> = {
   movie: () => t('Your most-watched movie'),
   binge: () => t('Your biggest binge'),
   clock: () => '',
+  requests: () => tc('Your requests', 'wrapped'),
+  oddest: () => t('Your oddest request'),
   personality: () => t('Your watch personality'),
   summary: () => t('Seedy Wrapped')
 };
@@ -100,9 +106,10 @@ export function Story(p: StoryProps) {
       <Backdrop story={story} w={w} />
       <div style="height: 14px" />
       <Header {...p} light={th.light} />
-      <div style="position: absolute; z-index: 2; left: 0; right: 0; top: 80px; bottom: 96px; display: flex; flex-direction: column; padding: 0 24px">
+      <div style={`position: absolute; z-index: 2; left: 0; right: 0; top: 80px; bottom: ${SPOTS[story] ? 214 : 96}px; display: flex; flex-direction: column; padding: 0 24px`}>
         <Content {...p} />
       </div>
+      <MeduSpot story={story} w={w} light={th.light} />
       <Footer {...p} light={th.light} />
     </div>
   );
@@ -118,6 +125,8 @@ function Backdrop({ story, w }: { story: StoryKey; w: Wrapped }) {
     case 'movie': return <MovieBackdrop />;
     case 'binge': return <BingeBackdrop />;
     case 'clock': return <NightBackdrop kind={w.clock?.kind} />;
+    case 'requests': return <RequestsBackdrop />;
+    case 'oddest': return <OddestBackdrop />;
     case 'personality': return <PersonalityBackdrop />;
     default: return <SummaryBackdrop />;
   }
@@ -192,14 +201,14 @@ function Footer(p: StoryProps & { light: boolean }) {
   );
 }
 
-/* Medu's speech bubble; its tail points down at Medu on its [side]. */
-function Say({ children, side, dark, delay, style }: { children: ComponentChildren; side: 'left' | 'right'; dark?: boolean; delay: number; style: string }) {
+/* Medu's speech bubble; its tail points sideways at Medu, on her [side]. */
+function Say({ children, side, dark, delay }: { children: ComponentChildren; side: 'left' | 'right'; dark?: boolean; delay: number }) {
   const bg = dark ? DARK : '#ffffff';
   const fg = dark ? '#ffffff' : DARK;
   return (
-    <span class="say" style={`animation-delay: ${delay.toFixed(2)}s; position: relative; display: block; max-width: 190px; padding: 10px 14px; border-radius: 18px; background: ${bg}; color: ${fg}; font-size: 14px; font-weight: 800; line-height: 1.3; ${style}`}>
+    <span class="say" style={`animation-delay: ${delay.toFixed(2)}s; position: relative; display: block; max-width: 206px; padding: 10px 14px; border-radius: 18px; background: ${bg}; color: ${fg}; font-size: 14px; font-weight: 800; line-height: 1.3; text-wrap: balance; transform-origin: ${side === 'left' ? '0' : '100%'} 50%`}>
       {children}
-      <span aria-hidden="true" style={`position: absolute; bottom: -7px; ${side}: 22px; width: 16px; height: 16px; background: ${bg}; transform: rotate(45deg); border-radius: 3px`} />
+      <span aria-hidden="true" style={`position: absolute; ${side}: -5px; top: 50%; width: 14px; height: 14px; margin-top: -7px; background: ${bg}; transform: rotate(45deg); border-radius: 3px`} />
     </span>
   );
 }
@@ -212,6 +221,43 @@ function MeduAt({ mood, size, label, glow = true }: { mood: MeduMood; size: numb
   return <span role="img" aria-label={label} style="display: block"><MeduProps mood={mood} size={size} glow={glow} /></span>;
 }
 
+/* Where Medu sits on each story (the side her bubble's tail points to) and when she pops in; her bubble follows. */
+const SPOTS: Partial<Record<StoryKey, { side: 'left' | 'right'; at: number }>> = {
+  hours: { side: 'right', at: 1.5 }, lover: { side: 'left', at: 1.8 }, genres: { side: 'right', at: 1.3 }, shows: { side: 'left', at: 1.5 },
+  movie: { side: 'right', at: 1.7 }, binge: { side: 'left', at: 2 }, clock: { side: 'right', at: 1.6 }, requests: { side: 'left', at: 1.7 },
+  oddest: { side: 'right', at: 1.8 }, personality: { side: 'left', at: 1.6 }
+};
+
+function meduLine(story: StoryKey, w: Wrapped): MeduLine | null {
+  switch (story) {
+    case 'hours': return hoursMedu(w);
+    case 'lover': return loverMedu(w);
+    case 'genres': return genreMedu(w);
+    case 'shows': return showsMedu(w);
+    case 'movie': return movieMedu(w);
+    case 'binge': return bingeMedu(w);
+    case 'clock': return w.clock ? clockMedu(w) : null;
+    case 'requests': return requestsMedu(w);
+    case 'oddest': return oddestMedu(w);
+    case 'personality': return personalityMedu(w.personality.key);
+    default: return null;
+  }
+}
+
+/* Medu at the bottom of a story, 84 px up, with what she has to say: a dark bubble on light stories, a white one on dark. */
+function MeduSpot({ story, w, light }: { story: StoryKey; w: Wrapped; light: boolean }) {
+  const spot = SPOTS[story];
+  const line = spot ? meduLine(story, w) : null;
+  if (!spot || !line?.text) return null;
+  const bubble = <div style="height: 82px; display: flex; align-items: center"><Say side={spot.side} dark={!light} delay={spot.at + 0.3}>{line.text}</Say></div>;
+  const medu = <Pop delay={spot.at}><MeduAt mood={line.mood} size={88} label={t('Medu')} /></Pop>;
+  return (
+    <div style={`position: absolute; z-index: 4; ${spot.side}: 14px; bottom: 84px; display: flex; align-items: flex-start; gap: 12px`}>
+      {spot.side === 'left' ? <>{medu}{bubble}</> : <>{bubble}{medu}</>}
+    </div>
+  );
+}
+
 function Content(p: StoryProps) {
   switch (p.story) {
     case 'cover': return <Cover {...p} />;
@@ -222,6 +268,8 @@ function Content(p: StoryProps) {
     case 'movie': return <MovieStory {...p} />;
     case 'binge': return <Binge {...p} />;
     case 'clock': return <Clock {...p} />;
+    case 'requests': return <Requests {...p} />;
+    case 'oddest': return <Oddest {...p} />;
     case 'personality': return <Personality {...p} />;
     default: return <Summary {...p} />;
   }
@@ -233,12 +281,8 @@ function Cover({ w, total, onNext, still }: StoryProps) {
   const year = String(w.year);
   return (
     <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center">
-      <Pop delay={0.15} style="margin-bottom: 30px"><MeduAt mood="party" size={156} glow={false} label={t('Medu, ready to party')} /></Pop>
-      <div class="in" style="animation-delay: .45s; position: relative; font-size: 118px; line-height: 0.9; font-weight: 900; letter-spacing: -0.05em">
-        <span aria-hidden="true" style="position: absolute; left: 0; top: -30px; -webkit-text-stroke: 2px rgba(255, 159, 255, 0.22); color: transparent">{year}</span>
-        <span aria-hidden="true" style="position: absolute; left: 0; top: -15px; -webkit-text-stroke: 2px rgba(255, 159, 255, 0.45); color: transparent">{year}</span>
-        <span style={`position: relative; color: ${ACCENT}`}>{year}</span>
-      </div>
+      <Pop delay={0.15} style="margin-bottom: 18px"><MeduAt mood="party" size={164} glow={false} label={t('Medu, ready to party')} /></Pop>
+      <div class="in" style={`animation-delay: .45s; position: relative; font-size: 118px; line-height: 0.9; font-weight: 900; letter-spacing: -0.05em; color: ${ACCENT}`}>{year}</div>
       <h1 class="in" style="animation-delay: .6s; margin: 8px 0 0; font-size: 50px; line-height: 1; font-weight: 900; letter-spacing: -0.02em; text-transform: uppercase; color: #ffffff">{t('Wrapped')}</h1>
       <p class="in" style="animation-delay: .75s; margin: 16px 0 0; max-width: 300px; font-size: 16px; line-height: 1.45; color: #c8c8c8">{t('Medu took notes all year. Here’s what you watched, binged and couldn’t stop rewatching.')}</p>
       <button class="in" type="button" onClick={onNext} tabIndex={still ? -1 : 0} style="animation-delay: .9s; position: relative; z-index: 5; display: flex; align-items: center; gap: 10px; height: 54px; margin-top: 26px; padding: 0 30px; border: 0; border-radius: 999px; background: #f0f0f0; color: #1e1e1e; font-size: 17px; font-weight: 900; cursor: pointer">
@@ -274,25 +318,22 @@ function Hours({ w }: StoryProps) {
   const hours = hoursOf(w.watchMs);
   const text = formatNumber(hours);
   const big = text.length > 5 ? 100 : 128;
-  return <>
-    <span class="in" style="animation-delay: .1s; margin-top: 18px; font-size: 22px; font-weight: 800">{t('This year you watched')}</span>
-    <div role="img" aria-label={tn(hours, '{n} hour', '{n} hours')} style={`margin: 6px 0 0 -6px; font-size: ${big}px; font-weight: 900; letter-spacing: -0.06em; font-variant-numeric: tabular-nums`}>
-      <Odometer text={text} />
+  return (
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; padding-bottom: 20px">
+      <span class="in" style="animation-delay: .1s; font-size: 22px; font-weight: 800">{t('This year you watched')}</span>
+      <div role="img" aria-label={tn(hours, '{n} hour', '{n} hours')} style={`margin: 6px 0 0 -6px; font-size: ${big}px; font-weight: 900; letter-spacing: -0.06em; font-variant-numeric: tabular-nums`}>
+        <Odometer text={text} />
+      </div>
+      <span class="in" style="animation-delay: .9s; margin-top: -22px; font-size: 62px; line-height: 1; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase">{hours === 1 ? t('hour') : t('hours')}</span>
+      <div class="in" style="animation-delay: 1.3s; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px">
+        {hourChips(w).map((c) => (
+          <span key={c.small} style="display: flex; flex-direction: column; gap: 1px; padding: 10px 13px; border-radius: 16px; background: #1e1e1e; color: #ffffff">
+            <b style="font-size: 19px; font-weight: 900">{c.big}</b><span style="font-size: 12px; color: #c8c8c8">{c.small}</span>
+          </span>
+        ))}
+      </div>
     </div>
-    <span class="in" style="animation-delay: .9s; margin-top: -22px; font-size: 62px; line-height: 1; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase">{hours === 1 ? t('hour') : t('hours')}</span>
-    <div class="in" style="animation-delay: 1.3s; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px">
-      {hourChips(w).map((c) => (
-        <span key={c.small} style="display: flex; flex-direction: column; gap: 1px; padding: 10px 13px; border-radius: 16px; background: #1e1e1e; color: #ffffff">
-          <b style="font-size: 19px; font-weight: 900">{c.big}</b><span style="font-size: 12px; color: #c8c8c8">{c.small}</span>
-        </span>
-      ))}
-    </div>
-    <div style="flex: 1" />
-    <div style="display: flex; align-items: flex-end; justify-content: flex-end; gap: 0; margin-right: -14px">
-      <Say side="right" delay={1.8} style="margin-bottom: 120px; margin-right: -26px">{t('I made popcorn for every single one of them.')}</Say>
-      <Pop delay={1.5}><MeduAt mood="popcorn" size={150} label={t('Medu with popcorn')} /></Pop>
-    </div>
-  </>;
+  );
 }
 
 // ── 3 · Shows or movies? ──
@@ -326,11 +367,6 @@ function Lover({ w }: StoryProps) {
       <span style="font-size: 22px; font-weight: 900">{loverUnit(other.count, !shows)}</span>
     </div>
     <span class="in" style="animation-delay: 1.6s; margin-top: 4px; font-size: 14px; font-weight: 700; opacity: 0.75">{other.line}</span>
-    <div style="flex: 1" />
-    <div style="display: flex; align-items: flex-end; justify-content: flex-end; margin: 0 -10px -6px 0">
-      <Say side="right" dark delay={2.1} style="margin-bottom: 48px; margin-right: -12px">{loverMedu(w)}</Say>
-      <Pop delay={1.8}><MeduAt mood="sad" size={74} label={t('Medu, a little sad')} /></Pop>
-    </div>
   </>;
 }
 
@@ -360,11 +396,6 @@ function Genres({ w }: StoryProps) {
       })}
     </ol>
     {genreOther(w) && <span class="in" style="animation-delay: 1.2s; margin-top: 14px; font-size: 12px; color: #8c8c8c">{genreOther(w)}</span>}
-    <div style="flex: 1" />
-    <div style="display: flex; align-items: flex-end; gap: 0; margin-left: -10px">
-      <Pop delay={1.4}><MeduAt mood="think" size={104} label={t('Medu, thinking')} /></Pop>
-      <Say side="left" delay={1.7} style="margin-bottom: 92px; margin-left: -14px">{genreMedu(w)}</Say>
-    </div>
   </>;
 }
 
@@ -417,7 +448,7 @@ function Shows({ w }: StoryProps) {
   if (!first) return null;
   return <>
     <h2 class="in" style="animation-delay: .1s; margin: 18px 0 0; font-size: 44px; line-height: 0.98; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase">{t('Your top')}<br />{t('shows')}</h2>
-    <div class="pop" style="animation-delay: .35s; position: relative; flex: none; margin-top: 18px; height: 158px; border-radius: 22px; overflow: hidden; box-shadow: 0 14px 30px rgba(30, 30, 30, 0.25)">
+    <div class="pop" style="animation-delay: .35s; position: relative; flex: none; margin-top: 18px; height: 146px; border-radius: 22px; overflow: hidden; box-shadow: 0 14px 30px rgba(30, 30, 30, 0.25)">
       <Wide item={first.item} seed={first.id} width={700} backdrop />
       <div style="position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0) 60%)" />
       <span aria-hidden="true" style="position: absolute; right: 16px; top: 0; font-size: 92px; line-height: 1; font-weight: 900; letter-spacing: -0.05em; color: transparent; -webkit-text-stroke: 2.5px #ffffff">1</span>
@@ -443,11 +474,6 @@ function Shows({ w }: StoryProps) {
       ))}
     </ol>
     {showsFootnote(w) && <p class="in" style="animation-delay: 1.3s; margin: 14px 0 0; font-size: 14px; line-height: 1.45; font-weight: 600; opacity: 0.75">{showsFootnote(w)}</p>}
-    <div style="flex: 1" />
-    <div style="display: flex; align-items: flex-end; justify-content: flex-end; margin: 0 -10px -6px 0">
-      <Say side="right" dark delay={1.8} style="margin-bottom: 52px; margin-right: -14px">{showsMedu(w)}</Say>
-      <Pop delay={1.5}><MeduAt mood="wave" size={78} label={t('Medu, waving')} /></Pop>
-    </div>
   </>;
 }
 
@@ -478,18 +504,18 @@ function MovieStory({ w }: StoryProps) {
   const title = movieTitle(w);
   return <>
     <h2 class="in" style="animation-delay: .1s; margin: 18px 0 0; font-size: 40px; line-height: 0.98; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase">{title}</h2>
-    <div style="position: relative; display: flex; justify-content: center; margin-top: 26px">
-      <div class="pop" style="animation-delay: .35s; position: relative; width: 196px; height: 294px; border-radius: 16px; overflow: hidden; transform: rotate(-4deg); box-shadow: 0 22px 44px rgba(60, 30, 0, 0.35); background: #2a1519">
+    <div style="position: relative; display: flex; justify-content: center; margin-top: 22px">
+      <div class="pop" style="animation-delay: .35s; position: relative; width: 170px; height: 255px; border-radius: 16px; overflow: hidden; transform: rotate(-4deg); box-shadow: 0 22px 44px rgba(60, 30, 0, 0.35); background: #2a1519">
         {poster
           ? <img src={poster} alt="" crossOrigin="anonymous" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover" />
           : <LanternArt name={m.name} />}
       </div>
-      <span class="pop" role="img" aria-label={tn(m.views, 'Watched {n} time', 'Watched {n} times')} style="animation-delay: .8s; position: absolute; right: 6px; top: -10px; width: 108px; height: 108px; border-radius: 50%; background: #1e1e1e; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: rotate(8deg)">
+      <span class="pop" role="img" aria-label={tn(m.views, 'Watched {n} time', 'Watched {n} times')} style="animation-delay: .8s; position: absolute; right: 22px; top: -8px; width: 100px; height: 100px; border-radius: 50%; background: #1e1e1e; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: rotate(8deg)">
         <b style="font-size: 50px; line-height: 0.9; font-weight: 900; letter-spacing: -0.04em">{formatNumber(m.views)}×</b>
         <span style={`font-size: 11px; font-weight: 800; color: ${ACCENT}`}>{t('watched')}</span>
       </span>
     </div>
-    <div class="in" style="animation-delay: 1s; display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 22px; text-align: center">
+    <div class="in" style="animation-delay: 1s; display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 18px; text-align: center">
       <b style="font-size: 30px; line-height: 1.1; font-weight: 900; letter-spacing: -0.02em">{m.name}</b>
       <span style="font-size: 14px; font-weight: 600; opacity: 0.75">{movieMeta(w)}</span>
     </div>
@@ -497,11 +523,6 @@ function MovieStory({ w }: StoryProps) {
       {movieTickets(w).map((month, i) => (
         <span key={i} class="pop" style={`animation-delay: ${(1.2 + i * 0.12).toFixed(2)}s; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 0 1 58px; min-width: 0; height: 34px; border-radius: 8px; background: #1e1e1e; color: #ffffff; font-size: 11px; font-weight: 800; line-height: 1.15; -webkit-mask: ${TICKET_MASK}; mask: ${TICKET_MASK}`}>{month}</span>
       ))}
-    </div>
-    <div style="flex: 1" />
-    <div style="display: flex; align-items: flex-end; margin-left: -12px">
-      <Pop delay={1.7}><MeduAt mood="love" size={96} label={t('Medu, in love')} /></Pop>
-      <Say side="left" delay={2} style="margin-bottom: 80px; margin-left: -10px">{movieMedu(w)}</Say>
     </div>
   </>;
 }
@@ -546,11 +567,6 @@ function Binge({ w }: StoryProps) {
       </div>
     )}
     <p class="in" style="animation-delay: 1.9s; margin: 14px 0 0; font-size: 15px; line-height: 1.45; font-weight: 700">{bingeText(w)}</p>
-    <div style="flex: 1" />
-    <div style="display: flex; align-items: flex-end; margin: 0 0 -6px -10px">
-      <Pop delay={2.1}><MeduAt mood="search" size={80} label={t('Medu, baffled')} /></Pop>
-      <Say side="left" dark delay={2.4} style="margin-bottom: 56px; margin-left: -8px">{t('Did you… blink at all?')}</Say>
-    </div>
   </>;
 }
 
@@ -598,15 +614,120 @@ function Clock({ w }: StoryProps) {
     <p class="in" style={`animation-delay: 1.4s; margin: 6px 0 0; font-size: 16px; line-height: 1.45; color: ${day ? '#3a3a3a' : '#c8c8c8'}`}>
       {at >= 0 ? <>{share.slice(0, at)}{pct}{share.slice(at + 5)}</> : share} {clockDay(w)}
     </p>
-    <div style="flex: 1" />
-    <div style="display: flex; align-items: flex-end; justify-content: flex-end; margin-right: -10px">
-      <Say side="right" dark={day} delay={1.9} style="margin-bottom: 70px; margin-right: -18px">{clockMedu(w)}</Say>
-      <Pop delay={1.6}><MeduAt mood={clockMood(w)} size={104} label={w.clock.kind === 'night' ? t('Medu, sleepy') : t('Medu, waving')} /></Pop>
+  </>;
+}
+
+// ── 9 · Your requests ──
+
+function Requests({ w }: StoryProps) {
+  const r = w.requests;
+  if (!r) return null;
+  const parts = [
+    { n: r.here, label: t('{n} here', { n: formatNumber(r.here) }), line: t('arrived and ready to watch'), bg: DARK, fg: '#ffffff', ring: 'none', start: true },
+    { n: r.coming, label: formatNumber(r.coming), line: t('on the way'), bg: 'rgba(30, 30, 30, 0.45)', fg: '#ffffff', ring: 'none', start: false },
+    { n: r.declined, label: formatNumber(r.declined), line: t('declined, not available yet'), bg: 'transparent', fg: DARK, ring: 'inset 0 0 0 2px #1e1e1e', start: false }
+  ].filter((x) => x.n > 0);
+  const cards = [
+    r.fastest && { big: arrivalTime(r.fastest.ms), small: t('fastest arrival: {title}', { title: arrivalName(r.fastest) }) },
+    r.genre && { big: genreName(r.genre), small: t('what you asked for most') }
+  ].filter((c): c is { big: string; small: string } => !!c);
+  return <>
+    <span class="in" style="animation-delay: .1s; margin-top: 18px; font-size: 18px; font-weight: 800">{tc('Your requests', 'wrapped')}</span>
+    <div role="img" aria-label={tn(r.count, '{n} title requested', '{n} titles requested')} style="display: flex; align-items: flex-end; gap: 12px; margin-top: 10px">
+      <span style="font-size: 112px; line-height: 0.86; font-weight: 900; letter-spacing: -0.06em"><Odometer text={formatNumber(r.count)} delay={0.3} /></span>
+      <span class="in" style="animation-delay: .8s; padding-bottom: 8px; font-size: 28px; line-height: 0.95; font-weight: 900">
+        {tc(r.count === 1 ? 'title' : 'titles', 'count')}<br />{tc('requested', r.count === 1 ? 'one' : 'other')}
+      </span>
+    </div>
+    <div role="img" aria-label={t('{a} arrived, {b} on the way, {c} declined', { a: r.here, b: r.coming, c: r.declined })} style="display: flex; gap: 3px; height: 34px; margin-top: 24px">
+      {parts.map((x, i) => (
+        <span key={x.line} class="grow" style={`animation-delay: ${(0.7 + i * 0.15).toFixed(2)}s; flex: ${x.n}; display: flex; align-items: center; justify-content: ${x.start ? 'flex-start' : 'center'}; padding: 0 10px; border-radius: 9px; background: ${x.bg}; box-shadow: ${x.ring}; color: ${x.fg}; font-size: 13px; font-weight: 900; white-space: nowrap`}>{x.label}</span>
+      ))}
+    </div>
+    <ul class="in" style="animation-delay: 1.2s; list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+      {parts.map((x) => (
+        <li key={x.line} style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700">
+          <span aria-hidden="true" style={`width: 12px; height: 12px; border-radius: 4px; background: ${x.bg}; box-shadow: ${x.ring}`} />
+          <b style="width: 26px; font-weight: 900">{formatNumber(x.n)}</b>{x.line}
+        </li>
+      ))}
+    </ul>
+    {cards.length > 0 && (
+      <div class="in" style="animation-delay: 1.4s; display: flex; gap: 8px; margin-top: 20px">
+        {cards.map((c) => (
+          <div key={c.small} style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 14px; border-radius: 18px; background: #1e1e1e; color: #ffffff">
+            <b style="font-size: 26px; line-height: 1; font-weight: 900; letter-spacing: -0.02em; overflow-wrap: break-word">{c.big}</b>
+            <span style="font-size: 12px; line-height: 1.35; color: #c8c8c8">{c.small}</span>
+          </div>
+        ))}
+      </div>
+    )}
+  </>;
+}
+
+// ── 10 · The oddest request ──
+
+/* The board's retro poster, for a title without one: a ringed planet under the stars, its name across the bottom. */
+function RetroPoster({ name }: { name: string }) {
+  const stars = Array.from({ length: 26 }, (_, i) => [(i * 97) % 400, (i * 61) % 330, [1.5, 2.5, 3.5][i % 3], [0.4, 0.6, 0.8][i % 3]] as const);
+  return (
+    <svg viewBox="0 0 400 600" style="position: absolute; inset: 0; width: 100%; height: 100%" aria-hidden="true">
+      <rect width="400" height="600" fill="#1f2a44" />
+      {stars.map(([x, y, r, o], i) => <circle key={i} cx={x} cy={y} r={r} fill="#f3e3c3" opacity={o} />)}
+      <circle cx="220" cy="230" r="118" fill="#e86f4f" />
+      <ellipse cx="220" cy="236" rx="178" ry="34" fill="none" stroke="#f3e3c3" stroke-width="10" transform="rotate(-14 220 236)" />
+      <foreignObject x="20" y="400" width="360" height="180">
+        <div style="height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; font: 900 52px/1.02 var(--font); letter-spacing: -1px; color: #f3e3c3; text-transform: uppercase; overflow: hidden">{name}</div>
+      </foreignObject>
+    </svg>
+  );
+}
+
+function Oddest({ w }: StoryProps) {
+  const o = w.oddest;
+  if (!o) return null;
+  const poster = o.item ? primaryUrl(o.item, 300) : tmdbImage(o.posterPath, 'w342');
+  const size = o.name.length > 26 ? 32 : o.name.length > 16 ? 38 : 44;
+  const facts = [
+    o.year ? { big: String(o.year), small: t('released') } : null,
+    { big: oddRating(o.rating), small: t('on TMDB') },
+    { big: formatNumber(o.votes), small: o.votes === 1 ? t('person rated it') : t('people rated it') },
+    { big: o.requesters <= 1 ? t('Only you') : tn(o.requesters, '{n} person', '{n} people'), small: tc('asked for it', o.requesters <= 1 ? 'one' : 'other') }
+  ].filter((f): f is { big: string; small: string } => !!f);
+  return <>
+    <span class="in" style="animation-delay: .1s; margin-top: 18px; font-size: 18px; font-weight: 800">{t('Your oddest request')}</span>
+    <h2 class="in" style={`animation-delay: .2s; margin: 6px 0 0; font-size: ${size}px; line-height: 0.95; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical`}>{o.name}</h2>
+    <div style="display: flex; gap: 18px; margin-top: 18px">
+      <div class="pop" style="animation-delay: .4s; position: relative; flex: none; width: 140px; height: 210px; border-radius: 12px; overflow: hidden; transform: rotate(-3deg); box-shadow: 0 16px 34px rgba(60, 30, 0, 0.3); background: #1f2a44">
+        {poster
+          ? <img src={poster} alt="" crossOrigin="anonymous" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover" />
+          : <RetroPoster name={o.name} />}
+      </div>
+      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+        {facts.map((f, i) => (
+          <div key={f.small} class="in" style={`animation-delay: ${(0.7 + i * 0.1).toFixed(2)}s; display: flex; flex-direction: column; padding: 8px 0; border-top: 2px solid rgba(30, 30, 30, 0.14)`}>
+            <b style="font-size: 22px; line-height: 1.05; font-weight: 900; letter-spacing: -0.02em">{f.big}</b>
+            <span style="font-size: 12px; font-weight: 700; opacity: 0.7">{f.small}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div class="in" style="animation-delay: 1.2s; margin-top: 20px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <b style="font-size: 13px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase">{t('Odd-o-meter')}</b>
+        <span style="font-size: 13px; font-weight: 900">{t('{n} / 100', { n: formatNumber(o.score) })}</span>
+      </div>
+      <div role="img" aria-label={t('Oddness {n} out of 100', { n: o.score })} style="position: relative; height: 16px; margin-top: 6px; border-radius: 8px; background: rgba(30, 30, 30, 0.12)">
+        <span class="grow" style={`animation-delay: 1.4s; position: absolute; left: 0; top: 0; bottom: 0; width: ${Math.max(4, o.score)}%; border-radius: 8px; background: linear-gradient(90deg, #1e1e1e 0%, #1e1e1e 60%, #e86f4f 100%)`} />
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 11px; font-weight: 800; opacity: 0.7">
+        <span>{tc('Normal', 'odd')}</span><span>{t('Curious')}</span><span>{t('Medu is concerned')}</span>
+      </div>
     </div>
   </>;
 }
 
-// ── 8 · The personality ──
+// ── 11 · The personality ──
 
 export function PersonalityIcon({ kind, size }: { kind: string; size: number }) {
   const paths: Record<string, preact.JSX.Element> = {
@@ -617,6 +738,7 @@ export function PersonalityIcon({ kind, size }: { kind: string; size: number }) 
     regular: <><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>,
     slowburner: <><path d="M7 3h10M7 21h10" /><path d="M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9" /></>,
     weekender: <><path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3" /><path d="M3 11a2 2 0 0 1 2 2v2h14v-2a2 2 0 1 1 2 2v3H3v-3a2 2 0 0 1 0-4z" /><path d="M6 18v2M18 18v2" /></>,
+    completionist: <><circle cx="12" cy="12" r="9" /><path d="M8 12.5l2.7 2.7L16 9.5" /></>,
     easygoing: <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />
   };
   return <svg viewBox="0 0 24 24" width={size} height={size} style={ICON} aria-hidden="true">{paths[kind] ?? paths.easygoing}</svg>;
@@ -625,13 +747,16 @@ export function PersonalityIcon({ kind, size }: { kind: string; size: number }) 
 function Personality({ w }: StoryProps) {
   const key = w.personality.key;
   const name = personalityName(key);
+  // The longest word stays on one line ("The Completionist").
+  const longest = Math.max(...name.split(/\s+/).map((word) => word.length));
+  const size = longest > 11 ? 34 : name.length > 19 ? 36 : 40;
   return <>
     <span class="in" style="animation-delay: .1s; margin-top: 18px; font-size: 20px; font-weight: 800">{t('Your watch personality')}</span>
     <div class="pop" style="animation-delay: .4s; position: relative; margin-top: 16px; padding: 22px 22px 20px; border-radius: 26px; background: #1e1e1e; color: #ffffff">
       <span aria-hidden="true" style={`position: absolute; right: 18px; top: 18px; width: 52px; height: 52px; border-radius: 16px; background: ${ACCENT}; color: #1e1e1e; display: flex; align-items: center; justify-content: center`}><PersonalityIcon kind={key} size={28} /></span>
       <span aria-hidden="true" style="float: right; width: 52px; height: 50px; margin-right: -4px" />
       <span style={`display: block; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: ${ACCENT}`}>{t('You are')}</span>
-      <h2 style={`margin: 6px 0 0; font-size: ${name.length > 19 ? 36 : 40}px; line-height: 0.95; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase`}>{name}</h2>
+      <h2 style={`margin: 6px 0 0; font-size: ${size}px; line-height: 0.95; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase`}>{name}</h2>
       <p style="clear: both; margin: 12px 0 0; font-size: 15px; line-height: 1.45; color: #c8c8c8">{personalityText(key)}</p>
     </div>
     <ul style="list-style: none; margin: 18px 0 0; padding: 0">
@@ -645,15 +770,10 @@ function Personality({ w }: StoryProps) {
         );
       })}
     </ul>
-    <div style="flex: 1" />
-    <div style="display: flex; align-items: flex-end; justify-content: flex-end; margin-right: -8px">
-      <Say side="right" dark delay={1.9} style="margin-bottom: 84px; margin-right: -16px">{personalityMedu(key)}</Say>
-      <Pop delay={1.6}><MeduAt mood="yay" size={108} label={t('Medu, cheering')} /></Pop>
-    </div>
   </>;
 }
 
-// ── 9 · Summary: the share card ──
+// ── 12 · Summary: the share card ──
 
 export function SummaryCard({ w, cardRef }: { w: Wrapped; cardRef?: (el: HTMLElement | null) => void }) {
   const brand = useStore(brandingStore).name || 'Seedy';
@@ -697,6 +817,7 @@ export function SummaryCard({ w, cardRef }: { w: Wrapped; cardRef?: (el: HTMLEle
           <div style="display: flex; flex-direction: column; gap: 1px">
             <span style={label}>{t('Hours')}</span>
             <b style="font-size: 30px; line-height: 1.05; font-weight: 900; letter-spacing: -0.02em">{formatNumber(hoursOf(w.watchMs))}</b>
+            {summaryCounts(w) && <span style="margin-top: 2px; font-size: 11px; font-weight: 800; opacity: 0.7">{summaryCounts(w)}</span>}
           </div>
           {w.genres[0] && (
             <div style="display: flex; flex-direction: column; gap: 1px">
