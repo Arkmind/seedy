@@ -1,4 +1,5 @@
-import type { ComponentChildren } from 'preact';
+import type { ComponentChildren, JSX } from 'preact';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { useStore } from '../../lib/store';
 import { brandingStore } from '../../lib/app-state';
 import { formatNumber, t, tc, tn } from '../../lib/i18n';
@@ -146,7 +147,7 @@ function Header(p: StoryProps & { light: boolean }) {
             {i === p.index && (
               <span
                 class="seg-now"
-                style={`position: absolute; inset: 0; border-radius: 2px; background: ${ink}; animation-duration: ${STORY_MS}ms`}
+                style={`position: absolute; inset: 0; border-radius: 2px; background: ${ink}; --wr-seg: ${STORY_MS}ms; animation-duration: var(--wr-seg)`}
                 onAnimationEnd={(e) => { if (e.animationName === 'wr-seg') p.onSegmentEnd?.(); }}
               />
             )}
@@ -215,6 +216,52 @@ function Say({ children, side, dark, delay }: { children: ComponentChildren; sid
 
 function Pop({ delay, children, style = '' }: { delay: number; children: ComponentChildren; style?: string }) {
   return <div class="pop" style={`animation-delay: ${delay}s; ${style}`}>{children}</div>;
+}
+
+/* Text that steps its font size down from `max` until it fits its box: `lines` lines (one: no wrapping), or the box's
+   own height. Below `min` it's clamped. Stories are drawn at a fixed size, so measuring is reliable once fonts are in. */
+function Fit({ text, max, min, lines, as = 'span', style = '', children }: {
+  /** The text, or what the children say (it's what makes it measure again). */
+  text: string; max: number; min: number; lines?: number; as?: 'span' | 'b' | 'h2' | 'div'; style?: string; children?: ComponentChildren;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  const [size, setSize] = useState(max);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const run = () => {
+      let px = max;
+      for (;;) {
+        el.style.fontSize = `${px}px`;
+        // Glyphs stick out of tight line heights by a fraction of an em; a line too many is a whole line.
+        if ((el.scrollHeight <= el.clientHeight + px * 0.45 + 1 && el.scrollWidth <= el.clientWidth + 1) || px <= min) break;
+        px -= 1;
+      }
+      setSize(px);
+    };
+    run();
+    document.fonts?.ready.then(run).catch(() => { /* measured already */ });
+  }, [text, max, min, lines]);
+  const clamp = lines === 1 ? 'display: block; white-space: nowrap; text-overflow: ellipsis'
+    : lines ? `display: -webkit-box; -webkit-line-clamp: ${lines}; -webkit-box-orient: vertical` : '';
+  const Tag = as as unknown as (p: JSX.HTMLAttributes<HTMLElement>) => JSX.Element;
+  return <Tag ref={ref} style={`${style}; overflow: hidden; ${clamp}; font-size: ${size}px`}>{children ?? text}</Tag>;
+}
+
+/* A line that only shows when there's room for it in the story's text area: a long list above hides it rather than
+   pushing it under Medu. Goes last in the area. */
+function IfRoom({ children }: { children: ComponentChildren }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState(true);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const area = el?.offsetParent as HTMLElement | null;
+    if (!el || !area) return;
+    const check = () => setRoom(el.offsetTop + el.offsetHeight <= area.clientHeight + 1);
+    check();
+    document.fonts?.ready.then(check).catch(() => { /* checked already */ });
+  });
+  return <div ref={ref} style={room ? '' : 'visibility: hidden'}>{children}</div>;
 }
 
 function MeduAt({ mood, size, label, glow = true }: { mood: MeduMood; size: number; label: string; glow?: boolean }) {
@@ -362,7 +409,8 @@ function Lover({ w }: StoryProps) {
       </div>
       <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; font-weight: 800"><span>{win}</span><span>{lose}</span></div>
     </div>
-    <div class="in" style="animation-delay: 1.5s; display: flex; align-items: baseline; gap: 8px; margin-top: 116px">
+    <div style="flex: 1; min-height: 24px" />
+    <div class="in" style="animation-delay: 1.5s; display: flex; align-items: baseline; gap: 8px">
       <b style="font-size: 52px; line-height: 0.9; font-weight: 900; letter-spacing: -0.05em">{formatNumber(other.count)}</b>
       <span style="font-size: 22px; font-weight: 900">{loverUnit(other.count, !shows)}</span>
     </div>
@@ -386,7 +434,7 @@ function Genres({ w }: StoryProps) {
           <li key={g.name} class="in" style={`animation-delay: ${(0.5 + i * 0.12).toFixed(2)}s; display: flex; align-items: center; gap: 14px`}>
             <span style={`flex: none; width: 82px; font-size: 38px; font-weight: 900; letter-spacing: -0.04em; color: ${color}`}>{formatNumber(g.pct)}%</span>
             <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px">
-              <span style="font-size: 16px; font-weight: 800; color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{genreName(g)}</span>
+              <Fit text={genreName(g)} max={16} min={12} lines={1} style="font-weight: 800; color: #ffffff" />
               <span style="display: block; height: 14px; border-radius: 7px; background: #262626">
                 <span class="grow" style={`display: block; width: ${Math.max(4, (g.pct / top) * 100).toFixed(1)}%; height: 100%; border-radius: 7px; background: ${color}; animation-delay: ${(0.6 + i * 0.12).toFixed(2)}s`} />
               </span>
@@ -395,7 +443,7 @@ function Genres({ w }: StoryProps) {
         );
       })}
     </ol>
-    {genreOther(w) && <span class="in" style="animation-delay: 1.2s; margin-top: 14px; font-size: 12px; color: #8c8c8c">{genreOther(w)}</span>}
+    {genreOther(w) && <IfRoom><span class="in" style="animation-delay: 1.2s; display: block; margin-top: 14px; font-size: 12px; color: #8c8c8c">{genreOther(w)}</span></IfRoom>}
   </>;
 }
 
@@ -454,7 +502,7 @@ function Shows({ w }: StoryProps) {
       <span aria-hidden="true" style="position: absolute; right: 16px; top: 0; font-size: 92px; line-height: 1; font-weight: 900; letter-spacing: -0.05em; color: transparent; -webkit-text-stroke: 2.5px #ffffff">1</span>
       <span style="position: absolute; left: 16px; right: 16px; bottom: 14px; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; color: #ffffff">
         <span style="display: flex; flex-direction: column; min-width: 0">
-          <b style="font-size: 26px; line-height: 1.15; font-weight: 900; letter-spacing: -0.01em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical">{first.name}</b>
+          <Fit as="b" text={first.name} max={26} min={18} lines={2} style="line-height: 1.15; font-weight: 900; letter-spacing: -0.01em" />
           <span style="font-size: 13px; color: #d0d0d0">{showMeta(first)}</span>
         </span>
         <span style={`flex: none; padding: 4px 10px; border-radius: 999px; background: ${ACCENT}; color: #1e1e1e; font-size: 12px; font-weight: 900`}>{t('Your #1')}</span>
@@ -466,14 +514,14 @@ function Shows({ w }: StoryProps) {
           <span style="flex: none; width: 30px; font-size: 30px; font-weight: 900; letter-spacing: -0.04em">{i + 2}</span>
           <span aria-hidden="true" style="position: relative; flex: none; width: 70px; height: 40px; border-radius: 9px; overflow: hidden"><Wide item={s.item} seed={s.id} width={160} /></span>
           <span style="flex: 1; min-width: 0; display: flex; flex-direction: column">
-            <b style="font-size: 17px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{s.name}</b>
+            <Fit as="b" text={s.name} max={17} min={13} lines={2} style="line-height: 1.15; font-weight: 900" />
             <span style="font-size: 13px; opacity: 0.7">{tn(s.episodes, '{n} episode', '{n} episodes')}</span>
           </span>
           <span style="flex: none; font-size: 15px; font-weight: 900">{showTime(s.watchMs)}</span>
         </li>
       ))}
     </ol>
-    {showsFootnote(w) && <p class="in" style="animation-delay: 1.3s; margin: 14px 0 0; font-size: 14px; line-height: 1.45; font-weight: 600; opacity: 0.75">{showsFootnote(w)}</p>}
+    {showsFootnote(w) && <IfRoom><p class="in" style="animation-delay: 1.3s; margin: 14px 0 0; font-size: 14px; line-height: 1.45; font-weight: 600; opacity: 0.75">{showsFootnote(w)}</p></IfRoom>}
   </>;
 }
 
@@ -491,7 +539,9 @@ function LanternArt({ name }: { name: string }) {
         <g key={x} transform={`translate(${x} ${y})`}><path d="M0 0v16" stroke="#3a1a1f" stroke-width="3" /><rect x="-14" y="16" width="28" height="38" rx="12" fill="#ffb38a" opacity={o} /></g>
       ))}
       <foreignObject x="20" y="490" width="360" height="100">
-        <div style="height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; font: 900 40px/1.05 var(--font); letter-spacing: 1px; color: #ffffff; text-transform: uppercase; overflow: hidden">{name}</div>
+        <div style="height: 100%; display: flex; align-items: center; justify-content: center">
+          <Fit as="div" text={name} max={40} min={20} lines={2} style="width: 100%; text-align: center; font-family: var(--font); font-weight: 900; line-height: 1.05; letter-spacing: 1px; color: #ffffff; text-transform: uppercase" />
+        </div>
       </foreignObject>
     </svg>
   );
@@ -516,14 +566,14 @@ function MovieStory({ w }: StoryProps) {
       </span>
     </div>
     <div class="in" style="animation-delay: 1s; display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 18px; text-align: center">
-      <b style="font-size: 30px; line-height: 1.1; font-weight: 900; letter-spacing: -0.02em">{m.name}</b>
+      <Fit as="b" text={m.name} max={30} min={18} lines={2} style="max-width: 100%; line-height: 1.1; font-weight: 900; letter-spacing: -0.02em" />
       <span style="font-size: 14px; font-weight: 600; opacity: 0.75">{movieMeta(w)}</span>
     </div>
-    <div style="display: flex; justify-content: center; gap: 6px; margin-top: 14px">
+    <IfRoom><div style="display: flex; justify-content: center; gap: 6px; margin-top: 14px">
       {movieTickets(w).map((month, i) => (
         <span key={i} class="pop" style={`animation-delay: ${(1.2 + i * 0.12).toFixed(2)}s; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 0 1 58px; min-width: 0; height: 34px; border-radius: 8px; background: #1e1e1e; color: #ffffff; font-size: 11px; font-weight: 800; line-height: 1.15; -webkit-mask: ${TICKET_MASK}; mask: ${TICKET_MASK}`}>{month}</span>
       ))}
-    </div>
+    </div></IfRoom>
   </>;
 }
 
@@ -548,8 +598,8 @@ function Binge({ w }: StoryProps) {
         </span>
       ))}
     </div>
-    <div class="in" style="animation-delay: 1.2s; display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 12px; font-weight: 800">
-      <span>{timeOf(b.start)}</span><span style="opacity: 0.7; text-align: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{bingeLine(w)}</span><span>{timeOf(b.end)}</span>
+    <div class="in" style="animation-delay: 1.2s; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-top: 6px; font-size: 12px; font-weight: 800">
+      <span>{timeOf(b.start)}</span><Fit text={bingeLine(w)} max={12} min={10} lines={2} style="flex: 1; min-width: 0; opacity: 0.7; text-align: center" /><span>{timeOf(b.end)}</span>
     </div>
     {w.still.asked > 0 && (
       <div style="position: relative; height: 158px; margin-top: 22px">
@@ -607,9 +657,12 @@ function Clock({ w }: StoryProps) {
   const at = share.indexOf('{pct}');
   const pct = <b style={`color: ${day ? DARK : '#ffffff'}`}>{formatNumber(w.clock.pct)}%</b>;
   return <>
-    <h2 class="in" style={`animation-delay: .1s; margin: 18px 0 0; font-size: 44px; line-height: 0.98; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase; color: ${day ? DARK : '#ffffff'}`}>
-      {lead}<br /><span style={`color: ${day ? '#7a3fd1' : ACCENT}`}>{accent}</span>
-    </h2>
+    {/* Clear of the sun or moon on the right. */}
+    <div class="in" style="animation-delay: .1s; margin: 18px 0 0; max-width: 290px">
+      <Fit as="h2" text={`${lead} ${accent}`} max={44} min={30} lines={3} style={`margin: 0; line-height: 0.98; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase; color: ${day ? DARK : '#ffffff'}`}>
+        {lead}<br /><span style={`color: ${day ? '#7a3fd1' : ACCENT}`}>{accent}</span>
+      </Fit>
+    </div>
     <div class="in" style="animation-delay: .3s"><ClockFace w={w} day={day} /></div>
     <p class="in" style={`animation-delay: 1.4s; margin: 6px 0 0; font-size: 16px; line-height: 1.45; color: ${day ? '#3a3a3a' : '#c8c8c8'}`}>
       {at >= 0 ? <>{share.slice(0, at)}{pct}{share.slice(at + 5)}</> : share} {clockDay(w)}
@@ -631,10 +684,13 @@ function Requests({ w }: StoryProps) {
     r.fastest && { big: arrivalTime(r.fastest.ms), small: t('fastest arrival: {title}', { title: arrivalName(r.fastest) }) },
     r.genre && { big: genreName(r.genre), small: t('what you asked for most') }
   ].filter((c): c is { big: string; small: string } => !!c);
+  // The board's 112 px for two digits; "1,234" has to leave room for "titles requested".
+  const digits = formatNumber(r.count).length;
+  const countSize = digits <= 2 ? 112 : digits === 3 ? 100 : 72;
   return <>
     <span class="in" style="animation-delay: .1s; margin-top: 18px; font-size: 18px; font-weight: 800">{tc('Your requests', 'wrapped')}</span>
     <div role="img" aria-label={tn(r.count, '{n} title requested', '{n} titles requested')} style="display: flex; align-items: flex-end; gap: 12px; margin-top: 10px">
-      <span style="font-size: 112px; line-height: 0.86; font-weight: 900; letter-spacing: -0.06em"><Odometer text={formatNumber(r.count)} delay={0.3} /></span>
+      <span style={`font-size: ${countSize}px; line-height: 0.86; font-weight: 900; letter-spacing: -0.06em`}><Odometer text={formatNumber(r.count)} delay={0.3} /></span>
       <span class="in" style="animation-delay: .8s; padding-bottom: 8px; font-size: 28px; line-height: 0.95; font-weight: 900">
         {tc(r.count === 1 ? 'title' : 'titles', 'count')}<br />{tc('requested', r.count === 1 ? 'one' : 'other')}
       </span>
@@ -648,7 +704,7 @@ function Requests({ w }: StoryProps) {
       {parts.map((x) => (
         <li key={x.line} style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700">
           <span aria-hidden="true" style={`width: 12px; height: 12px; border-radius: 4px; background: ${x.bg}; box-shadow: ${x.ring}`} />
-          <b style="width: 26px; font-weight: 900">{formatNumber(x.n)}</b>{x.line}
+          <b style="flex: none; min-width: 26px; font-weight: 900">{formatNumber(x.n)}</b>{x.line}
         </li>
       ))}
     </ul>
@@ -656,7 +712,7 @@ function Requests({ w }: StoryProps) {
       <div class="in" style="animation-delay: 1.4s; display: flex; gap: 8px; margin-top: 20px">
         {cards.map((c) => (
           <div key={c.small} style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 14px; border-radius: 18px; background: #1e1e1e; color: #ffffff">
-            <b style="font-size: 26px; line-height: 1; font-weight: 900; letter-spacing: -0.02em; overflow-wrap: break-word">{c.big}</b>
+            <Fit as="b" text={c.big} max={26} min={17} lines={2} style="line-height: 1.05; font-weight: 900; letter-spacing: -0.02em" />
             <span style="font-size: 12px; line-height: 1.35; color: #c8c8c8">{c.small}</span>
           </div>
         ))}
@@ -677,7 +733,9 @@ function RetroPoster({ name }: { name: string }) {
       <circle cx="220" cy="230" r="118" fill="#e86f4f" />
       <ellipse cx="220" cy="236" rx="178" ry="34" fill="none" stroke="#f3e3c3" stroke-width="10" transform="rotate(-14 220 236)" />
       <foreignObject x="20" y="400" width="360" height="180">
-        <div style="height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; font: 900 52px/1.02 var(--font); letter-spacing: -1px; color: #f3e3c3; text-transform: uppercase; overflow: hidden">{name}</div>
+        <div style="height: 100%; display: flex; align-items: center; justify-content: center">
+          <Fit as="div" text={name} max={52} min={24} lines={3} style="width: 100%; text-align: center; font-family: var(--font); font-weight: 900; line-height: 1.02; letter-spacing: -1px; color: #f3e3c3; text-transform: uppercase" />
+        </div>
       </foreignObject>
     </svg>
   );
@@ -687,7 +745,6 @@ function Oddest({ w }: StoryProps) {
   const o = w.oddest;
   if (!o) return null;
   const poster = o.item ? primaryUrl(o.item, 300) : tmdbImage(o.posterPath, 'w342');
-  const size = o.name.length > 26 ? 32 : o.name.length > 16 ? 38 : 44;
   const facts = [
     o.year ? { big: String(o.year), small: t('released') } : null,
     { big: oddRating(o.rating), small: t('on TMDB') },
@@ -696,7 +753,9 @@ function Oddest({ w }: StoryProps) {
   ].filter((f): f is { big: string; small: string } => !!f);
   return <>
     <span class="in" style="animation-delay: .1s; margin-top: 18px; font-size: 18px; font-weight: 800">{t('Your oddest request')}</span>
-    <h2 class="in" style={`animation-delay: .2s; margin: 6px 0 0; font-size: ${size}px; line-height: 0.95; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical`}>{o.name}</h2>
+    <div class="in" style="animation-delay: .2s; margin: 6px 0 0">
+      <Fit as="h2" text={o.name} max={44} min={24} lines={3} style="margin: 0; line-height: 0.95; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase" />
+    </div>
     <div style="display: flex; gap: 18px; margin-top: 18px">
       <div class="pop" style="animation-delay: .4s; position: relative; flex: none; width: 140px; height: 210px; border-radius: 12px; overflow: hidden; transform: rotate(-3deg); box-shadow: 0 16px 34px rgba(60, 30, 0, 0.3); background: #1f2a44">
         {poster
@@ -747,16 +806,13 @@ export function PersonalityIcon({ kind, size }: { kind: string; size: number }) 
 function Personality({ w }: StoryProps) {
   const key = w.personality.key;
   const name = personalityName(key);
-  // The longest word stays on one line ("The Completionist").
-  const longest = Math.max(...name.split(/\s+/).map((word) => word.length));
-  const size = longest > 11 ? 34 : name.length > 19 ? 36 : 40;
   return <>
     <span class="in" style="animation-delay: .1s; margin-top: 18px; font-size: 20px; font-weight: 800">{t('Your watch personality')}</span>
     <div class="pop" style="animation-delay: .4s; position: relative; margin-top: 16px; padding: 22px 22px 20px; border-radius: 26px; background: #1e1e1e; color: #ffffff">
       <span aria-hidden="true" style={`position: absolute; right: 18px; top: 18px; width: 52px; height: 52px; border-radius: 16px; background: ${ACCENT}; color: #1e1e1e; display: flex; align-items: center; justify-content: center`}><PersonalityIcon kind={key} size={28} /></span>
-      <span aria-hidden="true" style="float: right; width: 52px; height: 50px; margin-right: -4px" />
+      <span aria-hidden="true" style="float: right; width: 52px; height: 50px; margin: 0 -4px 0 8px" />
       <span style={`display: block; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: ${ACCENT}`}>{t('You are')}</span>
-      <h2 style={`margin: 6px 0 0; font-size: ${size}px; line-height: 0.95; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase`}>{name}</h2>
+      <Fit as="h2" text={name} max={40} min={26} lines={2} style="margin: 6px 0 0; line-height: 0.95; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase" />
       <p style="clear: both; margin: 12px 0 0; font-size: 15px; line-height: 1.45; color: #c8c8c8">{personalityText(key)}</p>
     </div>
     <ul style="list-style: none; margin: 18px 0 0; padding: 0">
@@ -807,7 +863,7 @@ export function SummaryCard({ w, cardRef }: { w: Wrapped; cardRef?: (el: HTMLEle
               {w.shows.slice(0, 5).map((s, i) => (
                 <li key={s.id} style="display: flex; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 800; white-space: nowrap; min-width: 0">
                   <span style="flex: none; width: 12px; font-weight: 900; opacity: 0.55">{i + 1}</span>
-                  <span style="overflow: hidden; text-overflow: ellipsis">{s.name}</span>
+                  <Fit text={s.name} max={14} min={12} lines={2} style="min-width: 0; line-height: 1.2; white-space: normal" />
                 </li>
               ))}
             </ol>
@@ -822,13 +878,13 @@ export function SummaryCard({ w, cardRef }: { w: Wrapped; cardRef?: (el: HTMLEle
           {w.genres[0] && (
             <div style="display: flex; flex-direction: column; gap: 1px">
               <span style={label}>{t('Top genre')}</span>
-              <b style="font-size: 18px; line-height: 1.05; font-weight: 900; letter-spacing: -0.02em">{genreName(w.genres[0])}</b>
+              <Fit as="b" text={genreName(w.genres[0])} max={18} min={13} lines={2} style="line-height: 1.05; font-weight: 900; letter-spacing: -0.02em" />
             </div>
           )}
           {w.movie && (
             <div style="display: flex; flex-direction: column; gap: 1px">
               <span style={label}>{t('Top movie')}</span>
-              <b style="font-size: 18px; line-height: 1.05; font-weight: 900; letter-spacing: -0.02em; overflow-wrap: anywhere">{w.movie.name}</b>
+              <Fit as="b" text={w.movie.name} max={18} min={12} lines={3} style="line-height: 1.05; font-weight: 900; letter-spacing: -0.02em" />
             </div>
           )}
         </div>
@@ -836,7 +892,7 @@ export function SummaryCard({ w, cardRef }: { w: Wrapped; cardRef?: (el: HTMLEle
       <div style="position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; padding: 12px 14px; border-radius: 16px; background: #1e1e1e; color: #ffffff">
         <span style="display: flex; flex-direction: column">
           <span style={`font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: ${ACCENT}`}>{t('Watch personality')}</span>
-          <b style="font-size: 17px; font-weight: 900">{personalityName(w.personality.key)}</b>
+          <Fit as="b" text={personalityName(w.personality.key)} max={17} min={13} lines={1} style="font-weight: 900" />
         </span>
         <PersonalityIcon kind={w.personality.key} size={24} />
       </div>

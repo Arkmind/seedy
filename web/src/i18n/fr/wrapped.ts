@@ -312,7 +312,7 @@ const fr: Record<string, string> = {
   'Also {list}': 'Et aussi {list}',
   '{n} request': '{n} demande',
   'Share': 'Partager',
-  'Save image': 'Enregistrer l’image',
+  'Save image': 'Enregistrer',
   'Watch Wrapped again': 'Revoir Wrapped',
   'Your {year}, all in one': 'Ton {year} en un coup d’œil',
   'top show {name}': 'série préférée {name}',

@@ -97,7 +97,8 @@ function Viewer({ w }: { w: WrappedData }) {
   // Wide: the board's 0.88 at 900 px tall, smaller when the window is; neighbours at 0.7 of that board's size.
   const scale = wide
     ? Math.max(0.45, Math.min(0.88, (vp.h - 157) / STORY_H, (vp.w - 280) / 1010))
-    : Math.min(vp.w / 390, vp.h / 800);
+    // Phones: never shorter than the board, as Medu sits at the bottom right under the story's text.
+    : Math.min(vp.w / 390, vp.h / STORY_H);
   const side = scale * (0.7 / 0.88);
   // From the middle of the current story to the middle of a neighbour: half of each, the arrow and the gaps.
   const shift = (390 * scale) / 2 + 26 + 56 + 26 + (390 * side) / 2;
