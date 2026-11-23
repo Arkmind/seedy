@@ -421,6 +421,7 @@ class PlaybackDraft(var enc: JsonObject = JsonObject(emptyMap()), var srv: JsonO
             listOfNotNull(
                 encSwitch("EnableTonemapping", t("Tone mapping"), t("Keeps HDR from looking washed out on SDR screens")),
                 encChoice("TonemappingAlgorithm", t("Algorithm"), t("How bright highlights are compressed"), Algorithms.map { (v, l) -> Choice(v, if (v in WordAlgorithms) t(l) else l) }),
+                number("enc", "TonemappingPeak", t("Peak brightness"), t("Usually 100. Higher makes highlights darker"), 0.0, 10000.0, "nits"),
                 if (intel) encSwitch("EnableVppTonemapping", t("Intel VPP tone mapping"), t("Uses Intel’s built-in tone mapping instead")) else null,
                 if (hw == "videotoolbox") encSwitch("EnableVideoToolboxTonemapping", t("VideoToolbox tone mapping"), t("Uses Apple’s built-in tone mapping instead")) else null,
             ),

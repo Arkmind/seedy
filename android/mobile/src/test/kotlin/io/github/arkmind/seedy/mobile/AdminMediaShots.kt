@@ -221,7 +221,7 @@ object MediaSamples {
             "EnableHardwareEncoding" to true, "AllowHevcEncoding" to true, "AllowAv1Encoding" to false,
             "EnableIntelLowPowerH264HwEncoder" to true, "EnableIntelLowPowerHevcHwEncoder" to true,
             "EncoderPreset" to "auto", "H264Crf" to 23, "H265Crf" to 28,
-            "EnableTonemapping" to true, "TonemappingAlgorithm" to "bt2390", "EnableVppTonemapping" to false,
+            "EnableTonemapping" to true, "TonemappingAlgorithm" to "bt2390", "TonemappingPeak" to 100, "EnableVppTonemapping" to false,
             "EncodingThreadCount" to -1, "EnableThrottling" to true, "ThrottleDelaySeconds" to 180, "EnableSegmentDeletion" to true, "SegmentKeepSeconds" to 720,
             "EnableSubtitleExtraction" to true, "DownMixAudioBoost" to 2, "DownMixStereoAlgorithm" to "None", "EnableAudioVbr" to false,
             "DeinterlaceMethod" to "yadif", "DeinterlaceDoubleRate" to false, "MaxMuxingQueueSize" to 2048, "EnableFallbackFont" to false,
