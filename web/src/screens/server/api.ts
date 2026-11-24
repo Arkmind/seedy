@@ -430,6 +430,7 @@ export interface EncodingOptions extends Rest {
   EnableVppTonemapping: boolean;
   EnableVideoToolboxTonemapping: boolean;
   TonemappingAlgorithm: TonemapAlgorithm;
+  TonemappingPeak: number;
   H264Crf: number;
   H265Crf: number;
   EncoderPreset: EncoderPreset;

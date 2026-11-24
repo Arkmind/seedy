@@ -356,6 +356,9 @@ function Transcoding({ o, set }: { o: EncodingOptions; set: (p: Partial<Encoding
         <SrvRow name={t('Algorithm')} help={t('How bright highlights are compressed')}>
           <SelectField label={t('Algorithm')} value={o.TonemappingAlgorithm} options={ALGORITHMS.map((a) => (WORD_ALGORITHMS.has(a.value) ? { ...a, label: t(a.label) } : a))} onChange={(v) => set({ TonemappingAlgorithm: v })} />
         </SrvRow>
+        <SrvRow name={t('Peak brightness')} help={t('Usually 100. Higher makes highlights darker')}>
+          <NumBox label={t('Peak brightness, in nits')} unit="nits" width={64} value={o.TonemappingPeak} min={0} max={10000} onChange={(v) => set({ TonemappingPeak: v })} />
+        </SrvRow>
         {intel && <SrvSwitchRow name={t('Intel VPP tone mapping')} help={t('Uses Intel’s built-in tone mapping instead')} on={o.EnableVppTonemapping} set={(v) => set({ EnableVppTonemapping: v })} />}
         {hw === 'videotoolbox' && <SrvSwitchRow name={t('VideoToolbox tone mapping')} help={t('Uses Apple’s built-in tone mapping instead')} on={o.EnableVideoToolboxTonemapping} set={(v) => set({ EnableVideoToolboxTonemapping: v })} />}
       </Group>
