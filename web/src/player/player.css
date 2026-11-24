@@ -22,6 +22,8 @@
 /* The experimental player's canvas (soft-media.ts), one box per player. */
 .pl-soft { overflow: hidden; }
 .pl-soft-box { position: absolute; inset: 0; }
+/* The canvas stays at the video's own size; scaling it here keeps line art smooth (soft-media.ts fit()). */
+.pl-soft-box canvas { object-fit: contain; }
 
 /* ── Comparison ("Every video (for testing)"): experimental player left, usual player right, a bar that moves ── */
 .pl-cmp { position: absolute; inset: 0; pointer-events: none; }

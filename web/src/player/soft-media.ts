@@ -30,6 +30,14 @@ const NO_RANGES = {
 const MEDIA_TYPES = ['Video', 'Audio', 'Data', 'Subtitle'];
 const COVER_ART = 0x400;
 
+/* The CSS size libmedia turns into `px` canvas pixels: it multiplies by the pixel ratio and the canvas drops the
+   fraction, so round up by a hair rather than lose a pixel row to 1079.9999. */
+function cssPixels(px: number, ratio: number) {
+  let css = px / ratio;
+  while (css * ratio < px) css += css * Number.EPSILON;
+  return css;
+}
+
 /* Resolves once the <video> has a first frame (picture in picture refuses an element without one). */
 function hasPicture(video: HTMLVideoElement, ms: number) {
   return new Promise<void>((resolve, reject) => {
@@ -74,13 +82,16 @@ export class SoftMedia extends EventTarget implements MediaLike {
   private dur = NaN;
   private width = 0;
   private height = 0;
+  /* Sample aspect ratio (anamorphic video), 1 for square pixels. */
+  private sar = 1;
+  /* The pixel ratio libmedia sized its canvas with, read when it starts drawing. */
+  private ratio = 0;
   private vol = 1;
   private mute = false;
   private rate = 1;
   private fps = 0;
   private destroyed = false;
   private timer = 0;
-  private resizer: ResizeObserver | null = null;
   /* This player's own box in the host: a replaced player may still be shutting down in its own. */
   private box: HTMLDivElement;
   private lastMove = 0;
@@ -132,6 +143,11 @@ export class SoftMedia extends EventTarget implements MediaLike {
       this.player = p;
       // libmedia stops drawing in a hidden page unless it is in picture in picture, which it only knows for its own windows.
       p.isPictureInPicture = () => this.inPip();
+      // libmedia sizes its canvas when it starts drawing (playback start, restart after the end).
+      p.on('firstVideoRendered', () => {
+        this.ratio = window.devicePixelRatio || 1;
+        this.fit();
+      });
       p.on('played', () => {
         this.running = true;
         this.stalled = false;
@@ -161,6 +177,8 @@ export class SoftMedia extends EventTarget implements MediaLike {
       const v = p.getStreams().find((s) => s.mediaType === 'Video' && !(s.disposition & COVER_ART));
       this.width = v?.codecparProxy.width ?? 0;
       this.height = v?.codecparProxy.height ?? 0;
+      const sar = v?.codecparProxy.sampleAspectRatio;
+      this.sar = sar && sar.num > 0 && sar.den > 0 ? sar.num / sar.den : 1;
       this.emit('durationchange');
       this.emit('loadedmetadata');
       this.emit('resize');
@@ -168,8 +186,6 @@ export class SoftMedia extends EventTarget implements MediaLike {
       if (this.destroyed) return;
       this.ready = true;
       this.emit('canplay');
-      this.resizer = new ResizeObserver(() => p.resize(this.box.clientWidth, this.box.clientHeight));
-      this.resizer.observe(this.box);
       this.timer = window.setInterval(() => this.tick(), 250);
       if (this.rate !== 1) p.setPlaybackRate(this.rate);
       if (this.want) await this.start();
@@ -202,6 +218,8 @@ export class SoftMedia extends EventTarget implements MediaLike {
   private tick() {
     const p = this.player;
     if (!p || !this.ready || this.seeking || !this.running || !this.want) return;
+    // A renderer libmedia rebuilds (lost GPU context, new frame format) starts again at the box's size.
+    this.fit();
     const now = performance.now();
     const t = Number(p.currentTime) / 1000;
     if (Math.abs(t - this.time) > 0.001) {
@@ -245,6 +263,17 @@ export class SoftMedia extends EventTarget implements MediaLike {
     w.at = now;
     w.frames = frames;
     w.time = this.time;
+  }
+
+  /* libmedia draws 10-bit frames (most anime releases, HDR) without smoothing: scaled in its renderer, rows and columns
+     of pixels get dropped or doubled and line art turns jagged. Its canvas keeps the video's own size instead, and the
+     browser scales it like a <video> (.pl-soft-box canvas). Also redraws the waiting frame when paused. */
+  private fit() {
+    const p = this.player;
+    if (!p || !this.ratio || !this.width || !this.height) return;
+    // libmedia's own display width for anamorphic video.
+    const w = this.sar !== 1 ? Math.floor(this.width * this.sar) : this.width;
+    p.resize(cssPixels(w, this.ratio), cssPixels(this.height, this.ratio));
   }
 
   private fail(code: SoftErrorCode, err?: unknown) {
@@ -307,7 +336,7 @@ export class SoftMedia extends EventTarget implements MediaLike {
     video.muted = true;
     void video.play().catch(() => undefined);
     // A paused canvas sends no frame: libmedia draws the waiting one again when resized.
-    if (!this.want) this.player?.resize(this.box.clientWidth, this.box.clientHeight);
+    if (!this.want) this.fit();
     try {
       await hasPicture(video, 3000);
       if (this.destroyed) throw new DOMException('The experimental player stopped', 'AbortError');
@@ -416,7 +445,6 @@ export class SoftMedia extends EventTarget implements MediaLike {
     if (this.destroyed) return;
     this.destroyed = true;
     window.clearInterval(this.timer);
-    this.resizer?.disconnect();
     this.endPip(false);
     const p = this.player;
     this.player = null;
