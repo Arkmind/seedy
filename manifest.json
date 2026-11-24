@@ -2,6 +2,14 @@
   {
     "versions": [
       {
+        "version": "0.5.4.0",
+        "changelog": "# What's Changed\n- Smooth outlines in anime\n  On the web, the experimental player no longer turns curves into stair steps\n\n## Updating\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart Jellyfin: the fix comes with it.\n- Phones and TVs: Seedy offers this version itself (or update from Google Play). Nothing new to see there this time.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.5.3...v0.5.4",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Arkmind/seedy/releases/download/v0.5.4/seedy_0.5.4.0.zip",
+        "checksum": "a5f264f4dd7a86c405bf413e0f2aee20",
+        "timestamp": "2026-11-24T13:52:47Z"
+      },
+      {
         "version": "0.5.3.0",
         "changelog": "# What's Changed\n- Featured, picked for you\n  Titles like the ones you watch, what’s popular here and what’s new\n- Know why a title is featured\n  “Because you watched Dune”, “Popular here” or “New season”\n- Featured respects your privacy\n  Turn off personal recommendations and it stops using what you watch\n- The same buttons everywhere\n  On the web, watched and favorite look alike on home, people, books and music\n\n## Updating\n- Seedy offers this version itself on phones and TVs (or update from Google Play).\n- Update the Seedy plugin from Jellyfin's plugin catalogue, then restart Jellyfin: the web changes come with it.\n\n**Full changelog**: https://github.com/Arkmind/seedy/compare/v0.5.2...v0.5.3",
         "targetAbi": "12.0.0.0",
