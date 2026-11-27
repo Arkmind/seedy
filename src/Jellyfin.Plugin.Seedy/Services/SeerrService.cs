@@ -1323,17 +1323,20 @@ public sealed class SeerrService
 
     /* A series request's own availability: the seasons it asked for, not the whole show (season 1 of a five-season
        show is ready once season 1 is in). Seerr marks each asked-for season completed when it lands; the title's
-       season statuses cover requests it didn't mark. Nothing of the show on the server: the show's status stands. */
+       season statuses cover requests it didn't mark. A show Seerr calls available is checked too: Seerr leaves out
+       seasons TMDB lists no episodes for, so an announced season asked for early doesn't stop the whole show being
+       "available" (until its availability sync says otherwise). Nothing of the show on the server: its status stands. */
     private static string? RequestedSeasonsStatus(JsonNode r, JsonNode? details, string? showStatus, bool is4k)
     {
         var asked = (r["seasons"]?.AsArray() ?? []).Where(s => J.Int(s?["seasonNumber"]) > 0).ToList();
-        if (asked.Count == 0 || showStatus != "partial")
+        var seasons = details?["mediaInfo"]?["seasons"] as JsonArray;
+        if (asked.Count == 0 || showStatus is not ("partial" or "available") || (showStatus == "available" && seasons is null))
         {
             return showStatus;
         }
 
         var onServer = new Dictionary<int, int?>();
-        foreach (var s in details?["mediaInfo"]?["seasons"]?.AsArray() ?? [])
+        foreach (var s in seasons ?? [])
         {
             if (J.Int(s?["seasonNumber"]) is { } n)
             {
