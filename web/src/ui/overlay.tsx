@@ -8,7 +8,7 @@ import { t } from '../lib/i18n';
 /* ── Popover anchored to a button ── */
 
 export function Popover({
-  anchor, open, onClose, children, align = 'end', placement = 'below', width
+  anchor, open, onClose, children, align = 'end', placement = 'below', width, stay
 }: {
   anchor: RefObject<HTMLElement>;
   open: boolean;
@@ -17,6 +17,8 @@ export function Popover({
   align?: 'start' | 'end';
   placement?: 'below' | 'above';
   width?: number;
+  /* Stays under its button and scrolls when taller than the room below (a Filters panel), rather than moving up. */
+  stay?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left?: number; right?: number; maxHeight?: number; overflowY?: 'auto' }>({});
@@ -35,10 +37,16 @@ export function Popover({
       const h = Math.min(full, vh - 16);
       const next: typeof pos = {};
       // Under its button, moved up as far as it takes for its bottom to stay in the window.
-      if (placement === 'below') next.top = Math.max(8, Math.min(r.bottom + 8, vh - 8 - h));
-      else next.bottom = vh - r.top + 8;
-      // Taller than the window: it scrolls.
-      if (full > vh - 16) Object.assign(next, { maxHeight: vh - 16, overflowY: 'auto' });
+      const below = vh - r.bottom - 16;
+      if (stay && placement === 'below' && below >= 320) {
+        next.top = r.bottom + 8;
+        if (full > below) Object.assign(next, { maxHeight: below, overflowY: 'auto' });
+      } else {
+        if (placement === 'below') next.top = Math.max(8, Math.min(r.bottom + 8, vh - 8 - h));
+        else next.bottom = vh - r.top + 8;
+        // Taller than the window: it scrolls.
+        if (full > vh - 16) Object.assign(next, { maxHeight: vh - 16, overflowY: 'auto' });
+      }
       // Kept inside the window on both sides.
       const w = ref.current?.offsetWidth ?? 0;
       if (align === 'end') next.right = Math.max(8, Math.min(vw - r.right, vw - 8 - w));
@@ -56,7 +64,7 @@ export function Popover({
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };
-  }, [open, anchor, align, placement]);
+  }, [open, anchor, align, placement, stay]);
 
   useEffect(() => {
     if (!open) return;

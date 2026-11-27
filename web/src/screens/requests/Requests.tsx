@@ -10,6 +10,8 @@ import { BrowseFrame, Frame, NotSetUp, ResultsSection, type Tab } from './frame'
 import { Note, RetryButton, RowSkeletons, TopColumns } from './media-parts';
 import { ApprovalRow, MineRow, TitleCard, useRequestActions, useSummary } from './parts';
 import { plural } from '../../lib/format';
+import { useLocation } from '../../lib/router';
+import { BrowseResults, DiscoverTools, isBrowsing } from './browse';
 
 /* Requests · Movies and shows (Requests board): Seerr inside Seedy. Discover shows the person's latest requests, what
    waits for their approval when they manage requests, and rows of titles to request; a search looks Seerr up for
@@ -25,7 +27,7 @@ const ROWS: { kind: TitlesKind; title: string }[] = [
 const isUpcoming = (k: TitlesKind) => k === 'upcoming-movies' || k === 'upcoming-shows';
 
 /* The movies and shows search: Seerr. */
-function MoviesFrame({ tab, children }: { tab: Tab; children: ComponentChildren }) {
+function MoviesFrame({ tab, tools, children }: { tab: Tab; tools?: ComponentChildren | false; children: ComponentChildren }) {
   return (
     <Frame
       service="movies"
@@ -33,6 +35,7 @@ function MoviesFrame({ tab, children }: { tab: Tab; children: ComponentChildren 
       placeholder={t('Find any movie or show to request')}
       label={t('Search Seerr for movies and shows')}
       results={(query) => <SearchResults query={query} />}
+      tools={tools}
     >
       {children}
     </Frame>
@@ -57,14 +60,20 @@ function SearchResults({ query }: { query: string }) {
 /* ───────── Discover ───────── */
 
 export function RequestsDiscover() {
+  // A sort or a filter turns the rows into one list of results (RequestsResults board).
+  const browsing = isBrowsing(useLocation().query);
   return (
-    <MoviesFrame tab="discover">
-      <TopLists />
-      {ROWS.map((r, i) => (
-        <Lazy key={r.kind} eager={i < 2} placeholder={<RowSkeleton title={t(r.title)} width={180} />}>
-          {() => <TitlesRow kind={r.kind} title={t(r.title)} />}
-        </Lazy>
-      ))}
+    <MoviesFrame tab="discover" tools={browsing ? false : <DiscoverTools />}>
+      {browsing ? <BrowseResults /> : (
+        <>
+          <TopLists />
+          {ROWS.map((r, i) => (
+            <Lazy key={r.kind} eager={i < 2} placeholder={<RowSkeleton title={t(r.title)} width={180} />}>
+              {() => <TitlesRow kind={r.kind} title={t(r.title)} />}
+            </Lazy>
+          ))}
+        </>
+      )}
     </MoviesFrame>
   );
 }

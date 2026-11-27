@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -152,6 +154,103 @@ public class RequestsController : ControllerBase
     [HttpGet("Titles/{kind}")]
     public Task<ActionResult<SeerrTitlesDto>> Titles([FromRoute] string kind, [FromQuery] int page, CancellationToken ct)
         => Run((_, me) => _seerr.TitlesAsync(kind, page <= 0 ? 1 : page, me, ct), ct);
+
+    /// <summary>Titles to request, sorted and filtered (the Requests page's Sort and Filters).</summary>
+    /// <param name="view">all, trending, upcoming or top.</param>
+    /// <param name="type">all, movie or tv.</param>
+    /// <param name="sort">popularity, rating, release or title.</param>
+    /// <param name="order">asc or desc.</param>
+    /// <param name="status">Comma-separated: missing, partial, requested, available.</param>
+    /// <param name="genres">Comma-separated genre ids from Browse/Options.</param>
+    /// <param name="from">First release year.</param>
+    /// <param name="to">Last release year.</param>
+    /// <param name="rating">Lowest TMDB rating.</param>
+    /// <param name="runtimeMin">Shortest runtime in minutes.</param>
+    /// <param name="runtimeMax">Longest runtime in minutes.</param>
+    /// <param name="lang">Comma-separated original languages (ISO 639-1).</param>
+    /// <param name="studios">Comma-separated studio ids (movies).</param>
+    /// <param name="networks">Comma-separated network ids (shows).</param>
+    /// <param name="keywords">Comma-separated keyword ids (all of them).</param>
+    /// <param name="cursor">The previous page's next.</param>
+    /// <param name="take">Titles wanted (up to 60).</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Titles.</returns>
+    [HttpGet("Browse")]
+    public Task<ActionResult<SeerrBrowseDto>> Browse(
+        [FromQuery] string? view,
+        [FromQuery] string? type,
+        [FromQuery] string? sort,
+        [FromQuery] string? order,
+        [FromQuery] string? status,
+        [FromQuery] string? genres,
+        [FromQuery] int? from,
+        [FromQuery] int? to,
+        [FromQuery] double? rating,
+        [FromQuery] int? runtimeMin,
+        [FromQuery] int? runtimeMax,
+        [FromQuery] string? lang,
+        [FromQuery] string? studios,
+        [FromQuery] string? networks,
+        [FromQuery] string? keywords,
+        [FromQuery] string? cursor,
+        [FromQuery] int take,
+        CancellationToken ct)
+    {
+        var q = new SeerrBrowseQuery
+        {
+            View = view is "trending" or "upcoming" or "top" ? view : "all",
+            Type = type is "movie" or "tv" ? type : "all",
+            Sort = sort is "rating" or "release" or "title" ? sort : "popularity",
+            Ascending = order == "asc",
+            From = from is >= 1870 and <= 2200 ? from : null,
+            To = to is >= 1870 and <= 2200 ? to : null,
+            Rating = rating is > 0 and <= 10 ? rating : null,
+            RuntimeMin = runtimeMin is > 0 ? runtimeMin : null,
+            RuntimeMax = runtimeMax is > 0 ? runtimeMax : null
+        };
+        foreach (var s in Csv(status))
+        {
+            if (s is "missing" or "partial" or "requested" or "available")
+            {
+                q.Status.Add(s);
+            }
+        }
+
+        q.Genres.AddRange(Ids(genres));
+        q.Languages.AddRange(Csv(lang).Where(l => l.Length == 2 && l.All(char.IsAsciiLetterLower)));
+        q.Studios.AddRange(Ids(studios));
+        q.Networks.AddRange(Ids(networks));
+        q.Keywords.AddRange(Ids(keywords));
+        return Run((_, me) => _seerr.BrowseAsync(q, string.IsNullOrWhiteSpace(cursor) ? null : cursor, Math.Clamp(take <= 0 ? 24 : take, 1, 60), me, ct), ct);
+    }
+
+    /// <summary>What the Requests page's Filters offer: genres, original languages and networks.</summary>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Options.</returns>
+    [HttpGet("Browse/Options")]
+    public Task<ActionResult<SeerrBrowseOptionsDto>> BrowseOptions(CancellationToken ct)
+        => Run((_, _) => _seerr.BrowseOptionsAsync(ct), ct);
+
+    /// <summary>Studios whose name matches, for the Filters' Studio or network.</summary>
+    /// <param name="query">Text.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Studios.</returns>
+    [HttpGet("Browse/Studios")]
+    public Task<ActionResult<List<SeerrNamedDto>>> BrowseStudios([FromQuery] string? query, CancellationToken ct)
+        => Run((_, _) => string.IsNullOrWhiteSpace(query) ? Task.FromResult(new List<SeerrNamedDto>()) : _seerr.SearchStudiosAsync(query, ct), ct);
+
+    /// <summary>TMDB keywords that match, for the Filters' Keywords.</summary>
+    /// <param name="query">Text.</param>
+    /// <param name="ct">Cancellation.</param>
+    /// <returns>Keywords.</returns>
+    [HttpGet("Browse/Keywords")]
+    public Task<ActionResult<List<SeerrNamedDto>>> BrowseKeywords([FromQuery] string? query, CancellationToken ct)
+        => Run((_, _) => string.IsNullOrWhiteSpace(query) ? Task.FromResult(new List<SeerrNamedDto>()) : _seerr.SearchKeywordsAsync(query, ct), ct);
+
+    private static string[] Csv(string? s) => (s ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private static IEnumerable<int> Ids(string? s)
+        => Csv(s).Select(x => int.TryParse(x, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) ? id : 0).Where(id => id > 0).Distinct().Take(20);
 
     /// <summary>Approves a request (needs Seerr's Manage requests).</summary>
     /// <param name="requestId">Seerr request id.</param>

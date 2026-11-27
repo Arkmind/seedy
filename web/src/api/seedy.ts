@@ -395,6 +395,16 @@ export const requestSummary = () => get<RequestSummary>('/Seedy/Requests/Summary
 export const requestList = (q: { scope: 'mine' | 'all'; filter?: RequestFilter; sort?: 'added' | 'modified'; skip?: number; take?: number }) =>
   get<{ results: SeerrRequest[]; total: number }>('/Seedy/Requests/List', q as Query);
 export const seerrTitles = (kind: TitlesKind, page = 1) => get<{ results: SeerrTitle[]; pages: number }>(`/Seedy/Requests/Titles/${kind}`, { page });
+/* The Requests page's Sort and Filters (RequestsResults board); the params are screens/requests/browse.ts's.
+   `total` comes with the first page when Seerr knows it, `next` until the end. */
+export const seerrBrowse = (q: Query, signal?: AbortSignal) =>
+  get<{ results: SeerrTitle[]; total?: number; next?: string }>('/Seedy/Requests/Browse', q, signal);
+export interface SeerrGenre { id: number; name: string; movie: boolean; tv: boolean }
+export interface SeerrNamed { id: number; name: string; sub?: string }
+export const seerrBrowseOptions = () =>
+  get<{ genres: SeerrGenre[]; languages: { code: string; name: string }[]; networks: SeerrNamed[] }>('/Seedy/Requests/Browse/Options');
+export const seerrStudios = (query: string) => get<SeerrNamed[]>('/Seedy/Requests/Browse/Studios', { query });
+export const seerrKeywords = (query: string) => get<SeerrNamed[]>('/Seedy/Requests/Browse/Keywords', { query });
 export const approveRequest = (id: number) => post<SeerrRequest | undefined>(`/Seedy/Requests/${id}/Approve`);
 export const declineRequest = (id: number) => post<SeerrRequest | undefined>(`/Seedy/Requests/${id}/Decline`);
 export const retryRequest = (id: number) => post<SeerrRequest | undefined>(`/Seedy/Requests/${id}/Retry`);
