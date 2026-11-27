@@ -122,3 +122,19 @@ a.reqs-name:hover { color: #ffffff; text-decoration: underline; text-underline-o
   .reqs-row > .reqs-text { flex: 1 1 200px; }
   .reqs-row > .reqs-chip, .reqs-row.is-approval > .reqs-decide, .reqs-row.is-list > .reqs-acts { margin-left: 58px; }
 }
+
+/* ── Sort and Filters (Requests and RequestsResults boards) ── */
+
+/* With Sort and Filters in it, the search fills what's left of the row. */
+.reqs-bar.has-tools .reqs-search { flex: 1 1 380px; max-width: none; height: 48px; padding: 0 8px 0 16px; border-radius: 14px; }
+.reqs-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.reqs-total { font-size: 14px; font-weight: 600; color: var(--seedy-text-3); white-space: nowrap; }
+.reqs-browse { display: flex; flex-direction: column; gap: 22px; margin-top: -10px; }
+.reqs-found { display: flex; flex-direction: column; gap: 28px; }
+.reqs-foot { display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 13px; color: var(--seedy-text-3); }
+.reqs-more { min-width: 120px; font-weight: 700; }
+.reqs-more .spinner { width: 20px; height: 20px; border-width: 2px; }
+.reqs-list-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.reqs-list-name .list-title { min-width: 0; }
+.reqs-list-name .type-pill { flex: none; padding: 3px 8px; font-size: 10px; }
+.reqs-list-sub { display: inline-flex; align-items: center; gap: 4px; }

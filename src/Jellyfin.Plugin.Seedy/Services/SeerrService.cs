@@ -39,7 +39,7 @@ public sealed class SeerrException : Exception
 /// Talks to Seerr (Jellyseerr/Overseerr API) with the server-side API key. Requests are made as the
 /// signed-in person through Seerr's X-Api-User header, so their limits and auto-approval apply.
 /// </summary>
-public sealed class SeerrService
+public sealed partial class SeerrService
 {
     private static readonly TimeSpan UsersTtl = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan DetailsTtl = TimeSpan.FromHours(6);

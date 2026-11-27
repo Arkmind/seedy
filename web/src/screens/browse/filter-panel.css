@@ -1,0 +1,125 @@
+/* The Filters panel under its button (RequestsResults and LibraryFilters boards): sections split by hairlines, a
+   segmented Type, check rows, picked chips, sliders, rows that open in place, then Reset and Show. */
+
+.fpanel {
+  outline: none; width: min(380px, calc(100vw - 16px)); box-sizing: border-box; padding: 18px 20px 16px; border-radius: var(--r-tray);
+  background: #181818; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 0 1px var(--seedy-surface-2);
+}
+/* Taller than the window, the popover scrolls; Reset and Show stay at its foot. */
+.popover:has(> .fpanel) { border-radius: var(--r-tray); scrollbar-width: thin; }
+
+.fsec { display: flex; flex-direction: column; gap: 10px; padding: 18px 0; }
+.fsec:first-child { padding-top: 2px; }
+.fpanel > * + * { border-top: 1px solid #222222; }
+.fsec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.fsec-title { margin: 0; font-size: 14px; font-weight: 800; color: #ffffff; }
+.fsec-value { font-size: 13px; font-weight: 700; color: var(--seedy-text-hero); white-space: nowrap; }
+
+/* Type: All · Movies · Shows. */
+.fseg { display: flex; gap: 2px; padding: 3px; border-radius: var(--r-card); background: var(--seedy-surface); }
+.fseg-btn {
+  flex: 1 1 auto; height: 34px; padding: 0 8px; border: 0; border-radius: var(--r-ctl); background: transparent;
+  color: var(--seedy-text-hero); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.fseg-btn:hover { background: var(--seedy-surface-2); color: #ffffff; }
+.fseg-btn[aria-checked='true'] { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-weight: 800; }
+
+/* Check rows: box, colored dot, label, count. */
+.fcheck { position: relative; display: flex; align-items: center; gap: 12px; padding: 7px 0; cursor: pointer; }
+.fcheck-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.fcheck-box {
+  flex: none; width: 20px; height: 20px; box-sizing: border-box; border-radius: var(--r-xs);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 2px #5a5a5a; color: var(--seedy-ink-inverse);
+  transition: background-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.fcheck-box svg { opacity: 0; }
+.fcheck-input:checked + .fcheck-box { background: var(--seedy-inverse); box-shadow: none; }
+.fcheck-input:checked + .fcheck-box svg { opacity: 1; }
+.fcheck:hover .fcheck-box { box-shadow: inset 0 0 0 2px var(--seedy-text-2); }
+.fcheck:hover .fcheck-input:checked + .fcheck-box { box-shadow: none; }
+.fcheck-input:focus-visible + .fcheck-box { outline: 2px solid var(--seedy-accent); outline-offset: 2px; }
+.fcheck-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.fcheck-label {
+  flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--seedy-text-hero);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fcheck-input:checked ~ .fcheck-label { color: #ffffff; }
+.fcheck-sub { flex: none; font-size: 13px; color: #6f6f6f; white-space: nowrap; }
+
+/* Genres and other picks. */
+.fpicks { display: flex; flex-wrap: wrap; gap: 6px; }
+.fpick {
+  display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border: 0; border-radius: var(--r-ctl);
+  background: var(--seedy-surface); color: var(--seedy-text); font: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.fpick:hover { background: var(--seedy-surface-2); color: #ffffff; }
+.fpick[aria-pressed='true'] { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-weight: 800; }
+.fpick.is-more { background: transparent; color: var(--seedy-text-2); padding: 0 8px; }
+.fpick.is-more:hover { color: #ffffff; background: var(--seedy-surface); }
+
+/* Sliders: one or two thumbs over a 4 px track, the picked part white. The inputs reach 10 px past the track so
+   a thumb's center lands on its ends. */
+.frange { position: relative; height: 22px; margin: 6px 10px 0; }
+.frange-track, .frange-fill { position: absolute; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; pointer-events: none; }
+.frange-track { left: 0; right: 0; background: var(--seedy-surface-2); }
+.frange-fill { background: var(--seedy-inverse); }
+.frange input {
+  position: absolute; top: 0; left: -10px; width: calc(100% + 20px); height: 22px; margin: 0; padding: 0;
+  background: transparent; -webkit-appearance: none; appearance: none; pointer-events: none; outline: none;
+}
+.frange input::-webkit-slider-runnable-track { height: 22px; background: transparent; border: 0; }
+.frange input::-moz-range-track { height: 22px; background: transparent; border: 0; }
+.frange input::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; pointer-events: auto; width: 20px; height: 20px; margin-top: 1px; border: 0;
+  border-radius: 50%; background: #ffffff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); cursor: grab;
+}
+.frange input::-moz-range-thumb {
+  pointer-events: auto; width: 20px; height: 20px; border: 0; border-radius: 50%; background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); cursor: grab;
+}
+.frange input:active::-webkit-slider-thumb { cursor: grabbing; }
+.frange input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--seedy-accent), 0 2px 6px rgba(0, 0, 0, 0.5); }
+.frange input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--seedy-accent), 0 2px 6px rgba(0, 0, 0, 0.5); }
+
+/* Rows that open in place: Runtime, Original language, Studio or network, Keywords. */
+.fdrill-btn {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 14px 0; border: 0; background: transparent;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.fdrill-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fdrill-title { font-size: 14px; font-weight: 800; color: #ffffff; }
+.fdrill-sub { font-size: 13px; font-weight: 600; color: #6f6f6f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fdrill-sub.is-set { color: var(--seedy-accent); }
+.fdrill-btn svg { flex: none; color: var(--seedy-text-2); transition: transform var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.fdrill-btn:hover svg { color: #ffffff; }
+.fdrill-btn[aria-expanded='true'] svg { transform: rotate(90deg); }
+.fdrill-body { display: flex; flex-direction: column; gap: 8px; padding: 0 0 16px; }
+.fdrill-note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--seedy-text-3); }
+
+.fsearch {
+  display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: var(--r-menu);
+  background: var(--seedy-surface); color: var(--seedy-text-2);
+  transition: box-shadow var(--t-fast) var(--ease);
+}
+.fsearch:focus-within { box-shadow: inset 0 0 0 2px var(--seedy-accent); }
+.fsearch input {
+  flex: 1; min-width: 0; border: 0; background: transparent; color: #ffffff; font: inherit; font-size: 14px; outline: none;
+}
+.fsearch input::placeholder { color: var(--seedy-text-3); }
+.fsearch input::-webkit-search-cancel-button { filter: invert(0.6); }
+.flist { display: flex; flex-direction: column; }
+.flist-head { margin-top: 4px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--seedy-text-3); }
+
+.fpanel-foot {
+  position: sticky; bottom: 0; z-index: 1; display: flex; justify-content: space-between; gap: 8px;
+  margin: 0 -20px -16px; padding: 14px 20px 16px; background: #181818;
+}
+.fpanel-foot .btn { height: 40px; padding: 0 16px; border-radius: var(--r-card); font-size: 14px; }
+.fpanel-reset { background: var(--seedy-surface); color: var(--seedy-text); font-weight: 700; }
+.fpanel-reset:not(:disabled):hover { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); }
+.fpanel-apply { background: var(--seedy-inverse); color: var(--seedy-ink-inverse); font-weight: 800; }
+.fpanel-apply:not(:disabled):hover { background: #ffffff; }

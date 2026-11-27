@@ -410,6 +410,49 @@ public sealed class SeerrTitlesDto
     [JsonPropertyName("pages")] public int Pages { get; set; }
 }
 
+/// <summary>A page of the Requests page's sorted and filtered titles.</summary>
+public sealed class SeerrBrowseDto
+{
+    [JsonPropertyName("results")] public List<SeerrTitleDto> Results { get; set; } = [];
+
+    /// <summary>Gets or sets how many titles match, on the first page, when Seerr knows (not with filters Seedy applies).</summary>
+    [JsonPropertyName("total")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? Total { get; set; }
+
+    /// <summary>Gets or sets where the next page starts; null at the end.</summary>
+    [JsonPropertyName("next")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Next { get; set; }
+}
+
+/// <summary>A genre of movies, shows or both. Its id is the movie genre's for genres both have (Action stands for
+/// shows' Action &amp; Adventure too).</summary>
+public sealed class SeerrGenreDto
+{
+    [JsonPropertyName("id")] public int Id { get; set; }
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("movie")] public bool Movie { get; set; }
+    [JsonPropertyName("tv")] public bool Tv { get; set; }
+}
+
+public sealed class SeerrLanguageDto
+{
+    [JsonPropertyName("code")] public string Code { get; set; } = string.Empty;
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+}
+
+/// <summary>A studio, network or keyword; `sub` is a studio's country.</summary>
+public sealed class SeerrNamedDto
+{
+    [JsonPropertyName("id")] public int Id { get; set; }
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("sub")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Sub { get; set; }
+}
+
+public sealed class SeerrBrowseOptionsDto
+{
+    [JsonPropertyName("genres")] public List<SeerrGenreDto> Genres { get; set; } = [];
+    [JsonPropertyName("languages")] public List<SeerrLanguageDto> Languages { get; set; } = [];
+    [JsonPropertyName("networks")] public List<SeerrNamedDto> Networks { get; set; } = [];
+}
+
 public sealed class SeerrSeasonDto
 {
     [JsonPropertyName("seasonNumber")] public int SeasonNumber { get; set; }

@@ -156,12 +156,14 @@ export function ViewTabs({ service, tab, query }: { service: Service | null; tab
 }
 
 /* The search above a service's Discover; while there's a query its results replace the tab. */
-export function Frame({ service, tab, placeholder, label, results, children }: {
+export function Frame({ service, tab, placeholder, label, results, tools, children }: {
   service: Service;
   tab: Tab;
   placeholder: string;
   label: string;
   results: (query: string) => ComponentChildren;
+  /* Sort and Filters after the tabs (Requests board); while there's one, the bar's search fills its row. */
+  tools?: ComponentChildren | false;
   children: ComponentChildren;
 }) {
   const services = useServices();
@@ -186,7 +188,7 @@ export function Frame({ service, tab, placeholder, label, results, children }: {
   }
   return (
     <Shell service={service}>
-      <div class="reqs-bar">
+      <div class={'reqs-bar' + (tools !== undefined ? ' has-tools' : '')}>
         <label class="reqs-search">
           <Icon name="search" size={20} stroke={2.2} />
           <input
@@ -202,6 +204,7 @@ export function Frame({ service, tab, placeholder, label, results, children }: {
           />
         </label>
         <ViewTabs service={service} tab={tab} query={query} />
+        {!query && tools}
       </div>
       {query ? results(query) : children}
     </Shell>
